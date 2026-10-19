@@ -3,26 +3,9 @@
  * (ADR-0005). Both are the only ways a player moves an account between devices, so both are checked
  * against a genuinely empty second browser context.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-import {
-  expectActiveProfile,
-  chooseInMainMenu,
-  openApp,
-  renameProfile,
-  switchProfileNames,
-  watchConsole,
-} from './helpers';
-
-/** The link the account menu just put on the clipboard. */
-async function clipboard(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const view = globalThis as unknown as {
-      navigator: { clipboard: { readText: () => Promise<string> } };
-    };
-    return view.navigator.clipboard.readText();
-  });
-}
+import { chooseInProfileMenu, openApp, renameProfile, switchProfileNames, watchConsole } from './helpers';
 
 test('export writes a JSON file and importing it adds a second profile', async ({ page }, testInfo) => {
   const problems = watchConsole(page);
@@ -32,7 +15,7 @@ test('export writes a JSON file and importing it adds a second profile', async (
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    chooseInMainMenu(page, /^Export JSON/),
+    chooseInProfileMenu(page, /^Export JSON/),
   ]);
   expect(download.suggestedFilename()).toMatch(/^pyrrhic-exported-\d{4}-\d{2}-\d{2}\.json$/);
 
@@ -52,40 +35,5 @@ test('export writes a JSON file and importing it adds a second profile', async (
 
   await expect.poll(() => switchProfileNames(page)).toHaveLength(2);
 
-  expect(problems).toEqual([]);
-});
-
-test('a profile link offers to add the account in a fresh browser', async ({ page, browser, context }) => {
-  const problems = watchConsole(page);
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await openApp(page);
-
-  await renameProfile(page, 'Shared');
-
-  // Share copies the link and says so in a live region; with no march generated it is the profile.
-  await chooseInMainMenu(page, /^Share this march/);
-  // The march has its own status line; this one is the top bar's.
-  await expect(page.getByRole('banner').getByRole('status')).toHaveText('Copied');
-  const url = await clipboard(page);
-  expect(url).toContain('#c=');
-
-  const fresh = await browser.newContext();
-  const other = await fresh.newPage();
-  const otherProblems = watchConsole(other);
-  await other.goto(url);
-  await other.waitForLoadState('networkidle');
-
-  // The prompt must appear before anything stored is touched, and the code must leave the address bar.
-  const prompt = other.getByRole('dialog');
-  await expect(prompt.getByRole('heading', { name: 'Load shared profile?' })).toBeVisible();
-  await expect(prompt).toContainText('Shared');
-  expect(other.url()).not.toContain('#c=');
-
-  await prompt.getByRole('button', { name: 'Add as new profile' }).click();
-  await expectActiveProfile(other, 'Shared');
-  await expect.poll(() => switchProfileNames(other)).toEqual(['My account', 'Shared']);
-
-  expect(otherProblems).toEqual([]);
-  await fresh.close();
   expect(problems).toEqual([]);
 });

@@ -1,7 +1,7 @@
 /**
  * The top app bar (design plan §5.1 as revised by spike 0009 — frame V1 adopted): M3's small top
- * app bar, 64 px, scrolling away with the page, carrying the menu and the brand on the left and the account on the
- * right, and nothing else.
+ * app bar, 64 px, scrolling away with the page, carrying the brand on the left and, on the right, the profile menu
+ * (profiles, files, account) and the app menu at the screen's edge.
  *
  * The figures used to live here. They moved to where the action they belong with is — the March
  * pane's header on a desktop, the bottom app bar on a phone — because a bar that repeats the pane
@@ -10,8 +10,8 @@
 import { Box, Title } from '@mantine/core';
 
 import { AppBar as BarSurface } from '../kit';
-import { AccountDropdown } from './AccountDropdown';
 import { MainMenu } from './MainMenu';
+import { ProfileMenu } from './ProfileMenu';
 import themeClasses from '../theme.module.css';
 
 /**
@@ -27,14 +27,18 @@ export function AppBar() {
     <BarSurface
       brand={
         <>
-          <MainMenu />
           <BrandMark />
           <Title order={1} size="1.125rem" fw={600} lh={1.4}>
             Pyrrhic
           </Title>
         </>
       }
-      actions={<AccountDropdown />}
+      actions={
+        <>
+          <ProfileMenu />
+          <MainMenu />
+        </>
+      }
     />
   );
 }

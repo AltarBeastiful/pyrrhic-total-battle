@@ -45,6 +45,8 @@ export const pushForbiddenSchema = z.object({
 export const authUserSchema = z.object({
   id: z.string().min(1),
   email: z.string().default(''),
+  /** The display name the provider gave (Google's `name`); empty for an email sign-up. */
+  name: z.string().optional(),
   verified: z.boolean().default(false),
 });
 export type AccountUser = z.infer<typeof authUserSchema>;

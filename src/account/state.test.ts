@@ -83,8 +83,11 @@ function renameActive(name: string): void {
   useStore.getState().renameProfile(useStore.getState().doc.activeProfileId, name);
 }
 
-async function signIn({ created = false }: { created?: boolean } = {}): Promise<void> {
-  onRequest('authWithPassword', () => ({ token: 'raw-token', record: USER }));
+async function signIn({
+  created = false,
+  record = USER,
+}: { created?: boolean; record?: typeof USER & { name?: string } } = {}): Promise<void> {
+  onRequest('authWithPassword', () => ({ token: 'raw-token', record }));
   const { signInWithPassword } = await import('./auth');
   await useAccountStore.getState().adopt(await signInWithPassword(USER.email, 'password123'), { created });
 }
@@ -419,4 +422,23 @@ test('a refused password change answers false and says why', async () => {
   await expect(useAccountStore.getState().changePassword('wrong', 'newpassword12')).resolves.toBe(false);
   expect(useAccountStore.getState().error).toContain('That current password is not right');
   expect(useAccountStore.getState().user).toEqual(USER);
+});
+
+test('a new account’s first profile takes the first name of its owner, when it still has the default name', async () => {
+  startServer();
+  await signIn({ created: true, record: { ...USER, name: 'Rémi Benoit' } });
+  expect(names()).toEqual(['Rémi']);
+});
+
+test('a profile the player already renamed keeps its name', async () => {
+  startServer();
+  renameActive('Mine');
+  await signIn({ created: true, record: { ...USER, name: 'Rémi Benoit' } });
+  expect(names()).toEqual(['Mine']);
+});
+
+test('an account with no name changes nothing', async () => {
+  startServer();
+  await signIn({ created: true });
+  expect(names()).toEqual(['My account']);
 });

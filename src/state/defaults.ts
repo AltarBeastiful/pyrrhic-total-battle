@@ -192,9 +192,12 @@ export function nextProfileName(taken: readonly string[]): string {
   }
 }
 
+/** The name every browser's first profile starts with. */
+export const DEFAULT_PROFILE_NAME = 'My account';
+
 export function newRoot(deviceName = ''): RootDocument {
   const deviceId = uuid();
-  const profile = newProfile('My account', deviceId);
+  const profile = newProfile(DEFAULT_PROFILE_NAME, deviceId);
   return {
     schemaVersion: SCHEMA_VERSION,
     dataVersion: CURRENT_DATA_VERSION,

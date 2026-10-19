@@ -1,50 +1,28 @@
 /**
- * The app-level menu at the start of the bar, next to the brand (B-18): the profile actions (rename, new,
- * duplicate, delete), the file actions, the share link, the pool line and theme preferences, install and
- * update, and About. Switching profile and the account rows live in the account dropdown at the other end
- * (B-17). None of it takes permanent space (design rule 15), and it is the slot where navigation links
- * go once there are pages.
+ * The app menu at the far right of the bar: the pool line and theme preferences, install and update, and
+ * About. Profiles, files and the account live in the profile menu beside it. None of it takes permanent
+ * space (design rule 15), and it is the slot where navigation links go once there are pages.
  *
  * The menu itself is kit's `AppMenu`, so the shell cannot invent a shape: every row is an action,
  * a segmented row or a section heading, and each kind has one appearance.
  */
-import { ActionIcon, Button, Group, Text, TextInput, useMantineColorScheme } from '@mantine/core';
-import { Copy, Download, Info, Link2, Menu, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
-import { lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import { ActionIcon, useMantineColorScheme } from '@mantine/core';
+import { Download, Info, Menu, RefreshCw } from 'lucide-react';
+import { lazy, useState, useSyncExternalStore } from 'react';
 
-import { useAccountStore } from '@/account/state';
-import { version as gameData } from '@/data';
 import { isInstallAvailable, promptInstall, subscribeToInstall } from '@/pwa/install';
 import { applyUpdate, isUpdateReady, subscribeToUpdate } from '@/pwa/register';
-import { buildBattleLink, buildProfileLink } from '@/share/codec';
-import { applyImport, exportProfileFile, parseImport } from '@/share/exportImport';
-import type { ImportMode, ParsedImport } from '@/share/exportImport';
-import { nextProfileName, uniqueProfileName } from '@/state/defaults';
 import { POOL_LINE_DEFAULTS, THEMES, type PoolLineDefault, type Theme } from '@/state/schema';
-import { selectActiveProfile, selectActiveSetup, selectProfiles, selectTheme, useStore } from '@/state/store';
+import { selectActiveProfile, selectTheme, useStore } from '@/state/store';
 
-import { AppMenu, Dialog, type AppMenuEntry, type AppMenuSection } from '../kit';
+import { AppMenu, type AppMenuEntry, type AppMenuSection } from '../kit';
 import { LazySurface } from '../lazy';
-import { copyText, downloadJson } from '../profile/download';
-import { ImportDialog } from '../profile/ImportDialog';
-import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
 
-// The account surfaces drag in the PocketBase SDK and About drags in the data notes; both are opened
-// once in a blue moon, so neither is in the first load (ui-foundation plan §6).
+// About drags in the data notes and is opened
+// once in a blue moon, so it is not in the first load (ui-foundation plan §6).
 const AboutDialog = lazy(() => import('../AboutDialog').then((module) => ({ default: module.AboutDialog })));
-const AccountDialogs = lazy(() =>
-  import('../account/AccountDialogs').then((module) => ({ default: module.AccountDialogs })),
-);
 
-type DialogKind = 'new' | 'rename' | 'duplicate' | 'delete' | 'about';
-
-interface ImportState {
-  parsed: ParsedImport | null;
-  error: string | null;
-}
-
-const EMPTY_IMPORT: ImportState = { parsed: null, error: null };
+type DialogKind = 'about';
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -74,143 +52,23 @@ function isTheme(value: string): value is Theme {
   return (THEMES as readonly string[]).includes(value);
 }
 
-/** One name, one field: New, Rename and Duplicate all ask the same question. */
-function NameDialog({
-  title,
-  description,
-  confirmLabel,
-  initialName,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  description?: string;
-  confirmLabel: string;
-  initialName: string;
-  onConfirm: (name: string) => void;
-  onCancel: () => void;
-}) {
-  const [name, setName] = useState(initialName);
-  const trimmed = name.trim();
-  const confirm = (): void => {
-    if (trimmed !== '') onConfirm(trimmed);
-  };
-
-  return (
-    <Dialog
-      opened
-      onClose={onCancel}
-      title={title}
-      size="sm"
-      {...(description === undefined ? {} : { description })}
-      footer={
-        <Group justify="flex-end" gap="sm">
-          <Button variant="default" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button disabled={trimmed === ''} onClick={confirm}>
-            {confirmLabel}
-          </Button>
-        </Group>
-      }
-    >
-      <TextInput
-        label="Profile name"
-        data-autofocus
-        value={name}
-        onChange={(event) => {
-          setName(event.currentTarget.value);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') confirm();
-        }}
-      />
-    </Dialog>
-  );
-}
-
 /** The main menu and every dialog it opens. Rendered by the app bar, nowhere else. */
 export function MainMenu() {
-  const profiles = useStore(selectProfiles);
   const profile = useStore(selectActiveProfile);
-  const setup = useStore(selectActiveSetup);
   const theme = useStore(selectTheme);
   const setTheme = useStore((state) => state.setTheme);
   const updateProfile = useStore((state) => state.updateProfile);
-  const createProfile = useStore((state) => state.createProfile);
-  const duplicateProfile = useStore((state) => state.duplicateProfile);
-  const renameProfile = useStore((state) => state.renameProfile);
-  const deleteProfile = useStore((state) => state.deleteProfile);
-  const result = useResultStore((state) => state.last);
-  const accountDialog = useAccountStore((state) => state.dialog);
   const { setColorScheme } = useMantineColorScheme();
 
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
   const updateReady = useSyncExternalStore(subscribeToUpdate, isUpdateReady, () => false);
 
   const [dialog, setDialog] = useState<DialogKind | null>(null);
-  const [importState, setImportState] = useState<ImportState>(EMPTY_IMPORT);
-  const [notice, setNotice] = useState('');
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  // The copy notice says what just happened and then gets out of the way.
-  useEffect(() => {
-    if (notice === '') return undefined;
-    const timer = setTimeout(() => {
-      setNotice('');
-    }, 4000);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [notice]);
 
   if (profile === undefined) return null;
 
   const close = (): void => {
     setDialog(null);
-  };
-
-  const readFile = (file: File): void => {
-    void file
-      .text()
-      .then((json) => {
-        setImportState({ parsed: parseImport(json), error: null });
-      })
-      .catch((error: unknown) => {
-        setImportState({
-          parsed: null,
-          error: error instanceof Error ? error.message : 'This file could not be read.',
-        });
-      });
-  };
-
-  const applyFile = (mode: ImportMode): void => {
-    if (importState.parsed) applyImport(useStore, importState.parsed, mode);
-    setImportState(EMPTY_IMPORT);
-  };
-
-  /**
-   * The march when there is one, the account otherwise — a link to a result nobody generated would
-   * be a link to nothing. The menu item says which of the two it is about to put on the clipboard.
-   */
-  const shareLink = (): Promise<string> => {
-    const baseUrl = typeof window === 'undefined' ? '' : window.location.href;
-    const options = { baseUrl, dataVersion: gameData.dataVersion };
-    if (result !== null && setup !== undefined) {
-      return buildBattleLink(setup, resultCounts(result.result), toSavedSummary(result.summary), options);
-    }
-    return buildProfileLink(profile, options);
-  };
-
-  const copyShareLink = (): void => {
-    void shareLink()
-      .then(copyText)
-      .then((ok) => {
-        setNotice(ok ? 'Copied' : 'The link could not be copied');
-      })
-      .catch(() => {
-        setNotice('The link could not be built');
-      });
   };
 
   const appEntries: AppMenuEntry[] = [
@@ -252,80 +110,6 @@ export function MainMenu() {
   // can do to this profile, the file actions, the link, the theme, and About at the bottom.
   const sections: AppMenuSection[] = [
     {
-      id: 'profile',
-      title: profile.name,
-      entries: [
-        {
-          id: 'rename',
-          label: 'Rename profile',
-          icon: <Pencil size={ICON} aria-hidden />,
-          onSelect: () => {
-            setDialog('rename');
-          },
-        },
-      ],
-    },
-    {
-      id: 'this',
-      title: 'This profile',
-      entries: [
-        {
-          id: 'new',
-          label: 'New profile',
-          icon: <Plus size={ICON} aria-hidden />,
-          onSelect: () => {
-            setDialog('new');
-          },
-        },
-        {
-          id: 'duplicate',
-          label: 'Duplicate profile',
-          icon: <Copy size={ICON} aria-hidden />,
-          onSelect: () => {
-            setDialog('duplicate');
-          },
-        },
-        {
-          id: 'delete',
-          label: 'Delete profile',
-          icon: <Trash2 size={ICON} aria-hidden />,
-          danger: true,
-          onSelect: () => {
-            setDialog('delete');
-          },
-        },
-      ],
-    },
-    {
-      id: 'data',
-      title: 'Data',
-      entries: [
-        {
-          id: 'export',
-          label: 'Export JSON',
-          icon: <Download size={ICON} aria-hidden />,
-          onSelect: () => {
-            downloadJson(exportProfileFile(profile, gameData.dataVersion));
-          },
-        },
-        {
-          id: 'import',
-          label: 'Import JSON',
-          icon: <Upload size={ICON} aria-hidden />,
-          onSelect: () => {
-            fileInput.current?.click();
-          },
-        },
-        {
-          id: 'share',
-          label: 'Share this march',
-          description: result === null ? 'Link to this profile' : 'Link to the march you generated',
-          icon: <Link2 size={ICON} aria-hidden />,
-          onSelect: copyShareLink,
-        },
-      ],
-    },
-    {
       id: 'theme',
       entries: [
         {
@@ -358,58 +142,6 @@ export function MainMenu() {
     { id: 'app', title: 'Pyrrhic', entries: appEntries },
   ];
 
-  const nameDialog = (): ReactNode => {
-    if (dialog === 'new') {
-      return (
-        <NameDialog
-          title="New profile"
-          description="A profile is one game account: its tiers, mercenaries and bonus values."
-          confirmLabel="Create"
-          initialName={nextProfileName(profiles.map((candidate) => candidate.name))}
-          onCancel={close}
-          onConfirm={(name) => {
-            createProfile(name);
-            close();
-          }}
-        />
-      );
-    }
-    if (dialog === 'rename') {
-      return (
-        <NameDialog
-          title="Rename profile"
-          confirmLabel="Save"
-          initialName={profile.name}
-          onCancel={close}
-          onConfirm={(name) => {
-            renameProfile(profile.id, name);
-            close();
-          }}
-        />
-      );
-    }
-    if (dialog === 'duplicate') {
-      return (
-        <NameDialog
-          title="Duplicate profile"
-          description="The copy gets its own identity, so editing it never touches the original."
-          confirmLabel="Duplicate"
-          initialName={uniqueProfileName(
-            profile.name,
-            profiles.map((candidate) => candidate.name),
-            'copy',
-          )}
-          onCancel={close}
-          onConfirm={(name) => {
-            duplicateProfile(profile.id, name);
-            close();
-          }}
-        />
-      );
-    }
-    return null;
-  };
-
   return (
     <>
       <AppMenu
@@ -423,54 +155,6 @@ export function MainMenu() {
         }
       />
 
-      <Text span role="status" size="xs" c="dimmed">
-        {notice}
-      </Text>
-
-      <input
-        ref={fileInput}
-        type="file"
-        accept="application/json,.json"
-        aria-label="Pyrrhic export file"
-        style={{ display: 'none' }}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = '';
-          if (file) readFile(file);
-        }}
-      />
-
-      {nameDialog()}
-
-      <Dialog
-        role="alertdialog"
-        opened={dialog === 'delete'}
-        onClose={close}
-        title="Delete profile"
-        size="sm"
-        description={`“${profile.name}” and everything in it will be removed from this browser. Export it first if you might want it back.`}
-        footer={
-          <Group justify="flex-end" gap="sm">
-            <Button variant="default" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              color="danger"
-              onClick={() => {
-                deleteProfile(profile.id);
-                close();
-              }}
-            >
-              Delete profile
-            </Button>
-          </Group>
-        }
-      />
-
-      <LazySurface isOpen={accountDialog !== null}>
-        <AccountDialogs />
-      </LazySurface>
-
       <LazySurface isOpen={dialog === 'about'}>
         <AboutDialog
           open={dialog === 'about'}
@@ -479,15 +163,6 @@ export function MainMenu() {
           }}
         />
       </LazySurface>
-
-      <ImportDialog
-        parsed={importState.parsed}
-        error={importState.error}
-        onApply={applyFile}
-        onClose={() => {
-          setImportState(EMPTY_IMPORT);
-        }}
-      />
     </>
   );
 }

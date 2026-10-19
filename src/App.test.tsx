@@ -26,17 +26,23 @@ function renderApp(): ReturnType<typeof render> {
   return render(<App />, { wrapper: ThemeHarness });
 }
 
-/** Open the main menu, which is where every profile action lives now. */
+/** Open the app menu: theme, install and About. */
 async function openMainMenu(): Promise<HTMLElement> {
   fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
   return screen.findByRole('menu');
 }
 
-test('renders the brand and the main menu', async () => {
+/** Open the profile menu, which is where every profile action lives now. */
+async function openProfileMenu(): Promise<HTMLElement> {
+  fireEvent.click(screen.getByRole('button', { name: /^Profile:/ }));
+  return screen.findByRole('menu');
+}
+
+test('renders the brand and the profile menu', async () => {
   renderApp();
   expect(screen.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeTruthy();
 
-  const menu = await openMainMenu();
+  const menu = await openProfileMenu();
   expect(within(menu).getByRole('menuitem', { name: /^New profile/ })).toBeTruthy();
 });
 

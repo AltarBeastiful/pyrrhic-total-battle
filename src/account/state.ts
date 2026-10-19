@@ -20,7 +20,7 @@
 import { create } from 'zustand';
 import type { StoreApi } from 'zustand';
 
-import { newProfile, newRoot, uniqueProfileName } from '@/state/defaults';
+import { DEFAULT_PROFILE_NAME, newProfile, newRoot, uniqueProfileName } from '@/state/defaults';
 import { migrate } from '@/state/migrations';
 import type { Profile, RootDocument } from '@/state/schema';
 import { useStore, type StoreState } from '@/state/store';
@@ -178,6 +178,20 @@ function cancelAutosave(): boolean {
   clearTimeout(autosave);
   autosave = null;
   return true;
+}
+
+/** The profile a new account starts with, renamed to the owner's first name while it is still the untouched default. */
+function namedAfter(profile: Profile, user: AccountUser): Profile {
+  const first = (user.name ?? '').trim().split(/\s+/)[0] ?? '';
+  if (first === '' || profile.rev !== 0 || profile.name !== DEFAULT_PROFILE_NAME) return profile;
+  const now = Date.now();
+  return {
+    ...profile,
+    name: first,
+    rev: profile.rev + 1,
+    updatedAt: now,
+    sectionUpdatedAt: { ...profile.sectionUpdatedAt, name: now },
+  };
 }
 
 export const useAccountStore = create<AccountState>()((set, get) => {
@@ -436,7 +450,10 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       let next = base === null ? local : mergeDocuments(local, base);
       // A new account with nothing anywhere yet: the untouched profile on screen becomes its first.
       // On sign-in, `withAProfile` below gives an empty account a fresh one instead.
-      if (created && next.profiles.length === 0) next = { ...next, profiles: current.profiles };
+      // It takes the first name of the account's owner when it still has the name every browser starts with.
+      if (created && next.profiles.length === 0) {
+        next = { ...next, profiles: current.profiles.map((profile) => namedAfter(profile, user)) };
+      }
       if (!next.profiles.some((profile) => profile.id === next.activeProfileId)) {
         const preferred = cached?.activeProfileId;
         next = {

@@ -29,21 +29,21 @@ test('the bar is the banner, and the brand is the page’s one H1', () => {
   expect(brand.textContent).toBe('Pyrrhic');
 });
 
-test('the controls in it are the menu and the account icon', () => {
+test('the controls in it are the profile menu and the app menu', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
 
   expect(within(banner).getByRole('button', { name: 'Menu' })).toBeTruthy();
   // Nothing else: no Generate, no figures, no jump bar (design plan §5.1, `v4-desktop.jpg`).
-  expect(within(banner).getByRole('button', { name: /^Profiles and account/ })).toBeTruthy();
+  expect(within(banner).getByRole('button', { name: /^Profile:/ })).toBeTruthy();
   expect(within(banner).getAllByRole('button')).toHaveLength(2);
   expect(screen.queryByRole('button', { name: /Generate/ })).toBeNull();
 });
 
-test('the menu button sits next to the brand, before the account icon', () => {
+test('the app menu is the last control, at the screen’s edge, after the profile menu', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
   const [first, second] = within(banner).getAllByRole('button');
-  expect(first?.getAttribute('aria-label')).toBe('Menu');
-  expect(second?.getAttribute('aria-label')).toMatch(/^Profiles and account/);
+  expect(first?.getAttribute('aria-label')).toMatch(/^Profile:/);
+  expect(second?.getAttribute('aria-label')).toBe('Menu');
 });

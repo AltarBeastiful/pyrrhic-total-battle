@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 /**
- * The main menu (B-18; design plan §5.2): every profile action a player has, behind one control, in
- * the order the plan fixes. What is tested here is what a player can name — the rows, the two
- * questions that interrupt (rename, delete) and the theme row — never how the menu is drawn.
+ * The app menu: preferences, install, update and About. What is tested here is what a player can name,
+ * never how the menu is drawn.
  */
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -33,9 +32,11 @@ async function openMenu(): Promise<HTMLElement> {
   return screen.findByRole('menu');
 }
 
-test('the menu carries the profile actions, the file actions, the link and About', async () => {
+test('the menu carries the preferences and About, and nothing about profiles, files or sharing', async () => {
   const menu = await openMenu();
-  const names = [
+  expect(within(menu).getByRole('menuitem', { name: /^About Pyrrhic/ })).toBeTruthy();
+  expect(within(menu).getByRole('radiogroup', { name: 'Theme' })).toBeTruthy();
+  for (const name of [
     'Rename profile',
     'New profile',
     'Duplicate profile',
@@ -43,44 +44,9 @@ test('the menu carries the profile actions, the file actions, the link and About
     'Export JSON',
     'Import JSON',
     'Share this march',
-    'About Pyrrhic',
-  ];
-  for (const name of names) {
-    expect(within(menu).getByRole('menuitem', { name: new RegExp(`^${name}`) })).toBeTruthy();
+  ]) {
+    expect(within(menu).queryByRole('menuitem', { name: new RegExp(`^${name}`) })).toBeNull();
   }
-});
-
-test('renaming asks for the new name in a dialog and writes it to the store', async () => {
-  const user = userEvent.setup();
-  const menu = await openMenu();
-  await user.click(within(menu).getByRole('menuitem', { name: /^Rename profile/ }));
-
-  const dialog = await screen.findByRole('dialog');
-  const field = within(dialog).getByLabelText('Profile name');
-  await user.clear(field);
-  await user.type(field, 'Renamed');
-  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
-
-  await waitFor(() => {
-    expect(useStore.getState().doc.profiles[0]?.name).toBe('Renamed');
-  });
-  expect(screen.queryByRole('button', { name: /^Account:/ })).toBeNull();
-});
-
-test('deleting asks first, in a dialog that interrupts', async () => {
-  const user = userEvent.setup();
-  useStore.getState().createProfile('Spare');
-  const menu = await openMenu();
-  await user.click(within(menu).getByRole('menuitem', { name: /^Delete profile/ }));
-
-  const dialog = await screen.findByRole('alertdialog');
-  expect(dialog.textContent).toContain('Export it first');
-  expect(useStore.getState().doc.profiles).toHaveLength(2);
-
-  await user.click(within(dialog).getByRole('button', { name: 'Delete profile' }));
-  await waitFor(() => {
-    expect(useStore.getState().doc.profiles.map((profile) => profile.name)).toEqual(['My account']);
-  });
 });
 
 test('the theme row offers the three choices and writes the one that is picked', async () => {

@@ -20,7 +20,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
-  menuButton,
   bonusTotal,
   bonusesCard,
   closeMarchSheet,
@@ -688,19 +687,6 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
   record('J7 taps', taps.count, null);
 }
 
-/** J5 — share this march: the account menu, the item, the word that says it is on the clipboard. */
-async function journey5(page: Page): Promise<void> {
-  const taps = new Taps();
-
-  await taps.tap(menuButton(page));
-  await expect(page.getByRole('menu')).toBeVisible();
-  await taps.tap(page.getByRole('menuitem', { name: /^Share this march/ }));
-  await expect(page.getByRole('banner').getByRole('status')).toHaveText('Copied');
-
-  record('J5 taps', taps.count, 3);
-  expect(taps.count).toBeLessThanOrEqual(3);
-}
-
 // ---- The two frames -----------------------------------------------------------------------------
 test.describe('phone 390×844', () => {
   test.use({ viewport: PHONE });
@@ -724,13 +710,6 @@ test.describe('phone 390×844', () => {
   test('J3 the bonuses changed: ≤ 6 taps', async ({ page }) => {
     const problems = watchConsole(page);
     await journey3(page);
-    expect(problems).toEqual([]);
-  });
-
-  test('J5 share this march: ≤ 3 taps', async ({ page, context }) => {
-    const problems = watchConsole(page);
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await journey5(page);
     expect(problems).toEqual([]);
   });
 
@@ -770,13 +749,6 @@ test.describe('desktop 1400×900', () => {
   test('J3 the bonuses changed: ≤ 6 taps', async ({ page }) => {
     const problems = watchConsole(page);
     await journey3(page);
-    expect(problems).toEqual([]);
-  });
-
-  test('J5 share this march: ≤ 3 taps', async ({ page, context }) => {
-    const problems = watchConsole(page);
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await journey5(page);
     expect(problems).toEqual([]);
   });
 

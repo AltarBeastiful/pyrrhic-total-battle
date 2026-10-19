@@ -15,7 +15,7 @@ import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
 import { renderWithTheme } from '../kit/testRender';
-import { AccountDropdown } from '../shell/AccountDropdown';
+import { ProfileMenu } from '../shell/ProfileMenu';
 import { AccountDialogs } from './AccountDialogs';
 
 vi.mock('pocketbase', async () => {
@@ -79,8 +79,8 @@ afterEach(() => {
 
 async function openMenu(): Promise<HTMLElement> {
   const user = userEvent.setup();
-  renderWithTheme(<AccountDropdown />);
-  await user.click(screen.getByRole('button', { name: /^Profiles and account/ }));
+  renderWithTheme(<ProfileMenu />);
+  await user.click(screen.getByRole('button', { name: /^Profile:/ }));
   return screen.findByRole('menu');
 }
 
@@ -158,13 +158,13 @@ test('the profile row says where the profile is saved, signed in or not', async 
 });
 
 test('signed out, the account button says the profile is this browser’s only', () => {
-  renderWithTheme(<AccountDropdown />);
-  expect(screen.getByRole('button', { name: /^Profiles and account: signed out/ })).toBeTruthy();
+  renderWithTheme(<ProfileMenu />);
+  expect(screen.getByRole('button', { name: /^Profile: .*signed out/ })).toBeTruthy();
   expect(screen.getByRole('button', { name: /saved in this browser only/i })).toBeTruthy();
 
   cleanup();
   useAccountStore.setState({ user: USER });
-  renderWithTheme(<AccountDropdown />);
+  renderWithTheme(<ProfileMenu />);
   expect(screen.queryByRole('button', { name: /saved in this browser only/i })).toBeNull();
 });
 

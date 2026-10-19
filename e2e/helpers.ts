@@ -252,12 +252,12 @@ export async function openMainMenu(page: Page): Promise<Locator> {
   return menu;
 }
 
-/** The icon-only account control (B-17); its name starts "Profiles and account". */
+/** The profile menu button (name, glyph while signed in, chevron); its accessible name starts "Profile:". */
 export function accountDropdownButton(page: Page): Locator {
-  return page.getByRole('button', { name: /^Profiles and account/ });
+  return page.getByRole('button', { name: /^Profile:/ });
 }
 
-/** Open the account dropdown: the profile switcher, the account rows and the sync status. */
+/** Open the profile menu: the profiles, their actions, the files, the account rows and the sync status. */
 export async function openAccountDropdown(page: Page): Promise<Locator> {
   await accountDropdownButton(page).click();
   const menu = page.getByRole('menu');
@@ -272,9 +272,16 @@ export async function chooseInMainMenu(page: Page, name: string | RegExp): Promi
   await expect(page.getByRole('menu')).toBeHidden();
 }
 
-/** Rename the active profile through the menu and its dialog. */
+/** Open the profile menu and choose one item by name, waiting for the menu to close behind it. */
+export async function chooseInProfileMenu(page: Page, name: string | RegExp): Promise<void> {
+  await openAccountDropdown(page);
+  await page.getByRole('menuitem', { name }).click();
+  await expect(page.getByRole('menu')).toBeHidden();
+}
+
+/** Rename the active profile through the profile menu and its dialog. */
 export async function renameProfile(page: Page, name: string): Promise<void> {
-  await chooseInMainMenu(page, /^Rename profile/);
+  await chooseInProfileMenu(page, /^Rename profile/);
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Profile name').fill(name);
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
@@ -299,7 +306,7 @@ export async function expectActiveProfile(page: Page, name: string, timeout = 50
 /** Wait until the debounced write has landed: the menu's one-word status says so. */
 export async function waitForSaved(page: Page): Promise<void> {
   const menu = await openAccountDropdown(page);
-  await expect(menu.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(menu.getByText(/^Saved/)).toBeVisible({ timeout: 10_000 });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
 }
@@ -308,7 +315,10 @@ export async function waitForSaved(page: Page): Promise<void> {
 export async function profileNames(page: Page): Promise<string[]> {
   const menu = await openAccountDropdown(page);
   const names = (await menu.getByRole('menuitem').allInnerTexts()).filter(
-    (name) => !/^(Sign in|Signed in as|Sign out|Confirm your email)/.test(name.trim()),
+    (name) =>
+      !/^(Sign in|Signed in as|Sign out|Confirm your email|Rename profile|New profile|Duplicate profile|Delete profile|Export JSON|Import JSON)/.test(
+        name.trim(),
+      ),
   );
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
@@ -625,7 +635,10 @@ export function generateControl(page: Page): Locator {
 export async function switchProfileNames(page: Page): Promise<string[]> {
   const menu = await openAccountDropdown(page);
   const names = (await menu.getByRole('menuitem').allInnerTexts()).filter(
-    (name) => !/^(Sign in|Signed in as|Sign out|Confirm your email)/.test(name.trim()),
+    (name) =>
+      !/^(Sign in|Signed in as|Sign out|Confirm your email|Rename profile|New profile|Duplicate profile|Delete profile|Export JSON|Import JSON)/.test(
+        name.trim(),
+      ),
   );
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();

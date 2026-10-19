@@ -36,7 +36,7 @@ test('first run shows the default profile and the setup cards', async ({ page })
 
   // The whole profile bar is one menu now, and the save state is one word inside it (design plan §5.2).
   const menu = await openAccountDropdown(page);
-  await expect(menu.getByText('Saved', { exact: true })).toBeVisible();
+  await expect(menu.getByText(/^Saved/)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
 
