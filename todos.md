@@ -77,6 +77,9 @@ EMH6 47
 - Why are some plans so different when activating an army strength boost
 - with the new propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
 - gitbisect the performance improvements to check hte trend over a few cases
+- UI: differentiate menu and login. make it a sane menu bar 
+- UI: if artifacts or titles are active or was open before, keep it open after a refresh or when reopening the site
+- UI: merc search should: focus first result when searching, reset search when validated
 - [done, tight default 1cb2ac9] Tight almost alwyas feels better than as is and no other even compares as they always use more mercs. Lets first check if we cna optimize tight further to get better trades, then lets move it as default; removing the table and other options on the selector; lets keep as is for now, but lets add a hover to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and damage.
 - [done 2026-10-10, Critical 04; 12 units open as B-13] [UI] order troops as they appear in the battle selection. and allow to switch to order by health from hte battle summary.
 - [done 2026-10-10, Critical 01] when logged out and logged in don't import the local profile each time. If possible lets import only if we create an account, lot when logging in. Logging in should just silently overwrite the profile with the account profile. Logging out should just puts us back to a new profile.

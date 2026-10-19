@@ -1,0 +1,746 @@
+[
+ {
+  "knob": "`DEPTHS`",
+  "restriction": "no high — `[1,2,3,4,5]`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 433.722,
+     "cpuMin": 386.389,
+     "wallMed": 219.36661300000014,
+     "wallMin": 204.5285219999996
+    },
+    "restr": {
+     "cpuMed": 524.268,
+     "cpuMin": 310.039,
+     "wallMed": 209.9547620000003,
+     "wallMin": 168.0643630000004
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 963.058,
+     "cpuMin": 685.508,
+     "wallMed": 469.82519200000024,
+     "wallMin": 410.78964199999973
+    },
+    "restr": {
+     "cpuMed": 929.515,
+     "cpuMin": 640.679,
+     "wallMed": 453.12718799999857,
+     "wallMin": 401.9115789999996
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 2129.837,
+     "cpuMin": 1781.542,
+     "wallMed": 1526.7072869999975,
+     "wallMin": 1459.9710650000015
+    },
+    "restr": {
+     "cpuMed": 1877.015,
+     "cpuMin": 1726.339,
+     "wallMed": 1473.8161229999969,
+     "wallMin": 1401.473192999998
+    }
+   }
+  ],
+  "baseCpu": 3526.617,
+  "restrCpu": 3330.798,
+  "savedPct": 5.5526018277573215,
+  "baseCpuMin": 2853.439,
+  "restrCpuMin": 2677.057,
+  "savedMinPct": 6.181383236158196,
+  "poolPct": 2.7816224562711884,
+  "baseWallMin": 2075.289229000001,
+  "restrWallMin": 1971.449134999998,
+  "wallSavedPct": 5.003644434180351,
+  "refusals": []
+ },
+ {
+  "knob": "`DEPTHS`",
+  "restriction": "no low — `[4,5,6,7,8]`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 386.455,
+     "cpuMin": 338.528,
+     "wallMed": 205.51494500000263,
+     "wallMin": 197.85916599999473
+    },
+    "restr": {
+     "cpuMed": 340.442,
+     "cpuMin": 285.815,
+     "wallMed": 166.03170099999988,
+     "wallMin": 157.90452299999015
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 941.764,
+     "cpuMin": 713.531,
+     "wallMed": 449.36850199999753,
+     "wallMin": 412.287227000008
+    },
+    "restr": {
+     "cpuMed": 874.72,
+     "cpuMin": 616.126,
+     "wallMed": 410.27544599999965,
+     "wallMin": 376.28590799999074
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1776.946,
+     "cpuMin": 1722.836,
+     "wallMed": 1464.45753900001,
+     "wallMin": 1419.6875040000014
+    },
+    "restr": {
+     "cpuMed": 1519.675,
+     "cpuMin": 1441.6,
+     "wallMed": 1222.7654800000018,
+     "wallMin": 1171.2520090000035
+    }
+   }
+  ],
+  "baseCpu": 3105.165,
+  "restrCpu": 2734.837,
+  "savedPct": 11.926193938164316,
+  "baseCpuMin": 2774.895,
+  "restrCpuMin": 2343.541,
+  "savedMinPct": 15.544876472803468,
+  "poolPct": 6.995194412761561,
+  "baseWallMin": 2029.833897000004,
+  "restrWallMin": 1705.4424399999843,
+  "wallSavedPct": 15.981182375535976,
+  "refusals": []
+ },
+ {
+  "knob": "`DEPTHS`",
+  "restriction": "middle — `[3,4,5,6]`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 460.848,
+     "cpuMin": 353.08,
+     "wallMed": 212.83759799999825,
+     "wallMin": 199.36261099998956
+    },
+    "restr": {
+     "cpuMed": 324.468,
+     "cpuMin": 283.08,
+     "wallMed": 165.01661399999284,
+     "wallMin": 156.38125900001614
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 746.164,
+     "cpuMin": 610.915,
+     "wallMed": 424.8235459999996,
+     "wallMin": 397.5413460000127
+    },
+    "restr": {
+     "cpuMed": 584.963,
+     "cpuMin": 527.776,
+     "wallMed": 359.20587999999407,
+     "wallMin": 349.7241259999864
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1747.126,
+     "cpuMin": 1677.701,
+     "wallMed": 1430.1795270000002,
+     "wallMin": 1397.904692000011
+    },
+    "restr": {
+     "cpuMed": 1757.702,
+     "cpuMin": 1698.193,
+     "wallMed": 1408.9542789999978,
+     "wallMin": 1374.848324999999
+    }
+   }
+  ],
+  "baseCpu": 2954.138,
+  "restrCpu": 2667.133,
+  "savedPct": 9.715355206831912,
+  "baseCpuMin": 2641.696,
+  "restrCpuMin": 2509.049,
+  "savedMinPct": 5.02128178261238,
+  "poolPct": 2.2595768021755713,
+  "baseWallMin": 1994.8086490000132,
+  "restrWallMin": 1880.9537100000016,
+  "wallSavedPct": 5.70756192866351,
+  "refusals": []
+ },
+ {
+  "knob": "`LADDER_GROWTHS`",
+  "restriction": "every other — `[1,1.5,2.2,4,6]`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 424.125,
+     "cpuMin": 372.688,
+     "wallMed": 205.64281000001938,
+     "wallMin": 194.7567740000086
+    },
+    "restr": {
+     "cpuMed": 361.571,
+     "cpuMin": 304.257,
+     "wallMed": 180.44541099999333,
+     "wallMin": 168.70868099998916
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 912.118,
+     "cpuMin": 624.851,
+     "wallMed": 439.5600689999992,
+     "wallMin": 385.591711999994
+    },
+    "restr": {
+     "cpuMed": 869.795,
+     "cpuMin": 663.379,
+     "wallMed": 410.0093250000209,
+     "wallMin": 370.737043000001
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1810.307,
+     "cpuMin": 1703.744,
+     "wallMed": 1428.7316569999966,
+     "wallMin": 1390.2714170000108
+    },
+    "restr": {
+     "cpuMed": 1731.255,
+     "cpuMin": 1650.002,
+     "wallMed": 1372.5026039999793,
+     "wallMin": 1336.3309149999986
+    }
+   }
+  ],
+  "baseCpu": 3146.55,
+  "restrCpu": 2962.621,
+  "savedPct": 5.845417997489316,
+  "baseCpuMin": 2701.283,
+  "restrCpuMin": 2617.638,
+  "savedMinPct": 3.0964915560494766,
+  "poolPct": 1.3934212002222646,
+  "baseWallMin": 1970.6199030000134,
+  "restrWallMin": 1875.7766389999888,
+  "wallSavedPct": 4.812864411631998,
+  "refusals": []
+ },
+ {
+  "knob": "`SIZER_DEPTHS`",
+  "restriction": "drop `msRelaxed`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 388.605,
+     "cpuMin": 355.649,
+     "wallMed": 203.35450300000957,
+     "wallMin": 195.53772299998673
+    },
+    "restr": {
+     "cpuMed": 347.399,
+     "cpuMin": 315.617,
+     "wallMed": 173.9468919999781,
+     "wallMin": 164.98986400000285
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 932.615,
+     "cpuMin": 649.255,
+     "wallMed": 445.4065919999848,
+     "wallMin": 398.85496999998577
+    },
+    "restr": {
+     "cpuMed": 843.736,
+     "cpuMin": 640.335,
+     "wallMed": 388.6132980000111,
+     "wallMin": 348.94310899998527
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1780.959,
+     "cpuMin": 1735.016,
+     "wallMed": 1422.5051170000224,
+     "wallMin": 1396.7420189999975
+    },
+    "restr": {
+     "cpuMed": 1167.319,
+     "cpuMin": 795.226,
+     "wallMed": 570.0474019999965,
+     "wallMin": 523.8998920000158
+    }
+   }
+  ],
+  "baseCpu": 3102.179,
+  "restrCpu": 2358.4539999999997,
+  "savedPct": 23.974277435312416,
+  "baseCpuMin": 2739.92,
+  "restrCpuMin": 1751.1779999999999,
+  "savedMinPct": 36.08652807381238,
+  "poolPct": 16.23893763321557,
+  "baseWallMin": 1991.13471199997,
+  "restrWallMin": 1037.832865000004,
+  "wallSavedPct": 47.8773154450426,
+  "refusals": []
+ },
+ {
+  "knob": "`SIZER_DEPTHS`",
+  "restriction": "drop `ms`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 400.654,
+     "cpuMin": 356.545,
+     "wallMed": 200.9620569999679,
+     "wallMin": 192.0464969999739
+    },
+    "restr": {
+     "cpuMed": 358.014,
+     "cpuMin": 307.499,
+     "wallMed": 182.25486599997384,
+     "wallMin": 178.2363030000124
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 924.672,
+     "cpuMin": 655.04,
+     "wallMed": 441.50396800000453,
+     "wallMin": 394.76221800001804
+    },
+    "restr": {
+     "cpuMed": 863.842,
+     "cpuMin": 588.644,
+     "wallMed": 394.5367569999653,
+     "wallMin": 346.8908909999882
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1782.711,
+     "cpuMin": 1727.155,
+     "wallMed": 1425.0172059999895,
+     "wallMin": 1402.6658709999756
+    },
+    "restr": {
+     "cpuMed": 1672.299,
+     "cpuMin": 1611.721,
+     "wallMed": 1332.3001059999806,
+     "wallMin": 1313.3788780000177
+    }
+   }
+  ],
+  "baseCpu": 3108.0370000000003,
+  "restrCpu": 2894.1549999999997,
+  "savedPct": 6.881578308108962,
+  "baseCpuMin": 2738.74,
+  "restrCpuMin": 2507.864,
+  "savedMinPct": 8.430007959864746,
+  "poolPct": 3.793503581939136,
+  "baseWallMin": 1989.4745859999675,
+  "restrWallMin": 1838.5060720000183,
+  "wallSavedPct": 7.588361020659535,
+  "refusals": []
+ },
+ {
+  "knob": "`SIZER_DEPTHS`",
+  "restriction": "drop `elite`",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 650.34,
+     "cpuMin": 339.296,
+     "wallMed": 237.1615650000167,
+     "wallMin": 196.13486400002148
+    },
+    "restr": {
+     "cpuMed": 371.862,
+     "cpuMin": 311.503,
+     "wallMed": 180.1694590000552,
+     "wallMin": 171.67245699994965
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 899.259,
+     "cpuMin": 608.822,
+     "wallMed": 437.05375099997036,
+     "wallMin": 383.06543099996634
+    },
+    "restr": {
+     "cpuMed": 841.866,
+     "cpuMin": 615.277,
+     "wallMed": 383.8758679999737,
+     "wallMin": 335.2274360000156
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1783.347,
+     "cpuMin": 1722.693,
+     "wallMed": 1419.740399000002,
+     "wallMin": 1396.556540999969
+    },
+    "restr": {
+     "cpuMed": 1636.815,
+     "cpuMin": 1593.616,
+     "wallMed": 1308.6923890000326,
+     "wallMin": 1292.9558949999628
+    }
+   }
+  ],
+  "baseCpu": 3332.946,
+  "restrCpu": 2850.543,
+  "savedPct": 14.47377185228923,
+  "baseCpuMin": 2670.8109999999997,
+  "restrCpuMin": 2520.3959999999997,
+  "savedMinPct": 5.631809963340722,
+  "poolPct": 2.534314483503325,
+  "baseWallMin": 1975.7568359999568,
+  "restrWallMin": 1799.855787999928,
+  "wallSavedPct": 8.902970486800971,
+  "refusals": []
+ },
+ {
+  "knob": "`WINNER_RUNGS_DEPTH`",
+  "restriction": "winner-rungs shape off",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 615.473,
+     "cpuMin": 371.549,
+     "wallMed": 239.13221700000577,
+     "wallMin": 196.37242699996568
+    },
+    "restr": {
+     "cpuMed": 412.288,
+     "cpuMin": 337.781,
+     "wallMed": 205.28718299994944,
+     "wallMin": 196.20210499997484
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 926.08,
+     "cpuMin": 685.934,
+     "wallMed": 441.5854839999811,
+     "wallMin": 391.8408059999929
+    },
+    "restr": {
+     "cpuMed": 906.684,
+     "cpuMin": 674.764,
+     "wallMed": 439.39004199998453,
+     "wallMin": 401.43499899999006
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1831.979,
+     "cpuMin": 1703.539,
+     "wallMed": 1464.7813339999993,
+     "wallMin": 1406.125262000016
+    },
+    "restr": {
+     "cpuMed": 1872.541,
+     "cpuMin": 1760.69,
+     "wallMed": 1482.631686000037,
+     "wallMin": 1423.660556000017
+    }
+   }
+  ],
+  "baseCpu": 3373.532,
+  "restrCpu": 3191.513,
+  "savedPct": 5.39550239926582,
+  "baseCpuMin": 2761.022,
+  "restrCpuMin": 2773.235,
+  "savedMinPct": -0.4423362073898793,
+  "poolPct": -0.1990512933254457,
+  "baseWallMin": 1994.3384949999745,
+  "restrWallMin": 2021.297659999982,
+  "wallSavedPct": -1.3517848182541266,
+  "refusals": []
+ },
+ {
+  "knob": "`PLAN_LIMITS.climbRounds`",
+  "restriction": "32 → 16",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 423.649,
+     "cpuMin": 361.987,
+     "wallMed": 207.13117199996486,
+     "wallMin": 200.87451399996644
+    },
+    "restr": {
+     "cpuMed": 633.467,
+     "cpuMin": 345.106,
+     "wallMed": 238.73764700000174,
+     "wallMin": 198.07257499999832
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 939.368,
+     "cpuMin": 589.453,
+     "wallMed": 453.31689799996093,
+     "wallMin": 391.4724720000522
+    },
+    "restr": {
+     "cpuMed": 859.87,
+     "cpuMin": 574.481,
+     "wallMed": 384.4527559999842,
+     "wallMin": 337.0076779999654
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1887.067,
+     "cpuMin": 1789.803,
+     "wallMed": 1491.3579929999541,
+     "wallMin": 1450.6057150000706
+    },
+    "restr": {
+     "cpuMed": 1452.209,
+     "cpuMin": 1369.664,
+     "wallMed": 1124.8171339999535,
+     "wallMin": 1098.4734129999997
+    }
+   }
+  ],
+  "baseCpu": 3250.084,
+  "restrCpu": 2945.5460000000003,
+  "savedPct": 9.370157817459473,
+  "baseCpuMin": 2741.2430000000004,
+  "restrCpuMin": 2289.251,
+  "savedMinPct": 16.488578356606844,
+  "poolPct": 7.41986026047308,
+  "baseWallMin": 2042.9527010000893,
+  "restrWallMin": 1633.5536659999634,
+  "wallSavedPct": 20.03957481735687,
+  "refusals": []
+ },
+ {
+  "knob": "`PLAN_LIMITS.climbRounds`",
+  "restriction": "32 → 8",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 397.57,
+     "cpuMin": 345.166,
+     "wallMed": 213.4292569999816,
+     "wallMin": 199.43056099989917
+    },
+    "restr": {
+     "cpuMed": 463.78,
+     "cpuMin": 367.177,
+     "wallMed": 220.44140800007153,
+     "wallMin": 207.9924330000067
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 964.243,
+     "cpuMin": 692.488,
+     "wallMed": 459.5263000000268,
+     "wallMin": 409.1537900000112
+    },
+    "restr": {
+     "cpuMed": 829.87,
+     "cpuMin": 577.843,
+     "wallMed": 355.6793449999532,
+     "wallMin": 322.05955999996513
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1882.185,
+     "cpuMin": 1799.734,
+     "wallMed": 1486.105038000038,
+     "wallMin": 1452.8181430000113
+    },
+    "restr": {
+     "cpuMed": 1532.858,
+     "cpuMin": 1321.8,
+     "wallMed": 1009.9361280000303,
+     "wallMin": 981.7474269999657
+    }
+   }
+  ],
+  "baseCpu": 3243.998,
+  "restrCpu": 2826.508,
+  "savedPct": 12.869613359810955,
+  "baseCpuMin": 2837.388,
+  "restrCpuMin": 2266.8199999999997,
+  "savedMinPct": 20.108917074436075,
+  "poolPct": 9.049012683496233,
+  "baseWallMin": 2061.4024939999217,
+  "restrWallMin": 1511.7994199999375,
+  "wallSavedPct": 26.661609054985703,
+  "refusals": []
+ },
+ {
+  "knob": "`PLAN_LIMITS.climbSeeds`",
+  "restriction": "8 → 4",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 410.595,
+     "cpuMin": 329.326,
+     "wallMed": 215.36526300001424,
+     "wallMin": 200.83008699992206
+    },
+    "restr": {
+     "cpuMed": 426.913,
+     "cpuMin": 369.762,
+     "wallMed": 212.7093889999669,
+     "wallMin": 206.17199099995196
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 950.678,
+     "cpuMin": 681.922,
+     "wallMed": 455.4939680000534,
+     "wallMin": 408.7323059999617
+    },
+    "restr": {
+     "cpuMed": 963.282,
+     "cpuMin": 777.384,
+     "wallMed": 459.92087799997535,
+     "wallMin": 435.3680089999689
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 2177.772,
+     "cpuMin": 1777.305,
+     "wallMed": 1520.3555860000197,
+     "wallMin": 1418.704822999891
+    },
+    "restr": {
+     "cpuMed": 1850.204,
+     "cpuMin": 1748.977,
+     "wallMed": 1470.089709999971,
+     "wallMin": 1425.355387999909
+    }
+   }
+  ],
+  "baseCpu": 3539.045,
+  "restrCpu": 3240.3990000000003,
+  "savedPct": 8.438604199720539,
+  "baseCpuMin": 2788.553,
+  "restrCpuMin": 2896.123,
+  "savedMinPct": -3.857556230776326,
+  "poolPct": -1.7359003038493466,
+  "baseWallMin": 2028.2672159997746,
+  "restrWallMin": 2066.89538799983,
+  "wallSavedPct": -1.9044912669958323,
+  "refusals": []
+ },
+ {
+  "knob": "`PLAN_LIMITS.sweepRounds`",
+  "restriction": "16 → 8",
+  "perArmy": [
+   {
+    "name": "owner-live pyrrhic-my-account-2026-10-11.json",
+    "base": {
+     "cpuMed": 400.792,
+     "cpuMin": 332.446,
+     "wallMed": 202.82937199994922,
+     "wallMin": 194.40492100000847
+    },
+    "restr": {
+     "cpuMed": 422.205,
+     "cpuMin": 342.531,
+     "wallMed": 208.44095600000583,
+     "wallMin": 193.36601300002076
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
+    "base": {
+     "cpuMed": 914.624,
+     "cpuMin": 611.666,
+     "wallMed": 447.4588480000384,
+     "wallMin": 386.55529299995396
+    },
+    "restr": {
+     "cpuMed": 929.237,
+     "cpuMin": 604.344,
+     "wallMed": 445.4125589999603,
+     "wallMin": 392.4338079999434
+    }
+   },
+   {
+    "name": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
+    "base": {
+     "cpuMed": 1809.822,
+     "cpuMin": 1767.593,
+     "wallMed": 1442.8852810000535,
+     "wallMin": 1411.3903520000167
+    },
+    "restr": {
+     "cpuMed": 1778.065,
+     "cpuMin": 1721.336,
+     "wallMed": 1431.827226000023,
+     "wallMin": 1404.8255099999951
+    }
+   }
+  ],
+  "baseCpu": 3125.238,
+  "restrCpu": 3129.507,
+  "savedPct": -0.13659759672704072,
+  "baseCpuMin": 2711.705,
+  "restrCpuMin": 2668.2110000000002,
+  "savedMinPct": 1.60393553133544,
+  "poolPct": 0.7217709891009481,
+  "baseWallMin": 1992.3505659999792,
+  "restrWallMin": 1990.6253309999593,
+  "wallSavedPct": 0.08659294350409572,
+  "refusals": []
+ }
+]

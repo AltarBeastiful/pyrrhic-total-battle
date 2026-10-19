@@ -8,7 +8,7 @@ related: ['[[00-inventory]]', '[[01-relevant]]', '[[03-needs-owner]]', '[[progre
 
 # Backlog
 
-Thirteen items: twelve refined from the ideas in `todos.md` that triage (see `triage/README.md`) marked `relevant` or `partly-done`, and B-13, which came from the Critical 04 troop order. Nothing here is implemented. The owner picks which become stories and in what order. Rule numbers refer to [[design-rules]]. Every engine item carries two standing criteria: the benchmark rating does not regress, and tests pass on the kernel path.
+Eighteen items: twelve refined from the ideas in `todos.md` that triage (see `triage/README.md`) marked `relevant` or `partly-done`, B-13, which came from the Critical 04 troop order, and B-14 to B-18, the 2026-10-19 UI grilling (merc keyboard flow, Bonuses fold, bar split). Nothing here is implemented. The owner picks which become stories and in what order. Rule numbers refer to [[design-rules]]. Every engine item carries two standing criteria: the benchmark rating does not regress, and tests pass on the kernel path.
 
 ## Status since the first review (2026-10-10 review)
 
@@ -39,6 +39,11 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 8 | [[B-04-merc-fill-button]] | Per-stack merc fill button | M | the manual alternative to B-03 | B-03 decision, design artifact |
 | 9 | [[B-05-fewer-monsters-option]] | Fewer monsters option | M | needs a rating decision (T-24) | owner |
 | 10 | [[B-12-equipment-revamp]] | Equipment revamp | L | biggest, needs T-21 | owner T-21, design artifact |
+| 11 | [[B-14-merc-search-keyboard]] | Merc search: highlight, hire, clear, stay open | S | UI polish, no blocker | none |
+| 12 | [[B-15-merc-quantity-pill-keyboard]] | Merc quantity pills: keyboard flow | S | follows B-14 | B-14 |
+| 13 | [[B-16-bonuses-open-when-active]] | Artifacts and Titles open when something is active | S | cheap, no blocker | none |
+| 14 | [[B-17-account-icon-dropdown]] | Account icon with its own dropdown | M | first half of the bar split | none |
+| 15 | [[B-18-menu-dropdown]] | Menu dropdown on the left of the bar | M | second half of the bar split | B-17 |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 
