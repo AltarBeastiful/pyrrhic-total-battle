@@ -602,11 +602,11 @@ test('B-16: a fold left open stays open after a remount with nothing active', ()
 
 test('B-16: collapsing an active fold by hand holds for the session, and the document never carries it', () => {
   useStore.getState().updateActiveSetup((s) => ({ active: { ...s.active, titles: ['some-title'] } }));
-  const before = JSON.stringify(useStore.getState().root);
+  const before = JSON.stringify(useStore.getState().doc);
   renderWithTheme(<BonusesSection />);
   fireEvent.click(foldControl('Titles'));
   expect(isOpen('Titles')).toBe(false);
-  expect(JSON.stringify(useStore.getState().root)).toBe(before);
+  expect(JSON.stringify(useStore.getState().doc)).toBe(before);
 });
 
 test('B-16: a document that arrives after mount with an active title opens Titles', () => {
