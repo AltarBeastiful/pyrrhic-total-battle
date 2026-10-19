@@ -31,6 +31,7 @@ import {
   pushedOn,
   raisedCounts,
   roundedCounts,
+  offersRound,
   shelterCeiling,
   troopFloor,
 } from './raise';
@@ -734,6 +735,22 @@ test('the button is hidden where the push adds nothing or buys no damage', () =>
   expect(offersPush({ damage: 1_253_159, before: 1_148_381, lost: 2, total: 2 }, false)).toBe(true);
   // And a pool standing pushed keeps its mark whatever the trade reads: the press is the only way back.
   expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2, total: 2 }, true)).toBe(true);
+});
+
+test('the 10 mark is drawn for a gain, or for a small loss that saves mercs, and for a pool standing rounded', () => {
+  expect(offersRound(null, false)).toBe(false);
+  // A gain, whatever it costs in mercs.
+  expect(offersRound({ damage: 1_100_000, before: 1_000_000, lost: 3, total: 9 }, false)).toBe(true);
+  // A loss within 3 % that saves mercs (More mercs on the owner's account: −2 %, one merc).
+  expect(offersRound({ damage: 980_000, before: 1_000_000, lost: -1, total: 9 }, false)).toBe(true);
+  // A wash that saves mercs is the same trade; a wash that saves none is nothing.
+  expect(offersRound({ damage: 1_000_000, before: 1_000_000, lost: -1, total: 9 }, false)).toBe(true);
+  expect(offersRound({ damage: 1_000_000, before: 1_000_000, lost: 0, total: 9 }, false)).toBe(false);
+  // A loss past the line, or a loss that saves nothing, is not offered.
+  expect(offersRound({ damage: 940_000, before: 1_000_000, lost: -1, total: 9 }, false)).toBe(false);
+  expect(offersRound({ damage: 990_000, before: 1_000_000, lost: 1, total: 9 }, false)).toBe(false);
+  // Standing pressed, the press is the only way back.
+  expect(offersRound({ damage: 940_000, before: 1_000_000, lost: -1, total: 9 }, true)).toBe(true);
 });
 
 /**

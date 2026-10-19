@@ -34,6 +34,11 @@ export interface PushOffer {
   pressed: boolean;
   /** The trade the push offers, or `null` when it would add nothing here — the state the button is hidden in. */
   trade: PushTrade | null;
+  /**
+   * A rounding only: the pool had nothing to round, so the press **pushes it and lands the push in tens** (owner,
+   * 2026-10-19), and the button says so.
+   */
+  pushes?: boolean;
 }
 
 /** The kernel's Tight under a ceiling, per march, held so a render asks it once (`useMarch`'s last resort). */
@@ -331,19 +336,32 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
      * the first, so the kill order the second keeps is the one the first left.
      */
     const byHand = new Set(Object.keys(counts));
+    /**
+     * **One pool's rounding over a march** — and, where the pool has nothing to round and no push stands on it (its
+     * stacks are already in tens), **the push landed in tens** (owner, 2026-10-19: the 10 mark is offered wherever the
+     * push is). `pushes` says which one this is, for the button's name.
+     */
+    const roundingOf = (
+      pool: RaisedPool,
+      march: StackResult,
+      composedNow: Record<string, number>,
+    ): { moves: Record<string, number>; pushes: boolean } | null => {
+      const moves = roundedCounts(snapshot.request, snapshot.result, march, composedNow, pool, byHand);
+      if (moves !== null) return { moves, pushes: false };
+      if (standing.includes(pool)) return null;
+      const lifted = pushedCounts(snapshot.request, march, [pool], burnCap);
+      if (lifted === null) return null;
+      const pushedNow = { ...composedNow, ...lifted };
+      const landed = applyCounts(snapshot.request, snapshot.result, pushedNow).result;
+      const inTens = roundedCounts(snapshot.request, snapshot.result, landed, pushedNow, pool, byHand);
+      return { moves: { ...lifted, ...(inTens ?? {}) }, pushes: true };
+    };
     let roundedMoves: Record<string, number> | null = null;
     let roundedMarch = beforeRound;
     for (const pool of canRaise ? pushedOn(rounded) : []) {
-      const moves = roundedCounts(
-        snapshot.request,
-        snapshot.result,
-        roundedMarch,
-        { ...composed, ...(roundedMoves ?? {}) },
-        pool,
-        byHand,
-      );
-      if (moves === null) continue;
-      roundedMoves = { ...(roundedMoves ?? {}), ...moves };
+      const rounding = roundingOf(pool, roundedMarch, { ...composed, ...(roundedMoves ?? {}) });
+      if (rounding === null) continue;
+      roundedMoves = { ...(roundedMoves ?? {}), ...rounding.moves };
       roundedMarch = applyCounts(snapshot.request, snapshot.result, { ...composed, ...roundedMoves }).result;
     }
     const edits =
@@ -405,8 +423,9 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
       if (!canRaise) return null;
       if (!beforeRound.stacks.some((stack) => stack.pool === pool && stack.count > 0)) return null;
       const pressed = rounded[pool];
-      const moved = roundedCounts(snapshot.request, snapshot.result, beforeRound, composed, pool, byHand);
-      if (moved === null) return { pressed, trade: null };
+      const rounding = roundingOf(pool, beforeRound, composed);
+      if (rounding === null) return { pressed, trade: null };
+      const moved = rounding.moves;
       const after = applyCounts(snapshot.request, snapshot.result, { ...composed, ...moved, ...counts });
       const lostOf = (stacks: readonly Stack[]): number =>
         pool === 'authority'
@@ -420,6 +439,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
           lost: lostOf(after.result.stacks) - lostOf(beforeRound.stacks),
           total: lostOf(after.result.stacks),
         },
+        ...(rounding.pushes ? { pushes: true } : {}),
       };
     };
     const round: Record<RaisedPool, PushOffer | null> = {

@@ -46,7 +46,7 @@ import { amount, bonusLines, compact, signedCompact, signedPercent } from './for
 import classes from './march.module.css';
 import { RAISE_CHOICES } from './choices';
 import type { PositionReading, PositionTrades } from './positions';
-import { isExhaustive, offersPush, raisesPool } from './raise';
+import { isExhaustive, offersPush, offersRound, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
@@ -357,10 +357,10 @@ export function MarchPushControl({
    * a number two blocks up the same screen already answers (`MarchRecap`), and rule 5 is one figure in one place.
    */
   const adds = trade === null ? '0' : signedCompact(trade.damage - trade.before);
+  // **The change in what cannot be revived, never the march's total** (owner, 2026-10-20), signed like the rounding's.
+  const pushLost = trade === null ? '0' : `${trade.lost >= 0 ? '+' : '−'}${amount(Math.abs(trade.lost))}`;
   const figures =
-    trade === null
-      ? ''
-      : `: ${adds} damage, ${signedPercent(gain)}, ${amount(trade.lost)} ${POOL_NOUN[pool]} lost`;
+    trade === null ? '' : `: ${adds} damage, ${signedPercent(gain)}, ${pushLost} ${POOL_NOUN[pool]} lost`;
   const name = offer.pressed
     ? `Take the push off ${POOL_NOUN[pool]}${figures}.${reopens ? ` ${REOPENS_NOTE}` : ''}`
     : `Push ${POOL_NOUN[pool]} to the most the kill order allows${figures}.`;
@@ -382,7 +382,7 @@ export function MarchPushControl({
               <Group gap={6} wrap="nowrap">
                 <Glyph kind={pool} />
                 <Text span size="xs">
-                  {`${amount(trade.total)} ${POOL_NOUN[pool]} lost +${amount(trade.lost)}`}
+                  {`${pushLost} ${POOL_NOUN[pool]} lost`}
                 </Text>
               </Group>
             </>
@@ -438,8 +438,10 @@ export function MarchRoundControl({
   const lost = `${trade.lost >= 0 ? '+' : '−'}${amount(Math.abs(trade.lost))}`;
   const figures = `: ${adds} damage, ${signedPercent(gain)}, ${lost} ${POOL_NOUN[pool]} lost`;
   const name = offer.pressed
-    ? `Take the rounding off ${POOL_NOUN[pool]}${figures}.${reopens ? ` ${REOPENS_NOTE}` : ''}`
-    : `Round ${POOL_NOUN[pool]} to tens, up or down by the best trade${figures}.`;
+    ? `Take the ${offer.pushes === true ? 'push to tens' : 'rounding'} off ${POOL_NOUN[pool]}${figures}.${reopens ? ` ${REOPENS_NOTE}` : ''}`
+    : offer.pushes === true
+      ? `Push ${POOL_NOUN[pool]} and land in tens${figures}.`
+      : `Round ${POOL_NOUN[pool]} to tens, up or down by the best trade${figures}.`;
   return (
     <Tooltip
       label={
@@ -594,7 +596,7 @@ export function MarchPills({
                     }}
                   />
                 )}
-                {pool !== null && rounding !== null && rounding.trade !== null && (
+                {pool !== null && rounding !== null && offersRound(rounding.trade, rounding.pressed) && (
                   <MarchRoundControl
                     pool={pool}
                     offer={rounding}

@@ -2433,7 +2433,7 @@ test('the push sits on the hired pool’s own line, and a press keeps the kill o
   // the damage it buys and the **stock** it spends (owner, 2026-10-12: *"it should be additional merc lost (that
   // cannot be revived)"*), not the units fielded.
   expect(pushButton().getAttribute('aria-label')).toMatch(
-    /^Push mercs to the most the kill order allows: \+[\d.]+[KM]? damage, \+[\d.]+%, [\d,]+ mercs lost\.$/,
+    /^Push mercs to the most the kill order allows: \+[\d.]+[KM]? damage, \+[\d.]+%, \+[\d,]+ mercs lost\.$/,
   );
   expect(pushButton().getAttribute('aria-pressed')).toBe('false');
   // The plan fields no monster and the pool has no room for one, so its line draws no mark at all.
@@ -2479,7 +2479,8 @@ test('the tooltip says the damage the push adds, and the mercenaries lost for go
   // **What the push adds, and never the march's total** (owner, 2026-10-12): the damage figure on this line is a
   // signed addition, and the percentage beside it is the same addition read against the march on screen.
   expect(tip.textContent).toMatch(/Damage \+[\d.]+[KM]?\s*\+[\d.]+%/);
-  expect(tip.textContent).toMatch(/[\d,]+ mercs lost \+[\d,]+/);
+  expect(tip.textContent).toMatch(/\+[\d,]+ mercs lost/);
+  expect(tip.textContent).not.toMatch(/\d mercs lost \+/);
 });
 
 test('the push is a plan’s own control, and a sizer’s march draws neither it nor the raise', async () => {

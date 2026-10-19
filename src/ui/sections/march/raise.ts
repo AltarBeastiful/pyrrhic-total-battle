@@ -611,6 +611,25 @@ export function offersPush(trade: PushTrade | null, pressed: boolean): boolean {
 }
 
 /**
+ * **The most damage a rounding may cost and still be offered, when it saves mercs** (owner, 2026-10-19: *"sometimes
+ * a trade — a small loss of damage while saving more mercs — is also interesting"*). A share of the march's worst
+ * opening: 3 % is the line between the trades the 10 mark was drawn for (−2 % for 1 merc saved on More mercs) and the ones it
+ * was not (−5 % to −8 % for the same merc).
+ */
+export const ROUND_LOSS_TOLERANCE = 0.03;
+
+/**
+ * **Whether the 10 mark is drawn for this trade**: it buys damage, or it saves mercs for a loss of damage within
+ * `ROUND_LOSS_TOLERANCE` (and a wash that saves mercs is such a trade). A pool standing rounded keeps its mark,
+ * as a pushed one does (`offersPush`): the press is the only way back.
+ */
+export function offersRound(trade: PushTrade | null, pressed: boolean): boolean {
+  if (trade === null) return false;
+  if (pressed || trade.damage > trade.before) return true;
+  return trade.lost < 0 && trade.before - trade.damage <= trade.before * ROUND_LOSS_TOLERANCE;
+}
+
+/**
  * **Every stack of one hired pool rounded to a ten, up or down, whichever trade is best** (owner, 2026-10-16:
  * *"round to ten going upwards or downwards depending on the best trade. same properties as the other
  * button"*). The push's own sibling at the end of the pool line, and a standing rule of the same species
