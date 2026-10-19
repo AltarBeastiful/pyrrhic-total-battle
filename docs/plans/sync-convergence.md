@@ -40,17 +40,25 @@ it looked related to deletion. It is not the deletion itself.
    by id (order ignored), tombstones by id and `deletedAt`, and each profile by canonical JSON
    (keys sorted). A change of order alone is never a reason to push.
 3. **Order is a display matter.** Profile order is whatever each device shows. If a shared order
-   is wanted later it needs its own field; the merge must not invent one.
+   is wanted later it needs its own field and its own merge rule (last-writer-wins on an ordered
+   id list); the merge must not invent one. Known non-feature: nothing is reserved in the schema.
 4. **A merge that changes nothing is not an edit.** If `merge(local, remote)` equals `remote`
    by (2), the device adopts `remoteVersion` and goes to `saved` without a request.
 5. **Loop guard.** If a device has pushed N times (say 5) in a minute with no local edit between
    them, it stops, shows "Sync paused: this account keeps changing from another device", and
    waits for the next edit or a manual retry. A defence, not the fix; it should never fire once
    (1)–(4) hold, and its trigger is logged to the console so it is noticed if it does.
+   A push that carries remote changes the pull just merged in is not editless and resets the
+   count, so a burst of legitimate remote edits never trips it; only saves that merely repeat the
+   remote content already seen count. The counter is per tab, in memory.
 6. **429 is a pause, not an error state that retries instantly.** Honour `Retry-After` when the
    server sends it, else back off 5 s, 15 s, 60 s. The document stays dirty meanwhile.
-7. **Own echoes are ignored.** A realtime event whose `updatedBy` is this `deviceId` never starts
-   a pull (today the version check can lose a race with the push response).
+7. **Own echoes are ignored.** A realtime event whose `updatedBy` is this tab's origin never
+   starts a pull (today the version check can lose a race with the push response). The origin is
+   `deviceId/tabId`, sent in the existing `deviceId` field and stored in `updatedBy` (100
+   characters, no server change): tabs of one browser share a `deviceId`, so the device alone
+   dropped one tab's save from the other. The tab id is new on every page load, in memory only. A
+   client that names only its device is never taken for this tab, so its saves are pulled.
 
 ## Tests (red first, on the current code)
 

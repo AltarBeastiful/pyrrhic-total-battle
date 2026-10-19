@@ -11,7 +11,7 @@ import { newRoot } from '@/state/defaults';
 
 import { resetClient } from './client';
 import { FakeResponseError, onRequest, resetFakePocketBase } from './fixtures';
-import { pull, push } from './sync';
+import { originOf, pull, push } from './sync';
 
 vi.mock('pocketbase', async () => {
   const { FakePocketBase, FakeAuthStore } = await import('./fixtures');
@@ -83,7 +83,11 @@ test('push sends the raw token, the whole document and the next version', async 
   const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
   expect(url).toBe('https://backend.test/api/app/profile');
   expect((init.headers as Record<string, string>).Authorization).toBe('raw-token');
-  expect(JSON.parse(String(init.body))).toEqual({ data: document, version: 4, deviceId: 'device-1' });
+  expect(JSON.parse(String(init.body))).toEqual({
+    data: document,
+    version: 4,
+    deviceId: originOf('device-1'),
+  });
 });
 
 test('the first save of an account sends version 1', async () => {

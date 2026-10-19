@@ -287,15 +287,15 @@ test('sameContent ignores the order of profiles, tombstones and section stamps',
   ];
   const one: RootDocument = {
     ...phone,
-    profiles: [stamped(first, ['troops', 'bonuses']), second],
+    profiles: [stamped(first, ['troops', 'settings']), second],
     tombstones: tombs,
   };
   const other: RootDocument = {
     ...phone,
-    profiles: [second, { ...first, sectionUpdatedAt: { bonuses: 2, troops: 1 } }],
+    profiles: [second, { ...first, sectionUpdatedAt: { settings: 2, troops: 1 } }],
     tombstones: [...tombs].reverse(),
   };
-  // `bonuses`→2, `troops`→1 in `other`; in `one` troops→1, bonuses→2: same values, other key order.
+  // `settings`→2, `troops`→1 in `other`; in `one` troops→1, settings→2: same values, other key order.
   expect(sameContent(one, other)).toBe(true);
   expect(sameContent(other, one)).toBe(true);
 });

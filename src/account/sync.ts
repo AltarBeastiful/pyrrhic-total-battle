@@ -60,6 +60,20 @@ export async function pull(): Promise<RemoteProfile | null> {
 }
 
 /**
+ * This page load's own id. Tabs of one browser share a `deviceId`, so the device alone cannot tell
+ * one tab's save from another's; the tab id, held in memory and new on every load, can.
+ */
+const TAB_ID = crypto.randomUUID();
+
+/**
+ * Who a save came from, as the server stores it in `updatedBy` (100 characters, free text):
+ * `deviceId/tabId`. A client that names only its device is never taken for this tab.
+ */
+export function originOf(deviceId: string): string {
+  return `${deviceId}/${TAB_ID}`;
+}
+
+/**
  * Overwrite the account's blob. `baseVersion` is the version this device last saw; the request
  * carries `baseVersion + 1`, which is what makes a second device's save a conflict rather than a
  * silent overwrite.
@@ -80,7 +94,7 @@ export async function push(
   }
 
   const version = baseVersion + 1;
-  const body = JSON.stringify({ data: document, version, deviceId });
+  const body = JSON.stringify({ data: document, version, deviceId: originOf(deviceId) });
   let response: Response;
   try {
     response = await fetch(`${backendOrigin()}${PROFILE_ENDPOINT}`, {

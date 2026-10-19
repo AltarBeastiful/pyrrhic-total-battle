@@ -25,6 +25,7 @@ import {
   resetFakePocketBase,
 } from './fixtures';
 import { AUTOSAVE_MS, resetAccountModule, trackAccountChanges, useAccountStore } from './state';
+import { originOf } from './sync';
 
 vi.mock('pocketbase', async () => {
   const { FakePocketBase, FakeAuthStore } = await import('./fixtures');
@@ -515,12 +516,64 @@ test('this device’s own save, echoed over realtime before the answer arrives, 
   await vi.waitFor(() => {
     expect(server?.version).toBeGreaterThan(useAccountStore.getState().remoteVersion);
   });
-  emitRealtime({ version: server?.version, updatedBy: useAccountStore.getState().deviceId });
+  emitRealtime({ version: server?.version, updatedBy: originOf(useAccountStore.getState().deviceId) });
   release();
   await saving;
 
   expect(pulls()).toBe(before);
   expect(useAccountStore.getState().remoteVersion).toBe(server?.version);
+});
+
+test('a save from another tab of this same browser is pulled, not taken for an echo', async () => {
+  renameActive('Main');
+  await signUp();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  anotherDeviceAdds('From tab B');
+  const before = pulls();
+
+  emitRealtime({ version: server?.version, updatedBy: `${useAccountStore.getState().deviceId}/another-tab` });
+
+  await vi.waitFor(() => {
+    expect(pulls()).toBe(before + 1);
+  });
+  await vi.waitFor(() => {
+    expect(names()).toContain('From tab B');
+  });
+});
+
+test('a save from an older client, which names only its device, is pulled', async () => {
+  renameActive('Main');
+  await signUp();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  anotherDeviceAdds('From old client');
+  const before = pulls();
+
+  emitRealtime({ version: server?.version, updatedBy: useAccountStore.getState().deviceId });
+
+  await vi.waitFor(() => {
+    expect(pulls()).toBe(before + 1);
+  });
+});
+
+test('ten distinct remote edits in a row, each merged and pushed, do not trip the loop guard', async () => {
+  renameActive('Main');
+  await signUp();
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  stopTracking();
+  useAccountStore.getState().markDirty();
+  for (let i = 0; i < 10; i += 1) {
+    anotherDeviceAdds(`Remote ${String(i)}`);
+    renameActive(`Local ${String(i)}`); // untracked: the merge carries both sides, so a push follows
+    await useAccountStore.getState().sync({ pull: true });
+  }
+
+  expect(useAccountStore.getState().syncState).not.toBe('paused');
+  expect(warn).not.toHaveBeenCalled();
+  warn.mockRestore();
 });
 
 test('after five saves with no edit between them the device stops, and an edit starts it again', async () => {

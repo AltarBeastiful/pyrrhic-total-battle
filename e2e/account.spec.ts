@@ -303,6 +303,31 @@ test('two open screens stay in step: an edit on one appears on the other without
   await second.close();
 });
 
+test('two tabs of one browser stay in step: a save in one appears in the other with no focus change', async ({
+  browser,
+}) => {
+  const { email, password } = newCredentials();
+
+  const context = await browser.newContext();
+  const tabA = await context.newPage();
+  await openApp(tabA);
+  await renameProfile(tabA, 'Tabs');
+  await signUpConfirmed(tabA, email, password);
+  await renameProfile(tabA, 'Tabs, saved');
+  await waitForAccountSaved(tabA);
+
+  // Same context, so the same device id: only the per-tab id tells the two saves apart.
+  const tabB = await context.newPage();
+  await openApp(tabB);
+  await expectActiveProfile(tabB, 'Tabs, saved', 15_000);
+
+  await renameProfile(tabB, 'Tabs, edited on B');
+  await waitForAccountSaved(tabB);
+  await expectActiveProfile(tabA, 'Tabs, edited on B', 15_000);
+
+  await context.close();
+});
+
 test('signing out takes the account’s profiles off this browser, and signing in brings them back', async ({
   page,
 }) => {

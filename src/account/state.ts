@@ -41,7 +41,7 @@ import type * as Auth from './auth';
 import type { SignInMethods } from './auth';
 import { mergeDocuments, sameContent } from './merge';
 import type { AccountUser } from './schema';
-import { pull, push, watchRemote, type RemoteProfile } from './sync';
+import { originOf, pull, push, watchRemote, type RemoteProfile } from './sync';
 
 /** How long after the last edit the account is saved. */
 export const AUTOSAVE_MS = 3000;
@@ -132,6 +132,8 @@ let stopWatching: Promise<() => Promise<void>> | null = null;
 let again: { pull: boolean; keepalive: boolean } | null = null;
 /** When this device saved without an edit behind it; an edit empties it. */
 let editlessPushes: number[] = [];
+/** A pull brought remote changes onto the screen since the last save, so that save is not editless. */
+let tookNews = false;
 /** The loop guard has fired: no save until the player edits. */
 let loopTripped = false;
 /** Consecutive 429s, and the timer that tries again after the last. */
@@ -229,7 +231,10 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       }
     }
     const merged = withAProfile(mergeDocuments(current, remoteDoc));
-    if (!sameContent(merged, useStore.getState().doc)) apply(merged);
+    if (!sameContent(merged, useStore.getState().doc)) {
+      tookNews = true;
+      apply(merged);
+    }
     return remoteDoc;
   };
 
@@ -241,7 +246,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
     if (stopWatching !== null) return;
     stopWatching = watchRemote((version, updatedBy) => {
       // Our own save echoing back can arrive before its response: nothing to fetch.
-      if (updatedBy === get().deviceId) return;
+      if (updatedBy === originOf(get().deviceId)) return;
       if (version > get().remoteVersion) void get().sync({ pull: true });
     });
     // No realtime (an old proxy, a flaky network): focus, visibility and reconnect still catch up.
@@ -338,7 +343,11 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         if (result.ok) {
           standIn = null; // saved: whatever was on screen is the account's copy now
           rateRefusals = 0;
-          noteSave();
+          // Carrying remote changes forward is not a loop; only a save that merely repeats the
+          // remote content already seen is the ping-pong the guard is for.
+          if (tookNews) editlessPushes = [];
+          else noteSave();
+          tookNews = false;
           rememberDevice({ remoteVersion: result.version });
           if (loopTripped) {
             set({ remoteVersion: result.version });
@@ -741,6 +750,7 @@ export function resetAccountModule(): void {
   cancelAutosave();
   cancelRateRetry();
   editlessPushes = [];
+  tookNews = false;
   loopTripped = false;
   rateRefusals = 0;
   unwatch();
