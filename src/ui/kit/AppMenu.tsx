@@ -59,7 +59,9 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
     // `withInitialFocusPlaceholder` is on by default and renders a `role="presentation"` div as the
     // first child of the `role="menu"` dropdown, which is a child that role does not allow (axe
     // `aria-required-children`). Off, the focus trap lands on the first item — which is what a menu
-    // owes the keyboard anyway.
+    // owes the keyboard anyway — but it also painted the first row as hovered on every open, next to
+    // the check mark that already marks the active profile. So a wrapper around the sections takes the
+    // initial focus (`data-autofocus`; the trap only looks among the dropdown's descendants), and the arrow keys carry it to the first item from there.
     // Portalled to the body and stacked over every bar (`theme.ts`): left in place it was a child of
     // the app bar, which paints at 100 — under the command bar's 250 — so the last rows of a long
     // account menu were covered by the bar at the bottom of the window.
@@ -71,54 +73,56 @@ export function AppMenu({ label, trigger, sections, width = 240 }: AppMenuProps)
       {/* Long menus (a signed-in account has a dozen rows) scroll inside the dropdown instead of
           running past the viewport, where the last rows could not be reached. */}
       <Menu.Dropdown aria-label={label} mah="calc(100dvh - 5rem)" style={{ overflowY: 'auto' }}>
-        {sections.map((section, index) => (
-          <div key={section.id}>
-            {index > 0 && <Menu.Divider />}
-            {section.title !== undefined && <Menu.Label>{section.title}</Menu.Label>}
-            {section.entries.map((entry) =>
-              entry.kind === 'note' ? (
-                <Text key={entry.id} size="xs" c="dimmed" px="sm" py={6} role="status">
-                  {entry.label}
-                </Text>
-              ) : entry.kind === 'segment' ? (
-                <Menu.Item key={entry.id} component="div" closeMenuOnClick={false}>
-                  <Text size="xs" c="dimmed" mb={4}>
+        <div data-autofocus tabIndex={-1} style={{ outline: 0 }}>
+          {sections.map((section, index) => (
+            <div key={section.id}>
+              {index > 0 && <Menu.Divider />}
+              {section.title !== undefined && <Menu.Label>{section.title}</Menu.Label>}
+              {section.entries.map((entry) =>
+                entry.kind === 'note' ? (
+                  <Text key={entry.id} size="xs" c="dimmed" px="sm" py={6} role="status">
                     {entry.label}
                   </Text>
-                  <SegmentedControl
-                    fullWidth
-                    size="xs"
-                    aria-label={entry.label}
-                    data={entry.options}
-                    value={entry.value}
-                    onChange={entry.onChange}
-                  />
-                </Menu.Item>
-              ) : (
-                <Menu.Item
-                  key={entry.id}
-                  leftSection={entry.icon}
-                  {...(entry.danger === true ? { color: 'red' as const } : {})}
-                  disabled={entry.disabled ?? false}
-                  onClick={entry.onSelect}
-                >
-                  {entry.label}
-                  {entry.checked === true && (
-                    <>
-                      {' '}
-                      <VisuallyHidden>(active)</VisuallyHidden>
-                    </>
-                  )}
-                  {entry.description !== undefined && (
-                    <Text size="xs" c="dimmed">
-                      {entry.description}
+                ) : entry.kind === 'segment' ? (
+                  <Menu.Item key={entry.id} component="div" closeMenuOnClick={false}>
+                    <Text size="xs" c="dimmed" mb={4}>
+                      {entry.label}
                     </Text>
-                  )}
-                </Menu.Item>
-              ),
-            )}
-          </div>
-        ))}
+                    <SegmentedControl
+                      fullWidth
+                      size="xs"
+                      aria-label={entry.label}
+                      data={entry.options}
+                      value={entry.value}
+                      onChange={entry.onChange}
+                    />
+                  </Menu.Item>
+                ) : (
+                  <Menu.Item
+                    key={entry.id}
+                    leftSection={entry.icon}
+                    {...(entry.danger === true ? { color: 'red' as const } : {})}
+                    disabled={entry.disabled ?? false}
+                    onClick={entry.onSelect}
+                  >
+                    {entry.label}
+                    {entry.checked === true && (
+                      <>
+                        {' '}
+                        <VisuallyHidden>(active)</VisuallyHidden>
+                      </>
+                    )}
+                    {entry.description !== undefined && (
+                      <Text size="xs" c="dimmed">
+                        {entry.description}
+                      </Text>
+                    )}
+                  </Menu.Item>
+                ),
+              )}
+            </div>
+          ))}
+        </div>
       </Menu.Dropdown>
     </Menu>
   );

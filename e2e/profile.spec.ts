@@ -5,7 +5,14 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { chooseInProfileMenu, openApp, renameProfile, switchProfileNames, watchConsole } from './helpers';
+import {
+  chooseInProfileMenu,
+  openAccountDropdown,
+  openApp,
+  renameProfile,
+  switchProfileNames,
+  watchConsole,
+} from './helpers';
 
 test('export writes a JSON file and importing it adds a second profile', async ({ page }, testInfo) => {
   const problems = watchConsole(page);
@@ -36,4 +43,18 @@ test('export writes a JSON file and importing it adds a second profile', async (
   await expect.poll(() => switchProfileNames(page)).toHaveLength(2);
 
   expect(problems).toEqual([]);
+});
+
+test('opening the profile menu highlights no row, and ArrowDown still reaches the first', async ({
+  page,
+}) => {
+  await openApp(page);
+
+  const menu = await openAccountDropdown(page);
+  const first = menu.getByRole('menuitem').first();
+  await expect(first).not.toBeFocused();
+  await expect(first).not.toHaveAttribute('data-hovered', 'true');
+
+  await page.keyboard.press('ArrowDown');
+  await expect(first).toBeFocused();
 });
