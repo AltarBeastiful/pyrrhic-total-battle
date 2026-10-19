@@ -37,6 +37,7 @@ import {
 } from '@mantine/core';
 import { Pencil, Plus, Undo2 } from 'lucide-react';
 import { forwardRef, lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { ComponentPropsWithoutRef } from 'react';
 
 import type { CustomMercenary, Profile } from '@/state/schema';
@@ -65,6 +66,13 @@ export function MercenariesSection() {
   const profile = useActiveProfileSlice((current) => ({ id: current.id, mercenaries: current.mercenaries }));
   const updateProfile = useStore((state) => state.updateProfile);
   const titleId = useId();
+  // The keyboard flow over the quantity pills (B-15): which editor is open, the badges by id so
+  // focus can be put on one, the cap the open editor started from (Esc puts it back), and the
+  // mercenary hired last (Esc from the search lands on its pill).
+  const [openId, setOpenId] = useState<string | null>(null);
+  const badges = useRef(new Map<string, HTMLButtonElement>());
+  const startCap = useRef<number | null>(null);
+  const lastHired = useRef<string | null>(null);
 
   const mercenaries = profile?.mercenaries;
   const [editor, setEditor] = useState<{ merc?: CustomMercenary } | null>(null);
@@ -118,6 +126,7 @@ export function MercenariesSection() {
   };
 
   const hire = (id: string): void => {
+    lastHired.current = id;
     if (ownedIds.includes(id)) return;
     patch({ selected: [...mercenaries.selected, { id, cap: null }] });
   };
@@ -168,6 +177,37 @@ export function MercenariesSection() {
     });
   };
 
+  /** The pills that carry a quantity, in the order they are drawn. */
+  const hiredIds = owned.filter((entry) => !entry.isCustom).map((entry) => entry.id);
+
+  const openEditor = (id: string | null): void => {
+    if (id !== null) startCap.current = owned.find((entry) => entry.id === id)?.cap ?? null;
+    setOpenId(id);
+  };
+
+  /** Tab and Shift+Tab on a pill, or inside its editor: the neighbour, if there is one. */
+  const walk = (from: string, event: KeyboardEvent, editing: boolean): void => {
+    const next = hiredIds[hiredIds.indexOf(from) + (event.shiftKey ? -1 : 1)];
+    if (next === undefined) {
+      // The end of the list: close the editor (the figure is already written) and let the Tab go
+      // on from the pill, out of the list.
+      if (editing) {
+        badges.current.get(from)?.focus();
+        setOpenId(null);
+      }
+      return;
+    }
+    event.preventDefault();
+    if (editing) openEditor(next);
+    else badges.current.get(next)?.focus();
+  };
+
+  const cancelEdit = (id: string): void => {
+    setCap(id, startCap.current);
+    setOpenId(null);
+    badges.current.get(id)?.focus();
+  };
+
   const saveCustom = (merc: CustomMercenary): void => {
     const custom = mercenaries.custom;
     patch({
@@ -203,6 +243,21 @@ export function MercenariesSection() {
         onCap={(cap) => {
           setCap(entry.id, cap);
         }}
+        opened={openId === entry.id}
+        onOpened={(open) => {
+          if (open) openEditor(entry.id);
+          else setOpenId((current) => (current === entry.id ? null : current));
+        }}
+        onWalk={(event, editing) => {
+          walk(entry.id, event, editing);
+        }}
+        onCancel={() => {
+          cancelEdit(entry.id);
+        }}
+        badgeRef={(node) => {
+          if (node === null) badges.current.delete(entry.id);
+          else badges.current.set(entry.id, node);
+        }}
       />
     ),
   }));
@@ -230,6 +285,10 @@ export function MercenariesSection() {
             onPick={hire}
             emptyMessage="No mercenary of that name. Add it by hand."
             width={240}
+            escapeFocus={() => {
+              const id = lastHired.current;
+              return id === null ? null : (badges.current.get(id) ?? null);
+            }}
           />
           {/* Quiet, in the muted ink (owner, 2026-09-18: "greyish but still visible, as it's seldom
               used"): a mercenary the tables do not carry is a rare thing to type in. */}
@@ -363,8 +422,8 @@ type TargetProps = Omit<
   'color' | 'style' | 'className' | 'children' | 'type' | 'onClick'
 >;
 
-const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress: () => void } & TargetProps>(
-  function CountBadge({ entry, onPress, ...target }, ref) {
+const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress: () => void; badgeRef: (node: HTMLButtonElement | null) => void } & TargetProps>(
+  function CountBadge({ entry, onPress, badgeRef, ...target }, ref) {
     // `ref` and `...target` are the popover's: `Popover.Target` anchors its dropdown on the element it
     // is handed a reference to and stamps its ARIA on it. Without them the editor opened at the page's
     // top-left corner (owner, 2026-09-18: "the popup is opened on the far left corner").
@@ -373,7 +432,11 @@ const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress:
         // The popover's own props first, so the badge's class, style and press are what stands: the
         // target's `className` would otherwise write over the badge's, and with it the pointer.
         {...target}
-        ref={ref}
+        ref={(node: HTMLButtonElement | null) => {
+          badgeRef(node);
+          if (typeof ref === 'function') ref(node);
+          else if (ref !== null) ref.current = node;
+        }}
         component="button"
         type="button"
         variant="filled"
@@ -402,12 +465,22 @@ function HiredPill({
   entry,
   onCap,
   onRemove,
+  opened,
+  onOpened,
+  onWalk,
+  onCancel,
+  badgeRef,
 }: {
   entry: MercenaryRow;
   onCap: (cap: number | null) => void;
   onRemove: () => void;
+  opened: boolean;
+  onOpened: (open: boolean) => void;
+  onWalk: (event: KeyboardEvent, editing: boolean) => void;
+  onCancel: () => void;
+  badgeRef: (node: HTMLButtonElement | null) => void;
 }) {
-  const [opened, setOpened] = useState(false);
+  const setOpened = onOpened;
   const name = entry.unit.name;
 
   // The owned-count editor is a setup editor, so `Ctrl`/`⌘ + Enter` closes it before the march runs
@@ -451,14 +524,28 @@ function HiredPill({
           <Popover.Target>
             <CountBadge
               entry={entry}
+              badgeRef={badgeRef}
+              onKeyDown={(event) => {
+                if (opened) return;
+                if (event.key === 'Tab') onWalk(event, false);
+                // The face is out of the tab order (the badges are the walk), so the badge carries
+                // the way to remove the mercenary from the keyboard.
+                else if (event.key === 'Delete' || event.key === 'Backspace') onRemove();
+              }}
               onPress={() => {
-                setOpened((open) => !open);
+                setOpened(!opened);
               }}
             />
           </Popover.Target>
         }
       >
-        <UnstyledButton className={classes.face} fz="sm" aria-label={`Remove ${name}`} onClick={onRemove}>
+        <UnstyledButton
+          className={classes.face}
+          fz="sm"
+          aria-label={`Remove ${name}`}
+          tabIndex={-1}
+          onClick={onRemove}
+        >
           <PillFace entry={entry} />
         </UnstyledButton>
       </CornerPill>
@@ -474,6 +561,17 @@ function HiredPill({
             setOpened(false);
           }}
           onKeyDown={(event) => {
+            // Tab commits and opens the neighbour's editor; Esc takes the edit back (B-15).
+            if (event.key === 'Tab') {
+              onWalk(event, true);
+              return;
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              onCancel();
+              return;
+            }
             // Enter in the field, whether or not the browser turns it into a submit (jsdom does
             // not always): the same close. The switch keeps its own keys.
             if (event.key !== 'Enter' || !(event.target instanceof HTMLInputElement)) return;

@@ -8,7 +8,7 @@
  * `Combobox.Target` does, so Escape is handled here (investigation 0007).
  */
 import { Box, Button, Combobox, Text, useCombobox } from '@mantine/core';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import classes from './kit.module.css';
 
@@ -38,6 +38,11 @@ export interface GroupedComboboxProps {
   emptyMessage?: string;
   width?: number | string;
   disabled?: boolean;
+  /**
+   * Where the focus goes when Escape closes the list: the element returned, or the trigger when
+   * this returns null or is not given.
+   */
+  escapeFocus?: () => HTMLElement | null;
 }
 
 function textOf(option: ComboboxOption): string {
@@ -53,7 +58,9 @@ export function GroupedCombobox({
   emptyMessage = 'Nothing matches',
   width = 220,
   disabled = false,
+  escapeFocus,
 }: GroupedComboboxProps) {
+  const trigger = useRef<HTMLButtonElement>(null);
   const [query, setQuery] = useState('');
   const combobox = useCombobox({
     // The search field takes the focus as the list opens (owner, 2026-09-18: "the hire a merc button
@@ -104,6 +111,7 @@ export function GroupedCombobox({
         <Button
           variant="default"
           w={width}
+          ref={trigger}
           disabled={disabled}
           onClick={() => {
             combobox.toggleDropdown();
@@ -125,6 +133,7 @@ export function GroupedCombobox({
             if (event.key === 'Escape') {
               event.preventDefault();
               combobox.closeDropdown();
+              (escapeFocus?.() ?? trigger.current)?.focus();
             }
           }}
         />
