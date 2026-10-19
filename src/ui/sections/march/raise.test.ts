@@ -728,12 +728,12 @@ test('the button is hidden where the push adds nothing or buys no damage', () =>
   expect(offersPush(null, false)).toBe(false);
   // A push that **loses** the worst opening: his answer of 2026-10-12 to experiment 225's three falling stops —
   // the mark has one meaning (more mercs, more damage, the same order), so a loss is not offered.
-  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2 }, false)).toBe(false);
+  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2, total: 2 }, false)).toBe(false);
   // A wash is not a gain either: more units for the same damage is more silver for nothing.
-  expect(offersPush({ damage: 1_000, before: 1_000, lost: 2 }, false)).toBe(false);
-  expect(offersPush({ damage: 1_253_159, before: 1_148_381, lost: 2 }, false)).toBe(true);
+  expect(offersPush({ damage: 1_000, before: 1_000, lost: 2, total: 2 }, false)).toBe(false);
+  expect(offersPush({ damage: 1_253_159, before: 1_148_381, lost: 2, total: 2 }, false)).toBe(true);
   // And a pool standing pushed keeps its mark whatever the trade reads: the press is the only way back.
-  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2 }, true)).toBe(true);
+  expect(offersPush({ damage: 1_148_381, before: 1_253_159, lost: 2, total: 2 }, true)).toBe(true);
 });
 
 /**

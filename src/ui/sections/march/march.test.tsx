@@ -2479,7 +2479,7 @@ test('the tooltip says the damage the push adds, and the mercenaries lost for go
   // **What the push adds, and never the march's total** (owner, 2026-10-12): the damage figure on this line is a
   // signed addition, and the percentage beside it is the same addition read against the march on screen.
   expect(tip.textContent).toMatch(/Damage \+[\d.]+[KM]?\s*\+[\d.]+%/);
-  expect(tip.textContent).toMatch(/\+[\d,]+ mercs lost/);
+  expect(tip.textContent).toMatch(/[\d,]+ mercs lost \+[\d,]+/);
 });
 
 test('the push is a plan’s own control, and a sizer’s march draws neither it nor the raise', async () => {

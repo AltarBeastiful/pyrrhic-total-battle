@@ -367,7 +367,7 @@ export function MarchPushControl({
               <Group gap={6} wrap="nowrap">
                 <Glyph kind={pool} />
                 <Text span size="xs">
-                  {`+${amount(trade.lost)} ${POOL_NOUN[pool]} lost`}
+                  {`${amount(trade.total)} ${POOL_NOUN[pool]} lost +${amount(trade.lost)}`}
                 </Text>
               </Group>
             </>
@@ -568,21 +568,21 @@ export function MarchPills({
                     }}
                   />
                 )}
-                {pool !== null && offer !== null && offersPush(offer.trade, offer.pressed) && (
-                  <MarchPushControl
-                    pool={pool}
-                    offer={offer}
-                    onPush={() => {
-                      onPush(pool);
-                    }}
-                  />
-                )}
                 {pool !== null && rounding !== null && rounding.trade !== null && (
                   <MarchRoundControl
                     pool={pool}
                     offer={rounding}
                     onRound={() => {
                       onRound(pool);
+                    }}
+                  />
+                )}
+                {pool !== null && offer !== null && offersPush(offer.trade, offer.pressed) && (
+                  <MarchPushControl
+                    pool={pool}
+                    offer={offer}
+                    onPush={() => {
+                      onPush(pool);
                     }}
                   />
                 )}

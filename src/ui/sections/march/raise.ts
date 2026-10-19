@@ -585,6 +585,8 @@ export interface PushTrade {
    * units themselves.
    */
   lost: number;
+  /** What the pool loses in all once the trade is made: the loss already there plus `lost`. */
+  total: number;
 }
 
 /**

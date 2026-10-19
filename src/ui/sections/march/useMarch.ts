@@ -378,15 +378,18 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
        * stock to spend (S-102: it is trained and revived with gold), so its loss is the units it gains.
        */
       let lost = 0;
+      let total = 0;
       if (pool === 'authority') {
-        lost = hiredLost(after.result.stacks) - hiredLost(start.stacks);
+        total = hiredLost(after.result.stacks);
+        lost = total - hiredLost(start.stacks);
       } else {
         for (const stack of start.stacks) {
           if (stack.pool !== pool) continue;
+          total += moved[stack.unitId] ?? stack.count;
           lost += (moved[stack.unitId] ?? stack.count) - (effective[stack.unitId] ?? stack.count);
         }
       }
-      return { pressed, trade: { damage: after.summary.minDamage, before: earlier.minDamage, lost } };
+      return { pressed, trade: { damage: after.summary.minDamage, before: earlier.minDamage, lost, total } };
     };
     const push: Record<RaisedPool, PushOffer | null> = {
       authority: offer('authority'),
@@ -415,6 +418,7 @@ export function useMarch(pillOrder: PillOrder = 'battle'): MarchView {
           damage: after.summary.minDamage,
           before: beforeRoundSummary.minDamage,
           lost: lostOf(after.result.stacks) - lostOf(beforeRound.stacks),
+          total: lostOf(after.result.stacks),
         },
       };
     };
