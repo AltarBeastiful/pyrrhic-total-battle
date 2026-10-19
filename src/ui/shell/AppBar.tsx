@@ -34,9 +34,7 @@ export function AppBar() {
           </Title>
         </>
       }
-      actions={
-<AccountDropdown />
-      }
+      actions={<AccountDropdown />}
     />
   );
 }

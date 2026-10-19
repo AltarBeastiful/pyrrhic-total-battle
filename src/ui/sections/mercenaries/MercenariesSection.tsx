@@ -36,6 +36,7 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { Pencil, Plus, Undo2 } from 'lucide-react';
+import { useMergedRef } from '@mantine/hooks';
 import { forwardRef, lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { ComponentPropsWithoutRef } from 'react';
@@ -422,39 +423,41 @@ type TargetProps = Omit<
   'color' | 'style' | 'className' | 'children' | 'type' | 'onClick'
 >;
 
-const CountBadge = forwardRef<HTMLButtonElement, { entry: MercenaryRow; onPress: () => void; badgeRef: (node: HTMLButtonElement | null) => void } & TargetProps>(
-  function CountBadge({ entry, onPress, badgeRef, ...target }, ref) {
-    // `ref` and `...target` are the popover's: `Popover.Target` anchors its dropdown on the element it
-    // is handed a reference to and stamps its ARIA on it. Without them the editor opened at the page's
-    // top-left corner (owner, 2026-09-18: "the popup is opened on the far left corner").
-    return (
-      <Badge
-        // The popover's own props first, so the badge's class, style and press are what stands: the
-        // target's `className` would otherwise write over the badge's, and with it the pointer.
-        {...target}
-        ref={(node: HTMLButtonElement | null) => {
-          badgeRef(node);
-          if (typeof ref === 'function') ref(node);
-          else if (ref !== null) ref.current = node;
-        }}
-        component="button"
-        type="button"
-        variant="filled"
-        color="slate"
-        autoContrast
-        radius="xl"
-        tt="none"
-        fw={600}
-        className={classes.count}
-        style={COUNT_BADGE}
-        aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
-        onClick={onPress}
-      >
-        {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
-      </Badge>
-    );
-  },
-);
+const CountBadge = forwardRef<
+  HTMLButtonElement,
+  {
+    entry: MercenaryRow;
+    onPress: () => void;
+    badgeRef: (node: HTMLButtonElement | null) => void;
+  } & TargetProps
+>(function CountBadge({ entry, onPress, badgeRef, ...target }, ref) {
+  const merged = useMergedRef(badgeRef, ref);
+  // `ref` and `...target` are the popover's: `Popover.Target` anchors its dropdown on the element it
+  // is handed a reference to and stamps its ARIA on it. Without them the editor opened at the page's
+  // top-left corner (owner, 2026-09-18: "the popup is opened on the far left corner").
+  return (
+    <Badge
+      // The popover's own props first, so the badge's class, style and press are what stands: the
+      // target's `className` would otherwise write over the badge's, and with it the pointer.
+      {...target}
+      ref={merged}
+      component="button"
+      type="button"
+      variant="filled"
+      color="slate"
+      autoContrast
+      radius="xl"
+      tt="none"
+      fw={600}
+      className={classes.count}
+      style={COUNT_BADGE}
+      aria-label={`${entry.unit.name}: owned ${capSpoken(entry.cap)}`}
+      onClick={onPress}
+    >
+      {entry.cap === null ? <Glyph kind="unlimited" /> : count(entry.cap)}
+    </Badge>
+  );
+});
 
 /**
  * One mercenary the tables carry. Its body is the quantity: press it and a popover opens under the
@@ -480,19 +483,18 @@ function HiredPill({
   onCancel: () => void;
   badgeRef: (node: HTMLButtonElement | null) => void;
 }) {
-  const setOpened = onOpened;
   const name = entry.unit.name;
 
   // The owned-count editor is a setup editor, so `Ctrl`/`⌘ + Enter` closes it before the march runs
   // (`kit/openEditors.ts`): the figure is written on every keystroke, so the close keeps it.
   useOpenEditor(opened, () => {
-    setOpened(false);
+    onOpened(false);
   });
 
   return (
     <Popover
       opened={opened}
-      onChange={setOpened}
+      onChange={onOpened}
       // On the badge's **end**, which is the one edge of it that never moves: the badge is
       // right-aligned on the pill's corner and grows leftward as the figure lands, so a box aligned
       // on its start walked left with every digit (owner, 2026-09-18: "when inputting numbers…
@@ -533,7 +535,7 @@ function HiredPill({
                 else if (event.key === 'Delete' || event.key === 'Backspace') onRemove();
               }}
               onPress={() => {
-                setOpened(!opened);
+                onOpened(!opened);
               }}
             />
           </Popover.Target>
@@ -558,7 +560,7 @@ function HiredPill({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            setOpened(false);
+            onOpened(false);
           }}
           onKeyDown={(event) => {
             // Tab commits and opens the neighbour's editor; Esc takes the edit back (B-15).
@@ -577,7 +579,7 @@ function HiredPill({
             if (event.key !== 'Enter' || !(event.target instanceof HTMLInputElement)) return;
             if (event.target.type === 'checkbox') return;
             event.preventDefault();
-            setOpened(false);
+            onOpened(false);
           }}
         >
           <Stack gap="sm">

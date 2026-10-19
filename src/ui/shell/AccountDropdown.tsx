@@ -25,8 +25,8 @@ const ICON = 15;
 type SyncState = 'saved' | 'saving' | 'offline' | 'error';
 
 /** The dot's colour: quiet when all is saved, a warning when it is not. */
-function dotColour(state: 'none' | 'signed-out' | SyncState): string {
-  if (state === 'signed-out' || state === 'none') return 'gray';
+function dotColour(state: 'signed-out' | SyncState): string {
+  if (state === 'signed-out') return 'gray';
   if (state === 'error') return 'red';
   if (state === 'offline' || state === 'saving') return 'yellow';
   return 'teal';
@@ -45,7 +45,7 @@ export function AccountDropdown() {
   if (profile === undefined) return null;
 
   const signedIn = enabled && user !== null;
-  const account = enabled ? (user === null ? 'signed-out' : syncState) : null;
+  const account = enabled && user !== null ? syncState : 'signed-out';
   const status = saveStatus({ dirty, account });
   const state = signedIn ? 'signed-in' : 'signed-out';
   const who = signedIn ? `signed in as ${user.email === '' ? 'your account' : user.email}` : 'signed out';
@@ -81,19 +81,8 @@ export function AccountDropdown() {
           data-state={state}
           aria-label={`Profiles and account: ${enabled ? `${who}, ` : ''}${status}`}
         >
-          <Indicator
-            color={dotColour(account ?? 'none')}
-            size={8}
-            offset={-1}
-            position="top-end"
-            disabled={account === null}
-            withBorder
-          >
-            {signedIn || !enabled ? (
-              <UserRound size={18} aria-hidden />
-            ) : (
-              <CloudOff size={18} aria-hidden />
-            )}
+          <Indicator color={dotColour(account)} size={8} offset={-1} position="top-end" withBorder>
+            {signedIn ? <UserRound size={18} aria-hidden /> : <CloudOff size={18} aria-hidden />}
           </Indicator>
         </ActionIcon>
       }

@@ -111,6 +111,17 @@ test('a build with no backend still offers the profiles, and no account rows', a
   const menu = await open();
   expect(within(menu).getByRole('menuitem', { name: /^My account \(active\)/ })).toBeTruthy();
   expect(within(menu).queryByRole('menuitem', { name: /Sign in/ })).toBeNull();
+  expect(within(menu).getByText('Saved in this browser only')).toBeTruthy();
+});
+
+test('with no backend the control is signed out: cloud-off icon, and the name says browser only', () => {
+  useAccountStore.setState({ enabled: false });
+  renderWithTheme(<AccountDropdown />);
+  const button = screen.getByRole('button', { name: /^Profiles and account/ });
+  expect(button.getAttribute('data-state')).toBe('signed-out');
+  expect(button.getAttribute('aria-label')).toContain('Saved in this browser only');
+  expect(button.querySelector('.lucide-cloud-off')).not.toBeNull();
+  expect(button.querySelector('.mantine-Indicator-indicator')).not.toBeNull();
 });
 
 test('the old combined menu is gone: no Account pill, the main menu is the Menu button', () => {

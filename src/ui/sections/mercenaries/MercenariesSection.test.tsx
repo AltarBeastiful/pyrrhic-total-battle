@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -333,6 +333,31 @@ test('in an open editor Tab commits and opens the next one, Shift+Tab the previo
 
   await user.tab({ shift: true });
   expect(within(await screen.findByRole('dialog')).getByText('Bear V')).toBeTruthy();
+});
+
+test('in an open editor Tab at the last pill commits, closes, and lets the focus leave; Shift+Tab at the first too', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own(THREE);
+
+  await user.click(badge('Arbalester VII: owned 8'));
+  const field = await screen.findByRole('textbox', { name: 'Owned' });
+  await user.clear(field);
+  await user.type(field, '12');
+  await user.tab();
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  expect(mercs()?.selected[2]).toEqual({ id: 'arbalester-7', cap: 12 });
+  expect(camp().contains(document.activeElement)).toBe(false);
+
+  await user.click(badge('Bear V: owned 5'));
+  await screen.findByRole('textbox', { name: 'Owned' });
+  await user.tab({ shift: true });
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  expect(camp().contains(document.activeElement)).toBe(false);
 });
 
 test('Esc in an editor cancels the edit and keeps the focus on the pill', async () => {
