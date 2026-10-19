@@ -252,6 +252,19 @@ export async function openAccountMenu(page: Page): Promise<Locator> {
   return menu;
 }
 
+/** The icon-only account control (B-17); its name starts "Profiles and account". */
+export function accountDropdownButton(page: Page): Locator {
+  return page.getByRole('button', { name: /^Profiles and account/ });
+}
+
+/** Open the account dropdown: the profile switcher, the account rows and the sync status. */
+export async function openAccountDropdown(page: Page): Promise<Locator> {
+  await accountDropdownButton(page).click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
 /** Open the menu and choose one item by name, waiting for the menu to close behind it. */
 export async function chooseInAccountMenu(page: Page, name: string | RegExp): Promise<void> {
   await openAccountMenu(page);
@@ -271,7 +284,7 @@ export async function renameProfile(page: Page, name: string): Promise<void> {
 
 /** Wait until the debounced write has landed: the menu's one-word status says so. */
 export async function waitForSaved(page: Page): Promise<void> {
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await expect(menu.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
@@ -279,11 +292,10 @@ export async function waitForSaved(page: Page): Promise<void> {
 
 /** Names of every profile in the switcher, the active one without its spoken marker. */
 export async function profileNames(page: Page): Promise<string[]> {
-  const menu = await openAccountMenu(page);
-  const names = await menu
-    .getByRole('group', { name: 'Switch profile' })
-    .getByRole('menuitem')
-    .allInnerTexts();
+  const menu = await openAccountDropdown(page);
+  const names = (await menu.getByRole('menuitem').allInnerTexts()).filter(
+    (name) => !/^(Sign in|Signed in as|Sign out|Confirm your email)/.test(name.trim()),
+  );
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
   return names.map((name) => name.replace(/\s*\(active\)\s*$/, '').trim());
@@ -597,15 +609,13 @@ export function generateControl(page: Page): Locator {
  * groups with; the label's parent is the group.
  */
 export async function switchProfileNames(page: Page): Promise<string[]> {
-  const menu = await openAccountMenu(page);
-  const names = await menu
-    .getByText('Switch profile', { exact: true })
-    .locator('xpath=..')
-    .getByRole('menuitem')
-    .allInnerTexts();
+  const menu = await openAccountDropdown(page);
+  const names = (await menu.getByRole('menuitem').allInnerTexts()).filter(
+    (name) => !/^(Sign in|Signed in as|Sign out|Confirm your email)/.test(name.trim()),
+  );
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
-  return names.map((name) => name.trim());
+  return names.map((name) => name.replace(/\s*\(active\)\s*$/, '').trim());
 }
 
 // ---- The March section (design plan §7.5, M-08) -------------------------------------------------

@@ -29,13 +29,14 @@ test('the bar is the banner, and the brand is the page’s one H1', () => {
   expect(brand.textContent).toBe('Pyrrhic');
 });
 
-test('the one control in it is the account, named after the profile', () => {
+test('the controls in it are the profile menu and the account icon', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
 
   expect(within(banner).getByRole('button', { name: 'Account: My account' })).toBeTruthy();
   // Nothing else: no Generate, no figures, no jump bar (design plan §5.1, `v4-desktop.jpg`).
-  expect(within(banner).getAllByRole('button')).toHaveLength(1);
+  expect(within(banner).getByRole('button', { name: /^Profiles and account/ })).toBeTruthy();
+  expect(within(banner).getAllByRole('button')).toHaveLength(2);
   expect(screen.queryByRole('button', { name: /Generate/ })).toBeNull();
 });
 

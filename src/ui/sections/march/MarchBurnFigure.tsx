@@ -127,7 +127,7 @@ export function MarchBurnFigure({
           aria-label={`Merc lost${capped ? `, limit ${amount(ceiling)}` : ''}: press to set the most`}
           style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline', font: 'inherit' }}
         >
-          <Text span inherit c={capped ? 'var(--mantine-color-brass-filled)' : undefined}>
+          <Text span inherit {...(capped ? { c: 'var(--mantine-color-brass-filled)' } : {})}>
             {lost}
           </Text>
           {capped ? (
