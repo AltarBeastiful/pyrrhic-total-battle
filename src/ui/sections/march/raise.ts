@@ -623,8 +623,8 @@ export function offersPush(trade: PushTrade | null, pressed: boolean): boolean {
  * the push refuses one. A round-down never empties a stack, so that is not a candidate.
  *
  * **The best trade is the most damage, then the fewest lost** — the worst opening, as every other figure of the
- * pool line reads it, and on a tie the loss the tooltip prints. Past `ROUND_COMBINATIONS` the stacks are rounded
- * one at a time, the last to fall first, each against the others as they stand.
+ * pool line reads it, and on a tie the loss the tooltip prints. Past `ROUND_COMBINATIONS`, or where no whole
+ * combination is legal, the stacks are rounded one at a time, the last to fall first, each against the others as they stand.
  *
  * **It never burns a chunk more, so no burn ceiling can bind it** (`docs/plans/burn-ceiling.md` §3.2): a count
  * not in tens burns `⌊n/10⌋ + 1` chunks, which is exactly what its ten above burns, and its ten below burns one
@@ -707,7 +707,11 @@ export function roundedCounts(
       for (const option of here.options) walk(at + 1, { ...moves, [here.unitId]: option });
     };
     walk(0, {});
-    return (best as { moves: Record<string, number> } | null)?.moves ?? null;
+    const whole = (best as { moves: Record<string, number> } | null)?.moves;
+    if (whole !== undefined) return whole;
+    // No combination of every stack is legal — one stack stuck against its stock or its neighbour (a count of 19
+    // owned of 19 can only go down) must not hide a rounding the others allow — so it falls to the one-at-a-time
+    // walk below, which may leave a stack as it stands.
   }
   const moves: Record<string, number> = {};
   for (const { unitId, options } of candidates) {

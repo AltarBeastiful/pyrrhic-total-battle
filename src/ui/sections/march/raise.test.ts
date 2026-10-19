@@ -773,6 +773,20 @@ test('the rounding keeps the stock and the housing, and never empties a stack', 
   expect(rounded(seven, { caps: { [HUNTER]: 7 } })).toBeNull();
 });
 
+test('a stack that cannot be rounded does not hide the rounding the others allow', () => {
+  // The knight stands at 19 of 19 owned: the ten above is out of stock, the ten below (200 000) would fall under
+  // the chariot (300 000) and move the kill order. The hunter's 30 is still legal, so the button is drawn.
+  const KNIGHT = 'knight-6';
+  const CHARIOT = 'chariot-6';
+  const march = marchOf([
+    stack(RD3, 'leadership', 500, 2_000),
+    stack(HUNTER, 'authority', 23, 30_000),
+    stack(KNIGHT, 'authority', 19, 20_000),
+    stack(CHARIOT, 'authority', 10, 30_000),
+  ]);
+  expect(rounded(march, { caps: { [KNIGHT]: 19 } })).toEqual({ [HUNTER]: 30 });
+});
+
 test('the rounding asks for nothing where the march is already in tens, or the stack was typed by hand', () => {
   const tens = marchOf([stack(RD3, 'leadership', 500, 2_000), stack(HUNTER, 'authority', 20, 30_000)]);
   expect(rounded(tens)).toBeNull();
