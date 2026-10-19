@@ -9,18 +9,7 @@
  * a segmented row or a section heading, and each kind has one appearance.
  */
 import { ActionIcon, Button, Group, Text, TextInput, useMantineColorScheme } from '@mantine/core';
-import {
-  Copy,
-  Download,
-  Info,
-  Link2,
-  Menu,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Trash2,
-  Upload,
-} from 'lucide-react';
+import { Copy, Download, Info, Link2, Menu, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 

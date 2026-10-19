@@ -27,7 +27,14 @@ export function MercLostLabel({ editable }: { editable: boolean }) {
   return (
     <>
       Merc lost{' '}
-      <Tooltip label={HELP} multiline maw={240} withinPortal withArrow events={{ hover: true, focus: true, touch: true }}>
+      <Tooltip
+        label={HELP}
+        multiline
+        maw={240}
+        withinPortal
+        withArrow
+        events={{ hover: true, focus: true, touch: true }}
+      >
         <Text span inherit c="dimmed" tabIndex={0} aria-label={HELP} style={{ cursor: 'help' }}>
           <CircleHelp size={11} style={{ verticalAlign: '-1px' }} aria-hidden />
         </Text>
@@ -117,7 +124,11 @@ export function MarchBurnFigure({
   return (
     <Group gap={6} wrap="nowrap" align="baseline">
       <Tooltip
-        label={capped ? `Limit ${amount(ceiling)} mercs${slack ? ', not reached' : ''}. Press to change.` : 'Cap the mercs lost'}
+        label={
+          capped
+            ? `Limit ${amount(ceiling)} mercs${slack ? ', not reached' : ''}. Press to change.`
+            : 'Cap the mercs lost'
+        }
         withinPortal
         withArrow
       >

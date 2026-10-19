@@ -159,9 +159,7 @@ test('the profile row says where the profile is saved, signed in or not', async 
 
 test('signed out, the account button says the profile is this browser’s only', () => {
   renderWithTheme(<AccountDropdown />);
-  expect(
-    screen.getByRole('button', { name: /^Profiles and account: signed out/ }),
-  ).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Profiles and account: signed out/ })).toBeTruthy();
   expect(screen.getByRole('button', { name: /saved in this browser only/i })).toBeTruthy();
 
   cleanup();
