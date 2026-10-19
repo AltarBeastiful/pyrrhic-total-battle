@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
- "run": "2026-10-19T02:52:38.002Z",
-=======
  "run": "2026-10-19T02:33:54.831Z",
->>>>>>> integration/b14-b18
  "scenarios": [
   {
    "label": "first-run army, Bear V ×1 (20 000 leadership)",
@@ -11,15 +7,9 @@
    "stops": [
     "sweet-spot"
    ],
-<<<<<<< HEAD
-   "planMs": 28,
-   "planCpuMs": 33,
-   "searchMs": 4106,
-=======
    "planMs": 78,
    "planCpuMs": 63,
    "searchMs": 5695,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -569,15 +559,9 @@
    "stops": [
     "sweet-spot"
    ],
-<<<<<<< HEAD
-   "planMs": 53,
-   "planCpuMs": 69,
-   "searchMs": 3411,
-=======
    "planMs": 85,
    "planCpuMs": 100,
    "searchMs": 4234,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1128,15 +1112,9 @@
     "sweet-spot",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 45,
-   "planCpuMs": 39,
-   "searchMs": 3597,
-=======
    "planMs": 76,
    "planCpuMs": 79,
    "searchMs": 6236,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -1895,15 +1873,9 @@
     "sweet-spot",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 125,
-   "planCpuMs": 136,
-   "searchMs": 3173,
-=======
    "planMs": 184,
    "planCpuMs": 221,
    "searchMs": 4815,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -2660,15 +2632,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 216,
-   "planCpuMs": 238,
-   "searchMs": 3369,
-=======
    "planMs": 330,
    "planCpuMs": 403,
    "searchMs": 5874,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -3510,15 +3476,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 1159,
-   "planCpuMs": 1202,
-   "searchMs": 78199,
-=======
    "planMs": 532,
    "planCpuMs": 902,
    "searchMs": 87166,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -4283,15 +4243,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 679,
-   "planCpuMs": 858,
-   "searchMs": 96517,
-=======
    "planMs": 2312,
    "planCpuMs": 1781,
    "searchMs": 148918,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -4964,15 +4918,9 @@
     "sweet-spot",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 91,
-   "planCpuMs": 215,
-   "searchMs": 3918,
-=======
    "planMs": 469,
    "planCpuMs": 687,
    "searchMs": 13934,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -5871,15 +5819,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 399,
-   "planCpuMs": 550,
-   "searchMs": 1463,
-=======
    "planMs": 1373,
    "planCpuMs": 1119,
    "searchMs": 5013,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -6798,15 +6740,9 @@
     "sweet-spot",
     "steady-max"
    ],
-<<<<<<< HEAD
-   "planMs": 464,
-   "planCpuMs": 579,
-   "searchMs": 1552,
-=======
    "planMs": 1851,
    "planCpuMs": 1211,
    "searchMs": 5591,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -7645,15 +7581,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 233,
-   "planCpuMs": 269,
-   "searchMs": 161,
-=======
    "planMs": 890,
    "planCpuMs": 790,
    "searchMs": 647,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -8496,15 +8426,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 357,
-   "planCpuMs": 464,
-   "searchMs": 1423,
-=======
    "planMs": 1334,
    "planCpuMs": 1252,
    "searchMs": 5356,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -9425,15 +9349,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 77,
-   "planCpuMs": 184,
-   "searchMs": 2954,
-=======
    "planMs": 524,
    "planCpuMs": 620,
    "searchMs": 10583,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -10276,15 +10194,9 @@
     "more-mercs",
     "steady-max"
    ],
-<<<<<<< HEAD
-   "planMs": 167,
-   "planCpuMs": 182,
-   "searchMs": 657,
-=======
    "planMs": 728,
    "planCpuMs": 620,
    "searchMs": 2690,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -11038,15 +10950,9 @@
     "more-mercs",
     "steady-max"
    ],
-<<<<<<< HEAD
-   "planMs": 112,
-   "planCpuMs": 133,
-   "searchMs": 140,
-=======
    "planMs": 519,
    "planCpuMs": 537,
    "searchMs": 538,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -11756,15 +11662,9 @@
     "steady-max",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 94,
-   "planCpuMs": 99,
-   "searchMs": 136,
-=======
    "planMs": 384,
    "planCpuMs": 352,
    "searchMs": 854,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -12472,15 +12372,9 @@
     "sweet-spot",
     "steady-max"
    ],
-<<<<<<< HEAD
-   "planMs": 97,
-   "planCpuMs": 250,
-   "searchMs": 2381,
-=======
    "planMs": 512,
    "planCpuMs": 438,
    "searchMs": 15214,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -13160,15 +13054,9 @@
     "sweet-spot",
     "steady-max"
    ],
-<<<<<<< HEAD
-   "planMs": 118,
-   "planCpuMs": 213,
-   "searchMs": 2419,
-=======
    "planMs": 1434,
    "planCpuMs": 951,
    "searchMs": 22328,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
@@ -14023,15 +13911,9 @@
     "sweet-spot",
     "all-in"
    ],
-<<<<<<< HEAD
-   "planMs": 205,
-   "planCpuMs": 287,
-   "searchMs": 2842,
-=======
    "planMs": 2124,
    "planCpuMs": 1021,
    "searchMs": 21311,
->>>>>>> integration/b14-b18
    "searchCalls": 40,
    "planBudgetMs": 40000,
    "searchBudgetMs": 8000,
