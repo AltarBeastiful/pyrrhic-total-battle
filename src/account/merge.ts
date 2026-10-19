@@ -103,7 +103,26 @@ export function mergeDocuments(local: RootDocument, remote: RootDocument): RootD
   return { ...local, profiles, tombstones, activeProfileId };
 }
 
-/** True when the two copies hold the same records: nothing to push, nothing to apply. */
+/** JSON with object keys sorted, so the same value always prints the same. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, inner: unknown) => {
+    if (inner === null || typeof inner !== 'object' || Array.isArray(inner)) return inner;
+    return Object.fromEntries(Object.entries(inner).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)));
+  });
+}
+
+/** One line per record, sorted: the same set of records gives the same text, whatever the order. */
+function recordSet(records: { id: string }[]): string[] {
+  return records.map((record) => `${record.id}:${canonical(record)}`).sort();
+}
+
+/**
+ * True when the two copies hold the same records: nothing to push, nothing to apply. A set
+ * comparison: order of profiles, of tombstones and of keys is a display matter, never an edit.
+ */
 export function sameContent(a: RootDocument, b: RootDocument): boolean {
-  return JSON.stringify([a.profiles, a.tombstones]) === JSON.stringify([b.profiles, b.tombstones]);
+  return (
+    JSON.stringify([recordSet(a.profiles), recordSet(a.tombstones)]) ===
+    JSON.stringify([recordSet(b.profiles), recordSet(b.tombstones)])
+  );
 }

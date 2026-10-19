@@ -45,6 +45,12 @@ import { pull, push, watchRemote, type RemoteProfile } from './sync';
 
 /** How long after the last edit the account is saved. */
 export const AUTOSAVE_MS = 3000;
+/** Waits after a 429 that names no delay: each further refusal in a row takes the next one. */
+const RATE_BACKOFF_MS = [5_000, 15_000, 60_000];
+/** This many saves inside `LOOP_WINDOW_MS` with no edit between them is a loop, not a player. */
+const LOOP_LIMIT = 5;
+const LOOP_WINDOW_MS = 60_000;
+const LOOP_MESSAGE = 'Sync paused: this account keeps changing from another device.';
 
 /** Which errand is in flight; the rows disable themselves rather than spinning. */
 export type AccountBusy = 'none' | 'signin' | 'signout' | 'verify' | 'password' | 'delete';
@@ -53,7 +59,7 @@ export type AccountBusy = 'none' | 'signin' | 'signout' | 'verify' | 'password' 
 export type AccountDialog = 'signin' | 'account' | 'password' | 'delete' | 'merged' | 'left' | null;
 
 /** Where the account copy stands, in the words the profile row uses. */
-export type AccountSync = 'saved' | 'saving' | 'offline' | 'error';
+export type AccountSync = 'saved' | 'saving' | 'offline' | 'paused' | 'error';
 
 /** What signing in did to the profiles this browser had made on its own. */
 export interface MergeSummary {
@@ -124,6 +130,13 @@ let running: Promise<void> | null = null;
 /** Stops the realtime subscription; `null` while nobody is signed in. */
 let stopWatching: Promise<() => Promise<void>> | null = null;
 let again: { pull: boolean; keepalive: boolean } | null = null;
+/** When this device saved without an edit behind it; an edit empties it. */
+let editlessPushes: number[] = [];
+/** The loop guard has fired: no save until the player edits. */
+let loopTripped = false;
+/** Consecutive 429s, and the timer that tries again after the last. */
+let rateRefusals = 0;
+let rateRetry: ReturnType<typeof setTimeout> | null = null;
 /**
  * The profile a sign-in put on screen because the account could not be read: a stand-in, not the
  * account's. Until the account's copy has been read it is dropped from the first merge that brings
@@ -171,6 +184,11 @@ function unwatch(): void {
   const stopping = stopWatching;
   stopWatching = null;
   void stopping?.then((stop) => stop()).catch(() => undefined);
+}
+
+function cancelRateRetry(): void {
+  if (rateRetry !== null) clearTimeout(rateRetry);
+  rateRetry = null;
 }
 
 function cancelAutosave(): boolean {
@@ -221,7 +239,9 @@ export const useAccountStore = create<AccountState>()((set, get) => {
    */
   const watch = (): void => {
     if (stopWatching !== null) return;
-    stopWatching = watchRemote((version) => {
+    stopWatching = watchRemote((version, updatedBy) => {
+      // Our own save echoing back can arrive before its response: nothing to fetch.
+      if (updatedBy === get().deviceId) return;
       if (version > get().remoteVersion) void get().sync({ pull: true });
     });
     // No realtime (an old proxy, a flaky network): focus, visibility and reconnect still catch up.
@@ -233,6 +253,7 @@ export const useAccountStore = create<AccountState>()((set, get) => {
   /** The account's profiles leave the screen; a fresh local profile takes their place. */
   const leave = async (keep: boolean): Promise<void> => {
     cancelAutosave();
+    cancelRateRetry();
     unwatch();
     standIn = null;
     const current = useStore.getState().doc;
@@ -258,6 +279,16 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       dialog: 'left',
       leftReason: 'expired',
     });
+  };
+
+  /** A save went through: if no edit stands behind a run of them, stop the run. */
+  const noteSave = (): void => {
+    const now = Date.now();
+    editlessPushes = [...editlessPushes.filter((at) => now - at < LOOP_WINDOW_MS), now];
+    if (editlessPushes.length < LOOP_LIMIT) return;
+    loopTripped = true;
+    console.warn(`Account sync paused: ${String(editlessPushes.length)} saves in a minute with no edit.`);
+    set({ dirty: true, syncState: 'paused', error: LOOP_MESSAGE });
   };
 
   const syncOnce = async (pullFirst: boolean, keepalive: boolean): Promise<void> => {
@@ -286,10 +317,19 @@ export const useAccountStore = create<AccountState>()((set, get) => {
           const remoteDoc = takeRemote(remote);
           if (sameContent(useStore.getState().doc, remoteDoc)) {
             rememberDevice({ remoteVersion: base });
-            set({ remoteVersion: base, dirty: false, syncState: 'saved', error: '' });
+            // A tripped guard keeps its say: nothing was pushed, but the loop is not over.
+            set(
+              loopTripped
+                ? { remoteVersion: base }
+                : { remoteVersion: base, dirty: false, syncState: 'saved', error: '' },
+            );
             return;
           }
         }
+      }
+      if (loopTripped) {
+        set({ dirty: true, syncState: 'paused', error: LOOP_MESSAGE });
+        return;
       }
       for (let attempt = 0; attempt < 3; attempt += 1) {
         // Edits made while this request is out mark the document dirty again, and save themselves.
@@ -297,7 +337,13 @@ export const useAccountStore = create<AccountState>()((set, get) => {
         const result = await push(useStore.getState().doc, base, get().deviceId, { keepalive });
         if (result.ok) {
           standIn = null; // saved: whatever was on screen is the account's copy now
+          rateRefusals = 0;
+          noteSave();
           rememberDevice({ remoteVersion: result.version });
+          if (loopTripped) {
+            set({ remoteVersion: result.version });
+            return;
+          }
           set({ remoteVersion: result.version, syncState: get().dirty ? 'saving' : 'saved', error: '' });
           return;
         }
@@ -315,6 +361,23 @@ export const useAccountStore = create<AccountState>()((set, get) => {
       const kind = error instanceof AccountError ? error.kind : 'server';
       if (kind === 'auth') {
         await expire();
+        return;
+      }
+      if (error instanceof AccountError && kind === 'rate') {
+        // A pause, not a failure: the document stays dirty and goes out again after the wait.
+        const wait =
+          error.retryAfterMs ?? RATE_BACKOFF_MS[Math.min(rateRefusals, RATE_BACKOFF_MS.length - 1)] ?? 0;
+        rateRefusals += 1;
+        set({ dirty: true, syncState: 'paused', error: error.message });
+        cancelRateRetry();
+        // setTimeout overflows past 2^31 ms and would fire at once.
+        rateRetry = setTimeout(
+          () => {
+            rateRetry = null;
+            void get().sync();
+          },
+          Math.min(wait, 600_000),
+        );
         return;
       }
       set({
@@ -349,6 +412,10 @@ export const useAccountStore = create<AccountState>()((set, get) => {
 
     markDirty: () => {
       if (get().user === null || device.owner === null) return;
+      // An edit re-arms the loop guard, and is a reason to save at once rather than wait.
+      editlessPushes = [];
+      loopTripped = false;
+      cancelRateRetry();
       set({ dirty: true, syncState: 'saving' });
       cancelAutosave();
       autosave = setTimeout(() => {
@@ -672,6 +739,10 @@ export function watchAccountSync(): () => void {
 /** Tests only: forget the module's timers and the device state read at import. */
 export function resetAccountModule(): void {
   cancelAutosave();
+  cancelRateRetry();
+  editlessPushes = [];
+  loopTripped = false;
+  rateRefusals = 0;
   unwatch();
   running = null;
   again = null;

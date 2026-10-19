@@ -19,6 +19,7 @@ import { CACHE_STORAGE_KEY, DEVICE_STORAGE_KEY, resetClient } from './client';
 import {
   emitRealtime,
   FakeResponseError,
+  fakeCalls,
   onRequest,
   realtimeListeners,
   resetFakePocketBase,
@@ -441,4 +442,147 @@ test('an account with no name changes nothing', async () => {
   startServer();
   await signIn({ created: true });
   expect(names()).toEqual(['Guest']);
+});
+
+// ---- Convergence (docs/plans/sync-convergence.md) ----------------------------------------------
+
+type FetchArgs = [string, RequestInit];
+
+/** Count the saves that go out; the fake server still answers them. */
+function countPosts(): () => number {
+  const real = globalThis.fetch as unknown as (...args: FetchArgs) => Promise<Response>;
+  let posts = 0;
+  vi.stubGlobal('fetch', (...args: FetchArgs) => {
+    posts += 1;
+    return real(...args);
+  });
+  return () => posts;
+}
+
+function pulls(): number {
+  return fakeCalls.filter((call) => call.method === 'getFirstListItem').length;
+}
+
+test('the same records in another order, heard over realtime, are pulled and never pushed back', async () => {
+  renameActive('Main');
+  await signUp();
+  anotherDeviceAdds('From the phone');
+  await useAccountStore.getState().sync({ pull: true });
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  if (server === null) throw new Error('nothing saved yet');
+  // The other device saved the same two profiles, listed the other way round.
+  server = {
+    version: server.version + 1,
+    data: { ...server.data, profiles: [...server.data.profiles].reverse() },
+  };
+  const posts = countPosts();
+  const before = pulls();
+
+  emitRealtime({ version: server.version, updatedBy: 'the-other-device' });
+
+  await vi.waitFor(() => {
+    expect(pulls()).toBe(before + 1);
+  });
+  await vi.waitFor(() => {
+    expect(useAccountStore.getState().remoteVersion).toBe(server?.version);
+  });
+  expect(posts()).toBe(0);
+  expect(useAccountStore.getState().syncState).toBe('saved');
+});
+
+test('this device’s own save, echoed over realtime before the answer arrives, starts no pull', async () => {
+  renameActive('Main');
+  await signUp();
+  await vi.waitFor(() => {
+    expect(realtimeListeners()).toBe(1);
+  });
+  const real = globalThis.fetch as unknown as (...args: FetchArgs) => Promise<Response>;
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.stubGlobal('fetch', async (...args: FetchArgs) => {
+    const response = await real(...args); // the server has saved it…
+    await gate; // …and the answer is still on its way
+    return response;
+  });
+  const before = pulls();
+
+  renameActive('Edited');
+  const saving = useAccountStore.getState().sync();
+  await vi.waitFor(() => {
+    expect(server?.version).toBeGreaterThan(useAccountStore.getState().remoteVersion);
+  });
+  emitRealtime({ version: server?.version, updatedBy: useAccountStore.getState().deviceId });
+  release();
+  await saving;
+
+  expect(pulls()).toBe(before);
+  expect(useAccountStore.getState().remoteVersion).toBe(server?.version);
+});
+
+test('after five saves with no edit between them the device stops, and an edit starts it again', async () => {
+  vi.useFakeTimers();
+  await signUp();
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  stopTracking(); // saves that nothing the player did asked for
+  useAccountStore.getState().markDirty(); // one edit, then nothing but saves
+  const posts = countPosts();
+  for (let i = 0; i < 8; i += 1) await useAccountStore.getState().sync();
+
+  expect(posts()).toBe(5);
+  expect(useAccountStore.getState().syncState).toBe('paused');
+  expect(useAccountStore.getState().error).toMatch(/keeps changing/);
+  expect(warn).toHaveBeenCalled();
+
+  useAccountStore.getState().markDirty(); // the player edits
+  await useAccountStore.getState().sync();
+  expect(posts()).toBe(6);
+  expect(useAccountStore.getState().syncState).toBe('saved');
+  warn.mockRestore();
+});
+
+/** The first save is refused with 429, then the server behaves. */
+function rateLimitedOnce(headers: Record<string, string> = {}): () => number {
+  const real = globalThis.fetch as unknown as (...args: FetchArgs) => Promise<Response>;
+  let posts = 0;
+  vi.stubGlobal('fetch', (...args: FetchArgs) => {
+    posts += 1;
+    if (posts === 1) return Promise.resolve(new Response('{}', { status: 429, headers }));
+    return real(...args);
+  });
+  return () => posts;
+}
+
+test('a 429 pauses the save, keeps the edit, and tries again after 5 seconds, not at once', async () => {
+  await signUp();
+  vi.useFakeTimers();
+  const posts = rateLimitedOnce();
+  renameActive('Edited');
+  await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 100);
+
+  expect(posts()).toBe(1);
+  expect(useAccountStore.getState()).toMatchObject({ dirty: true, syncState: 'paused' });
+  await vi.advanceTimersByTimeAsync(4_000);
+  expect(posts()).toBe(1);
+  await vi.advanceTimersByTimeAsync(1_500);
+  expect(posts()).toBe(2);
+  expect(names(server?.data)).toEqual(['Edited']);
+  expect(useAccountStore.getState()).toMatchObject({ dirty: false, syncState: 'saved' });
+});
+
+test('a 429 with Retry-After waits as long as the server says', async () => {
+  await signUp();
+  vi.useFakeTimers();
+  const posts = rateLimitedOnce({ 'Retry-After': '30' });
+  renameActive('Edited');
+  await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + 100);
+
+  await vi.advanceTimersByTimeAsync(29_000);
+  expect(posts()).toBe(1);
+  await vi.advanceTimersByTimeAsync(1_500);
+  expect(posts()).toBe(2);
+  expect(useAccountStore.getState().syncState).toBe('saved');
 });

@@ -144,7 +144,18 @@ test('a save the rate limiter refused says to wait, not that something broke', a
   await signIn();
   vi.stubGlobal('fetch', () => Promise.resolve(respond(429, { message: 'Too Many Requests.' })));
   await expect(push(newRoot(), 0, 'device-1')).rejects.toMatchObject({
-    kind: 'server',
-    message: 'Too many saves in a row. Wait a minute, then try again.',
+    kind: 'rate',
+    message: 'Too many saves in a row. Waiting a moment, then saving again.',
   });
+});
+
+test('a 429 is a rate-limit error that carries the server’s Retry-After', async () => {
+  await signIn();
+  vi.stubGlobal('fetch', () =>
+    Promise.resolve(new Response('{}', { status: 429, headers: { 'Retry-After': '12' } })),
+  );
+  await expect(push(newRoot(), 3, 'device-1')).rejects.toMatchObject({ kind: 'rate', retryAfterMs: 12_000 });
+
+  vi.stubGlobal('fetch', () => Promise.resolve(new Response('{}', { status: 429 })));
+  await expect(push(newRoot(), 3, 'device-1')).rejects.toMatchObject({ kind: 'rate', retryAfterMs: null });
 });

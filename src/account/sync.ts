@@ -116,7 +116,9 @@ export async function push(
     throw new AccountError('auth', 'This session has expired. Sign in again.');
   }
   if (response.status === 429) {
-    throw new AccountError('server', 'Too many saves in a row. Wait a minute, then try again.');
+    throw new AccountError('rate', 'Too many saves in a row. Waiting a moment, then saving again.', {
+      retryAfterMs: retryAfterMs(response),
+    });
   }
   if (!response.ok) {
     throw new AccountError('server', 'The account server refused to save this profile.');
@@ -127,6 +129,12 @@ export async function push(
     throw new AccountError('server', 'The account server sent an answer we could not read.');
   }
   return { ok: true, version: parsed.data.version, updated: parsed.data.updated };
+}
+
+/** `Retry-After` in seconds, as the server sends it; `null` when absent or not a plain number. */
+function retryAfterMs(response: Response): number | null {
+  const seconds = Number(response.headers.get('Retry-After'));
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -143,10 +151,12 @@ async function readJson(response: Response): Promise<unknown> {
  * the server now holds; the caller pulls and merges when it is ahead of what this device has seen.
  * Resolves to the function that stops listening.
  */
-export async function watchRemote(onVersion: (version: number) => void): Promise<() => Promise<void>> {
+export async function watchRemote(
+  onVersion: (version: number, updatedBy: string) => void,
+): Promise<() => Promise<void>> {
   const pb = await getClient();
   return pb.collection(PROFILES_COLLECTION).subscribe('*', (event) => {
-    const version = (event.record as { version?: unknown }).version;
-    if (typeof version === 'number') onVersion(version);
+    const { version, updatedBy } = event.record as { version?: unknown; updatedBy?: unknown };
+    if (typeof version === 'number') onVersion(version, typeof updatedBy === 'string' ? updatedBy : '');
   });
 }

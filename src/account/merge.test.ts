@@ -271,3 +271,78 @@ test('the pool line chosen on one device and troops changed on the other both su
     expect(profile?.troops.guardsmen).toBeNull();
   }
 });
+
+test('sameContent ignores the order of profiles, tombstones and section stamps', () => {
+  const { phone } = twoDevices();
+  const [first] = phone.profiles;
+  if (!first) throw new Error('no profile');
+  const second = newProfile('Second', phone.deviceId);
+  const stamped = (profile: Profile, keys: [string, string]): Profile => ({
+    ...profile,
+    sectionUpdatedAt: Object.fromEntries(keys.map((key, i) => [key, i + 1])) as Profile['sectionUpdatedAt'],
+  });
+  const tombs = [
+    { id: 'a', deletedAt: 1 },
+    { id: 'b', deletedAt: 2 },
+  ];
+  const one: RootDocument = {
+    ...phone,
+    profiles: [stamped(first, ['troops', 'bonuses']), second],
+    tombstones: tombs,
+  };
+  const other: RootDocument = {
+    ...phone,
+    profiles: [second, { ...first, sectionUpdatedAt: { bonuses: 2, troops: 1 } }],
+    tombstones: [...tombs].reverse(),
+  };
+  // `bonuses`→2, `troops`→1 in `other`; in `one` troops→1, bonuses→2: same values, other key order.
+  expect(sameContent(one, other)).toBe(true);
+  expect(sameContent(other, one)).toBe(true);
+});
+
+test('sameContent is false when a single field differs', () => {
+  const { phone } = twoDevices();
+  const [first] = phone.profiles;
+  if (!first) throw new Error('no profile');
+  expect(sameContent(phone, { ...phone, profiles: [{ ...first, name: 'Other' }] })).toBe(false);
+  expect(sameContent(phone, { ...phone, tombstones: [{ id: 'x', deletedAt: 1 }] })).toBe(false);
+  expect(
+    sameContent(
+      { ...phone, tombstones: [{ id: 'x', deletedAt: 1 }] },
+      { ...phone, tombstones: [{ id: 'x', deletedAt: 2 }] },
+    ),
+  ).toBe(false);
+});
+
+test('two devices holding the same records in different orders stop pushing after one round', () => {
+  const { phone } = twoDevices();
+  const [first] = phone.profiles;
+  if (!first) throw new Error('no profile');
+  const extras = ['B', 'C'].map((name) => newProfile(name, phone.deviceId));
+  const tombs = [
+    { id: 't1', deletedAt: 1 },
+    { id: 't2', deletedAt: 2 },
+  ];
+  let a: RootDocument = { ...phone, profiles: [first, ...extras], tombstones: tombs };
+  let b: RootDocument = {
+    ...newRoot('pc'),
+    profiles: [...extras].reverse().concat(first),
+    activeProfileId: first.id,
+    tombstones: [...tombs].reverse(),
+  };
+  let server = a;
+  let pushes = 0;
+  for (let round = 0; round < 5; round += 1) {
+    for (const device of ['a', 'b'] as const) {
+      const local = device === 'a' ? a : b;
+      const merged = mergeDocuments(local, server);
+      if (device === 'a') a = merged;
+      else b = merged;
+      if (!sameContent(merged, server)) {
+        server = merged;
+        pushes += 1;
+      }
+    }
+  }
+  expect(pushes).toBe(0);
+});

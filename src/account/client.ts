@@ -60,6 +60,8 @@ export type AccountErrorKind =
   | 'auth'
   /** The account exists, but its email address has never been confirmed. */
   | 'unverified'
+  /** The backend is rate-limiting this account (429): wait, then save again. */
+  | 'rate'
   /** The backend answered, but not with something we can use. */
   | 'server'
   /** The stored blob is not a Pyrrhic document. */
@@ -67,11 +69,18 @@ export type AccountErrorKind =
 
 export class AccountError extends Error {
   readonly kind: AccountErrorKind;
+  /** For `rate`: how long the server asked to wait (`Retry-After`), `null` when it did not say. */
+  readonly retryAfterMs: number | null;
 
-  constructor(kind: AccountErrorKind, message: string, options: ErrorOptions = {}) {
+  constructor(
+    kind: AccountErrorKind,
+    message: string,
+    options: ErrorOptions & { retryAfterMs?: number | null } = {},
+  ) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = 'AccountError';
     this.kind = kind;
+    this.retryAfterMs = options.retryAfterMs ?? null;
   }
 }
 

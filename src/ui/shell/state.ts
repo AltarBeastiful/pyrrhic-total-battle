@@ -14,13 +14,14 @@ export type FabState = 'ready' | 'stale' | 'running' | 'blocked';
  */
 export function saveStatus(options: {
   dirty: boolean;
-  account: null | 'signed-out' | 'saved' | 'saving' | 'offline' | 'error';
+  account: null | 'signed-out' | 'saved' | 'saving' | 'offline' | 'paused' | 'error';
 }): string {
   const { dirty, account } = options;
   if (account === null) return dirty ? 'Saving…' : 'Saved';
   if (account === 'signed-out') return dirty ? 'Saving…' : 'Saved in this browser only';
   if (account === 'saving') return 'Saving to your account…';
   if (account === 'offline') return 'Offline: saves when back online';
+  if (account === 'paused') return 'Sync paused';
   if (account === 'error') return 'Not saved to your account yet: will retry';
   return 'Saved to your account';
 }
