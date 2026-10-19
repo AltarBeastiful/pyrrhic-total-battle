@@ -8,7 +8,7 @@
  * Everything is selected by role and by accessible name, so a class, a layout or a glyph can change
  * without a test noticing.
  */
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -563,4 +563,65 @@ test('every battle setup keeps its own selection of sources', async () => {
 
   expect(setup()?.id).toBe(first?.id);
   expect(setup()?.active.captains).toHaveLength(1);
+});
+
+// ---- B-16: the Artifacts and Titles folds open on load ------------------------------------------
+
+const foldControl = (title: string): HTMLElement =>
+  within(card()).getByRole('button', { name: new RegExp(`^${title}`) });
+const isOpen = (title: string): boolean => foldControl(title).getAttribute('aria-expanded') === 'true';
+
+test('B-16: with nothing active and no stored state, both folds are closed', () => {
+  renderWithTheme(<BonusesSection />);
+  expect(isOpen('Artifacts')).toBe(false);
+  expect(isOpen('Titles')).toBe(false);
+});
+
+test('B-16: an active title opens Titles on mount, and only Titles', () => {
+  useStore.getState().updateActiveSetup((s) => ({ active: { ...s.active, titles: ['some-title'] } }));
+  renderWithTheme(<BonusesSection />);
+  expect(isOpen('Titles')).toBe(true);
+  expect(isOpen('Artifacts')).toBe(false);
+});
+
+test('B-16: an active artifact opens Artifacts on mount, and only Artifacts', () => {
+  useStore.getState().updateActiveSetup((s) => ({ active: { ...s.active, artifacts: ['some-entry'] } }));
+  renderWithTheme(<BonusesSection />);
+  expect(isOpen('Artifacts')).toBe(true);
+  expect(isOpen('Titles')).toBe(false);
+});
+
+test('B-16: a fold left open stays open after a remount with nothing active', () => {
+  const first = renderWithTheme(<BonusesSection />);
+  fireEvent.click(foldControl('Titles'));
+  first.unmount();
+  renderWithTheme(<BonusesSection />);
+  expect(isOpen('Titles')).toBe(true);
+  expect(isOpen('Artifacts')).toBe(false);
+});
+
+test('B-16: collapsing an active fold by hand holds for the session, and the document never carries it', () => {
+  useStore.getState().updateActiveSetup((s) => ({ active: { ...s.active, titles: ['some-title'] } }));
+  const before = JSON.stringify(useStore.getState().doc);
+  renderWithTheme(<BonusesSection />);
+  fireEvent.click(foldControl('Titles'));
+  expect(isOpen('Titles')).toBe(false);
+  expect(JSON.stringify(useStore.getState().doc)).toBe(before);
+});
+
+test('B-16: a document that arrives after mount with an active title opens Titles', () => {
+  renderWithTheme(<BonusesSection />);
+  expect(isOpen('Titles')).toBe(false);
+  const root = newRoot();
+  const loaded = {
+    ...root,
+    profiles: root.profiles.map((p) => ({
+      ...p,
+      setups: p.setups.map((s) => ({ ...s, active: { ...s.active, titles: ['some-title'] } })),
+    })),
+  };
+  act(() => {
+    useStore.getState().replaceDocument(loaded);
+  });
+  expect(isOpen('Titles')).toBe(true);
 });

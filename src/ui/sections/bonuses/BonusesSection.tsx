@@ -70,10 +70,18 @@ export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const titleId = useId();
-  const [folds, setFolds] = useState<Record<BonusesFold, boolean>>(() => ({
-    artifacts: readFold('artifacts'),
-    titles: readFold('titles'),
-  }));
+  // B-16: a foot fold opens on load when the device left it open or when something in it is on.
+  // Resolved once per loaded profile (the document can arrive after the first render), then the
+  // hand owns it for the session. The device memory is `uiPrefs`, never the document (rule 4).
+  const [folds, setFolds] = useState<Record<BonusesFold, boolean>>({ artifacts: false, titles: false });
+  const [resolvedFor, setResolvedFor] = useState<string | null>(null);
+  if (profile !== undefined && setup !== undefined && resolvedFor !== profile.id) {
+    setResolvedFor(profile.id);
+    setFolds({
+      artifacts: readFold('artifacts') || setup.active.artifacts.length > 0,
+      titles: readFold('titles') || setup.active.titles.length > 0,
+    });
+  }
   const [editor, setEditor] = useState<EditorTarget | null>(null);
   const [refusedCaptain, setRefusedCaptain] = useState(false);
   const [refusedArtifact, setRefusedArtifact] = useState(false);

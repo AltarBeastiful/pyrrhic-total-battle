@@ -81,3 +81,52 @@ test('Escape in the search field closes the list', async () => {
   await user.type(screen.getByRole('textbox', { name: 'Search mercenaries' }), '{Escape}');
   expect(screen.queryByRole('option', { name: 'Bear' })).toBeNull();
 });
+
+test('typing highlights the first match and Enter picks it', async () => {
+  const user = userEvent.setup();
+  const onPick = vi.fn();
+  renderWithTheme(<Example onPick={onPick} />);
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+  await user.type(screen.getByRole('textbox', { name: 'Search mercenaries' }), 'e');
+  expect(screen.getByRole('option', { name: 'Bear' }).getAttribute('data-combobox-selected')).toBe('true');
+  await user.keyboard('{Enter}');
+
+  expect(onPick).toHaveBeenCalledWith('bear-5');
+});
+
+test('Down moves the highlight and Enter picks that one', async () => {
+  const user = userEvent.setup();
+  const onPick = vi.fn();
+  renderWithTheme(<Example onPick={onPick} />);
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+  await user.type(screen.getByRole('textbox', { name: 'Search mercenaries' }), 'e');
+  await user.keyboard('{ArrowDown}{Enter}');
+  expect(onPick).toHaveBeenLastCalledWith('hunter-5');
+
+  await user.keyboard('e{ArrowDown}{ArrowUp}{Enter}');
+  expect(onPick).toHaveBeenLastCalledWith('bear-5');
+});
+
+test('after a pick the text is empty, the list stays open and the field keeps the focus', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+  const field = screen.getByRole('textbox', { name: 'Search mercenaries' });
+  await user.type(field, 'arch');
+  await user.keyboard('{Enter}');
+
+  expect((field as HTMLInputElement).value).toBe('');
+  expect(screen.getByRole('option', { name: 'Bear' })).toBeTruthy();
+  expect(document.activeElement).toBe(field);
+});
+
+test('Escape closes the list and clears the search', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<Example />);
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+  await user.type(screen.getByRole('textbox', { name: 'Search mercenaries' }), 'arch');
+  await user.keyboard('{Escape}');
+  await user.click(screen.getByRole('button', { name: 'Hire mercenary…' }));
+
+  expect((screen.getByRole('textbox', { name: 'Search mercenaries' }) as HTMLInputElement).value).toBe('');
+});

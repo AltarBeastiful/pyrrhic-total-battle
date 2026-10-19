@@ -8,7 +8,7 @@
  * `Combobox.Target` does, so Escape is handled here (investigation 0007).
  */
 import { Box, Button, Combobox, Text, useCombobox } from '@mantine/core';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import classes from './kit.module.css';
 
@@ -38,6 +38,11 @@ export interface GroupedComboboxProps {
   emptyMessage?: string;
   width?: number | string;
   disabled?: boolean;
+  /**
+   * Where the focus goes when Escape closes the list: the element returned, or the trigger when
+   * this returns null or is not given.
+   */
+  escapeFocus?: () => HTMLElement | null;
 }
 
 function textOf(option: ComboboxOption): string {
@@ -53,7 +58,9 @@ export function GroupedCombobox({
   emptyMessage = 'Nothing matches',
   width = 220,
   disabled = false,
+  escapeFocus,
 }: GroupedComboboxProps) {
+  const trigger = useRef<HTMLButtonElement>(null);
   const [query, setQuery] = useState('');
   const combobox = useCombobox({
     // The search field takes the focus as the list opens (owner, 2026-09-18: "the hire a merc button
@@ -64,6 +71,7 @@ export function GroupedCombobox({
       combobox.focusSearchInput();
     },
     onDropdownClose: () => {
+      setQuery('');
       combobox.resetSelectedOption();
     },
   });
@@ -80,19 +88,30 @@ export function GroupedCombobox({
       .filter((group) => group.options.length > 0);
   }, [groups, query]);
 
+  // Every keystroke highlights the first match, so Enter hires it; Up and Down (Mantine's search
+  // field) move from there. Runs after the list has re-rendered, which `selectFirstOption` reads.
+  useEffect(() => {
+    if (query.trim() === '') combobox.resetSelectedOption();
+    else combobox.selectFirstOption();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the store object is new every render
+  }, [query]);
+
   return (
     <Combobox
       store={combobox}
       withinPortal={false}
       onOptionSubmit={(value) => {
         onPick(value);
-        // Deliberately left open: several hires in a row is the whole point.
+        // Deliberately left open, field emptied and focused: several hires in a row is the point.
+        setQuery('');
+        combobox.focusSearchInput();
       }}
     >
       <Combobox.DropdownTarget>
         <Button
           variant="default"
           w={width}
+          ref={trigger}
           disabled={disabled}
           onClick={() => {
             combobox.toggleDropdown();
@@ -114,6 +133,7 @@ export function GroupedCombobox({
             if (event.key === 'Escape') {
               event.preventDefault();
               combobox.closeDropdown();
+              (escapeFocus?.() ?? trigger.current)?.focus();
             }
           }}
         />

@@ -260,3 +260,92 @@ test('the custom sheet adds a mercenary the tables do not carry, and its pill re
   await user.click(screen.getByRole('button', { name: 'Edit Spider Queen' }));
   expect(await screen.findByRole('dialog', { name: 'Edit custom mercenary' })).toBeTruthy();
 }, 20_000);
+
+// B-15: the quantity pills' keyboard flow. The UI tests carry no engine (the kernel/TS split lives
+// below the store), so one run covers both paths.
+const badge = (name: string) => screen.getByRole('button', { name });
+const THREE = [
+  { id: 'bear-5', cap: 5 },
+  { id: 'abomination-6', cap: 22 },
+  { id: 'arbalester-7', cap: 8 },
+];
+
+test('Esc from the search focuses the pill of the mercenary hired last, the trigger when none', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+
+  await find(user);
+  await user.keyboard('{Escape}');
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Hire mercenary…' }));
+
+  await find(user, 'bear');
+  await user.keyboard('{Enter}');
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('listbox')).toBeNull();
+  expect(document.activeElement).toBe(badge('Bear V: owned unlimited'));
+});
+
+test('Enter on a focused pill opens its editor', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own(THREE);
+
+  badge('Bear V: owned 5').focus();
+  await user.keyboard('{Enter}');
+  expect(within(await screen.findByRole('dialog')).getByText('Bear V')).toBeTruthy();
+});
+
+test('Tab and Shift+Tab walk the pills in displayed order, and leave the list at either end', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own(THREE);
+
+  badge('Bear V: owned 5').focus();
+  await user.tab();
+  expect(document.activeElement).toBe(badge('Abomination VI: owned 22'));
+  await user.tab();
+  expect(document.activeElement).toBe(badge('Arbalester VII: owned 8'));
+  await user.tab({ shift: true });
+  expect(document.activeElement).toBe(badge('Abomination VI: owned 22'));
+
+  badge('Arbalester VII: owned 8').focus();
+  await user.tab();
+  expect(camp().contains(document.activeElement)).toBe(false);
+  badge('Bear V: owned 5').focus();
+  await user.tab({ shift: true });
+  expect(document.activeElement).not.toBe(badge('Abomination VI: owned 22'));
+});
+
+test('in an open editor Tab commits and opens the next one, Shift+Tab the previous', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own(THREE);
+
+  await user.click(badge('Bear V: owned 5'));
+  const field = await screen.findByRole('textbox', { name: 'Owned' });
+  await user.clear(field);
+  await user.type(field, '9');
+  await user.tab();
+  expect(mercs()?.selected[0]).toEqual({ id: 'bear-5', cap: 9 });
+  const next = await screen.findByRole('dialog');
+  expect(within(next).getByText('Abomination VI')).toBeTruthy();
+  expect(screen.getAllByRole('dialog')).toHaveLength(1);
+
+  await user.tab({ shift: true });
+  expect(within(await screen.findByRole('dialog')).getByText('Bear V')).toBeTruthy();
+});
+
+test('Esc in an editor cancels the edit and keeps the focus on the pill', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<MercenariesSection />);
+  own(THREE);
+
+  await user.click(badge('Bear V: owned 5'));
+  const field = await screen.findByRole('textbox', { name: 'Owned' });
+  await user.clear(field);
+  await user.type(field, '99');
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(mercs()?.selected[0]).toEqual({ id: 'bear-5', cap: 5 });
+  expect(document.activeElement).toBe(badge('Bear V: owned 5'));
+});
