@@ -239,14 +239,14 @@ export async function settle(page: Page): Promise<void> {
   await expect(generateState(page)).not.toHaveAttribute('data-state', 'running', { timeout: 30_000 });
 }
 
-// ---- The account menu ---------------------------------------------------------------------------
-/** The top bar's one control; its accessible name is "Account: <profile name>". */
-export function accountButton(page: Page): Locator {
-  return page.getByRole('button', { name: /^Account: / });
+// ---- The main menu -----------------------------------------------------------------------------
+/** The menu button next to the brand (B-18); its accessible name is "Menu". */
+export function menuButton(page: Page): Locator {
+  return page.getByRole('button', { name: 'Menu', exact: true });
 }
 
-export async function openAccountMenu(page: Page): Promise<Locator> {
-  await accountButton(page).click();
+export async function openMainMenu(page: Page): Promise<Locator> {
+  await menuButton(page).click();
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
   return menu;
@@ -266,20 +266,34 @@ export async function openAccountDropdown(page: Page): Promise<Locator> {
 }
 
 /** Open the menu and choose one item by name, waiting for the menu to close behind it. */
-export async function chooseInAccountMenu(page: Page, name: string | RegExp): Promise<void> {
-  await openAccountMenu(page);
+export async function chooseInMainMenu(page: Page, name: string | RegExp): Promise<void> {
+  await openMainMenu(page);
   await page.getByRole('menuitem', { name }).click();
   await expect(page.getByRole('menu')).toBeHidden();
 }
 
 /** Rename the active profile through the menu and its dialog. */
 export async function renameProfile(page: Page, name: string): Promise<void> {
-  await chooseInAccountMenu(page, /^Rename profile/);
+  await chooseInMainMenu(page, /^Rename profile/);
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Profile name').fill(name);
   await dialog.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(accountButton(page)).toHaveAccessibleName(`Account: ${name}`);
+  await expectActiveProfile(page, name);
+}
+
+/** The active profile's name, read from the switcher (the account icon no longer carries it). */
+export async function activeProfileName(page: Page): Promise<string> {
+  const menu = await openAccountDropdown(page);
+  const text = await menu.getByRole('menuitem', { name: /\(active\)/ }).innerText();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  return text.replace(/\s*\(active\)\s*$/, '').trim();
+}
+
+/** Assert the active profile's name, polling while a sync lands. */
+export async function expectActiveProfile(page: Page, name: string, timeout = 5000): Promise<void> {
+  await expect.poll(() => activeProfileName(page), { timeout }).toBe(name);
 }
 
 /** Wait until the debounced write has landed: the menu's one-word status says so. */

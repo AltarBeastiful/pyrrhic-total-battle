@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The account menu (design plan §5.2): every profile action a player has, behind one control, in
+ * The main menu (B-18; design plan §5.2): every profile action a player has, behind one control, in
  * the order the plan fixes. What is tested here is what a player can name — the rows, the two
  * questions that interrupt (rename, delete) and the theme row — never how the menu is drawn.
  */
@@ -12,7 +12,7 @@ import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
 import { renderWithTheme } from '../kit/testRender';
-import { AccountMenu } from './AccountMenu';
+import { MainMenu } from './MainMenu';
 
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -28,8 +28,8 @@ afterEach(() => {
 /** Open the menu; everything below starts here, because nothing of this is on the page itself. */
 async function openMenu(): Promise<HTMLElement> {
   const user = userEvent.setup();
-  renderWithTheme(<AccountMenu />);
-  await user.click(screen.getByRole('button', { name: /^Account:/ }));
+  renderWithTheme(<MainMenu />);
+  await user.click(screen.getByRole('button', { name: 'Menu' }));
   return screen.findByRole('menu');
 }
 
@@ -64,7 +64,7 @@ test('renaming asks for the new name in a dialog and writes it to the store', as
   await waitFor(() => {
     expect(useStore.getState().doc.profiles[0]?.name).toBe('Renamed');
   });
-  expect(screen.getByRole('button', { name: 'Account: Renamed' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^Account:/ })).toBeNull();
 });
 
 test('deleting asks first, in a dialog that interrupts', async () => {

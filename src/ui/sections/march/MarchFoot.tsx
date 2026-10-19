@@ -141,7 +141,7 @@ export function MarchSavedFold() {
  * (`MarchSection.tsx`), at both widths, which is the one row on the card that was half empty.
  *
  * **The share mark is gone** (owner, 2026-10-13: *"remove the share march button"*): the account menu
- * already offers "Share this march" (`shell/AccountMenu.tsx`), so the mark said the same thing twice on
+ * already offers "Share this march" (`shell/MainMenu.tsx`), so the mark said the same thing twice on
  * one screen (design rule 5). What is left is the four marks a player reaches for on the answer itself.
  *
  * The edit mode it switches lives in the run store, not here: the stack pills it turns into fields are

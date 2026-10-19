@@ -6,8 +6,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  accountButton,
-  chooseInAccountMenu,
+  expectActiveProfile,
+  chooseInMainMenu,
   openApp,
   renameProfile,
   switchProfileNames,
@@ -32,7 +32,7 @@ test('export writes a JSON file and importing it adds a second profile', async (
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    chooseInAccountMenu(page, /^Export JSON/),
+    chooseInMainMenu(page, /^Export JSON/),
   ]);
   expect(download.suggestedFilename()).toMatch(/^pyrrhic-exported-\d{4}-\d{2}-\d{2}\.json$/);
 
@@ -63,7 +63,7 @@ test('a profile link offers to add the account in a fresh browser', async ({ pag
   await renameProfile(page, 'Shared');
 
   // Share copies the link and says so in a live region; with no march generated it is the profile.
-  await chooseInAccountMenu(page, /^Share this march/);
+  await chooseInMainMenu(page, /^Share this march/);
   // The march has its own status line; this one is the top bar's.
   await expect(page.getByRole('banner').getByRole('status')).toHaveText('Copied');
   const url = await clipboard(page);
@@ -82,7 +82,7 @@ test('a profile link offers to add the account in a fresh browser', async ({ pag
   expect(other.url()).not.toContain('#c=');
 
   await prompt.getByRole('button', { name: 'Add as new profile' }).click();
-  await expect(accountButton(other)).toHaveAccessibleName('Account: Shared');
+  await expectActiveProfile(other, 'Shared');
   await expect.poll(() => switchProfileNames(other)).toEqual(['My account', 'Shared']);
 
   expect(otherProblems).toEqual([]);

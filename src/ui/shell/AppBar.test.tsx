@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 /**
- * The top app bar after spike 0009: brand and account, full stop. The test is mostly a guard
+ * The top app bar after spike 0009: brand, menu and account, full stop. The test is mostly a guard
  * against the bar growing a second job again — it carried the figures and Generate until V1 was
  * adopted, and design rule 5 (do not duplicate) is what took them out.
  */
-import { act, cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
@@ -29,24 +29,21 @@ test('the bar is the banner, and the brand is the page’s one H1', () => {
   expect(brand.textContent).toBe('Pyrrhic');
 });
 
-test('the controls in it are the profile menu and the account icon', () => {
+test('the controls in it are the menu and the account icon', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
 
-  expect(within(banner).getByRole('button', { name: 'Account: My account' })).toBeTruthy();
+  expect(within(banner).getByRole('button', { name: 'Menu' })).toBeTruthy();
   // Nothing else: no Generate, no figures, no jump bar (design plan §5.1, `v4-desktop.jpg`).
   expect(within(banner).getByRole('button', { name: /^Profiles and account/ })).toBeTruthy();
   expect(within(banner).getAllByRole('button')).toHaveLength(2);
   expect(screen.queryByRole('button', { name: /Generate/ })).toBeNull();
 });
 
-test('the account trigger follows the profile it names', () => {
+test('the menu button sits next to the brand, before the account icon', () => {
   renderWithTheme(<AppBar />);
-  const id = useStore.getState().doc.profiles[0]?.id;
-  if (id === undefined) throw new Error('no profile to rename');
-  act(() => {
-    useStore.getState().renameProfile(id, 'Second account');
-  });
-
-  expect(screen.getByRole('button', { name: 'Account: Second account' })).toBeTruthy();
+  const banner = screen.getByRole('banner');
+  const [first, second] = within(banner).getAllByRole('button');
+  expect(first?.getAttribute('aria-label')).toBe('Menu');
+  expect(second?.getAttribute('aria-label')).toMatch(/^Profiles and account/);
 });
