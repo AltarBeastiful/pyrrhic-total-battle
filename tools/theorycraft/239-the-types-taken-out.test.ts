@@ -143,13 +143,19 @@ describe.skipIf(!process.env.THEORY)('239 — the types taken out', () => {
 
     // The stop is additive: every other stop is the same march under every pool.
     for (const army of results)
-      for (const run of army.runs) expect(run.others, `${army.label} @ ${String(run.dropTypes)}`).toEqual(army.runs[0]?.others);
+      for (const run of army.runs)
+        expect(run.others, `${army.label} @ ${String(run.dropTypes)}`).toEqual(army.runs[0]?.others);
 
     mkdirSync(OUT_DIR, { recursive: true });
     writeFileSync(
       new URL('239-the-types-taken-out.json', OUT_DIR),
       `${JSON.stringify(
-        { experiment: '239', fifthStop: CAMPAIGN.planFixes.fifthStop, drops: DROPS, armies: results.map((a) => ({ ...a, runs: a.runs.map(({ ms: _ms, ...rest }) => rest) })) },
+        {
+          experiment: '239',
+          fifthStop: CAMPAIGN.planFixes.fifthStop,
+          drops: DROPS,
+          armies: results.map((a) => ({ ...a, runs: a.runs.map(({ ms: _ms, ...rest }) => rest) })),
+        },
         null,
         1,
       )}\n`,
@@ -166,7 +172,9 @@ describe.skipIf(!process.env.THEORY)('239 — the types taken out', () => {
       "The thrifty stop's pool is the band (`dropTypes 0`), or the band plus, for every set of up to `dropTypes` troop types taken out, the Elite sizer's sheltered maximum over the rest with the whole sustainable stock as caps, and the same with each capped mercenary trimmed `1 … trims` chunks under it. The rule is `engine/thriftyStop.ts` with the burn allowed up to the next stop up's (inclusive). A cell is `Δdamage % / Δsilver % / Δqueue % / burn` of the pick against the sweet spot, `·` for no pick. Every other stop is asserted the same march under every pool.",
     );
     lines.push('');
-    lines.push(`| army | ${DROPS.map((d) => `drop ≤ ${String(d)}`).join(' | ')} | plan ms (${DROPS.join(' / ')}) |`);
+    lines.push(
+      `| army | ${DROPS.map((d) => `drop ≤ ${String(d)}`).join(' | ')} | plan ms (${DROPS.join(' / ')}) |`,
+    );
     lines.push(`|---|${DROPS.map(() => '---:').join('|')}|---:|`);
     for (const army of results) {
       const cells = army.runs.map((run) =>
@@ -174,7 +182,9 @@ describe.skipIf(!process.env.THEORY)('239 — the types taken out', () => {
           ? `${pct(run.thrifty.damage, run.sweet.damage)} / ${pct(run.thrifty.silver, run.sweet.silver)} / ${pct(run.thrifty.seconds, run.sweet.seconds)} / ${String(run.thrifty.burn)}`
           : '·',
       );
-      lines.push(`| ${army.label} | ${cells.join(' | ')} | ${army.runs.map((r) => String(Math.round(r.ms))).join(' / ')} |`);
+      lines.push(
+        `| ${army.label} | ${cells.join(' | ')} | ${army.runs.map((r) => String(Math.round(r.ms))).join(' / ')} |`,
+      );
     }
     lines.push(
       `| **armies with a pick** | ${DROPS.map((_, i) => String(results.filter((a) => a.runs[i]?.thrifty).length)).join(' | ')} | |`,
@@ -199,7 +209,8 @@ describe.skipIf(!process.env.THEORY)('239 — the types taken out', () => {
       lines.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
       const row = (name: string, p: Pick): string =>
         `| ${name} | ${n(p.damage)} | ${n(p.silver)} | ${String(p.burn)} | ${n(p.gold)} | ${n(p.coins)} | ${days(p.seconds)} | ${p.perSilver.toFixed(3)} | ${n(p.perMerc)} |`;
-      for (const stop of run.stops) lines.push(row(stop.pick === 'thrifty' ? '**thrifty**' : stop.pick, stop));
+      for (const stop of run.stops)
+        lines.push(row(stop.pick === 'thrifty' ? '**thrifty**' : stop.pick, stop));
       if (base?.thrifty && JSON.stringify(base.thrifty.counts) !== JSON.stringify(run.thrifty?.counts))
         lines.push(row('thrifty, band alone', base.thrifty));
       lines.push('');

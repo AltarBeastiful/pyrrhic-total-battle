@@ -35,7 +35,10 @@ import { READINGS } from './plan-report';
 import type { Figures } from './plan-report';
 
 /** The army an export file describes, built as `loadOwner` builds it (setup 0), or `null` with a note. */
-function exportArmy(file: string, note: (text: string) => void): { label: string; request: StackRequest } | null {
+function exportArmy(
+  file: string,
+  note: (text: string) => void,
+): { label: string; request: StackRequest } | null {
   if (!existsSync(file)) {
     note(`PYRRHIC_HORIZON_EXPORT: ${file} does not exist, skipped`);
     return null;
@@ -76,12 +79,21 @@ describe.skipIf(!process.env.THEORY)('232 — the march horizon', () => {
       const horizon = horizonOf(label, request);
       armies.push(horizon);
       report.add(
-        `${label}: ${horizon.refused ? `REFUSED (${horizon.refused})` : `${String(horizon.rows.length)} rows, ` +
-          `${String(horizon.stops.length)} stops, ${String(horizon.census.fifthCandidates)} fifth candidates`}`,
+        `${label}: ${
+          horizon.refused
+            ? `REFUSED (${horizon.refused})`
+            : `${String(horizon.rows.length)} rows, ` +
+              `${String(horizon.stops.length)} stops, ${String(horizon.census.fifthCandidates)} fifth candidates`
+        }`,
       );
     }
 
-    const meta = { experiment: '232', marchTarget: HORIZON, benchmarkArmies: scenarios.length, extraArmies: extras.length };
+    const meta = {
+      experiment: '232',
+      marchTarget: HORIZON,
+      benchmarkArmies: scenarios.length,
+      extraArmies: extras.length,
+    };
     mkdirSync(OUT_DIR, { recursive: true });
     saveHorizon(new URL('232-the-march-horizon.json', OUT_DIR), armies, meta);
     writeFileSync(new URL('232-the-march-horizon.md', OUT_DIR), renderSummary(armies, meta));
@@ -104,7 +116,8 @@ describe.skipIf(!process.env.THEORY)('232 — the march horizon', () => {
       expect(army.stops.length, `${army.label}: stops`).toBeGreaterThanOrEqual(1);
       expect(army.stops.length, `${army.label}: stops`).toBeLessThanOrEqual(5);
       const measured = measure(scenario, UNBUDGETED, 1);
-      if (!measured.plan) throw new Error(`${army.label}: the benchmark's own plan was refused (${measured.refusal ?? '?'})`);
+      if (!measured.plan)
+        throw new Error(`${army.label}: the benchmark's own plan was refused (${measured.refusal ?? '?'})`);
       expect(
         measured.plan.alternatives.map((stop) => stop.pick),
         `${army.label}: the offered picks`,
@@ -113,7 +126,9 @@ describe.skipIf(!process.env.THEORY)('232 — the march horizon', () => {
         const row = army.rows.find((r) => r.marks.stop === stop.pick);
         expect(row, `${army.label}: the ${stop.pick} stop is among the rows`).toBeDefined();
         if (!row) continue;
-        expect(readingsOf(row), `${army.label}: ${stop.pick} readings`).toEqual(readingsOf(figuresOf(stop.repeat)));
+        expect(readingsOf(row), `${army.label}: ${stop.pick} readings`).toEqual(
+          readingsOf(figuresOf(stop.repeat)),
+        );
       }
     });
 
@@ -124,12 +139,18 @@ describe.skipIf(!process.env.THEORY)('232 — the march horizon', () => {
       // The bar's readings are campaign totals (`readingOf` over `StopReport.campaign`), a row's `worst` is one
       // march: compare each on its own scale.
       const best = Math.max(...army.rows.map((row) => row.worst));
-      const bestStop = Math.max(...army.rows.filter((row) => row.marks.stop !== undefined).map((row) => row.worst));
-      expect(best, `${army.label}: best row on worst vs the best offered stop, a march`).toBeGreaterThanOrEqual(bestStop);
-      const bestCampaign = Math.max(...army.rows.map((row) => row.campaign.totalDamage));
-      expect(bestCampaign, `${army.label}: best row campaign vs the bar's most damage`).toBeGreaterThanOrEqual(
-        mostDamage.value,
+      const bestStop = Math.max(
+        ...army.rows.filter((row) => row.marks.stop !== undefined).map((row) => row.worst),
       );
+      expect(
+        best,
+        `${army.label}: best row on worst vs the best offered stop, a march`,
+      ).toBeGreaterThanOrEqual(bestStop);
+      const bestCampaign = Math.max(...army.rows.map((row) => row.campaign.totalDamage));
+      expect(
+        bestCampaign,
+        `${army.label}: best row campaign vs the bar's most damage`,
+      ).toBeGreaterThanOrEqual(mostDamage.value);
       const { summarised, undominated, band } = army.census;
       expect(summarised, `${army.label}: summarised ≥ undominated`).toBeGreaterThanOrEqual(undominated);
       expect(undominated, `${army.label}: undominated ≥ band`).toBeGreaterThanOrEqual(band);

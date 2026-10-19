@@ -34,6 +34,7 @@ import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { CAMPAIGN } from '@/config';
+import { selectActiveProfile, useStore } from '@/state/store';
 import type { StackResult, UnitDef } from '@/engine/types';
 import { Glyph, LeftOutPill, poolInk, StackPill } from '@/ui/domain';
 import domainClasses from '@/ui/domain/domain.module.css';
@@ -49,7 +50,7 @@ import { isExhaustive, offersPush, raisesPool } from './raise';
 import type { RaiseMode, RaiseModes, RaisedPool } from './raise';
 import { countsText, resizeWords } from './rows';
 import type { LeftOutUnit, MarchStackRow, PoolRow } from './rows';
-import { useRunStore } from './runStore';
+import { poolLineOpening, useRunStore } from './runStore';
 import { shelterNote } from './shelter';
 import type { PushOffer } from './useMarch';
 
@@ -306,6 +307,19 @@ export function MarchRaiseControl({
 }
 
 /**
+ * **Whether a Generate switches this pool's mark back on** — the account's *Pool line on Generate* setting names the
+ * pool and the mark's rule (owner, 2026-10-19: he took the button off, Generated, and it came back, and the setting
+ * was nowhere near the button). Said in the tooltip and the name, so the setting is found from the control it moves.
+ */
+function useReopens(pool: RaisedPool, rule: 'push' | 'round'): boolean {
+  const settings = useStore(selectActiveProfile).settings;
+  const opening = poolLineOpening(settings);
+  return (rule === 'push' ? opening.pushed : opening.rounded)[pool];
+}
+
+const REOPENS_NOTE = 'Generate switches this on again: Pool line on Generate, in the account menu.';
+
+/**
  * **The pool's push, at the end of its own line** (S-159; owner, 2026-10-12: *"a button on the right of the merc
  * line … the position can be switched back by pressing again on the button"*).
  *
@@ -332,6 +346,7 @@ export function MarchPushControl({
   offer: PushOffer;
   onPush: () => void;
 }) {
+  const reopens = useReopens(pool, 'push');
   const trade = offer.trade;
   if (!offersPush(trade, offer.pressed)) return null;
   const gain = trade === null || trade.before <= 0 ? 0 : ((trade.damage - trade.before) / trade.before) * 100;
@@ -347,7 +362,7 @@ export function MarchPushControl({
       ? ''
       : `: ${adds} damage, ${signedPercent(gain)}, ${amount(trade.lost)} ${POOL_NOUN[pool]} lost`;
   const name = offer.pressed
-    ? `Take the push off ${POOL_NOUN[pool]}${figures}.`
+    ? `Take the push off ${POOL_NOUN[pool]}${figures}.${reopens ? ` ${REOPENS_NOTE}` : ''}`
     : `Push ${POOL_NOUN[pool]} to the most the kill order allows${figures}.`;
   return (
     <Tooltip
@@ -373,6 +388,11 @@ export function MarchPushControl({
             </>
           )}
           {offer.pressed && <Text size="xs">{`Press again to put ${POOL_NOUN[pool]} back.`}</Text>}
+          {reopens && (
+            <Text size="xs" c="dimmed">
+              {REOPENS_NOTE}
+            </Text>
+          )}
         </Stack>
       }
       multiline
@@ -410,6 +430,7 @@ export function MarchRoundControl({
   offer: PushOffer;
   onRound: () => void;
 }) {
+  const reopens = useReopens(pool, 'round');
   const trade = offer.trade;
   if (trade === null) return null;
   const gain = trade.before <= 0 ? 0 : ((trade.damage - trade.before) / trade.before) * 100;
@@ -417,7 +438,7 @@ export function MarchRoundControl({
   const lost = `${trade.lost >= 0 ? '+' : '−'}${amount(Math.abs(trade.lost))}`;
   const figures = `: ${adds} damage, ${signedPercent(gain)}, ${lost} ${POOL_NOUN[pool]} lost`;
   const name = offer.pressed
-    ? `Take the rounding off ${POOL_NOUN[pool]}${figures}.`
+    ? `Take the rounding off ${POOL_NOUN[pool]}${figures}.${reopens ? ` ${REOPENS_NOTE}` : ''}`
     : `Round ${POOL_NOUN[pool]} to tens, up or down by the best trade${figures}.`;
   return (
     <Tooltip
@@ -439,6 +460,11 @@ export function MarchRoundControl({
             </Text>
           </Group>
           {offer.pressed && <Text size="xs">{`Press again to put ${POOL_NOUN[pool]} back.`}</Text>}
+          {reopens && (
+            <Text size="xs" c="dimmed">
+              {REOPENS_NOTE}
+            </Text>
+          )}
         </Stack>
       }
       multiline

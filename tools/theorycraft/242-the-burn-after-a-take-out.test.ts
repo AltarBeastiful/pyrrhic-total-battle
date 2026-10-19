@@ -76,8 +76,8 @@ describe.skipIf(!process.env.THEORY || !existsSync(ACCOUNT))('242 — the burn a
       '',
       'Each cell: merc lost (Δ vs stop) · damage (Δ%) · silver · gold. **stop** = Tight over the stop (what the March',
       'shows before the edit). **resized** = `resizeMarchOver` as the pane calls it; **+T** = Tight over it.',
-      '**capped** = diagnostic: hired caps at the stop\'s own counts instead of `largestSustained(stock, repeats)`;',
-      '**mercCap** = only the mercs capped at the stop\'s counts, monsters at their pool.',
+      "**capped** = diagnostic: hired caps at the stop's own counts instead of `largestSustained(stock, repeats)`;",
+      "**mercCap** = only the mercs capped at the stop's counts, monsters at their pool.",
       '',
     ];
     const stops = [...plan.alternatives].sort((a, b) => ORDER.indexOf(a.pick) - ORDER.indexOf(b.pick));
@@ -95,7 +95,9 @@ describe.skipIf(!process.env.THEORY || !existsSync(ACCOUNT))('242 — the burn a
         `stop as is: ${cell(before.asIs, before.asIs)} · **stop (Tight)**: ${cell(before.tight, before.tight)}`,
         '',
       );
-      lines.push('| take out | shape/fill | resized | resized+T | capped | capped+T | mercCap+T | hired Δ (resized) |');
+      lines.push(
+        '| take out | shape/fill | resized | resized+T | capped | capped+T | mercCap+T | hired Δ (resized) |',
+      );
       lines.push('|---|---|---|---|---|---|---|---|');
       const fielded = Object.keys(stop.counts).filter((id) => (stop.counts[id] ?? 0) > 0);
       for (const out of fielded) {

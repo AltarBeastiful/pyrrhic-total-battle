@@ -47,28 +47,55 @@ describe.skipIf(!process.env.THEORY)('231 — the queue across the band', () => 
       `${row.repeat.mercLost > 0 ? n(row.repeat.hiredDamage / row.repeat.mercLost) : '—'} |` +
       (sweet
         ? ` ${rate(
-            { damage: sweet.repeat.damage, silver: sweet.repeat.silver, gold: sweet.repeat.gold, hired: sweet.repeat.mercLost, dragonCoins: sweet.repeat.dragonCoins ?? 0, seconds: sweet.repeat.seconds },
-            { damage: row.repeat.damage, silver: row.repeat.silver, gold: row.repeat.gold, hired: row.repeat.mercLost, dragonCoins: row.repeat.dragonCoins ?? 0, seconds: row.repeat.seconds },
+            {
+              damage: sweet.repeat.damage,
+              silver: sweet.repeat.silver,
+              gold: sweet.repeat.gold,
+              hired: sweet.repeat.mercLost,
+              dragonCoins: sweet.repeat.dragonCoins ?? 0,
+              seconds: sweet.repeat.seconds,
+            },
+            {
+              damage: row.repeat.damage,
+              silver: row.repeat.silver,
+              gold: row.repeat.gold,
+              hired: row.repeat.mercLost,
+              dragonCoins: row.repeat.dragonCoins ?? 0,
+              seconds: row.repeat.seconds,
+            },
             CAMPAIGN.markerRates,
           ).toFixed(1)} |`
         : ' |');
 
-    report.h(`the band, by training queue (${plan.trade?.length ?? 0} plans) — the last column rates each against the sweet spot`);
-    report.add('| plan | worst dmg | silver | merc lost | gold | **queue** | per silver | per merc | vs sweet |');
+    report.h(
+      `the band, by training queue (${plan.trade?.length ?? 0} plans) — the last column rates each against the sweet spot`,
+    );
+    report.add(
+      '| plan | worst dmg | silver | merc lost | gold | **queue** | per silver | per merc | vs sweet |',
+    );
     report.add('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
     const trade = [...(plan.trade ?? [])].sort((a, b) => a.repeat.seconds - b.repeat.seconds);
     for (const row of trade.slice(0, 40)) report.add(line(row));
 
     report.h('the stops, rated against the sweet spot');
-    report.add('| stop | worst dmg | silver | merc lost | gold | **queue** | per silver | per merc | vs sweet |');
+    report.add(
+      '| stop | worst dmg | silver | merc lost | gold | **queue** | per silver | per merc | vs sweet |',
+    );
     report.add('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
-    for (const row of [...plan.alternatives].sort((a, b) => a.repeat.seconds - b.repeat.seconds)) report.add(line(row));
+    for (const row of [...plan.alternatives].sort((a, b) => a.repeat.seconds - b.repeat.seconds))
+      report.add(line(row));
 
     report.h('what each stop’s troop wall shelters');
     for (const row of plan.alternatives) {
       const e = evaluateCounts(base, row.counts);
       const stacks = e.result.stacks
-        .map((s) => ({ id: s.unitId, count: s.count, hp: s.totalHp, per: s.hpPerUnit, troops: troopIds.has(s.unitId) }))
+        .map((s) => ({
+          id: s.unitId,
+          count: s.count,
+          hp: s.totalHp,
+          per: s.hpPerUnit,
+          troops: troopIds.has(s.unitId),
+        }))
         .sort((a, b) => a.hp - b.hp);
       const floor = Math.min(...stacks.filter((s) => s.troops).map((s) => s.hp));
       const floorStack = stacks.find((s) => s.troops && s.hp === floor);
@@ -81,12 +108,18 @@ describe.skipIf(!process.env.THEORY)('231 — the queue across the band', () => 
       report.add('|---|---:|---:|---:|');
       for (const s of stacks.filter((x) => !x.troops)) {
         const room = s.per > 0 ? Math.floor(floor / s.per) : 0;
-        report.add(`| ${s.id.replace(/-(\d)$/, ' $1')} | ${n(s.count)} | ${n(Math.round(s.hp))} | **${n(room)}** (fields ${n(s.count)}) |`);
+        report.add(
+          `| ${s.id.replace(/-(\d)$/, ' $1')} | ${n(s.count)} | ${n(Math.round(s.hp))} | **${n(room)}** (fields ${n(s.count)}) |`,
+        );
       }
     }
 
-    report.h('the band grouped by the mercenaries burned: the loudest, the shortest queue, and what the shortest queue costs');
-    report.add('| burn | plans | most damage | that queue | **shortest queue** | its damage | its silver | its gold | its per silver | rate vs that burn’s loudest |');
+    report.h(
+      'the band grouped by the mercenaries burned: the loudest, the shortest queue, and what the shortest queue costs',
+    );
+    report.add(
+      '| burn | plans | most damage | that queue | **shortest queue** | its damage | its silver | its gold | its per silver | rate vs that burn’s loudest |',
+    );
     report.add('|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
     const trade2 = plan.trade ?? [];
     const byBurn = new Map<number, PlanTotals[]>();
@@ -97,14 +130,34 @@ describe.skipIf(!process.env.THEORY)('231 — the queue across the band', () => 
     }
     const rateOf = (before: PlanTotals, after: PlanTotals): number =>
       rate(
-        { damage: before.repeat.damage, silver: before.repeat.silver, gold: before.repeat.gold, hired: before.repeat.mercLost, dragonCoins: before.repeat.dragonCoins ?? 0, seconds: before.repeat.seconds },
-        { damage: after.repeat.damage, silver: after.repeat.silver, gold: after.repeat.gold, hired: after.repeat.mercLost, dragonCoins: after.repeat.dragonCoins ?? 0, seconds: after.repeat.seconds },
+        {
+          damage: before.repeat.damage,
+          silver: before.repeat.silver,
+          gold: before.repeat.gold,
+          hired: before.repeat.mercLost,
+          dragonCoins: before.repeat.dragonCoins ?? 0,
+          seconds: before.repeat.seconds,
+        },
+        {
+          damage: after.repeat.damage,
+          silver: after.repeat.silver,
+          gold: after.repeat.gold,
+          hired: after.repeat.mercLost,
+          dragonCoins: after.repeat.dragonCoins ?? 0,
+          seconds: after.repeat.seconds,
+        },
         CAMPAIGN.markerRates,
       );
     for (const burn of [...byBurn.keys()].sort((a, b) => a - b)) {
       const rows = byBurn.get(burn) ?? [];
-      const loud = rows.reduce((best, row) => (row.repeat.damage > best.repeat.damage ? row : best), rows[0]!);
-      const quick = rows.reduce((best, row) => (row.repeat.seconds < best.repeat.seconds ? row : best), rows[0]!);
+      const loud = rows.reduce(
+        (best, row) => (row.repeat.damage > best.repeat.damage ? row : best),
+        rows[0]!,
+      );
+      const quick = rows.reduce(
+        (best, row) => (row.repeat.seconds < best.repeat.seconds ? row : best),
+        rows[0]!,
+      );
       report.add(
         `| ${burn} | ${rows.length} | ${n(loud.repeat.damage)} | ${duration(loud.repeat.seconds)} | **${duration(quick.repeat.seconds)}** | ` +
           `${n(quick.repeat.damage)} | ${n(quick.repeat.silver)} | ${n(quick.repeat.gold)} | ${(quick.repeat.damage / quick.repeat.silver).toFixed(3)} | ` +

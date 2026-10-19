@@ -12,6 +12,15 @@
   overflow-y: auto;
 }
 
+/* Mantine paints the highlighted option (arrow keys, and the first match while typing) in the full
+   primary fill, which shouts across a long list (owner, 2026-10-19: "the highlight in the merc
+   search list is a bit too strong"). A wash of the page's own ink says "here" and leaves the row's
+   text at its normal contrast. */
+.comboboxOptions :global(.mantine-Combobox-option[data-combobox-selected]) {
+  background: color-mix(in srgb, var(--mantine-color-text) 9%, transparent);
+  color: inherit;
+}
+
 /* The gear that overlaps a chip's corner needs no ground of its own: the button inside it is the
    whole mark (investigation 0007's best find). It is 20 px, the level badge's own size, and sits where
    the badge sits: 1 px higher than centred on the corner, 9 px into the chip and 11 px above it. */

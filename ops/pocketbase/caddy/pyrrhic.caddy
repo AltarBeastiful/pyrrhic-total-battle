@@ -27,7 +27,25 @@ pyrrhic-backend.freeddns.org, pyrrhic-backend.92.5.91.253.sslip.io {
 		path /_/*
 		not remote_ip 203.0.113.1
 	}
-	respond @admin 403
+	handle @admin {
+		respond 403
+	}
+
+	# --- OAuth popup landing ----------------------------------------------
+	# After the provider answers, PocketBase redirects the sign-in popup to
+	# ../_/#/auth/oauth2-redirect-success, which is inside the closed admin UI
+	# (a 403 for every player). The code exchange does not depend on that page,
+	# so rewrite the Location to a static page outside /_/.
+	handle /oauth-done {
+		header Content-Type text/html
+		respond `<!doctype html><meta charset=utf-8><title>Signed in</title><p>Signed in. You can close this window.` 200
+	}
+
+	handle /api/oauth2-redirect {
+		reverse_proxy pocketbase:8090 {
+			header_down Location "../_/#/auth/oauth2-redirect-success" "/oauth-done"
+		}
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -40,7 +58,9 @@ pyrrhic-backend.freeddns.org, pyrrhic-backend.92.5.91.253.sslip.io {
 
 	# PocketBase owns its own CORS headers (the --origins flag in docker-compose.yml).
 	# Do not add Access-Control-* here or the browser will see duplicates.
-	reverse_proxy pocketbase:8090
+	handle {
+		reverse_proxy pocketbase:8090
+	}
 
 	log {
 		output file /data/pyrrhic-access.log {
