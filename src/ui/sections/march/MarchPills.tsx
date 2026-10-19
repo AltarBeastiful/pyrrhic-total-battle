@@ -312,7 +312,7 @@ export function MarchRaiseControl({
  * was nowhere near the button). Said in the tooltip and the name, so the setting is found from the control it moves.
  */
 function useReopens(pool: RaisedPool, rule: 'push' | 'round'): boolean {
-  const settings = useStore(selectActiveProfile).settings;
+  const settings = useStore(selectActiveProfile)?.settings;
   const opening = poolLineOpening(settings);
   return (rule === 'push' ? opening.pushed : opening.rounded)[pool];
 }
