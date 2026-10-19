@@ -4,9 +4,10 @@
  * against the bar growing a second job again — it carried the figures and Generate until V1 was
  * adopted, and design rule 5 (do not duplicate) is what took them out.
  */
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
+import { useAccountStore } from '@/account/state';
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
@@ -46,4 +47,16 @@ test('the app menu is the last control, at the screen’s edge, after the profil
   const [first, second] = within(banner).getAllByRole('button');
   expect(first?.getAttribute('aria-label')).toMatch(/^Profile:/);
   expect(second?.getAttribute('aria-label')).toBe('Menu');
+});
+
+test('signed out on a build with an account, Sign in sits on the bar and opens the sign-in dialog', () => {
+  useAccountStore.setState({ enabled: true, user: null, dialog: null });
+  renderWithTheme(<AppBar />);
+  const banner = screen.getByRole('banner');
+  const buttons = within(banner).getAllByRole('button');
+  expect(buttons.map((button) => button.textContent)).toEqual(['Sign in', 'Guest', '']);
+
+  fireEvent.click(buttons[0] as HTMLElement);
+  expect(useAccountStore.getState().dialog).toBe('signin');
+  useAccountStore.setState({ enabled: false, dialog: null });
 });

@@ -61,7 +61,7 @@ const PYRRHIC_RULES = [
   // Creating accounts. Thirty an hour per IP leaves room for a full e2e run and its
   // reruns, and still makes a signup flood pointless.
   { label: 'users:create', audience: '', duration: 3600, maxRequests: 30 },
-  // Saving a profile is a deliberate press, never a loop. Our own route: path label.
+  // Saving a profile. Our own route: path label. Autosave raised the ceiling to 200 (1792400000).
   { label: 'POST /api/app/profile', audience: '', duration: 60, maxRequests: 30 },
 ];
 

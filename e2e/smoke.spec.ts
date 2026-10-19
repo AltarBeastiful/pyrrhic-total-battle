@@ -32,7 +32,7 @@ test('first run shows the default profile and the setup cards', async ({ page })
   const problems = watchConsole(page);
   await openApp(page);
 
-  await expectActiveProfile(page, 'My account');
+  await expectActiveProfile(page, 'Guest');
 
   // The whole profile bar is one menu now, and the save state is one word inside it (design plan §5.2).
   const menu = await openAccountDropdown(page);

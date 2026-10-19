@@ -12,7 +12,14 @@ import { useShallow } from 'zustand/react/shallow';
 import { createStore } from 'zustand/vanilla';
 import type { StateCreator, StoreApi } from 'zustand';
 
-import { cloneProfileWithNewIds, defaultSetup, newProfile, newRoot, uuid } from './defaults';
+import {
+  cloneProfileWithNewIds,
+  DEFAULT_PROFILE_NAME,
+  defaultSetup,
+  newProfile,
+  newRoot,
+  uuid,
+} from './defaults';
 import { migrate } from './migrations';
 import type { StorageAdapter } from './storage';
 import { PROFILE_SECTIONS } from './schema';
@@ -218,7 +225,7 @@ const initializer =
         const tombstones = [...doc.tombstones, { id, deletedAt: Date.now() }];
         // The app always has at least one profile; deleting the last one starts a fresh account.
         if (profiles.length === 0) {
-          const fresh = newProfile('My account', doc.deviceId);
+          const fresh = newProfile(DEFAULT_PROFILE_NAME, doc.deviceId);
           set({ doc: { ...doc, profiles: [fresh], activeProfileId: fresh.id, tombstones } });
           return;
         }

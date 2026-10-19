@@ -163,7 +163,7 @@ function freshLocal(current: RootDocument): RootDocument {
 /** A merge can delete everything; the app always has a profile to show. */
 function withAProfile(doc: RootDocument): RootDocument {
   if (doc.profiles.length > 0) return doc;
-  const profile = newProfile('My account', doc.deviceId);
+  const profile = newProfile(DEFAULT_PROFILE_NAME, doc.deviceId);
   return { ...doc, profiles: [profile], activeProfileId: profile.id };
 }
 

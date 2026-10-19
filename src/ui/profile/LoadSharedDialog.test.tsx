@@ -45,5 +45,5 @@ test('keeps the shared name when nothing collides', () => {
   );
   fireEvent.click(screen.getByRole('button', { name: 'Add as new profile' }));
 
-  expect(names()).toEqual(['My account', 'From a friend']);
+  expect(names()).toEqual(['Guest', 'From a friend']);
 });

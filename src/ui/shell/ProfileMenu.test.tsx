@@ -54,7 +54,7 @@ async function open(): Promise<HTMLElement> {
 test('the control shows the profile name, and a person glyph only while signed in', () => {
   renderWithTheme(<ProfileMenu />);
   const signedOut = screen.getByRole('button', { name: /^Profile:/ });
-  expect(signedOut.textContent.trim()).toBe('My account');
+  expect(signedOut.textContent.trim()).toBe('Guest');
   expect(signedOut.getAttribute('aria-label')).toContain('signed out');
   expect(signedOut.getAttribute('data-state')).toBe('signed-out');
   expect(signedOut.querySelector('.lucide-user-round')).toBeNull();
@@ -77,10 +77,10 @@ test('the dropdown starts with the profiles, the active one checked, and picking
   const menu = await open();
 
   const items = [
-    within(menu).getByRole('menuitem', { name: /^My account/ }),
+    within(menu).getByRole('menuitem', { name: /^Guest/ }),
     within(menu).getByRole('menuitem', { name: /^Second/ }),
   ];
-  expect(items.map((item) => item.textContent)).toEqual(['My account (active)', 'Second']);
+  expect(items.map((item) => item.textContent)).toEqual(['Guest (active)', 'Second']);
 
   await user.click(within(menu).getByRole('menuitem', { name: /^Second/ }));
   await waitFor(() => {
@@ -112,7 +112,7 @@ test('Sign in opens the sign-in dialog', async () => {
 test('a build with no backend still offers the profiles, and no account rows', async () => {
   useAccountStore.setState({ enabled: false });
   const menu = await open();
-  expect(within(menu).getByRole('menuitem', { name: /^My account \(active\)/ })).toBeTruthy();
+  expect(within(menu).getByRole('menuitem', { name: /^Guest \(active\)/ })).toBeTruthy();
   expect(within(menu).queryByRole('menuitem', { name: /Sign in/ })).toBeNull();
   expect(within(menu).getByText('Saved in this browser only')).toBeTruthy();
 });
@@ -174,6 +174,6 @@ test('deleting asks first, in a dialog that interrupts', async () => {
 
   await user.click(within(dialog).getByRole('button', { name: 'Delete profile' }));
   await waitFor(() => {
-    expect(useStore.getState().doc.profiles.map((profile) => profile.name)).toEqual(['My account']);
+    expect(useStore.getState().doc.profiles.map((profile) => profile.name)).toEqual(['Guest']);
   });
 });

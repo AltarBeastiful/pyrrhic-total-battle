@@ -315,7 +315,7 @@ test('signing out takes the account’s profiles off this browser, and signing i
   await waitForAccountSaved(page);
 
   await chooseAccountRow(page, /^Sign out/);
-  await expectActiveProfile(page, 'My account', 15_000);
+  await expectActiveProfile(page, 'Guest', 15_000);
   await expect(accountDropdownButton(page)).toHaveAccessibleDescription(/saved in this browser only/);
 
   await signIn(page, email, password);

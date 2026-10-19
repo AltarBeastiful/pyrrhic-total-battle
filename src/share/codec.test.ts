@@ -195,7 +195,7 @@ describe('profile links', () => {
   });
 
   it('round-trips a brand-new profile (everything at its default)', async () => {
-    const profile = newProfile('My account', DEVICE);
+    const profile = newProfile('Guest', DEVICE);
     const decoded = await decodeShare(
       await encodeShare({
         kind: 'profile',

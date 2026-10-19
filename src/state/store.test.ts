@@ -25,11 +25,11 @@ function activeProfile(store: StoreApi<StoreState>) {
 }
 
 describe('first run', () => {
-  it('starts with one "My account" profile and one implicit setup', () => {
+  it('starts with one "Guest" profile and one implicit setup', () => {
     const store = makeStore();
     const profile = activeProfile(store);
     expect(store.getState().doc.profiles).toHaveLength(1);
-    expect(profile.name).toBe('My account');
+    expect(profile.name).toBe('Guest');
     expect(profile.troops.guardsmen).toEqual({ min: 1, max: 3 });
     expect(profile.troops.specialists).toEqual({ min: 1, max: 1 });
     expect(profile.troops.engineers).toBeNull();
@@ -122,7 +122,7 @@ describe('sync metadata', () => {
     const store = makeStore();
     const id = activeProfile(store).id;
     store.getState().updateProfile(id, (profile) => ({ name: `${profile.name}!` }));
-    expect(activeProfile(store).name).toBe('My account!');
+    expect(activeProfile(store).name).toBe('Guest!');
 
     store.getState().updateProfile(id, { id: 'hijacked' } as never);
     expect(activeProfile(store).id).toBe(id);
@@ -245,7 +245,7 @@ describe('loadStore', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const adapter = createMemoryAdapter('{not json');
     const doc = loadStore(adapter);
-    expect(doc.profiles[0]?.name).toBe('My account');
+    expect(doc.profiles[0]?.name).toBe('Guest');
     expect(adapter.corrupt).toBe('{not json');
     expect(warn).toHaveBeenCalled();
   });
@@ -351,8 +351,8 @@ describe('persistence', () => {
 
 describe('profile names', () => {
   it('the names New and Duplicate suggest are never ones already in use, and stay readable', () => {
-    expect(nextProfileName(['My account'])).toBe('Account 2');
-    expect(nextProfileName(['My account', 'Account 2', 'Account 3'])).toBe('Account 4');
+    expect(nextProfileName(['Guest'])).toBe('Account 2');
+    expect(nextProfileName(['Guest', 'Account 2', 'Account 3'])).toBe('Account 4');
     expect(nextProfileName(['Account 2'])).toBe('Account 3');
     expect(uniqueProfileName('Main', ['Main'], 'copy')).toBe('Main (copy)');
     expect(uniqueProfileName('Main', ['Main', 'Main (copy)'], 'copy')).toBe('Main (copy 2)');

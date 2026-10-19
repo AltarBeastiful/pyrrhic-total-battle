@@ -176,8 +176,8 @@ test('signing in to an account with no profiles still leaves one on screen, not 
 
   await signIn();
 
-  expect(names()).toEqual(['My account']);
-  expect(names(server?.data)).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
+  expect(names(server?.data)).toEqual(['Guest']);
   expect(useAccountStore.getState().dialog).toBeNull();
 });
 
@@ -205,7 +205,7 @@ test('a sign-in that cannot read the account yet does not save its stand-in prof
   refuseWith = 0; // signed in, then the network drops before the account's copy is read
 
   await signIn();
-  expect(names()).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
   expect(names(server?.data)).toEqual(['Main']);
 
   refuseWith = null;
@@ -304,7 +304,7 @@ test('an expired session puts the account away, edits included, and the next sig
   await useAccountStore.getState().sync();
 
   expect(useAccountStore.getState()).toMatchObject({ user: null, dialog: 'left', leftReason: 'expired' });
-  expect(names()).toEqual(['My account']); // nothing of the account's on screen
+  expect(names()).toEqual(['Guest']); // nothing of the account's on screen
   // Unlike a clean sign-out, expiry keeps the account's copy in the cache for the next sign-in.
   expect(localStorage.getItem(CACHE_STORAGE_KEY)).toContain('Edited before the session ended');
   expect(JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) ?? '{}')).toMatchObject({ owner: null });
@@ -323,7 +323,7 @@ test('a start-up with the account’s profiles on screen but no session puts the
 
   await useAccountStore.getState().restore();
 
-  expect(names()).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
   expect(useAccountStore.getState().leftReason).toBe('expired');
 });
 
@@ -346,7 +346,7 @@ test('signing out saves first, then takes the account’s profiles off this brow
   await useAccountStore.getState().signOut();
 
   expect(names(server?.data)).toEqual(['Saved on the way out']);
-  expect(names()).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
   // Nothing of the account's is left on this browser: not on screen, not in the cache.
   const accountIds = (server?.data.profiles ?? []).map((profile) => profile.id);
   expect(useStore.getState().doc.profiles.some((profile) => accountIds.includes(profile.id))).toBe(false);
@@ -366,7 +366,7 @@ test('signing out offline keeps the unsaved work put away, and says so', async (
 
   await useAccountStore.getState().signOut();
 
-  expect(names()).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
   expect(localStorage.getItem(CACHE_STORAGE_KEY)).toContain('Not saved yet');
   expect(useAccountStore.getState()).toMatchObject({ dialog: 'left', leftReason: 'offline' });
 });
@@ -440,5 +440,5 @@ test('a profile the player already renamed keeps its name', async () => {
 test('an account with no name changes nothing', async () => {
   startServer();
   await signIn({ created: true });
-  expect(names()).toEqual(['My account']);
+  expect(names()).toEqual(['Guest']);
 });
