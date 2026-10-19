@@ -10,6 +10,7 @@
 import { Box, Title } from '@mantine/core';
 
 import { AppBar as BarSurface } from '../kit';
+import { AccountDropdown } from './AccountDropdown';
 import { AccountMenu } from './AccountMenu';
 import themeClasses from '../theme.module.css';
 
@@ -32,7 +33,12 @@ export function AppBar() {
           </Title>
         </>
       }
-      actions={<AccountMenu />}
+      actions={
+        <>
+          <AccountMenu />
+          <AccountDropdown />
+        </>
+      }
     />
   );
 }

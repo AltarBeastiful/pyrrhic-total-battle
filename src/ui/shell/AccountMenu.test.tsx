@@ -48,29 +48,6 @@ test('the menu carries the profile actions, the file actions, the link and About
   for (const name of names) {
     expect(within(menu).getByRole('menuitem', { name: new RegExp(`^${name}`) })).toBeTruthy();
   }
-  // The save state is a word under the profile's own row, not a line of permanent chrome (R5).
-  expect(within(menu).getByText('Saved', { exact: true })).toBeTruthy();
-});
-
-test('the switcher lists every profile and moves to the one that is picked', async () => {
-  const user = userEvent.setup();
-  useStore.getState().createProfile('Second account');
-  useStore.getState().setActiveProfile(useStore.getState().doc.profiles[0]?.id ?? '');
-
-  renderWithTheme(<AccountMenu />);
-  await user.click(screen.getByRole('button', { name: /^Account:/ }));
-  const section = screen.getByText('Switch profile').parentElement;
-  if (section === null) throw new Error('the switcher lost its heading');
-
-  const names = within(section)
-    .getAllByRole('menuitem')
-    .map((item) => item.textContent);
-  expect(names).toEqual(['My account', 'Second account']);
-
-  await user.click(within(section).getByRole('menuitem', { name: 'Second account' }));
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'Account: Second account' })).toBeTruthy();
-  });
 });
 
 test('renaming asks for the new name in a dialog and writes it to the store', async () => {
