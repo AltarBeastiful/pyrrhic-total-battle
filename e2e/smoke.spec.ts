@@ -13,6 +13,7 @@ import {
   housingValue,
   marchFoot,
   marchPane,
+  openAccountDropdown,
   openAccountMenu,
   openApp,
   paneFrame,
@@ -34,7 +35,7 @@ test('first run shows the default profile and the setup cards', async ({ page })
   await expect(accountButton(page)).toHaveAccessibleName('Account: My account');
 
   // The whole profile bar is one menu now, and the save state is one word inside it (design plan §5.2).
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await expect(menu.getByText('Saved', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();

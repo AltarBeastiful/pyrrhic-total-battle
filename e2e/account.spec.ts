@@ -23,7 +23,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import {
   accountButton,
-  openAccountMenu,
+  openAccountDropdown,
   openApp,
   switchProfileNames,
   renameProfile,
@@ -91,7 +91,7 @@ test.beforeEach(async () => {
 
 /** Sign up through the menu's email dialog and wait for the account rows to appear. */
 async function signUp(page: Page, email: string, password: string): Promise<void> {
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
 
   const dialog = page.getByRole('dialog');
@@ -109,7 +109,7 @@ async function signUp(page: Page, email: string, password: string): Promise<void
   await dialog.getByRole('button', { name: 'Continue' }).click();
   await expect(dialog).toBeHidden({ timeout: 15_000 });
 
-  const signedIn = await openAccountMenu(page);
+  const signedIn = await openAccountDropdown(page);
   await expect(signedIn.getByRole('menuitem', { name: new RegExp(`Signed in as ${email}`) })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toBeHidden();
@@ -127,7 +127,7 @@ async function signUpConfirmed(page: Page, email: string, password: string): Pro
 }
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: 'Sign in with email…' }).click();
@@ -147,7 +147,7 @@ async function openYourAccount(page: Page): Promise<void> {
 
 /** Press one account row and let the menu close behind it. */
 async function chooseAccountRow(page: Page, name: RegExp): Promise<void> {
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await menu.getByRole('menuitem', { name }).click();
   await expect(page.getByRole('menu')).toBeHidden();
 }
@@ -172,7 +172,7 @@ test('the sign-in dialog offers what the server lists, and no email form when pa
     }),
   );
   await openApp(page);
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await menu.getByRole('menuitem', { name: /^Sign in…/ }).click();
 
   const dialog = page.getByRole('dialog');
@@ -184,7 +184,7 @@ test('the sign-in dialog offers what the server lists, and no email form when pa
 /** Wait until the profile row says the account has it (S-49d: nothing to press). */
 async function waitForAccountSaved(page: Page): Promise<void> {
   await expect(async () => {
-    const menu = await openAccountMenu(page);
+    const menu = await openAccountDropdown(page);
     try {
       await expect(menu.getByText('Saved to your account', { exact: true })).toBeVisible({ timeout: 2_000 });
     } finally {
@@ -336,7 +336,7 @@ test('a new account cannot save until its address is confirmed', async ({ page }
   await signUp(page, email, password);
 
   // The row is there, and it explains itself rather than only refusing.
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await expect(menu.getByRole('menuitem', { name: /^Confirm your email address/ })).toContainText(
     'Saving needs a confirmed address',
   );
@@ -375,7 +375,7 @@ test('a password can be changed, and the new one is the one that works', async (
   await chooseAccountRow(page, /^Sign out/);
   await signIn(page, email, nextPassword);
   await expect(
-    (await openAccountMenu(page)).getByRole('menuitem', { name: new RegExp(`Signed in as ${email}`) }),
+    (await openAccountDropdown(page)).getByRole('menuitem', { name: new RegExp(`Signed in as ${email}`) }),
   ).toBeVisible({ timeout: 15_000 });
   await page.keyboard.press('Escape');
 });
@@ -400,7 +400,7 @@ test('deleting the account leaves this browser exactly as it was', async ({ page
   await expect(page.getByRole('button', { name: 'Done' })).toBeHidden();
 
   // Signed out, with the way back in offered again — and the profile still here.
-  const menu = await openAccountMenu(page);
+  const menu = await openAccountDropdown(page);
   await expect(menu.getByRole('menuitem', { name: /^Sign in…/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(accountButton(page)).toHaveAccessibleName('Account: Mine to keep, saved');

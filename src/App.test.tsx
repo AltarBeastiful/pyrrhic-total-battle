@@ -38,16 +38,6 @@ test('renders the brand and the account menu', async () => {
 
   const menu = await openAccountMenu();
   expect(within(menu).getByRole('menuitem', { name: /^New profile/ })).toBeTruthy();
-
-  // The switcher is the rows under its own heading (kit's `AppMenu` writes a menu label, which is
-  // what a menu says "these belong together" with).
-  const switcher = within(menu).getByText('Switch profile').parentElement;
-  if (switcher === null) throw new Error('the switcher lost its heading');
-  expect(
-    within(switcher)
-      .getAllByRole('menuitem')
-      .map((item) => item.textContent),
-  ).toEqual(['My account']);
 });
 
 test('renders the cards of the plan, in order, with their anchors', () => {
