@@ -16,7 +16,7 @@ import { useStore } from '@/state/store';
 
 import { renderWithTheme } from '../kit/testRender';
 import { AccountDropdown } from './AccountDropdown';
-import { AccountMenu } from './AccountMenu';
+import { AppBar } from './AppBar';
 
 vi.mock('pocketbase', async () => {
   const { FakePocketBase, FakeAuthStore } = await import('@/account/fixtures');
@@ -113,13 +113,8 @@ test('a build with no backend still offers the profiles, and no account rows', a
   expect(within(menu).queryByRole('menuitem', { name: /Sign in/ })).toBeNull();
 });
 
-test('the old combined menu no longer carries the profile switcher or the account rows', async () => {
-  useAccountStore.setState({ user: USER });
-  const user = userEvent.setup();
-  renderWithTheme(<AccountMenu />);
-  await user.click(screen.getByRole('button', { name: /^Account:/ }));
-  const menu = await screen.findByRole('menu');
-  expect(within(menu).queryByText('Switch profile')).toBeNull();
-  expect(within(menu).queryByRole('menuitem', { name: /^Sign out/ })).toBeNull();
-  expect(within(menu).getByRole('menuitem', { name: /^Rename profile/ })).toBeTruthy();
+test('the old combined menu is gone: no Account pill, the main menu is the Menu button', () => {
+  renderWithTheme(<AppBar />);
+  expect(screen.queryByRole('button', { name: /^Account:/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Menu' })).toBeTruthy();
 });

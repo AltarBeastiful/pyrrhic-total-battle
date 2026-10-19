@@ -230,19 +230,6 @@
   box-shadow: 0 1px 0 rgb(255 255 255 / 15%) inset;
 }
 
-/* The account trigger: a pill on the raised step, as the artboards draw it. */
-.accountPill {
-  display: flex;
-  align-items: center;
-  gap: var(--mantine-spacing-xs);
-  min-width: 0;
-  border: 1px solid var(--pyr-hairline);
-  border-radius: var(--mantine-radius-xl);
-  background: var(--pyr-raised);
-  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
-  color: inherit;
-}
-
 /* Both bars carry the page's own faint top light, so the chrome and the panels are one material. */
 .bar {
   background: var(--pyr-bar);

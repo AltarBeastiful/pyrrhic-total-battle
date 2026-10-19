@@ -26,17 +26,17 @@ function renderApp(): ReturnType<typeof render> {
   return render(<App />, { wrapper: ThemeHarness });
 }
 
-/** Open the account menu, which is where every profile action lives now. */
-async function openAccountMenu(): Promise<HTMLElement> {
-  fireEvent.click(screen.getByRole('button', { name: /^Account:/ }));
+/** Open the main menu, which is where every profile action lives now. */
+async function openMainMenu(): Promise<HTMLElement> {
+  fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
   return screen.findByRole('menu');
 }
 
-test('renders the brand and the account menu', async () => {
+test('renders the brand and the main menu', async () => {
   renderApp();
   expect(screen.getByRole('heading', { level: 1, name: 'Pyrrhic' })).toBeTruthy();
 
-  const menu = await openAccountMenu();
+  const menu = await openMainMenu();
   expect(within(menu).getByRole('menuitem', { name: /^New profile/ })).toBeTruthy();
 });
 
@@ -77,7 +77,7 @@ test('the march is generated from the frame, not from a section', () => {
 
 test('the About panel names the game data version and the privacy promise', async () => {
   renderApp();
-  const menu = await openAccountMenu();
+  const menu = await openMainMenu();
   fireEvent.click(within(menu).getByRole('menuitem', { name: /^About Pyrrhic/ }));
 
   // About is a chunk of its own (T-06); Vitest transforms it on demand, so it may take a moment.
@@ -89,7 +89,7 @@ test('the About panel names the game data version and the privacy promise', asyn
 
 test('the theme row writes the choice to the store and to the document', async () => {
   renderApp();
-  const menu = await openAccountMenu();
+  const menu = await openMainMenu();
   fireEvent.click(within(menu).getByRole('radio', { name: 'Dark' }));
 
   await waitFor(() => {

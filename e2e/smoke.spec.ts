@@ -7,14 +7,14 @@
 import { expect, test } from '@playwright/test';
 
 import {
-  accountButton,
+  expectActiveProfile,
   fillHousing,
   generateControl,
   housingValue,
   marchFoot,
   marchPane,
   openAccountDropdown,
-  openAccountMenu,
+  openMainMenu,
   openApp,
   paneFrame,
   recapSummary,
@@ -32,7 +32,7 @@ test('first run shows the default profile and the setup cards', async ({ page })
   const problems = watchConsole(page);
   await openApp(page);
 
-  await expect(accountButton(page)).toHaveAccessibleName('Account: My account');
+  await expectActiveProfile(page, 'My account');
 
   // The whole profile bar is one menu now, and the save state is one word inside it (design plan §5.2).
   const menu = await openAccountDropdown(page);
@@ -151,7 +151,7 @@ test('what the player typed survives a reload', async ({ page }) => {
   await page.reload();
   await page.waitForLoadState('networkidle');
 
-  await expect(accountButton(page)).toHaveAccessibleName('Account: Reloaded');
+  await expectActiveProfile(page, 'Reloaded');
   // The housing fields print a capacity the way a player reads it: grouped. Which character does
   // the grouping is the theme's business (a thin space today), so the digits are what is asked for.
   for (const [pool, digits] of [
@@ -164,13 +164,13 @@ test('what the player typed survives a reload', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('the theme row of the account menu flips data-theme', async ({ page }) => {
+test('the theme row of the main menu flips data-theme', async ({ page }) => {
   const problems = watchConsole(page);
   await openApp(page);
 
   const attribute = (): Promise<string | undefined> => themeAttribute(page);
   const choose = async (name: string): Promise<void> => {
-    const menu = await openAccountMenu(page);
+    const menu = await openMainMenu(page);
     // Kit2's segmented row is a radio group inside the menu, not a menu item of its own; the input
     // itself is the hidden half of a segmented control, so the press lands on the label a player
     // sees — which is what a player presses too.

@@ -11,7 +11,7 @@ import {
   chooseObjective,
   closeMarchSheet,
   generate,
-  openAccountMenu,
+  openMainMenu,
   openApp,
   openMarchSheet,
   themeAttribute,
@@ -48,7 +48,7 @@ async function violations(page: Page): Promise<string[]> {
  * reads as a contrast failure that is not there.
  */
 async function chooseTheme(page: Page, name: 'Light' | 'Dark'): Promise<void> {
-  const menu = await openAccountMenu(page);
+  const menu = await openMainMenu(page);
   await menu.getByRole('radiogroup', { name: 'Theme' }).getByText(name, { exact: true }).click();
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();

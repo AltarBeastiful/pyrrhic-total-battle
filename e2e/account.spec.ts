@@ -22,7 +22,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  accountButton,
+  accountDropdownButton,
+  expectActiveProfile,
   openAccountDropdown,
   openApp,
   switchProfileNames,
@@ -208,7 +209,7 @@ async function createProfile(page: Page, name: string): Promise<void> {
   await dialog.getByLabel('Profile name').fill(name);
   await dialog.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(accountButton(page)).toHaveAccessibleName(`Account: ${name}`);
+  await expectActiveProfile(page, `${name}`);
 }
 
 test('an edit saves itself, and another browser that signs in has it', async ({ browser }) => {
@@ -227,9 +228,7 @@ test('an edit saves itself, and another browser that signs in has it', async ({ 
   const deviceB = await second.newPage();
   await openApp(deviceB);
   await signIn(deviceB, email, password);
-  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Edited, never saved by hand', {
-    timeout: 15_000,
-  });
+  await expectActiveProfile(deviceB, 'Edited, never saved by hand', 15_000);
   // B's own untouched start profile was not worth adding to the account.
   expect(await switchProfileNames(deviceB)).toEqual(['Edited, never saved by hand']);
 
@@ -255,7 +254,7 @@ test('two browsers editing different profiles both keep both, with no question a
   const deviceB = await second.newPage();
   await openApp(deviceB);
   await signIn(deviceB, email, password);
-  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Profile A, saved', { timeout: 15_000 });
+  await expectActiveProfile(deviceB, 'Profile A, saved', 15_000);
   await createProfile(deviceB, 'Profile B');
   await waitForAccountSaved(deviceB);
 
@@ -294,13 +293,11 @@ test('two open screens stay in step: an edit on one appears on the other without
   const deviceB = await second.newPage();
   await openApp(deviceB);
   await signIn(deviceB, email, password);
-  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Live, saved', { timeout: 15_000 });
+  await expectActiveProfile(deviceB, 'Live, saved', 15_000);
 
   // Nothing is done on B: no reload, no tab switch. Realtime brings A's edit over.
   await renameProfile(deviceA, 'Live, edited on A');
-  await expect(accountButton(deviceB)).toHaveAccessibleName('Account: Live, edited on A', {
-    timeout: 15_000,
-  });
+  await expectActiveProfile(deviceB, 'Live, edited on A', 15_000);
 
   await first.close();
   await second.close();
@@ -318,13 +315,11 @@ test('signing out takes the account’s profiles off this browser, and signing i
   await waitForAccountSaved(page);
 
   await chooseAccountRow(page, /^Sign out/);
-  await expect(accountButton(page)).toHaveAccessibleName('Account: My account', { timeout: 15_000 });
-  await expect(accountButton(page)).toHaveAccessibleDescription(/saved in this browser only/);
+  await expectActiveProfile(page, 'My account', 15_000);
+  await expect(accountDropdownButton(page)).toHaveAccessibleDescription(/saved in this browser only/);
 
   await signIn(page, email, password);
-  await expect(accountButton(page)).toHaveAccessibleName('Account: The account’s, edited', {
-    timeout: 15_000,
-  });
+  await expectActiveProfile(page, 'The account’s, edited', 15_000);
   expect(await switchProfileNames(page)).toEqual(['The account’s, edited']);
 });
 
@@ -403,7 +398,7 @@ test('deleting the account leaves this browser exactly as it was', async ({ page
   const menu = await openAccountDropdown(page);
   await expect(menu.getByRole('menuitem', { name: /^Sign in…/ })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(accountButton(page)).toHaveAccessibleName('Account: Mine to keep, saved');
+  await expectActiveProfile(page, 'Mine to keep, saved');
 
   // And the account really is gone: the same password no longer signs anybody in.
   await signIn(page, email, password);
@@ -447,6 +442,6 @@ test('the confirmation page spends the token it was given, or says why it could 
   await expect(page.getByRole('alert')).toContainText('This confirmation link has expired');
 
   await page.getByRole('button', { name: 'Back to Pyrrhic' }).click();
-  await expect(accountButton(page)).toBeVisible({ timeout: 15_000 });
+  await expect(accountDropdownButton(page)).toBeVisible({ timeout: 15_000 });
   expect(new URL(page.url()).search).toBe('');
 });

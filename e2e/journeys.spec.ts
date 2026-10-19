@@ -20,7 +20,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
-  accountButton,
+  menuButton,
   bonusTotal,
   bonusesCard,
   closeMarchSheet,
@@ -692,7 +692,7 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
 async function journey5(page: Page): Promise<void> {
   const taps = new Taps();
 
-  await taps.tap(accountButton(page));
+  await taps.tap(menuButton(page));
   await expect(page.getByRole('menu')).toBeVisible();
   await taps.tap(page.getByRole('menuitem', { name: /^Share this march/ }));
   await expect(page.getByRole('banner').getByRole('status')).toHaveText('Copied');

@@ -1,30 +1,20 @@
 /**
- * Everything that used to live in the profile bar, behind one control (design plan §5.2): the
- * profile and its name, the other profiles, the four profile actions, the two file actions, the
- * share link, the optional account (S-49b, only in a build that has a backend), the theme, the
- * offline rows the PWA used to float over the page, and About.
- *
- * None of it takes permanent space, which is the point: the strip it replaces was two rows of
- * chrome on every screen for actions a player uses once a month (design rule 15).
+ * The app-level menu at the start of the bar, next to the brand (B-18): the profile actions (rename, new,
+ * duplicate, delete), the file actions, the share link, the pool line and theme preferences, install and
+ * update, and About. Switching profile and the account rows live in the account dropdown at the other end
+ * (B-17). None of it takes permanent space (design rule 15), and it is the slot where navigation links
+ * go once there are pages.
  *
  * The menu itself is kit's `AppMenu`, so the shell cannot invent a shape: every row is an action,
  * a segmented row or a section heading, and each kind has one appearance.
  */
+import { ActionIcon, Button, Group, Text, TextInput, useMantineColorScheme } from '@mantine/core';
 import {
-  Avatar,
-  Button,
-  Group,
-  Text,
-  TextInput,
-  UnstyledButton,
-  useMantineColorScheme,
-} from '@mantine/core';
-import {
-  ChevronDown,
   Copy,
   Download,
   Info,
   Link2,
+  Menu,
   Pencil,
   Plus,
   RefreshCw,
@@ -50,7 +40,6 @@ import { LazySurface } from '../lazy';
 import { copyText, downloadJson } from '../profile/download';
 import { ImportDialog } from '../profile/ImportDialog';
 import { resultCounts, toSavedSummary, useResultStore } from '../resultStore';
-import themeClasses from '../theme.module.css';
 
 // The account surfaces drag in the PocketBase SDK and About drags in the data notes; both are opened
 // once in a blue moon, so neither is in the first load (ui-foundation plan §6).
@@ -151,8 +140,8 @@ function NameDialog({
   );
 }
 
-/** The account menu and every dialog it opens. Rendered by the app bar, nowhere else. */
-export function AccountMenu() {
+/** The main menu and every dialog it opens. Rendered by the app bar, nowhere else. */
+export function MainMenu() {
   const profiles = useStore(selectProfiles);
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
@@ -380,8 +369,6 @@ export function AccountMenu() {
     { id: 'app', title: 'Pyrrhic', entries: appEntries },
   ];
 
-  const initial = profile.name.trim().charAt(0).toUpperCase();
-
   const nameDialog = (): ReactNode => {
     if (dialog === 'new') {
       return (
@@ -437,24 +424,13 @@ export function AccountMenu() {
   return (
     <>
       <AppMenu
-        label="Account"
+        label="Menu"
         width={260}
         sections={sections}
         trigger={
-          <UnstyledButton
-            className={themeClasses.accountPill}
-            aria-label={`Account: ${profile.name}`}
-          >
-            <Avatar size={28} radius="xl" color="brass" variant="filled">
-              {initial === '' ? '?' : initial}
-            </Avatar>
-            <Group gap={4} wrap="nowrap" visibleFrom="sm">
-              <Text size="sm" lineClamp={1}>
-                {profile.name}
-              </Text>
-              <ChevronDown size={14} aria-hidden />
-            </Group>
-          </UnstyledButton>
+          <ActionIcon variant="default" radius="xl" size={36} aria-label="Menu">
+            <Menu size={18} aria-hidden />
+          </ActionIcon>
         }
       />
 
