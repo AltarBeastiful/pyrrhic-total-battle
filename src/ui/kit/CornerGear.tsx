@@ -139,6 +139,11 @@ export function CornerGear({
     <Popover
       position="bottom-end"
       trapFocus
+      // A phone's keyboard shrinks the window under the gear, and Mantine hides a dropdown whose
+      // target has left the window (`hideDetached`): the focused field vanished with it and the
+      // keyboard closed on every try to reopen it (owner, 2026-10-20, a hero gear near the bottom
+      // bar). The box stays up; `shift` and `flip` keep it on screen.
+      hideDetached={false}
       // Escape is ours when the caller drives the popover (`close` above); left uncontrolled, Mantine's.
       closeOnEscape={onOpenedChange === undefined}
       {...(opened === undefined ? {} : { opened })}

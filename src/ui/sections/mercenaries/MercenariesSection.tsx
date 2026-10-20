@@ -511,6 +511,8 @@ function HiredPill({
       // pill under it does.
       middlewares={{ flip: { crossAxis: false } }}
       trapFocus
+      // Same keyboard rule as `CornerGear`: the badge may leave the shrunken window, the editor stays.
+      hideDetached={false}
       // The focus is **not** handed back to the badge when the editor closes (owner, 2026-09-18:
       // "when finished entering, the badge seems selected with a white outline; useless"): a return
       // after Enter lands as a keyboard focus, and the badge lit its ring for nothing more to do
