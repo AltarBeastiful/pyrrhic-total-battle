@@ -60,13 +60,16 @@ export function SlotCounter({ worn, captains }: { worn: number; captains: number
 
 function Grade({ piece, on }: { piece: Piece; on: boolean }) {
   const grade = GRADES[piece.quality];
-  // Off is outlined and transparent, on is filled: form differs as well as colour (rule 24).
+  // The hue is the letter's ink, the ground is the chip's own. On is bare, off is ringed: form differs as well as colour (rule 24).
   return (
     <Badge
       circle
       size="sm"
       color={grade.token as 'grade1'}
-      variant={on ? 'filled' : 'outline'}
+      variant={on ? 'transparent' : 'outline'}
+      // The ink is the scheme's filled shade, the one `pnpm contrast` checks on every surface (as `tierInk`).
+      c={`var(--mantine-color-${grade.token}-filled)`}
+      fw={800}
       role="img"
       aria-label={`${QUALITY_LABELS[piece.quality]} grade`}
     >

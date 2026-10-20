@@ -679,7 +679,7 @@ test('a switched-off piece keeps its letter, outlined instead of filled', () => 
   const on = within(chipLabel(sourceChip('Emerald Guardian'))).getByRole('img', { name: 'Epic grade' });
   const off = within(chipLabel(sourceChip('War Master'))).getByRole('img', { name: 'Epic grade' });
   expect(off.textContent).toBe('E');
-  expect(on.getAttribute('data-variant')).toBe('filled');
+  expect(on.getAttribute('data-variant')).toBe('transparent');
   expect(off.getAttribute('data-variant')).toBe('outline');
 });
 
