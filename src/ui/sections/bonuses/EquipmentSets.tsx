@@ -58,15 +58,15 @@ export function SlotCounter({ worn, captains }: { worn: number; captains: number
   );
 }
 
-function Grade({ piece, on }: { piece: Piece; on: boolean }) {
+function Grade({ piece }: { piece: Piece }) {
   const grade = GRADES[piece.quality];
-  // The hue is the letter's ink, the ground is the chip's own. On is bare, off is ringed: form differs as well as colour (rule 24).
+  // The hue is the letter's ink and the ground is the chip's own; the chip's ring and tint say on or off, the letter says the grade (rule 24).
   return (
     <Badge
       circle
       size="sm"
       color={grade.token as 'grade1'}
-      variant={on ? 'transparent' : 'outline'}
+      variant="transparent"
       // The ink is the scheme's filled shade, the one `pnpm contrast` checks on every surface (as `tierInk`).
       c={`var(--mantine-color-${grade.token}-filled)`}
       fw={800}
@@ -96,7 +96,7 @@ function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
     <Group gap={4} wrap="nowrap" align="center">
       <SourceChip
         name={name}
-        badge={<Grade piece={piece} on={on} />}
+        badge={<Grade piece={piece} />}
         {...(tight === '' ? { value: '—' } : { value: tight })}
         details={[`${QUALITY_LABELS[piece.quality]} quality`, ...describeContribution(worth)]}
         checked={on}

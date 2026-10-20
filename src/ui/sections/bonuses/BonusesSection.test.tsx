@@ -670,7 +670,7 @@ test('a piece wears the letter of its grade and a tight bonus line, the full lin
   expect(screen.getByRole('tooltip').textContent).toContain('+128 % health / +128 % strength');
 });
 
-test('a switched-off piece keeps its letter, outlined instead of filled', () => {
+test('a switched-off piece keeps its letter, with no ring that comes and goes', () => {
   seedPieces([
     { id: 'p1', equipmentId: 'emerald-guardian', quality: 'epic', on: true },
     { id: 'p2', equipmentId: 'war-master', quality: 'epic' },
@@ -679,8 +679,7 @@ test('a switched-off piece keeps its letter, outlined instead of filled', () => 
   const on = within(chipLabel(sourceChip('Emerald Guardian'))).getByRole('img', { name: 'Epic grade' });
   const off = within(chipLabel(sourceChip('War Master'))).getByRole('img', { name: 'Epic grade' });
   expect(off.textContent).toBe('E');
-  expect(on.getAttribute('data-variant')).toBe('transparent');
-  expect(off.getAttribute('data-variant')).toBe('outline');
+  expect(off.getAttribute('data-variant')).toBe(on.getAttribute('data-variant'));
 });
 
 test('pieces without a set live in a No set card, and an empty profile shows only Add', () => {
