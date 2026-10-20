@@ -8,17 +8,17 @@
  * why in its tooltip.
  */
 import {
-  ActionIcon,
   Badge,
   Box,
   Button,
   Checkbox,
+  CloseButton,
   Group,
   Paper,
   type PaperProps,
-  SimpleGrid,
   Stack,
   Text,
+  TextInput,
   Tooltip,
 } from '@mantine/core';
 import {
@@ -32,19 +32,26 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
-import { Ellipsis, Plus, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 import { toggleActiveSource } from '@/state/actions/bonuses';
-import { addEmptySet, mintSetId, moveToSet, setPiecesOn } from '@/state/actions/equipmentSets';
+import {
+  addEmptySet,
+  deleteSetAndPieces,
+  moveToSet,
+  renameSet,
+  setPiecesOn,
+} from '@/state/actions/equipmentSets';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
-import { AppMenu } from '@/ui/kit';
 
 import { GRADES, gradeInk, layoutOf, slotsFor, tightLine } from './equipmentSets';
 import type { EquipmentSet } from './equipmentSets';
 import { describeContribution, QUALITY_LABELS } from './labels';
 import type { EditorTarget } from './rows';
 import { equipmentRecord, equipmentWorth } from './rows';
+import bonusClasses from './bonuses.module.css';
+import classes from './EquipmentSets.module.css';
 import { SourceChip } from './SourceChip';
 
 type Piece = ProfileSources['equipment'][number];
@@ -95,8 +102,6 @@ function Grade({ piece }: { piece: Piece }) {
 interface PieceProps {
   piece: Piece;
   on: boolean;
-  sets: readonly EquipmentSet[];
-  profileId: string;
   onEdit: (target: EditorTarget) => void;
 }
 
@@ -173,7 +178,7 @@ function Draggable({ id, children }: { id: string; children: React.ReactNode }) 
   );
 }
 
-function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
+function PieceChip({ piece, on, onEdit }: PieceProps) {
   const record = equipmentRecord(piece.equipmentId);
   const name = record?.name ?? piece.equipmentId;
   const worth = equipmentWorth(record, piece);
@@ -185,7 +190,10 @@ function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
         name={name}
         badge={<Grade piece={piece} />}
         {...(tight === '' ? { value: '—' } : { value: tight })}
-        details={[`${QUALITY_LABELS[piece.quality]} quality`, ...describeContribution(worth)]}
+        details={[
+          { text: `${QUALITY_LABELS[piece.quality]} quality`, color: gradeInk(piece.quality) },
+          ...describeContribution(worth),
+        ]}
         checked={on}
         dotted
         toggleLabel={on ? `${name}, on for this march` : `Switch on ${name}`}
@@ -197,55 +205,70 @@ function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
           onEdit(editor);
         }}
       />
-      <AppMenu
-        label={`Move ${name}`}
-        trigger={
-          <ActionIcon variant="subtle" color="slate" size="sm" aria-label={`Move ${name}`}>
-            <Ellipsis size={14} aria-hidden />
-          </ActionIcon>
-        }
-        sections={[
-          {
-            id: 'move',
-            title: 'Move to',
-            entries: [
-              ...sets.map((set) => ({
-                id: `set-${set.id}`,
-                label: set.name,
-                checked: piece.setId === set.id,
-                disabled: piece.setId === set.id,
-                onSelect: () => {
-                  moveToSet(profileId, piece.id, set.id);
-                },
-              })),
-              {
-                id: 'new',
-                label: 'New set',
-                onSelect: () => {
-                  moveToSet(profileId, piece.id, mintSetId());
-                },
-              },
-              {
-                id: 'none',
-                label: 'No set',
-                disabled: piece.setId === undefined,
-                onSelect: () => {
-                  moveToSet(profileId, piece.id, null);
-                },
-              },
-            ],
-          },
-        ]}
-      />
     </Group>
   );
 }
 
 function PieceGrid({ children }: { children: React.ReactNode }) {
   return (
-    <SimpleGrid cols={{ base: 1, xs: 2, lg: 3 }} spacing={8} verticalSpacing="md">
+    <Group gap={8} wrap="wrap" className={bonusClasses.gearGrid}>
       {children}
-    </SimpleGrid>
+    </Group>
+  );
+}
+
+/**
+ * A set's name, written in place: it reads as text, shows a line under it when hovered or focused, and
+ * is kept on Enter or on leaving the field. Escape gives the edit up. Left empty, the set takes the name
+ * its pieces suggest.
+ */
+function SetName({ profileId, set }: { profileId: string; set: EquipmentSet }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const given = useRef(false);
+  const keep = () => {
+    if (!given.current && draft !== null && draft.trim() !== set.name) renameSet(profileId, set.id, draft);
+    given.current = false;
+    setDraft(null);
+  };
+  return (
+    <TextInput
+      variant="unstyled"
+      size="sm"
+      aria-label={`Name of set ${set.name}`}
+      value={draft ?? set.name}
+      onFocus={(event) => {
+        setDraft(set.name);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        setDraft(event.currentTarget.value);
+      }}
+      onBlur={keep}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') {
+          given.current = true;
+          event.currentTarget.blur();
+        }
+      }}
+      // As wide as the text, so the click target is the name and not the line.
+      style={{
+        flex: '0 1 auto',
+        minWidth: 0,
+        width: `${String(Math.max(4, (draft ?? set.name).length + 1))}ch`,
+      }}
+      styles={{
+        input: {
+          fontWeight: 600,
+          height: 24,
+          minHeight: 24,
+          borderBottom: '1px solid transparent',
+          borderRadius: 0,
+          textOverflow: 'ellipsis',
+        },
+      }}
+      classNames={{ input: classes.setName }}
+    />
   );
 }
 
@@ -253,12 +276,11 @@ export interface EquipmentSetsProps {
   profile: Profile;
   setup: BattleSetup;
   onEdit: (target: EditorTarget) => void;
-  onEditSet: (setId: string) => void;
   onAdd: () => void;
   addDisabled: boolean;
 }
 
-export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDisabled }: EquipmentSetsProps) {
+export function EquipmentSets({ profile, setup, onEdit, onAdd, addDisabled }: EquipmentSetsProps) {
   const { sets, loose } = layoutOf(profile, setup);
   const [dragging, setDragging] = useState(false);
   // A mouse drags after a few pixels, so a click stays a click; a finger must rest first, so a swipe still scrolls the page (B-20).
@@ -298,13 +320,7 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
   const pieces = (list: readonly Piece[]) =>
     list.map((piece) => (
       <Draggable key={piece.id} id={piece.id}>
-        <PieceChip
-          piece={piece}
-          on={active.has(piece.id)}
-          sets={sets}
-          profileId={profile.id}
-          onEdit={onEdit}
-        />
+        <PieceChip piece={piece} on={active.has(piece.id)} onEdit={onEdit} />
       </Draggable>
     ));
 
@@ -331,7 +347,7 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
             <DropZone
               key={set.id}
               id={setTarget(set.id)}
-              withBorder
+              bd="1px solid color-mix(in srgb, var(--mantine-color-default-border) 40%, transparent)"
               bg="transparent"
               p="xs"
               role="group"
@@ -351,24 +367,21 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
                       );
                     }}
                   />
-                  <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0 }} truncate>
-                    {set.name}
-                  </Text>
-                  <ActionIcon
-                    variant="subtle"
-                    color="slate"
-                    size="sm"
-                    aria-label={`Edit set ${set.name}`}
-                    onClick={() => {
-                      onEditSet(set.id);
-                    }}
-                  >
-                    <Settings size={14} aria-hidden />
-                  </ActionIcon>
+                  <SetName profileId={profile.id} set={set} />
+                  {set.pieces.length === 0 && (
+                    <CloseButton
+                      ml="auto"
+                      size="sm"
+                      aria-label={`Delete empty set ${set.name}`}
+                      onClick={() => {
+                        deleteSetAndPieces(profile.id, set.id);
+                      }}
+                    />
+                  )}
                 </Group>
                 {set.pieces.length === 0 ? (
                   <Text size="xs" c="dimmed">
-                    Empty. Move a piece here from its ⋯ menu, or choose this set when adding one.
+                    Empty. Drag a piece here, or choose this set when adding one.
                   </Text>
                 ) : (
                   <PieceGrid>{pieces(set.pieces)}</PieceGrid>

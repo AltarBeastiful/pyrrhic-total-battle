@@ -43,7 +43,6 @@ import { selectsRestrictedCaptain } from './marchType';
 import { VipSheet } from './OtherSheets';
 import { PermanentChips } from './PermanentChips';
 import { RecoverySheet } from './RecoverySheet';
-import { SetSheet } from './SetSheet';
 import {
   captainEntryFor,
   firstQuality,
@@ -87,7 +86,6 @@ export function BonusesSection() {
     });
   }
   const [editor, setEditor] = useState<EditorTarget | null>(null);
-  const [setEditorId, setSetEditorId] = useState<string | null>(null);
   // The set the last piece went into stays chosen for the next Add (B-19: three pieces, three quick adds).
   const lastSet = useRef<string | undefined>(undefined);
   const [refusedCaptain, setRefusedCaptain] = useState(false);
@@ -269,7 +267,6 @@ export function BonusesSection() {
           profile={profile}
           setup={setup}
           onEdit={setEditor}
-          onEditSet={setSetEditorId}
           onAdd={() => {
             add('equipment');
           }}
@@ -387,20 +384,6 @@ export function BonusesSection() {
           sets={layoutOf(profile, setup).sets}
           onSetChosen={(setId) => {
             lastSet.current = setId;
-          }}
-        />
-      )}
-      {setEditorId !== null && (
-        <SetSheet
-          {...sheet}
-          setup={setup}
-          setId={setEditorId}
-          onClose={() => {
-            setSetEditorId(null);
-          }}
-          onEditPiece={(id) => {
-            setSetEditorId(null);
-            setEditor({ kind: 'equipment', id });
           }}
         />
       )}

@@ -739,8 +739,7 @@ test('an unnamed set is titled by what it boosts and its commonest grade, number
   expect(within(card()).getByRole('group', { name: 'Set Guardsmen (E) 2' })).toBeTruthy();
 });
 
-test('Add set puts an empty set in: New set, then New set 2, and a piece can be moved into it', async () => {
-  const user = userEvent.setup();
+test('Add set puts an empty set in: New set, then New set 2, and the first holds nothing yet', () => {
   seedPieces([{ id: 'l1', equipmentId: 'war-master' }]);
   renderWithTheme(<BonusesSection />);
 
@@ -750,77 +749,36 @@ test('Add set puts an empty set in: New set, then New set 2, and a piece can be 
   expect(within(card()).getByRole('group', { name: 'Set New set 2' })).toBeTruthy();
   // Nothing in it yet: its toggle has nothing to switch.
   expect((setToggle('New set') as HTMLInputElement).disabled).toBe(true);
-
-  await user.click(within(card()).getByRole('button', { name: 'Move War Master' }));
-  await user.click(screen.getByRole('menuitem', { name: 'New set 2' }));
-  expect(
-    within(within(card()).getByRole('group', { name: 'Set New set 2' })).getByRole('checkbox', {
-      name: 'Switch on War Master',
-    }),
-  ).toBeTruthy();
 });
 
-test('an empty set can be added to a profile with no piece, and deleted from its sheet', () => {
+test('an empty set can be added to a profile with no piece', () => {
   renderWithTheme(<BonusesSection />);
   fireEvent.click(within(card()).getByRole('button', { name: 'Add set' }));
   expect(within(card()).getByRole('group', { name: 'Set New set' })).toBeTruthy();
 
-  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set New set' }));
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete set and pieces' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Delete empty set New set' }));
   expect(within(card()).queryByRole('group', { name: 'Set New set' })).toBeNull();
   expect(profile()?.sources.equipmentSetNames).toBeUndefined();
 });
 
-test('the move menu puts a piece into a set, a new set or no set, from the keyboard too', async () => {
-  const user = userEvent.setup();
-  seedPieces([...alexander, { id: 'l1', equipmentId: 'guardian-of-justice' }], { s1: 'Alexander' });
-  renderWithTheme(<BonusesSection />);
-
-  await user.click(within(card()).getByRole('button', { name: 'Move Guardian of Justice' }));
-  await user.click(screen.getByRole('menuitem', { name: 'Alexander' }));
-  expect(profile()?.sources.equipment.find((piece) => piece.id === 'l1')?.setId).toBe('s1');
-
-  // Keyboard: focus the trigger, open with Enter, walk to "No set", choose with Enter.
-  const trigger = within(card()).getByRole('button', { name: 'Move Guardian of Justice' });
-  trigger.focus();
-  await user.keyboard('{Enter}');
-  await user.click(await screen.findByRole('menuitem', { name: 'No set' }));
-  expect(profile()?.sources.equipment.find((piece) => piece.id === 'l1')?.setId).toBeUndefined();
-
-  await user.click(within(card()).getByRole('button', { name: 'Move Guardian of Justice' }));
-  await user.click(screen.getByRole('menuitem', { name: 'New set' }));
-  const moved = profile()?.sources.equipment.find((piece) => piece.id === 'l1');
-  expect(moved?.setId).toBeDefined();
-  expect(moved?.setId).not.toBe('s1');
-});
-
-test('the set sheet renames, removes a piece, ungroups and deletes', async () => {
+test('a set is renamed in place: Enter keeps the name, Escape gives it up', async () => {
   const user = userEvent.setup();
   seedPieces(alexander, { s1: 'Alexander' });
   renderWithTheme(<BonusesSection />);
 
-  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set Alexander' }));
-  let sheet = screen.getByRole('dialog');
-  await user.clear(within(sheet).getByRole('textbox', { name: 'Name' }));
-  await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), 'Caesar');
+  const field = () => within(card()).getByRole('textbox', { name: /^Name of set/ });
+  await user.click(field());
+  await user.keyboard('Caesar{Enter}');
   expect(profile()?.sources.equipmentSetNames).toEqual({ s1: 'Caesar' });
 
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Remove War Master from set' }));
-  expect(profile()?.sources.equipment.find((piece) => piece.id === 'a2')?.setId).toBeUndefined();
+  await user.click(field());
+  await user.keyboard('Nero{Escape}');
+  expect(profile()?.sources.equipmentSetNames).toEqual({ s1: 'Caesar' });
 
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Ungroup all' }));
-  expect(profile()?.sources.equipment).toHaveLength(3);
-  expect(profile()?.sources.equipment.every((piece) => piece.setId === undefined)).toBe(true);
-  expect(profile()?.sources.equipmentSetNames).toBeUndefined();
-  cleanup();
-
-  seedPieces(alexander, { s1: 'Alexander' });
-  renderWithTheme(<BonusesSection />);
-  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set Alexander' }));
-  sheet = screen.getByRole('dialog');
-  fireEvent.click(within(sheet).getByRole('button', { name: 'Delete set and pieces' }));
-  expect(profile()?.sources.equipment).toEqual([]);
-  expect(setup()?.active.equipment).toEqual([]);
+  await user.click(field());
+  await user.keyboard('Nero');
+  await user.click(document.body);
+  expect(profile()?.sources.equipmentSetNames).toEqual({ s1: 'Nero' });
 });
 
 test('Add equipment keeps the chosen set for the next piece, and the sheet can start a new set', async () => {

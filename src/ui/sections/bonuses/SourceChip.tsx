@@ -26,7 +26,8 @@ export interface SourceChipProps {
    * "a tooltip on hover on Army Modernization that shows all bonuses entered"). The chip's own line
    * stops at "and 2 more"; this is the rest. Nothing is raised for a source with nothing in it.
    */
-  details?: readonly string[];
+  /** A line may carry its own ink (the quality of a piece, in its grade's colour). */
+  details?: readonly (string | { text: string; color: string })[];
   checked: boolean;
   onToggle: () => void;
   /** A level or a value is recorded: the chip gets a dot, as TotalStack's chips do (`ChipDot`). */
@@ -87,11 +88,17 @@ export function SourceChip({
       <Tooltip
         label={
           <Stack gap={2}>
-            {details.map((line) => (
-              <Text key={line} size="xs">
-                {line}
-              </Text>
-            ))}
+            {details.map((line) =>
+              typeof line === 'string' ? (
+                <Text key={line} size="xs">
+                  {line}
+                </Text>
+              ) : (
+                <Text key={line.text} size="xs" fw={600} c={line.color}>
+                  {line.text}
+                </Text>
+              ),
+            )}
           </Stack>
         }
         events={{ hover: true, focus: true, touch: false }}

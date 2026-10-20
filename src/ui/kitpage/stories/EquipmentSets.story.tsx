@@ -46,7 +46,6 @@ const story: KitStory = {
             profile={profile}
             setup={setup}
             onEdit={() => undefined}
-            onEditSet={() => undefined}
             onAdd={() => undefined}
             addDisabled={false}
           />
