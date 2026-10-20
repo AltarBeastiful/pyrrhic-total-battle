@@ -21,7 +21,9 @@ test('a gear editor keeps its focused field when the keyboard shrinks the window
     const view = globalThis as unknown as {
       innerHeight: number;
       scrollBy: (x: number, y: number) => void;
-      document: { querySelectorAll: (s: string) => ArrayLike<{ getBoundingClientRect: () => { top: number } }> };
+      document: {
+        querySelectorAll: (s: string) => ArrayLike<{ getBoundingClientRect: () => { top: number } }>;
+      };
     };
     const button = view.document.querySelectorAll('button[aria-label$="Beowulf’s level"]')[0];
     if (button !== undefined) view.scrollBy(0, button.getBoundingClientRect().top - (view.innerHeight - 170));

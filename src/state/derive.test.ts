@@ -353,7 +353,9 @@ describe('resolveSources — equipment sets (B-19)', () => {
     grouped.profile.sources.equipmentSetNames = { s1: 'Alexander' };
     grouped.setup.active.equipment = ['e1', 'e2'];
 
-    expect(resolveSources(grouped.profile, grouped.setup)).toEqual(resolveSources(loose.profile, loose.setup));
+    expect(resolveSources(grouped.profile, grouped.setup)).toEqual(
+      resolveSources(loose.profile, loose.setup),
+    );
   });
 });
 
