@@ -27,7 +27,7 @@ import { addEmptySet, mintSetId, moveToSet, setPiecesOn } from '@/state/actions/
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 import { AppMenu } from '@/ui/kit';
 
-import { GRADES, layoutOf, slotsFor, tightLine } from './equipmentSets';
+import { GRADES, gradeInk, layoutOf, slotsFor, tightLine } from './equipmentSets';
 import type { EquipmentSet } from './equipmentSets';
 import { describeContribution, QUALITY_LABELS } from './labels';
 import type { EditorTarget } from './rows';
@@ -69,7 +69,7 @@ function Grade({ piece }: { piece: Piece }) {
       color={grade.token as 'grade1'}
       variant="transparent"
       // The ink is the scheme's filled shade, the one `pnpm contrast` checks on every surface (as `tierInk`).
-      c={`var(--mantine-color-${grade.token}-filled)`}
+      c={gradeInk(piece.quality)}
       fw={800}
       role="img"
       aria-label={`${QUALITY_LABELS[piece.quality]} grade`}

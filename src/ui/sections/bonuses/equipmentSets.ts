@@ -29,6 +29,9 @@ export const GRADES: Record<Quality, { letter: string; token: string }> = {
   godlike: { letter: 'G', token: 'grade8' },
 };
 
+/** The ink a grade is written in: the scheme's filled shade, which `pnpm contrast` checks on every surface. */
+export const gradeInk = (quality: Quality): string => `var(--mantine-color-${GRADES[quality].token}-filled)`;
+
 export type SetState = 'all' | 'some' | 'none';
 
 export interface EquipmentSet {

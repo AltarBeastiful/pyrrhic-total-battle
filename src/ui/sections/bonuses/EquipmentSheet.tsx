@@ -13,6 +13,7 @@ import { Disclosure } from '@/ui/kit';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
 import { describeContribution, QUALITY_LABELS } from './labels';
+import { gradeInk } from './equipmentSets';
 import { equipmentRecord, firstQuality, qualitiesOf, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { FieldGroup, SourceSheet, WorthList } from './SourceSheet';
@@ -104,6 +105,13 @@ export function EquipmentSheet({
             }))}
             value={entry.quality}
             allowDeselect={false}
+            // The grade's ink, as on the piece's badge: the chosen value and every option in the list.
+            styles={{ input: { color: gradeInk(entry.quality), fontWeight: 600 } }}
+            renderOption={({ option }) => (
+              <span style={{ color: gradeInk(option.value as Quality), fontWeight: 600 }}>
+                {option.label}
+              </span>
+            )}
             onChange={(next) => {
               patch((current) => ({ ...current, quality: (next ?? current.quality) as Quality }));
             }}
