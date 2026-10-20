@@ -16,17 +16,40 @@
  * nothing (see its note: a shortcut that re-renders the frame on every keystroke was felt as
  * "all inputs a bit sluggish").
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { useBackCloses } from './backCloses';
 
 const open = new Set<() => void>();
+const listeners = new Set<() => void>();
+
+function changed(): void {
+  for (const listener of listeners) listener();
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * Whether any editor hovers right now, as a render input. The March sheet reads it to give up its
+ * own Escape: Mantine closes every open drawer on one keystroke, and the owner's ask of 2026-10-20 was
+ * that Esc shut the troop detail and the next Esc the summary under it.
+ */
+export function useEditorOpen(): boolean {
+  return useSyncExternalStore(subscribe, () => open.size > 0);
+}
 
 /** Register an open editor; call what comes back when it closes. */
 export function registerOpenEditor(close: () => void): () => void {
   open.add(close);
+  changed();
   return () => {
     open.delete(close);
+    changed();
   };
 }
 

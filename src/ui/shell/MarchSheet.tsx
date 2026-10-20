@@ -25,6 +25,7 @@ import { useEffect, useRef } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
 import { useBackCloses } from '@/ui/kit/backCloses';
+import { useEditorOpen } from '@/ui/kit/openEditors';
 import { LAYERS } from '@/ui/theme';
 
 import classes from './shell.module.css';
@@ -48,6 +49,8 @@ export function MarchSheet({ opened, onClose }: MarchSheetProps) {
   // Not a setup editor — Ctrl+Enter leaves it up to show the answer — but Back still puts it down
   // (owner, 2026-10-02; `kit/backCloses.ts`).
   useBackCloses(opened, onClose);
+  // An editor over the sheet owns Escape: one press closes it, the next closes the sheet.
+  const covered = useEditorOpen();
 
   /**
    * Move the sheet down by `to` pixels, or put it back where it belongs.
@@ -109,6 +112,7 @@ export function MarchSheet({ opened, onClose }: MarchSheetProps) {
     <Drawer.Root
       opened={opened}
       onClose={onClose}
+      closeOnEscape={!covered}
       position="bottom"
       size="calc(100dvh - var(--pyr-appbar-height))"
       radius={0}
