@@ -516,9 +516,7 @@ test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
   done(sheet);
 
   expect(profile()?.sources.equipment[0]?.quality).toBe('godlike');
-  expect(chipLabel(sourceChip('Emerald Guardian')).textContent).toContain(
-    '+128 % HP/STR melee',
-  );
+  expect(chipLabel(sourceChip('Emerald Guardian')).textContent).toContain('+128 % HP/STR melee');
 });
 
 test('the temple chip is off until something is typed into it, then on every march', () => {
@@ -641,7 +639,10 @@ function seedPieces(pieces: Seed[], names: Record<string, string> = {}): void {
     equipmentSetNames: names,
   }));
   useStore.getState().updateActiveSetup((current) => ({
-    active: { ...current.active, equipment: pieces.filter((piece) => piece.on === true).map((piece) => piece.id) },
+    active: {
+      ...current.active,
+      equipment: pieces.filter((piece) => piece.on === true).map((piece) => piece.id),
+    },
   }));
 }
 
@@ -665,6 +666,7 @@ test('a piece wears the letter of its grade and a tight bonus line, the full lin
 
   await user.hover(label);
   expect(await screen.findByRole('tooltip')).toBeTruthy();
+  expect(screen.getByRole('tooltip').textContent).toContain('Godlike quality');
   expect(screen.getByRole('tooltip').textContent).toContain('+128 % health / +128 % strength');
 });
 
@@ -726,16 +728,48 @@ test('a piece inside a set still switches alone, and two sets are not exclusive'
   expect(setup()?.active.equipment.toSorted()).toEqual(['a1', 'a2', 'a3', 'b1']);
 });
 
-test('an unnamed set suggests the shared type, else Set N', () => {
+test('an unnamed set is titled by what it boosts and its commonest grade, numbered when two read alike', () => {
   seedPieces([
-    { id: 'a1', equipmentId: 'war-master', setId: 's1' },
-    { id: 'a2', equipmentId: 'war-master', setId: 's1' },
-    { id: 'b1', equipmentId: 'war-master', setId: 's2' },
-    { id: 'b2', equipmentId: 'emerald-guardian', setId: 's2' },
+    { id: 'a1', equipmentId: 'guardian-of-justice', quality: 'uncommon', setId: 's1' },
+    { id: 'a2', equipmentId: 'guardian-of-justice', quality: 'epic', setId: 's1' },
+    { id: 'a3', equipmentId: 'guardian-of-justice', quality: 'epic', setId: 's1' },
+    { id: 'b1', equipmentId: 'guardian-of-justice', quality: 'epic', setId: 's2' },
   ]);
   renderWithTheme(<BonusesSection />);
-  expect(within(card()).getByRole('group', { name: 'Set War Master' })).toBeTruthy();
-  expect(within(card()).getByRole('group', { name: 'Set Set 2' })).toBeTruthy();
+  expect(within(card()).getByRole('group', { name: 'Set Guardsmen (E)' })).toBeTruthy();
+  expect(within(card()).getByRole('group', { name: 'Set Guardsmen (E) 2' })).toBeTruthy();
+});
+
+test('Add set puts an empty set in: New set, then New set 2, and a piece can be moved into it', async () => {
+  const user = userEvent.setup();
+  seedPieces([{ id: 'l1', equipmentId: 'war-master' }]);
+  renderWithTheme(<BonusesSection />);
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add set' }));
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add set' }));
+  expect(within(card()).getByRole('group', { name: 'Set New set' })).toBeTruthy();
+  expect(within(card()).getByRole('group', { name: 'Set New set 2' })).toBeTruthy();
+  // Nothing in it yet: its toggle has nothing to switch.
+  expect((setToggle('New set') as HTMLInputElement).disabled).toBe(true);
+
+  await user.click(within(card()).getByRole('button', { name: 'Move War Master' }));
+  await user.click(screen.getByRole('menuitem', { name: 'New set 2' }));
+  expect(
+    within(within(card()).getByRole('group', { name: 'Set New set 2' })).getByRole('checkbox', {
+      name: 'Switch on War Master',
+    }),
+  ).toBeTruthy();
+});
+
+test('an empty set can be added to a profile with no piece, and deleted from its sheet', () => {
+  renderWithTheme(<BonusesSection />);
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add set' }));
+  expect(within(card()).getByRole('group', { name: 'Set New set' })).toBeTruthy();
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set New set' }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete set and pieces' }));
+  expect(within(card()).queryByRole('group', { name: 'Set New set' })).toBeNull();
+  expect(profile()?.sources.equipmentSetNames).toBeUndefined();
 });
 
 test('the move menu puts a piece into a set, a new set or no set, from the keyboard too', async () => {

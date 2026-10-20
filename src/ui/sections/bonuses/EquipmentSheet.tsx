@@ -33,7 +33,14 @@ export interface EquipmentSheetProps {
   onClose: () => void;
 }
 
-export function EquipmentSheet({ profile, entryId, summary, sets, onSetChosen, onClose }: EquipmentSheetProps) {
+export function EquipmentSheet({
+  profile,
+  entryId,
+  summary,
+  sets,
+  onSetChosen,
+  onClose,
+}: EquipmentSheetProps) {
   const entry = profile.sources.equipment.find((candidate) => candidate.id === entryId);
   if (entry === undefined) return null;
   const record = equipmentRecord(entry.equipmentId);
@@ -113,7 +120,8 @@ export function EquipmentSheet({ profile, entryId, summary, sets, onSetChosen, o
           value={entry.setId ?? NO_SET}
           allowDeselect={false}
           onChange={(next) => {
-            const chosen = next === null || next === NO_SET ? undefined : next === NEW_SET ? mintSetId() : next;
+            const chosen =
+              next === null || next === NO_SET ? undefined : next === NEW_SET ? mintSetId() : next;
             moveToSet(profile.id, entry.id, chosen ?? null);
             onSetChosen?.(chosen);
           }}

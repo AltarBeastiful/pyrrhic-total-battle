@@ -7,15 +7,26 @@
  * row's header tints faintly when more is worn than the selected captains have slots for, and says
  * why in its tooltip.
  */
-import { ActionIcon, Badge, Button, Checkbox, Group, Paper, SimpleGrid, Stack, Text, Tooltip } from '@mantine/core';
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Checkbox,
+  Group,
+  Paper,
+  SimpleGrid,
+  Stack,
+  Text,
+  Tooltip,
+} from '@mantine/core';
 import { Ellipsis, Plus, Settings } from 'lucide-react';
 
 import { toggleActiveSource } from '@/state/actions/bonuses';
-import { mintSetId, moveToSet, setPiecesOn } from '@/state/actions/equipmentSets';
+import { addEmptySet, mintSetId, moveToSet, setPiecesOn } from '@/state/actions/equipmentSets';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 import { AppMenu } from '@/ui/kit';
 
-import { equipmentLayout, GRADES, slotsFor, tightLine } from './equipmentSets';
+import { GRADES, layoutOf, slotsFor, tightLine } from './equipmentSets';
 import type { EquipmentSet } from './equipmentSets';
 import { describeContribution, QUALITY_LABELS } from './labels';
 import type { EditorTarget } from './rows';
@@ -23,8 +34,6 @@ import { equipmentRecord, equipmentWorth } from './rows';
 import { SourceChip } from './SourceChip';
 
 type Piece = ProfileSources['equipment'][number];
-
-const typeName = (equipmentId: string): string => equipmentRecord(equipmentId)?.name ?? equipmentId;
 
 /** Worn against the slots of the selected captains: faint, and never a reason to stop. */
 export function SlotCounter({ worn, captains }: { worn: number; captains: number }) {
@@ -86,7 +95,7 @@ function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
         name={name}
         badge={<Grade piece={piece} on={on} />}
         {...(tight === '' ? { value: '—' } : { value: tight })}
-        details={describeContribution(worth)}
+        details={[`${QUALITY_LABELS[piece.quality]} quality`, ...describeContribution(worth)]}
         checked={on}
         dotted
         toggleLabel={on ? `${name}, on for this march` : `Switch on ${name}`}
@@ -160,21 +169,35 @@ export interface EquipmentSetsProps {
 }
 
 export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDisabled }: EquipmentSetsProps) {
-  const { sets, loose } = equipmentLayout(profile, setup, typeName);
+  const { sets, loose } = layoutOf(profile, setup);
   const active = new Set(setup.active.equipment);
-  const addButton = (
-    <Button
-      variant="subtle"
-      size="compact-sm"
-      leftSection={<Plus size={14} aria-hidden />}
-      disabled={addDisabled}
-      w="fit-content"
-      onClick={onAdd}
-    >
-      Add equipment
-    </Button>
+  const addButtons = (
+    <Group gap="xs">
+      <Button
+        variant="subtle"
+        size="compact-sm"
+        leftSection={<Plus size={14} aria-hidden />}
+        disabled={addDisabled}
+        onClick={onAdd}
+      >
+        Add equipment
+      </Button>
+      <Button
+        variant="subtle"
+        size="compact-sm"
+        leftSection={<Plus size={14} aria-hidden />}
+        onClick={() => {
+          addEmptySet(
+            profile.id,
+            sets.map((set) => set.name),
+          );
+        }}
+      >
+        Add set
+      </Button>
+    </Group>
   );
-  if (profile.sources.equipment.length === 0) return addButton;
+  if (profile.sources.equipment.length === 0 && sets.length === 0) return addButtons;
 
   const pieces = (list: readonly Piece[]) =>
     list.map((piece) => (
@@ -192,12 +215,13 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
     <Stack gap="xs">
       <Stack gap="xs" role="group" aria-label="Equipment">
         {sets.map((set) => (
-          <Paper key={set.id} withBorder p="xs" role="group" aria-label={`Set ${set.name}`}>
+          <Paper key={set.id} withBorder bg="transparent" p="xs" role="group" aria-label={`Set ${set.name}`}>
             <Stack gap="xs">
               <Group gap="xs" wrap="nowrap">
                 <Checkbox
                   checked={set.state === 'all'}
                   indeterminate={set.state === 'some'}
+                  disabled={set.pieces.length === 0}
                   aria-label={`${set.name}, ${String(set.on)} of ${String(set.pieces.length)} on`}
                   onChange={() => {
                     setPiecesOn(
@@ -224,20 +248,23 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
                   <Settings size={14} aria-hidden />
                 </ActionIcon>
               </Group>
-              <PieceGrid>{pieces(set.pieces)}</PieceGrid>
+              {set.pieces.length === 0 ? (
+                <Text size="xs" c="dimmed">
+                  Empty. Move a piece here from its ⋯ menu, or choose this set when adding one.
+                </Text>
+              ) : (
+                <PieceGrid>{pieces(set.pieces)}</PieceGrid>
+              )}
             </Stack>
           </Paper>
         ))}
-        <Paper withBorder p="xs" role="group" aria-label="No set">
-          <Stack gap="xs">
-            <Text size="sm" fw={600}>
-              No set
-            </Text>
-            {loose.length > 0 && <PieceGrid>{pieces(loose)}</PieceGrid>}
-          </Stack>
-        </Paper>
+        {loose.length > 0 && (
+          <div role="group" aria-label="No set">
+            <PieceGrid>{pieces(loose)}</PieceGrid>
+          </div>
+        )}
       </Stack>
-      {addButton}
+      {addButtons}
     </Stack>
   );
 }

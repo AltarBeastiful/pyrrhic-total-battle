@@ -36,7 +36,7 @@ import { CaptainChips } from './CaptainChips';
 import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSets, SlotCounter } from './EquipmentSets';
-import { equipmentLayout } from './equipmentSets';
+import { layoutOf } from './equipmentSets';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet } from './FreeFormSheets';
 import { selectsRestrictedCaptain } from './marchType';
@@ -69,8 +69,6 @@ import { readFold, writeFold, type BonusesFold } from './uiPrefs';
  */
 const ORDER = ['captains', 'equipment', 'permanent', 'other', 'events', 'recovery'] as const;
 const FOLDED = ['artifacts', 'titles'] as const satisfies readonly BonusesFold[];
-
-const setTypeName = (id: string): string => equipmentTable.find((piece) => piece.id === id)?.name ?? id;
 
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
@@ -386,7 +384,7 @@ export function BonusesSection() {
         <EquipmentSheet
           {...sheet}
           entryId={editor.id}
-          sets={equipmentLayout(profile, setup, setTypeName).sets}
+          sets={layoutOf(profile, setup).sets}
           onSetChosen={(setId) => {
             lastSet.current = setId;
           }}

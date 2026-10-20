@@ -2,11 +2,11 @@
  * What the Equipment row shows (B-19): the player's sets, the pieces without one, the grade of a
  * piece, and how many slots the selected captains wear. Sets are a view: no number here reaches a total.
  */
-import type { Quality } from '@/data/types';
+import type { BonusKey, Quality } from '@/data/types';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import { BONUS_LABELS, formatPercent, type BonusLike } from './labels';
-import type { BonusKey } from '@/data/types';
+import { BONUS_LABELS, firstKey, formatPercent, type BonusLike } from './labels';
+import { equipmentRecord, equipmentWorth } from './rows';
 
 type Piece = ProfileSources['equipment'][number];
 
@@ -45,14 +45,43 @@ export interface EquipmentLayout {
   loose: Piece[];
 }
 
+const QUALITY_ORDER = Object.keys(GRADES) as Quality[];
+
+/** The value that most pieces share; a tie goes to the one `rank` puts last (the more prominent). */
+function commonest<T extends string>(values: readonly T[], rank: (value: T) => number): T | undefined {
+  const counts = new Map<T, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || rank(b[0]) - rank(a[0]))[0]?.[0];
+}
+
 /**
- * Sets in the order their first piece appears. An unnamed set suggests the type its pieces share when
- * they all share one ("Emerald Guardian"), else "Set N" by position.
+ * The name an unnamed set suggests: what its pieces mostly boost and their most prominent grade,
+ * "Guardsmen (U)". Two such sets get a number so no two titles read alike; pieces with nothing to name
+ * fall back to "Set N".
+ */
+function suggestName(pieces: readonly Piece[], worth: (piece: Piece) => BonusLike, index: number): string {
+  const keys = pieces.flatMap((piece) => {
+    const key = firstKey(worth(piece));
+    return key !== undefined && key in BONUS_LABELS ? [key as BonusKey] : [];
+  });
+  const key = commonest(keys, () => 0);
+  if (key === undefined) return `Set ${String(index + 1)}`;
+  const quality = commonest(
+    pieces.map((piece) => piece.quality),
+    (value) => QUALITY_ORDER.indexOf(value),
+  );
+  return `${BONUS_LABELS[key]}${quality === undefined ? '' : ` (${GRADES[quality].letter})`}`;
+}
+
+/**
+ * Sets in the order their first piece appears, then the empty ones the player added. A named set
+ * keeps its name; an unnamed one suggests one (`suggestName`) and is numbered when another set already
+ * wears the same title.
  */
 export function equipmentLayout(
   profile: Profile,
   setup: BattleSetup,
-  typeName: (equipmentId: string) => string,
+  worth: (piece: Piece) => BonusLike,
 ): EquipmentLayout {
   const { equipment, equipmentSetNames } = profile.sources;
   const order: string[] = [];
@@ -68,16 +97,19 @@ export function equipmentLayout(
     list.push(piece);
     bySet.set(piece.setId, list);
   }
+  for (const id of Object.keys(equipmentSetNames ?? {})) if (!bySet.has(id)) order.push(id);
+
+  const taken = new Map<string, number>();
   const sets = order.map((id, index): EquipmentSet => {
     const pieces = bySet.get(id) ?? [];
     const on = pieces.filter((piece) => setup.active.equipment.includes(piece.id)).length;
-    const types = new Set(pieces.map((piece) => piece.equipmentId));
-    const named = equipmentSetNames?.[id]?.trim() ?? '';
-    const [only] = [...types];
-    const suggestion = types.size === 1 && only !== undefined ? typeName(only) : `Set ${String(index + 1)}`;
+    const stored = equipmentSetNames?.[id]?.trim() ?? '';
+    const base = stored === '' ? suggestName(pieces, worth, index) : stored;
+    const seen = (taken.get(base) ?? 0) + 1;
+    taken.set(base, seen);
     return {
       id,
-      name: named === '' ? suggestion : named,
+      name: stored === '' && seen > 1 ? `${base} ${String(seen)}` : base,
       pieces,
       on,
       state: on === 0 ? 'none' : on === pieces.length ? 'all' : 'some',
@@ -85,6 +117,10 @@ export function equipmentLayout(
   });
   return { sets, loose };
 }
+
+/** The layout of the account on screen: what each piece is worth names an unnamed set. */
+export const layoutOf = (profile: Profile, setup: BattleSetup): EquipmentLayout =>
+  equipmentLayout(profile, setup, (piece) => equipmentWorth(equipmentRecord(piece.equipmentId), piece));
 
 /** "+8 % HP/STR guardsmen +1": the first key of the piece in the fewest words, then how many more. */
 export function tightLine(bonus: BonusLike): string {

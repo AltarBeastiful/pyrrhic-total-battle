@@ -4,22 +4,17 @@
  */
 import { Button, Group, Stack, Text, TextInput } from '@mantine/core';
 
-import {
-  deleteSetAndPieces,
-  moveToSet,
-  renameSet,
-  ungroupSet,
-} from '@/state/actions/equipmentSets';
-import type { Profile } from '@/state/schema';
+import { deleteSetAndPieces, moveToSet, renameSet, ungroupSet } from '@/state/actions/equipmentSets';
+import type { BattleSetup, Profile } from '@/state/schema';
 
-import { equipmentLayout } from './equipmentSets';
+import { layoutOf } from './equipmentSets';
 import { equipmentRecord } from './rows';
 import type { TotalsSummary } from './rows';
 import { SourceSheet } from './SourceSheet';
 
 export interface SetSheetProps {
   profile: Profile;
-  setup: Parameters<typeof equipmentLayout>[1];
+  setup: BattleSetup;
   setId: string;
   summary: TotalsSummary;
   onClose: () => void;
@@ -27,9 +22,7 @@ export interface SetSheetProps {
 }
 
 export function SetSheet({ profile, setup, setId, summary, onClose, onEditPiece }: SetSheetProps) {
-  const set = equipmentLayout(profile, setup, (id) => equipmentRecord(id)?.name ?? id).sets.find(
-    (candidate) => candidate.id === setId,
-  );
+  const set = layoutOf(profile, setup).sets.find((candidate) => candidate.id === setId);
   if (set === undefined) return null;
   const stored = profile.sources.equipmentSetNames?.[setId] ?? '';
 
