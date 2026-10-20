@@ -339,6 +339,24 @@ describe('resolveSources — equipment', () => {
   });
 });
 
+describe('resolveSources — equipment sets (B-19)', () => {
+  it('gives the same bonus for the same switched-on pieces, with or without sets', () => {
+    const pieces = [
+      { id: 'e1', equipmentId: 'emerald-guardian', quality: 'legendary' as const },
+      { id: 'e2', equipmentId: 'war-master', quality: 'rare' as const },
+    ];
+    const loose = fixture();
+    loose.profile.sources.equipment = pieces;
+    loose.setup.active.equipment = ['e1', 'e2'];
+    const grouped = fixture();
+    grouped.profile.sources.equipment = pieces.map((piece) => ({ ...piece, setId: 's1' }));
+    grouped.profile.sources.equipmentSetNames = { s1: 'Alexander' };
+    grouped.setup.active.equipment = ['e1', 'e2'];
+
+    expect(resolveSources(grouped.profile, grouped.setup)).toEqual(resolveSources(loose.profile, loose.setup));
+  });
+});
+
 describe('resolveSources — artifacts', () => {
   it('adds the base-level and star-level table rows', () => {
     const { profile, setup } = fixture();

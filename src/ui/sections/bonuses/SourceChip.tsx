@@ -19,6 +19,8 @@ export interface SourceChipProps {
   toggleLabel: string;
   /** The second, dimmed line under the name: what the source is worth. */
   value?: string;
+  /** A mark worn before the name (the grade of a piece of equipment). */
+  badge?: ReactNode;
   /**
    * Every line the source is worth, for the tooltip a hover or a focus raises (owner, 2026-09-17:
    * "a tooltip on hover on Army Modernization that shows all bonuses entered"). The chip's own line
@@ -43,6 +45,7 @@ export function SourceChip({
   name,
   toggleLabel,
   value,
+  badge,
   checked,
   onToggle,
   dotted = false,
@@ -57,6 +60,7 @@ export function SourceChip({
   const chip = (
     <Chip checked={checked} disabled={disabled} color="brass" aria-label={toggleLabel} onChange={onToggle}>
       <Group gap={5} wrap="nowrap" component="span">
+        {badge}
         <Stack gap={0} component="span">
           <Text span inherit>
             {name}

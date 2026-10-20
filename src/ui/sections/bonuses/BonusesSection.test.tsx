@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { captains as captainTable } from '@/data';
+import { updateSources } from '@/state/actions/bonuses';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
@@ -516,7 +517,7 @@ test('editing a piece of equipment in its sheet moves the TOTAL', async () => {
 
   expect(profile()?.sources.equipment[0]?.quality).toBe('godlike');
   expect(chipLabel(sourceChip('Emerald Guardian')).textContent).toContain(
-    '+128 % health and strength (melee)',
+    '+128 % HP/STR melee',
   );
 });
 
@@ -624,4 +625,223 @@ test('B-16: a document that arrives after mount with an active title opens Title
     useStore.getState().replaceDocument(loaded);
   });
   expect(isOpen('Titles')).toBe(true);
+});
+
+// ---- B-19: sets, grade badges, tighter pills -------------------------------------------------------
+type Seed = { id: string; equipmentId: string; quality?: string; setId?: string; on?: boolean };
+
+/** Put pieces straight into the profile, switched on or not, as an account with gear already has. */
+function seedPieces(pieces: Seed[], names: Record<string, string> = {}): void {
+  updateSources(profile()!.id, (sources) => ({
+    ...sources,
+    equipment: pieces.map(({ on: _on, quality = 'rare', ...piece }) => ({
+      ...piece,
+      quality: quality as never,
+    })),
+    equipmentSetNames: names,
+  }));
+  useStore.getState().updateActiveSetup((current) => ({
+    active: { ...current.active, equipment: pieces.filter((piece) => piece.on === true).map((piece) => piece.id) },
+  }));
+}
+
+const alexander: Seed[] = [
+  { id: 'a1', equipmentId: 'emerald-guardian', setId: 's1', on: true },
+  { id: 'a2', equipmentId: 'war-master', setId: 's1', on: true },
+  { id: 'a3', equipmentId: 'steppe-enslaver', setId: 's1' },
+];
+
+const setToggle = (name: string): HTMLInputElement =>
+  within(card()).getByRole('checkbox', { name: new RegExp(`^${name}, \\d of \\d on$`) });
+
+test('a piece wears the letter of its grade and a tight bonus line, the full line on hover', async () => {
+  const user = userEvent.setup();
+  seedPieces([{ id: 'p1', equipmentId: 'emerald-guardian', quality: 'godlike', on: true }]);
+  renderWithTheme(<BonusesSection />);
+
+  const label = chipLabel(sourceChip('Emerald Guardian'));
+  expect(within(label).getByRole('img', { name: 'Godlike grade' }).textContent).toBe('G');
+  expect(label.textContent).toContain('+128 % HP/STR melee');
+
+  await user.hover(label);
+  expect(await screen.findByRole('tooltip')).toBeTruthy();
+  expect(screen.getByRole('tooltip').textContent).toContain('+128 % health / +128 % strength');
+});
+
+test('a switched-off piece keeps its letter, outlined instead of filled', () => {
+  seedPieces([
+    { id: 'p1', equipmentId: 'emerald-guardian', quality: 'epic', on: true },
+    { id: 'p2', equipmentId: 'war-master', quality: 'epic' },
+  ]);
+  renderWithTheme(<BonusesSection />);
+  const on = within(chipLabel(sourceChip('Emerald Guardian'))).getByRole('img', { name: 'Epic grade' });
+  const off = within(chipLabel(sourceChip('War Master'))).getByRole('img', { name: 'Epic grade' });
+  expect(off.textContent).toBe('E');
+  expect(on.getAttribute('data-variant')).toBe('filled');
+  expect(off.getAttribute('data-variant')).toBe('outline');
+});
+
+test('pieces without a set live in a No set card, and an empty profile shows only Add', () => {
+  renderWithTheme(<BonusesSection />);
+  expect(within(card()).queryByRole('group', { name: 'No set' })).toBeNull();
+  cleanup();
+
+  seedPieces([{ id: 'p1', equipmentId: 'war-master' }]);
+  renderWithTheme(<BonusesSection />);
+  const loose = within(card()).getByRole('group', { name: 'No set' });
+  expect(within(loose).getByRole('checkbox', { name: 'Switch on War Master' })).toBeTruthy();
+  expect(within(loose).queryByRole('checkbox', { name: /of \d on$/ })).toBeNull();
+});
+
+test('a set toggle is tri-state: a part-on set turns all on, a full set turns all off', () => {
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+
+  const toggle = setToggle('Alexander');
+  expect(toggle.indeterminate).toBe(true);
+  expect(toggle.getAttribute('aria-label')).toBe('Alexander, 2 of 3 on');
+
+  fireEvent.click(toggle);
+  expect(setup()?.active.equipment.toSorted()).toEqual(['a1', 'a2', 'a3']);
+  expect(setToggle('Alexander').checked).toBe(true);
+
+  fireEvent.click(setToggle('Alexander'));
+  expect(setup()?.active.equipment).toEqual([]);
+  expect(setToggle('Alexander').checked).toBe(false);
+  expect(setToggle('Alexander').indeterminate).toBe(false);
+});
+
+test('a piece inside a set still switches alone, and two sets are not exclusive', () => {
+  seedPieces([...alexander, { id: 'b1', equipmentId: 'guardian-of-justice', setId: 's2' }], {
+    s1: 'Alexander',
+    s2: 'Caesar',
+  });
+  renderWithTheme(<BonusesSection />);
+
+  fireEvent.click(sourceChip('Steppe Enslaver'));
+  expect(setup()?.active.equipment).toContain('a3');
+  expect(setToggle('Alexander').checked).toBe(true);
+
+  fireEvent.click(setToggle('Caesar'));
+  expect(setup()?.active.equipment.toSorted()).toEqual(['a1', 'a2', 'a3', 'b1']);
+});
+
+test('an unnamed set suggests the shared type, else Set N', () => {
+  seedPieces([
+    { id: 'a1', equipmentId: 'war-master', setId: 's1' },
+    { id: 'a2', equipmentId: 'war-master', setId: 's1' },
+    { id: 'b1', equipmentId: 'war-master', setId: 's2' },
+    { id: 'b2', equipmentId: 'emerald-guardian', setId: 's2' },
+  ]);
+  renderWithTheme(<BonusesSection />);
+  expect(within(card()).getByRole('group', { name: 'Set War Master' })).toBeTruthy();
+  expect(within(card()).getByRole('group', { name: 'Set Set 2' })).toBeTruthy();
+});
+
+test('the move menu puts a piece into a set, a new set or no set, from the keyboard too', async () => {
+  const user = userEvent.setup();
+  seedPieces([...alexander, { id: 'l1', equipmentId: 'guardian-of-justice' }], { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+
+  await user.click(within(card()).getByRole('button', { name: 'Move Guardian of Justice' }));
+  await user.click(screen.getByRole('menuitem', { name: 'Alexander' }));
+  expect(profile()?.sources.equipment.find((piece) => piece.id === 'l1')?.setId).toBe('s1');
+
+  // Keyboard: focus the trigger, open with Enter, walk to "No set", choose with Enter.
+  const trigger = within(card()).getByRole('button', { name: 'Move Guardian of Justice' });
+  trigger.focus();
+  await user.keyboard('{Enter}');
+  await user.click(await screen.findByRole('menuitem', { name: 'No set' }));
+  expect(profile()?.sources.equipment.find((piece) => piece.id === 'l1')?.setId).toBeUndefined();
+
+  await user.click(within(card()).getByRole('button', { name: 'Move Guardian of Justice' }));
+  await user.click(screen.getByRole('menuitem', { name: 'New set' }));
+  const moved = profile()?.sources.equipment.find((piece) => piece.id === 'l1');
+  expect(moved?.setId).toBeDefined();
+  expect(moved?.setId).not.toBe('s1');
+});
+
+test('the set sheet renames, removes a piece, ungroups and deletes', async () => {
+  const user = userEvent.setup();
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set Alexander' }));
+  let sheet = screen.getByRole('dialog');
+  await user.clear(within(sheet).getByRole('textbox', { name: 'Name' }));
+  await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), 'Caesar');
+  expect(profile()?.sources.equipmentSetNames).toEqual({ s1: 'Caesar' });
+
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Remove War Master from set' }));
+  expect(profile()?.sources.equipment.find((piece) => piece.id === 'a2')?.setId).toBeUndefined();
+
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Ungroup all' }));
+  expect(profile()?.sources.equipment).toHaveLength(3);
+  expect(profile()?.sources.equipment.every((piece) => piece.setId === undefined)).toBe(true);
+  expect(profile()?.sources.equipmentSetNames).toBeUndefined();
+  cleanup();
+
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit set Alexander' }));
+  sheet = screen.getByRole('dialog');
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Delete set and pieces' }));
+  expect(profile()?.sources.equipment).toEqual([]);
+  expect(setup()?.active.equipment).toEqual([]);
+});
+
+test('Add equipment keeps the chosen set for the next piece, and the sheet can start a new set', async () => {
+  const user = userEvent.setup();
+  seedPieces([{ id: 'a1', equipmentId: 'war-master', setId: 's1' }], { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
+  let sheet = screen.getByRole('dialog');
+  expect(profile()?.sources.equipment[1]?.setId).toBeUndefined();
+  await chooseIn(user, sheet, 'Set', 'Alexander');
+  expect(profile()?.sources.equipment[1]?.setId).toBe('s1');
+  done(sheet);
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Add equipment' }));
+  expect(profile()?.sources.equipment[2]?.setId).toBe('s1');
+  sheet = screen.getByRole('dialog');
+  await chooseIn(user, sheet, 'Set', 'New set');
+  const fresh = profile()?.sources.equipment[2]?.setId;
+  expect(fresh).toBeDefined();
+  expect(fresh).not.toBe('s1');
+});
+
+test.each([
+  [0, 6],
+  [1, 3],
+  [2, 6],
+  [3, 9],
+])('the slot counter with %i captains reads against %i slots, quietly', (captains, slots) => {
+  seedPieces([{ id: 'p1', equipmentId: 'war-master', on: true }]);
+  const ids = captainTable.slice(0, captains).map((record, index) => ({
+    id: `c${String(index)}`,
+    captainId: record.id,
+    level: 1,
+    star: 0,
+  }));
+  updateSources(profile()!.id, (sources) => ({ ...sources, captains: ids }));
+  useStore.getState().updateActiveSetup((current) => ({
+    active: { ...current.active, captains: ids.map((entry) => entry.id) },
+  }));
+  renderWithTheme(<BonusesSection />);
+  expect(within(card()).getByText(`1 of ${String(slots)} worn`)).toBeTruthy();
+});
+
+test('wearing more than the slots tints the counter and blocks nothing', () => {
+  const nine = Array.from({ length: 7 }, (_, index) => ({
+    id: `p${String(index)}`,
+    equipmentId: 'war-master',
+    on: true,
+  }));
+  seedPieces(nine);
+  renderWithTheme(<BonusesSection />);
+  const counter = within(card()).getByText('7 of 6 worn');
+  expect(counter.getAttribute('data-over')).toBe('true');
+  expect(setup()?.active.equipment).toHaveLength(7);
+  expect(within(card()).queryByRole('alert')).toBeNull();
 });

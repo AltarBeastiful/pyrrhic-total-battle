@@ -8,7 +8,7 @@ related: ['[[00-inventory]]', '[[01-relevant]]', '[[03-needs-owner]]', '[[progre
 
 # Backlog
 
-Eighteen items: twelve refined from the ideas in `todos.md` that triage (see `triage/README.md`) marked `relevant` or `partly-done`, B-13, which came from the Critical 04 troop order, and B-14 to B-18, the 2026-10-19 UI grilling (merc keyboard flow, Bonuses fold, bar split). Nothing here is implemented. The owner picks which become stories and in what order. Rule numbers refer to [[design-rules]]. Every engine item carries two standing criteria: the benchmark rating does not regress, and tests pass on the kernel path.
+Twenty items: twelve refined from the ideas in `todos.md` that triage (see `triage/README.md`) marked `relevant` or `partly-done`, B-13, which came from the Critical 04 troop order, and B-14 to B-18, the 2026-10-19 UI grilling (merc keyboard flow, Bonuses fold, bar split), and B-19 and B-20, the 2026-10-20 equipment-sets grilling. Nothing here is implemented. The owner picks which become stories and in what order. Rule numbers refer to [[design-rules]]. Every engine item carries two standing criteria: the benchmark rating does not regress, and tests pass on the kernel path.
 
 ## Status since the first review (2026-10-10 review)
 
@@ -38,12 +38,14 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 7 | [[B-03-silver-neutral-raise]] | More shielded mercs at equal silver | M | measure first (exp 197); may be unneeded | owner answer: planning or manual control |
 | 8 | [[B-04-merc-fill-button]] | Per-stack merc fill button | M | the manual alternative to B-03 | B-03 decision, design artifact |
 | 9 | [[B-05-fewer-monsters-option]] | Fewer monsters option | M | needs a rating decision (T-24) | owner |
-| 10 | [[B-12-equipment-revamp]] | Equipment revamp | L | biggest, needs T-21 | owner T-21, design artifact |
+| 10 | [[B-12-equipment-revamp]] | Equipment revamp (superseded by B-19) | L | design settled 2026-10-20, see B-19 | none |
 | 11 | [[B-14-merc-search-keyboard]] | Merc search: highlight, hire, clear, stay open | S | UI polish, no blocker | none |
 | 12 | [[B-15-merc-quantity-pill-keyboard]] | Merc quantity pills: keyboard flow | S | follows B-14 | B-14 |
 | 13 | [[B-16-bonuses-open-when-active]] | Artifacts and Titles open when something is active | S | cheap, no blocker | none |
 | 14 | [[B-17-account-icon-dropdown]] | Account icon with its own dropdown | M | first half of the bar split | none |
 | 15 | [[B-18-menu-dropdown]] | Menu dropdown on the left of the bar | M | second half of the bar split | B-17 |
+| 16 | [[B-19-equipment-sets]] | Equipment sets, grade badges, tighter pills | L | the 2026-10-20 grilling, design settled | none |
+| 17 | [[B-20-equipment-drag-and-drop]] | Drag a piece onto a set | M | needs B-19 and a library decision | B-19, owner call on a drag library |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 
@@ -73,7 +75,7 @@ Open items that the advisor machinery should answer first: B-05, B-08, B-09 (and
 
 | Todo | Question | Detail |
 | --- | --- | --- |
-| T-21 | Whole sets per hero or one item at a time? | Gates B-12 |
+| T-21 | Whole sets per hero or one item at a time? | Answered 2026-10-20: optional user-built sets, pieces stay individually switchable (B-19) |
 | T-24 | Is a monster worth half a merc in the rating? | A rating change; only the owner registers a new baseline |
 | T-28 | What does the hall of fame panel list? | Needs a screenshot or the list |
 | T-29 | Control for merc deaths, after the spike check | A measurement precedes any control |

@@ -201,3 +201,14 @@ test('the troop tiers are the group hues, not a second green and a second blue',
   // ladder reaches.
   expect(ramp(SEEDS.tier1)[5]).toBe('#99a5a3');
 });
+
+test('every equipment grade ink is checked against every surface in both schemes (B-19)', () => {
+  const pairs = contrastPairs();
+  for (const grade of ['grade1', 'grade2', 'grade3', 'grade4', 'grade5', 'grade6', 'grade7', 'grade8']) {
+    for (const scheme of ['light', 'dark'] as const) {
+      const own = pairs.filter((pair) => pair.scheme === scheme && pair.foreground.startsWith(`${grade}.`));
+      expect(own.length, `${grade} ${scheme}`).toBeGreaterThan(0);
+      for (const pair of own) expect(pair.min).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});

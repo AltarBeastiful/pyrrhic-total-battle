@@ -1,13 +1,13 @@
 /**
- * The equipment editor (S-15): which piece this is, its quality, and the name of the captain wearing
- * it. What a gem or an enchantment adds sits behind a fold, because the quality table does not carry
+ * The equipment editor (S-15): which piece this is, its quality, and the set it is grouped in (B-19). What a gem or an enchantment adds sits behind a fold, because the quality table does not carry
  * it and most pieces have none.
  */
-import { Select, SimpleGrid, Stack, TextInput } from '@mantine/core';
+import { Select, SimpleGrid, Stack } from '@mantine/core';
 
 import { equipment as equipmentTable } from '@/data';
 import type { Quality } from '@/data/types';
 import { removeSourceEntry, updateSources } from '@/state/actions/bonuses';
+import { mintSetId, moveToSet } from '@/state/actions/equipmentSets';
 import type { Profile, ProfileSources } from '@/state/schema';
 import { Disclosure } from '@/ui/kit';
 
@@ -17,16 +17,23 @@ import { equipmentRecord, firstQuality, qualitiesOf, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { FieldGroup, SourceSheet, WorthList } from './SourceSheet';
 
+const NO_SET = '__none__';
+const NEW_SET = '__new__';
+
 type EquipmentEntry = ProfileSources['equipment'][number];
 
 export interface EquipmentSheetProps {
   profile: Profile;
   entryId: string;
   summary: TotalsSummary;
+  /** Every set the profile has, for the Set field. */
+  sets: readonly { id: string; name: string }[];
+  /** Told which set the player chose, so the next piece added starts in it. */
+  onSetChosen?: (setId: string | undefined) => void;
   onClose: () => void;
 }
 
-export function EquipmentSheet({ profile, entryId, summary, onClose }: EquipmentSheetProps) {
+export function EquipmentSheet({ profile, entryId, summary, sets, onSetChosen, onClose }: EquipmentSheetProps) {
   const entry = profile.sources.equipment.find((candidate) => candidate.id === entryId);
   if (entry === undefined) return null;
   const record = equipmentRecord(entry.equipmentId);
@@ -95,14 +102,20 @@ export function EquipmentSheet({ profile, entryId, summary, onClose }: Equipment
             }}
           />
         </SimpleGrid>
-        <TextInput
-          label="Name"
-          placeholder="Which captain wears it"
-          description="Optional, so two pieces of the same type stay apart."
-          value={entry.name ?? ''}
-          onChange={(event) => {
-            const name = event.currentTarget.value;
-            patch((current) => ({ ...current, name }));
+        <Select
+          label="Set"
+          description="Optional. A set switches its pieces on together; each piece still switches alone."
+          data={[
+            { value: NO_SET, label: 'No set' },
+            ...sets.map((set) => ({ value: set.id, label: set.name })),
+            { value: NEW_SET, label: 'New set' },
+          ]}
+          value={entry.setId ?? NO_SET}
+          allowDeselect={false}
+          onChange={(next) => {
+            const chosen = next === null || next === NO_SET ? undefined : next === NEW_SET ? mintSetId() : next;
+            moveToSet(profile.id, entry.id, chosen ?? null);
+            onSetChosen?.(chosen);
           }}
         />
         <FieldGroup label="Worth right now">

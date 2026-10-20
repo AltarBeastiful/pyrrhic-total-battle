@@ -22,7 +22,7 @@
  * whole family reads at a glance.
  */
 import { Alert, Stack } from '@mantine/core';
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 
 import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
 import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
@@ -35,17 +35,21 @@ import { ArtifactChips } from './ArtifactChips';
 import { CaptainChips } from './CaptainChips';
 import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
+import { EquipmentSets, SlotCounter } from './EquipmentSets';
+import { equipmentLayout } from './equipmentSets';
 import { EquipmentSheet } from './EquipmentSheet';
 import { CustomSheet, DragonSheet, PermanentSheet } from './FreeFormSheets';
 import { selectsRestrictedCaptain } from './marchType';
 import { VipSheet } from './OtherSheets';
 import { PermanentChips } from './PermanentChips';
 import { RecoverySheet } from './RecoverySheet';
+import { SetSheet } from './SetSheet';
 import {
   captainEntryFor,
   firstQuality,
   MAX_ACTIVE_ARTIFACTS,
   MAX_ACTIVE_CAPTAINS,
+  MAX_EQUIPMENT,
   sourceGroups,
   starKeys,
   totalsSummary,
@@ -66,6 +70,8 @@ import { readFold, writeFold, type BonusesFold } from './uiPrefs';
 const ORDER = ['captains', 'equipment', 'permanent', 'other', 'events', 'recovery'] as const;
 const FOLDED = ['artifacts', 'titles'] as const satisfies readonly BonusesFold[];
 
+const setTypeName = (id: string): string => equipmentTable.find((piece) => piece.id === id)?.name ?? id;
+
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
@@ -83,6 +89,9 @@ export function BonusesSection() {
     });
   }
   const [editor, setEditor] = useState<EditorTarget | null>(null);
+  const [setEditorId, setSetEditorId] = useState<string | null>(null);
+  // The set the last piece went into stays chosen for the next Add (B-19: three pieces, three quick adds).
+  const lastSet = useRef<string | undefined>(undefined);
   const [refusedCaptain, setRefusedCaptain] = useState(false);
   const [refusedArtifact, setRefusedArtifact] = useState(false);
 
@@ -173,7 +182,18 @@ export function BonusesSection() {
       const id = mintSourceId();
       updateSources(profileId, (sources) => ({
         ...sources,
-        equipment: [...sources.equipment, { id, equipmentId: first.id, quality: firstQuality(first) }],
+        equipment: [
+          ...sources.equipment,
+          {
+            id,
+            equipmentId: first.id,
+            quality: firstQuality(first),
+            ...(lastSet.current !== undefined &&
+            sources.equipment.some((piece) => piece.setId === lastSet.current)
+              ? { setId: lastSet.current }
+              : {}),
+          },
+        ],
       }));
       toggleActiveSource('equipment', id, true);
       setEditor({ kind: 'equipment', id });
@@ -222,7 +242,7 @@ export function BonusesSection() {
 
   const panels: Record<
     (typeof ORDER)[number] | (typeof FOLDED)[number],
-    { title: string; summary: string; body: React.ReactNode }
+    { title: string; summary: React.ReactNode; body: React.ReactNode }
   > = {
     captains: {
       title: 'Hero and captains',
@@ -243,7 +263,22 @@ export function BonusesSection() {
         />
       ),
     },
-    equipment: { title: 'Equipment', summary: caption('equipment'), body: chipGroup('equipment') },
+    equipment: {
+      title: 'Equipment',
+      summary: <SlotCounter worn={setup.active.equipment.length} captains={setup.active.captains.length} />,
+      body: (
+        <EquipmentSets
+          profile={profile}
+          setup={setup}
+          onEdit={setEditor}
+          onEditSet={setSetEditorId}
+          onAdd={() => {
+            add('equipment');
+          }}
+          addDisabled={profile.sources.equipment.length >= MAX_EQUIPMENT}
+        />
+      ),
+    },
     artifacts: {
       title: 'Artifacts',
       summary: `${String(setup.active.artifacts.length)}/${String(MAX_ACTIVE_ARTIFACTS)}`,
@@ -347,7 +382,30 @@ export function BonusesSection() {
         </Stack>
       </Sections>
 
-      {editor?.kind === 'equipment' && <EquipmentSheet {...sheet} entryId={editor.id} />}
+      {editor?.kind === 'equipment' && (
+        <EquipmentSheet
+          {...sheet}
+          entryId={editor.id}
+          sets={equipmentLayout(profile, setup, setTypeName).sets}
+          onSetChosen={(setId) => {
+            lastSet.current = setId;
+          }}
+        />
+      )}
+      {setEditorId !== null && (
+        <SetSheet
+          {...sheet}
+          setup={setup}
+          setId={setEditorId}
+          onClose={() => {
+            setSetEditorId(null);
+          }}
+          onEditPiece={(id) => {
+            setSetEditorId(null);
+            setEditor({ kind: 'equipment', id });
+          }}
+        />
+      )}
       {editor?.kind === 'permanent' && <PermanentSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'custom' && <CustomSheet {...sheet} entryId={editor.id} />}
       {editor?.kind === 'vip' && <VipSheet {...sheet} />}

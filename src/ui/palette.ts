@@ -157,6 +157,16 @@ export const SEEDS = {
   tier7: '#5c3a8e',
   tier8: '#1b625c',
   tier9: '#645831',
+  // The eight equipment grades (B-19), in the game's rarity order: grey, steel, green, blue, violet,
+  // amber, red, magenta. Each letter badge is also written, so the hue is never the only signal.
+  grade1: '#485150', // poor
+  grade2: '#4a6670', // common
+  grade3: '#256b35', // uncommon
+  grade4: '#25568a', // rare
+  grade5: '#5b368a', // epic
+  grade6: '#855412', // legendary
+  grade7: '#8e2f2f', // ascendant
+  grade8: '#8a2f66', // godlike
 } as const;
 
 export type PyrColorName = keyof typeof SEEDS | 'slate';
@@ -196,6 +206,14 @@ export const COLORS: Record<PyrColorName, string[]> = {
   tier7: ramp(SEEDS.tier7),
   tier8: ramp(SEEDS.tier8),
   tier9: ramp(SEEDS.tier9),
+  grade1: ramp(SEEDS.grade1),
+  grade2: ramp(SEEDS.grade2),
+  grade3: ramp(SEEDS.grade3),
+  grade4: ramp(SEEDS.grade4),
+  grade5: ramp(SEEDS.grade5),
+  grade6: ramp(SEEDS.grade6),
+  grade7: ramp(SEEDS.grade7),
+  grade8: ramp(SEEDS.grade8),
   danger: ramp(SEEDS.danger),
   slate: SLATE,
 };

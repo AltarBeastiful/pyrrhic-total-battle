@@ -328,7 +328,7 @@ export function resolveSources(
     addInto(value.health, entry.extra?.health);
     addInto(value.strength, entry.extra?.strength);
     addInto(value.special, entry.extra?.special);
-    const name = entry.name || record?.name || entry.equipmentId;
+    const name = record?.name ?? entry.equipmentId;
     const id = nextId(`equipment:${entry.equipmentId}`, entry.id);
     out.push(toSource(id, `${name} (${titleCase(entry.quality)})`, 'equipment', value));
   }

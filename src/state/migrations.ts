@@ -196,6 +196,21 @@ export function addSettings(profile: Record<string, unknown>): Record<string, un
   return isPlainObject(profile.settings) ? profile : { ...profile, settings: { ...DEFAULT_SETTINGS } };
 }
 
+/**
+ * `9 → 10` for one profile (B-19): the "captain wearing it" name of a piece of equipment is gone, because
+ * nothing ever read it; a piece may now belong to a set instead. Dropping the field is the whole
+ * migration, and every total stays what it was.
+ */
+export function dropEquipmentWearer(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainObject(profile.sources) || !Array.isArray(profile.sources.equipment)) return profile;
+  const equipment = profile.sources.equipment.map((piece) => {
+    if (!isPlainObject(piece)) return piece;
+    const { name: _name, ...rest } = piece;
+    return rest;
+  });
+  return { ...profile, sources: { ...profile.sources, equipment } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -212,6 +227,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `6 → 7`: every profile gains an empty list of user-entered upgrades (W17 C2).
  * `7 → 8`: every setup gains an unspecified march type, so no captain restriction applies (W17 C5-0).
  * `8 → 9`: every profile gains its settings at the defaults (the pool line opens on neither pool).
+ * `9 → 10`: a piece of equipment loses its wearer name and may carry a set (B-19).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -223,6 +239,7 @@ export const migrations: MigrationTable = {
   6: (doc) => ({ ...doc, schemaVersion: 7, profiles: migrateProfiles(doc, addUpgradeList) }),
   7: (doc) => ({ ...doc, schemaVersion: 8, profiles: migrateProfiles(doc, addMarchType) }),
   8: (doc) => ({ ...doc, schemaVersion: 9, profiles: migrateProfiles(doc, addSettings) }),
+  9: (doc) => ({ ...doc, schemaVersion: 10, profiles: migrateProfiles(doc, dropEquipmentWearer) }),
 };
 
 /**
@@ -243,6 +260,7 @@ export const profileMigrations: MigrationTable = {
   6: addUpgradeList,
   7: addMarchType,
   8: addSettings,
+  9: dropEquipmentWearer,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -262,6 +280,7 @@ export const savedStackMigrations: MigrationTable = {
   6: identity,
   7: (doc) => ({ ...doc, setup: withMarchType(doc.setup) }),
   8: identity,
+  9: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -17,7 +17,7 @@ import classes from './bonuses.module.css';
 export interface FamilyRowProps {
   title: string;
   /** How many are on, of how many: "3/3", "2 of 8 sources on", "always on". */
-  count: string;
+  count: ReactNode;
   children: ReactNode;
 }
 

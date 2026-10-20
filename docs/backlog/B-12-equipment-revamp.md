@@ -8,6 +8,10 @@ related: ['[[00-inventory]]', 'T-16', 'T-18', 'T-19', 'T-20', 'T-21']
 
 # B-12 Equipment revamp: less crowded preview, grade letter, bonus off the pill, sets moved between heroes
 
+## Status
+
+superseded by [[B-19-equipment-sets]] (2026-10-20 grilling): T-21 answered (sets are optional, user-built groups, not tied to a hero); the 9-item cap became a faint non-blocking counter; the bonus stays on the pill in tight form, with hover and the sheet for the full line; the design artifact was approved as layout B.
+
 ## Context
 
 No equipment redesign story in `docs/PLAN.md`. `src/ui/sections/troops/` and `src/ui/sections/bonuses/` own the sheet. Tier steppers already colour by tier (S-92). T-17 is an illustration whose image is not in the repo.

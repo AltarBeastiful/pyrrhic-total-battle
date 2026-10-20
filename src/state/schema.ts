@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -142,7 +142,8 @@ export const equipmentEntrySchema = z.object({
   id: nonEmpty,
   equipmentId: nonEmpty,
   quality: qualitySchema,
-  name: z.string().optional(),
+  /** The player's own grouping (B-19): pieces that share a `setId` are one set. No set when absent. */
+  setId: nonEmpty.optional(),
   extra: z
     .object({
       health: bonusMapSchema.optional(),
@@ -180,6 +181,8 @@ export const sourcesSchema = z.object({
   permanent: z.array(permanentSourceSchema),
   captains: z.array(captainEntrySchema),
   equipment: z.array(equipmentEntrySchema),
+  /** Names the player gave to sets, keyed by `setId`. A set without a name is suggested one (B-19). */
+  equipmentSetNames: z.record(z.string(), z.string()).optional(),
   artifacts: z.array(artifactEntrySchema),
   /** Title ids owned by the account (the editor itself is deferred, D-02). */
   titles: z.array(z.string()),

@@ -22,6 +22,14 @@ type PyrrhicColor =
   | 'tier7'
   | 'tier8'
   | 'tier9'
+  | 'grade1'
+  | 'grade2'
+  | 'grade3'
+  | 'grade4'
+  | 'grade5'
+  | 'grade6'
+  | 'grade7'
+  | 'grade8'
   | 'slate'
   | DefaultMantineColor;
 

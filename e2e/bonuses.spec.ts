@@ -197,7 +197,7 @@ test('a piece of equipment is filled in from its sheet, and the card wears it', 
   await expect(chip).toBeChecked();
   const id = await chip.getAttribute('id');
   await expect(bonusesCard(page).locator(`label[for="${String(id)}"]`)).toContainText(
-    '+85.3 % health and strength (guardsmen)',
+    '+85.3 % HP/STR guardsmen',
   );
 
   expect(problems).toEqual([]);

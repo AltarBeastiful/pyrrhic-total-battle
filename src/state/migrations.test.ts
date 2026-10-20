@@ -196,6 +196,19 @@ function v8Fixture(): Record<string, unknown> {
   return { ...fixture, schemaVersion: 8 };
 }
 
+/**
+ * The same account as written by a v9 build: the v8 fixture with every profile carrying its settings, and
+ * one piece of equipment carrying the wearer name v10 retires (B-19).
+ */
+function v9Fixture(): Record<string, unknown> {
+  const fixture = v8Fixture();
+  const profile = (fixture.profiles as Record<string, unknown>[])[0]!;
+  profile.settings = { poolLine: 'neither', poolLineRule: 'push' };
+  const sources = profile.sources as Record<string, unknown>;
+  sources.equipment = [{ id: 'equip-1', equipmentId: 'helmet', quality: 'legendary', name: 'Aydae' }];
+  return { ...fixture, schemaVersion: 9 };
+}
+
 describe('readSchemaVersion', () => {
   it('reads an integer version and falls back to 0', () => {
     expect(readSchemaVersion({ schemaVersion: 3 })).toBe(3);
@@ -485,6 +498,31 @@ describe('migrate', () => {
     expect(() => migrate(broken)).toThrow();
   });
 
+  it('v9 → v10 drops the wearer name of every piece, and moves nothing else', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = v9Fixture();
+    const migrated = migrate(fixture);
+    warn.mockRestore();
+    expect(migrations[9]?.(fixture).schemaVersion).toBe(10);
+    const piece = migrated.profiles[0]?.sources.equipment[0];
+    expect(piece).toEqual({ id: 'equip-1', equipmentId: 'helmet', quality: 'legendary' });
+    expect(migrated.profiles[0]?.sources.equipment).toHaveLength(1);
+  });
+
+  it('keeps the set a piece belongs to and the name of the set through a load', () => {
+    const doc = migrate(v9Fixture());
+    const profile = doc.profiles[0]!;
+    const sources = {
+      ...profile.sources,
+      equipment: [{ id: 'equip-1', equipmentId: 'helmet', quality: 'rare' as const, setId: 'set-1' }],
+      equipmentSetNames: { 'set-1': 'Alexander' },
+    };
+    const stored = { ...doc, profiles: [{ ...profile, sources }] };
+    const loaded = migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.sources;
+    expect(loaded?.equipment[0]?.setId).toBe('set-1');
+    expect(loaded?.equipmentSetNames).toEqual({ 'set-1': 'Alexander' });
+  });
+
   it('round-trips a freshly created document', () => {
     const root = newRoot('desktop');
     expect(migrate(JSON.parse(JSON.stringify(root)))).toEqual(root);
@@ -565,6 +603,14 @@ describe('migrateProfile', () => {
     expect(migrateProfile(profile, 8).settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
     const [stack] = profile.savedStacks as unknown[];
     expect(migrateSavedStack(stack, 8).setup.marchType).toBe('unspecified');
+  });
+
+  it('drops a v9 profile’s wearer names on import, with the same pieces', () => {
+    const profile = (v9Fixture().profiles as Record<string, unknown>[])[0]!;
+    const migrated = migrateProfile(profile, 9);
+    expect(migrated.sources.equipment).toEqual([
+      { id: 'equip-1', equipmentId: 'helmet', quality: 'legendary' },
+    ]);
   });
 
   it('drops a v2 profile’s pins on import', () => {

@@ -282,7 +282,7 @@ function equipmentGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       const record = equipmentRecord(entry.equipmentId);
       return row({
         id: entry.id,
-        name: named(entry.name ?? '', record?.name ?? entry.equipmentId),
+        name: record?.name ?? entry.equipmentId,
         value: rowValue(equipmentWorth(record, entry)),
         lines: describeContribution(equipmentWorth(record, entry)),
         on: active.includes(entry.id),
