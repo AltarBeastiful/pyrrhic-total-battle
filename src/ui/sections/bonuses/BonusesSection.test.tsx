@@ -878,3 +878,118 @@ test('wearing more than the slots tints the counter and blocks nothing', () => {
   expect(setup()?.active.equipment).toHaveLength(7);
   expect(within(card()).queryByRole('alert')).toBeNull();
 });
+
+// ---- B-20: drag a piece onto a set -------------------------------------------------------------------
+/**
+ * jsdom has no layout, so the drop targets get boxes of their own: the sets stack down the card and
+ * the pointer is released inside the one dragged to. Everything else measures as nothing.
+ */
+const BOXES: Record<string, [number, number]> = {
+  'Set Alexander': [0, 100],
+  'Set Caesar': [100, 200],
+  'No set': [200, 300],
+  // Below every card: a release here is a release over nothing.
+  Nowhere: [900, 1000],
+};
+
+function stubBoxes(): () => void {
+  const original = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    const [top, bottom] = BOXES[this.getAttribute('aria-label') ?? ''] ?? [0, 0];
+    const wide = bottom === 0 ? 0 : 500;
+    return {
+      top,
+      bottom,
+      left: 0,
+      right: wide,
+      width: wide,
+      height: bottom - top,
+      x: 0,
+      y: top,
+      toJSON: () => ({}),
+    };
+  };
+  return () => {
+    Element.prototype.getBoundingClientRect = original;
+  };
+}
+
+/** Press a piece, move past the activation distance, then release over a target by its group name. */
+async function dragPiece(name: string, target: string): Promise<void> {
+  const [, bottom] = BOXES[target] ?? [0, 0];
+  const grip = sourceChip(name).closest('[data-piece-id]');
+  if (grip === null) throw new Error(`${name} cannot be dragged`);
+  const y = (BOXES[target]?.[0] ?? 0) + (bottom - (BOXES[target]?.[0] ?? 0)) / 2;
+  fireEvent.mouseDown(grip, { button: 0, clientX: 10, clientY: 10 });
+  fireEvent.mouseMove(document, { clientX: 20, clientY: 30 });
+  fireEvent.mouseMove(document, { clientX: 50, clientY: y });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  fireEvent.mouseUp(document, { clientX: 50, clientY: y });
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+const setOf = (id: string): string | undefined =>
+  profile()?.sources.equipment.find((p) => p.id === id)?.setId;
+
+test('dropping a piece on another set moves it there and switches nothing', async () => {
+  const restore = stubBoxes();
+  seedPieces([...alexander, { id: 'b1', equipmentId: 'guardian-of-justice', setId: 's2' }], {
+    s1: 'Alexander',
+    s2: 'Caesar',
+  });
+  renderWithTheme(<BonusesSection />);
+  const before = setup()?.active.equipment.toSorted();
+
+  await dragPiece('Steppe Enslaver', 'Set Caesar');
+  restore();
+
+  expect(setOf('a3')).toBe('s2');
+  expect(setup()?.active.equipment.toSorted()).toEqual(before);
+});
+
+test('dropping a piece on No set takes it out of its set, even when no piece was loose', async () => {
+  const restore = stubBoxes();
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+  expect(within(card()).queryByRole('group', { name: 'No set' })).toBeNull();
+
+  await dragPiece('War Master', 'No set');
+  restore();
+
+  expect(setOf('a2')).toBeUndefined();
+  expect(setup()?.active.equipment.toSorted()).toEqual(['a1', 'a2']);
+});
+
+test('dropping a piece on its own set, or on nothing, changes nothing', async () => {
+  const restore = stubBoxes();
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+  const before = profile()?.sources.equipment;
+  const on = setup()?.active.equipment;
+
+  await dragPiece('War Master', 'Set Alexander');
+  expect(profile()?.sources.equipment).toEqual(before);
+  expect(setup()?.active.equipment).toEqual(on);
+
+  await dragPiece('War Master', 'Nowhere');
+  restore();
+  expect(profile()?.sources.equipment).toEqual(before);
+  expect(setup()?.active.equipment).toEqual(on);
+});
+
+test('a plain click on a piece still switches it, and the No set card is gone once a drag ends', async () => {
+  const restore = stubBoxes();
+  seedPieces(alexander, { s1: 'Alexander' });
+  renderWithTheme(<BonusesSection />);
+
+  fireEvent.click(sourceChip('Steppe Enslaver'));
+  expect(setup()?.active.equipment).toContain('a3');
+
+  await dragPiece('War Master', 'Set Alexander');
+  restore();
+  expect(within(card()).queryByRole('group', { name: 'No set' })).toBeNull();
+});

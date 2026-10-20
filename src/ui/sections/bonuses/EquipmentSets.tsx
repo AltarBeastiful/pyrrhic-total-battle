@@ -15,12 +15,25 @@ import {
   Checkbox,
   Group,
   Paper,
+  type PaperProps,
   SimpleGrid,
   Stack,
   Text,
   Tooltip,
 } from '@mantine/core';
+import {
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { Ellipsis, Plus, Settings } from 'lucide-react';
+import { useState } from 'react';
 
 import { toggleActiveSource } from '@/state/actions/bonuses';
 import { addEmptySet, mintSetId, moveToSet, setPiecesOn } from '@/state/actions/equipmentSets';
@@ -85,6 +98,79 @@ interface PieceProps {
   sets: readonly EquipmentSet[];
   profileId: string;
   onEdit: (target: EditorTarget) => void;
+}
+
+/** The id a drop target answers to; "No set" is the one that is not a set. */
+const NO_SET = 'no-set';
+const setTarget = (setId: string): string => `set:${setId}`;
+
+/**
+ * The release that ends a drag is also a click on whatever is under the pointer, and a chip under it
+ * would switch the piece (B-20, story 7). The next click is swallowed, and only that one.
+ */
+function swallowNextClick(): void {
+  const stop = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+  };
+  document.addEventListener('click', stop, { capture: true, once: true });
+  setTimeout(() => {
+    document.removeEventListener('click', stop, { capture: true });
+  }, 0);
+}
+
+/** What a drop does: the menu's own move, and nothing when the piece lands where it already is. */
+function dropPiece(profileId: string, pieces: readonly Piece[], event: DragEndEvent): void {
+  const over = event.over?.id;
+  if (over === undefined) return;
+  const piece = pieces.find((candidate) => candidate.id === event.active.id);
+  if (piece === undefined) return;
+  const target = over === NO_SET ? null : String(over).slice('set:'.length);
+  if ((piece.setId ?? null) === target) return;
+  moveToSet(profileId, piece.id, target);
+}
+
+/** A card that takes a dragged piece, outlined while one hovers over it. */
+function DropZone({
+  id,
+  children,
+  ...rest
+}: PaperProps & { id: string; children: React.ReactNode; role: string; 'aria-label': string }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <Paper
+      ref={setNodeRef}
+      {...rest}
+      style={
+        isOver ? { outline: '2px solid var(--mantine-color-brass-filled)', outlineOffset: 2 } : undefined
+      }
+    >
+      {children}
+    </Paper>
+  );
+}
+
+/** A piece that follows the pointer once pressed and moved a few pixels; a plain press is still a click. */
+function Draggable({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, listeners, transform, isDragging } = useDraggable({ id });
+  return (
+    <Box
+      ref={setNodeRef}
+      data-piece-id={id}
+      {...listeners}
+      style={{
+        position: 'relative',
+        zIndex: isDragging ? 100 : undefined,
+        opacity: isDragging ? 0.85 : undefined,
+        transform:
+          transform === null
+            ? undefined
+            : `translate3d(${String(transform.x)}px, ${String(transform.y)}px, 0)`,
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
 function PieceChip({ piece, on, sets, profileId, onEdit }: PieceProps) {
@@ -174,6 +260,12 @@ export interface EquipmentSetsProps {
 
 export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDisabled }: EquipmentSetsProps) {
   const { sets, loose } = layoutOf(profile, setup);
+  const [dragging, setDragging] = useState(false);
+  // A mouse drags after a few pixels, so a click stays a click; a finger must rest first, so a swipe still scrolls the page (B-20).
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
   const active = new Set(setup.active.equipment);
   const addButtons = (
     <Group gap="xs">
@@ -205,68 +297,106 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
 
   const pieces = (list: readonly Piece[]) =>
     list.map((piece) => (
-      <PieceChip
-        key={piece.id}
-        piece={piece}
-        on={active.has(piece.id)}
-        sets={sets}
-        profileId={profile.id}
-        onEdit={onEdit}
-      />
+      <Draggable key={piece.id} id={piece.id}>
+        <PieceChip
+          piece={piece}
+          on={active.has(piece.id)}
+          sets={sets}
+          profileId={profile.id}
+          onEdit={onEdit}
+        />
+      </Draggable>
     ));
 
   return (
-    <Stack gap="xs">
-      <Stack gap="xs" role="group" aria-label="Equipment">
-        {sets.map((set) => (
-          <Paper key={set.id} withBorder bg="transparent" p="xs" role="group" aria-label={`Set ${set.name}`}>
-            <Stack gap="xs">
-              <Group gap="xs" wrap="nowrap">
-                <Checkbox
-                  checked={set.state === 'all'}
-                  indeterminate={set.state === 'some'}
-                  disabled={set.pieces.length === 0}
-                  aria-label={`${set.name}, ${String(set.on)} of ${String(set.pieces.length)} on`}
-                  onChange={() => {
-                    setPiecesOn(
-                      set.pieces.map((piece) => piece.id),
-                      set.state !== 'all',
-                    );
-                  }}
-                />
-                <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0 }} truncate>
-                  {set.name}
-                </Text>
-                <ActionIcon
-                  variant="subtle"
-                  color="slate"
-                  size="sm"
-                  aria-label={`Edit set ${set.name}`}
-                  onClick={() => {
-                    onEditSet(set.id);
-                  }}
-                >
-                  <Settings size={14} aria-hidden />
-                </ActionIcon>
-              </Group>
-              {set.pieces.length === 0 ? (
-                <Text size="xs" c="dimmed">
-                  Empty. Move a piece here from its ⋯ menu, or choose this set when adding one.
-                </Text>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={() => {
+        setDragging(true);
+      }}
+      onDragCancel={() => {
+        setDragging(false);
+        swallowNextClick();
+      }}
+      onDragEnd={(event) => {
+        setDragging(false);
+        swallowNextClick();
+        dropPiece(profile.id, profile.sources.equipment, event);
+      }}
+    >
+      <Stack gap="xs">
+        <Stack gap="xs" role="group" aria-label="Equipment">
+          {sets.map((set) => (
+            <DropZone
+              key={set.id}
+              id={setTarget(set.id)}
+              withBorder
+              bg="transparent"
+              p="xs"
+              role="group"
+              aria-label={`Set ${set.name}`}
+            >
+              <Stack gap="xs">
+                <Group gap="xs" wrap="nowrap">
+                  <Checkbox
+                    checked={set.state === 'all'}
+                    indeterminate={set.state === 'some'}
+                    disabled={set.pieces.length === 0}
+                    aria-label={`${set.name}, ${String(set.on)} of ${String(set.pieces.length)} on`}
+                    onChange={() => {
+                      setPiecesOn(
+                        set.pieces.map((piece) => piece.id),
+                        set.state !== 'all',
+                      );
+                    }}
+                  />
+                  <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0 }} truncate>
+                    {set.name}
+                  </Text>
+                  <ActionIcon
+                    variant="subtle"
+                    color="slate"
+                    size="sm"
+                    aria-label={`Edit set ${set.name}`}
+                    onClick={() => {
+                      onEditSet(set.id);
+                    }}
+                  >
+                    <Settings size={14} aria-hidden />
+                  </ActionIcon>
+                </Group>
+                {set.pieces.length === 0 ? (
+                  <Text size="xs" c="dimmed">
+                    Empty. Move a piece here from its ⋯ menu, or choose this set when adding one.
+                  </Text>
+                ) : (
+                  <PieceGrid>{pieces(set.pieces)}</PieceGrid>
+                )}
+              </Stack>
+            </DropZone>
+          ))}
+          {(loose.length > 0 || dragging) && (
+            // The gear stands half above its chip, so the first row needs room under the card above.
+            <DropZone
+              id={NO_SET}
+              bg="transparent"
+              role="group"
+              aria-label="No set"
+              pt={sets.length > 0 ? 10 : 0}
+            >
+              {loose.length > 0 ? (
+                <PieceGrid>{pieces(loose)}</PieceGrid>
               ) : (
-                <PieceGrid>{pieces(set.pieces)}</PieceGrid>
+                <Text size="xs" c="dimmed" ta="center" py="sm">
+                  Drop here to take a piece out of its set.
+                </Text>
               )}
-            </Stack>
-          </Paper>
-        ))}
-        {loose.length > 0 && (
-          // The gear stands half above its chip, so the first row needs room under the card above.
-          <Box role="group" aria-label="No set" pt={sets.length > 0 ? 10 : 0}>
-            <PieceGrid>{pieces(loose)}</PieceGrid>
-          </Box>
-        )}
+            </DropZone>
+          )}
+        </Stack>
+        {addButtons}
       </Stack>
-      {addButtons}
-    </Stack>
+    </DndContext>
   );
 }

@@ -250,3 +250,73 @@ test('what was set on a source survives a reload', async ({ page }) => {
 
   expect(problems).toEqual([]);
 });
+
+test('a piece is dragged onto a set and back to No set, and its switch stays as it was (B-20)', async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  await bonusesCard(page).getByRole('button', { name: 'Add equipment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  await bonusesCard(page).getByRole('button', { name: 'Add set' }).click();
+
+  const piece = bonusesCard(page).getByRole('checkbox', { name: /Emerald Guardian/ });
+  const set = bonusesCard(page).getByRole('group', { name: 'Set New set' });
+  await expect(piece).toBeChecked();
+
+  const from = await piece.locator('xpath=ancestor::*[@data-piece-id]').boundingBox();
+  const to = await set.boundingBox();
+  if (from === null || to === null) throw new Error('nothing to drag');
+  await page.mouse.move(from.x + 8, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 30, from.y + from.height / 2 - 20, { steps: 4 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(set.getByRole('checkbox', { name: /Emerald Guardian/ })).toBeChecked();
+
+  // And back out: the No set card is there while a piece is held.
+  const moved = await set
+    .getByRole('checkbox', { name: /Emerald Guardian/ })
+    .locator('xpath=ancestor::*[@data-piece-id]')
+    .boundingBox();
+  if (moved === null) throw new Error('nothing to drag back');
+  await page.mouse.move(moved.x + 8, moved.y + moved.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(moved.x + 30, moved.y + moved.height / 2 + 20, { steps: 4 });
+  const drop = await bonusesCard(page).getByRole('group', { name: 'No set' }).boundingBox();
+  if (drop === null) throw new Error('no drop card while dragging');
+  await page.mouse.move(drop.x + drop.width / 2, drop.y + drop.height / 2, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(
+    bonusesCard(page)
+      .getByRole('group', { name: 'No set' })
+      .getByRole('checkbox', { name: /Emerald Guardian/ }),
+  ).toBeChecked();
+
+  expect(problems).toEqual([]);
+});
+
+test('a drag that ends on the piece it started from does not switch it (B-20)', async ({ page }) => {
+  const problems = watchConsole(page);
+  await openApp(page);
+
+  await bonusesCard(page).getByRole('button', { name: 'Add equipment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+  const piece = bonusesCard(page).getByRole('checkbox', { name: /Emerald Guardian/ });
+  await expect(piece).toBeChecked();
+
+  const box = await piece.locator('xpath=ancestor::*[@data-piece-id]').boundingBox();
+  if (box === null) throw new Error('nothing to drag');
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + 8, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 30, y, { steps: 4 });
+  await page.mouse.move(box.x + 8, y, { steps: 4 });
+  await page.mouse.up();
+
+  await expect(piece).toBeChecked();
+  expect(problems).toEqual([]);
+});
