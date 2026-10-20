@@ -10,6 +10,7 @@
 import {
   ActionIcon,
   Badge,
+  Box,
   Button,
   Checkbox,
   Group,
@@ -259,9 +260,10 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
           </Paper>
         ))}
         {loose.length > 0 && (
-          <div role="group" aria-label="No set">
+          // The gear stands half above its chip, so the first row needs room under the card above.
+          <Box role="group" aria-label="No set" pt={sets.length > 0 ? 10 : 0}>
             <PieceGrid>{pieces(loose)}</PieceGrid>
-          </div>
+          </Box>
         )}
       </Stack>
       {addButtons}
