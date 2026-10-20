@@ -236,9 +236,6 @@ export function EquipmentSets({ profile, setup, onEdit, onEditSet, onAdd, addDis
                 <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0 }} truncate>
                   {set.name}
                 </Text>
-                <Text size="xs" c="dimmed">
-                  {`${String(set.on)}/${String(set.pieces.length)}`}
-                </Text>
                 <ActionIcon
                   variant="subtle"
                   color="slate"
