@@ -265,9 +265,9 @@ test('the exact figure is one hover away where the notation rounds', () => {
   expect(screen.getAllByTitle('8 192 000').length).toBeGreaterThan(0);
 });
 
-test('a worse re-plan says so, faintly, with the re-planned figure', () => {
+test('a worse re-plan is not blamed on the search: the row only reads its gain', () => {
   renderWithTheme(<AdvisorCard {...done()} />);
-  expect(screen.getByText(/the plan gets worse here: search issue/u).textContent).toContain('7.8M');
+  expect(screen.queryByText(/search issue/u)).toBeNull();
 });
 
 test('the other stops are folded, each ranked on itself', async () => {

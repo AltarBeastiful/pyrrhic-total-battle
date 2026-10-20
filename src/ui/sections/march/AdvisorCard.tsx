@@ -204,8 +204,9 @@ const MarchCost = memo(function MarchCost({ stop }: { stop: StopAdvice }) {
  * **One upgrade, read on one stop.** Two lines: the upgrade and what it is worth on the owner's rating (the
  * yardstick the bar and Tight use), then the damage it would bring, and under it what it costs the march when
  * that moves (`MarchCost`). A clamped or zero reading is "no gain" — kept on the list, never a minus
- * (`StopAdvice.gain` is never below 0), and with no cost line. A `worse` re-plan adds a faint line with the
- * re-planned figure, so a search regression is reported rather than read as a fact of the game.
+ * (`StopAdvice.gain` is never below 0), and with no cost line. A re-plan that lands below the current march
+ * says nothing more (owner, 2026-10-20): the current counts are always read under the upgrade, so an upgrade
+ * neither reading beats is simply not interesting.
  *
  * **Memoised on row identity** (W18 P4, experiment 200): a pass's answer is kept whole, so a row and its stops
  * keep their identity while another pass's progress re-renders the card; only a new answer draws it again.
@@ -241,11 +242,6 @@ const AdvisorRowLine = memo(function AdvisorRowLine({ row, stop }: { row: Adviso
         <Text className={classes.meta} c="dimmed" data-testid="advisor-per-cost">
           {gains ? `${gainWords(gainPerCost(row, stop.pick) ?? 0)} per ${row.cost.unit}, ` : ''}costs{' '}
           {amount(row.cost.amount)} {row.cost.unit}
-        </Text>
-      )}
-      {stop.worse && stop.replanned !== null && (
-        <Text className={classes.meta} c="dimmed">
-          the plan gets worse here: search issue (re-planned <Figure value={stop.replanned.bill.damage} />)
         </Text>
       )}
     </Stack>

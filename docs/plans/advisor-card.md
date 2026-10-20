@@ -125,7 +125,7 @@ One row per probe, ranked on the headline stop:
 - glyph + label (`Health +1 % ranged`), then the gain as **% of current damage** (`signedPercent`, from
   `StopAdvice.damagePercent`) and the damage it would reach in `compactTwo` with the exact figure on hover;
 - a clamped or zero row reads **"no gain"**, never a minus;
-- `worse` adds a faint line: "the plan gets worse here: search issue" with the re-planned damage;
+- a re-plan below the current march adds nothing (owner, 2026-10-20): the current counts are read under the upgrade anyway, so the row is "no gain";
 - no per-cost column (no v1 probe has a cost; rule 15);
 - the other stops of the bar behind one `Disclosure` per card ("Other stops"), each a compact list in the
   same row shape.
