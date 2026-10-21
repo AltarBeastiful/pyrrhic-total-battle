@@ -352,6 +352,12 @@ export const CAMPAIGN = {
    */
   captainConfirm: 8,
   /**
+   * Whether the captain advice also weighs captains the account does not own yet, an entry at level 0 (owner,
+   * 2026-10-21: only captains at level 1 and above for now, the option kept to add them later). Off: lineups,
+   * upgrades and the profiling run's captain phase read owned captains only.
+   */
+  captainsIncludeUnowned: false,
+  /**
    * How many of the lineups fielding a benched captain the upgrade pass plans in full (W17 C5b, a work count). A
    * captain in the lead lineup is tried in that lineup alone, so this only bounds the captains outside it. Two is the
    * phase's first figure, not yet measured: the screen's top-1 is the best lineup on 20 of 35 stops and its top-8

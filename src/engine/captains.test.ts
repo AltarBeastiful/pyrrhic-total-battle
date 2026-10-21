@@ -41,6 +41,18 @@ describe('distinctCaptains', () => {
     ]);
   });
 
+  test('a captain at level 0 is not owned yet, unless the config asks for it', () => {
+    const roster = [entry('a', 0), entry('b', 1)];
+    expect(distinctCaptains(roster).map((c) => c.captainId)).toEqual(['b']);
+    const was = CAMPAIGN.captainsIncludeUnowned;
+    try {
+      (CAMPAIGN as { captainsIncludeUnowned: boolean }).captainsIncludeUnowned = true;
+      expect(distinctCaptains(roster).map((c) => c.captainId)).toEqual(['a', 'b']);
+    } finally {
+      (CAMPAIGN as { captainsIncludeUnowned: boolean }).captainsIncludeUnowned = was;
+    }
+  });
+
   test('a tie on level and star keeps the first entry', () => {
     const first = { ...entry('a', 4), id: 'first' };
     const second = { ...entry('a', 4), id: 'second' };

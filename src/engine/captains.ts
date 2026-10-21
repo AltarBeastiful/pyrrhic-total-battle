@@ -17,6 +17,7 @@
  * Both rate with the owner's `rate()`, so a lineup that is better on damage but dearer to field still reads at its
  * worth. The current lineup is always in the set and rates 0 against itself, so nothing can read as a loss.
  */
+import { CAMPAIGN } from '../config';
 import type { Bill, MarkerRates } from './rating';
 import { rate } from './rating';
 import type { BonusTotals } from './types';
@@ -37,13 +38,15 @@ export function lineupKey(captainIds: readonly string[]): string {
 }
 
 /**
- * The owned captains with one entry per `captainId` — the strongest (level, then star), the first on a tie — in
+ * The owned captains (level 1 and above, unless `CAMPAIGN.captainsIncludeUnowned`) with one entry per `captainId` — the strongest (level, then star), the first on a tie — in
  * the order each captain first appears. The same captain can be entered twice (`derive.ts` id factory); a lineup
  * never fields one twice.
  */
 export function distinctCaptains<T extends RosterCaptain>(owned: readonly T[]): T[] {
   const best = new Map<string, T>();
   for (const entry of owned) {
+    // Level 0 is a captain the account does not own yet (`CAMPAIGN.captainsIncludeUnowned`).
+    if (entry.level < 1 && !CAMPAIGN.captainsIncludeUnowned) continue;
     const held = best.get(entry.captainId);
     if (
       held === undefined ||
