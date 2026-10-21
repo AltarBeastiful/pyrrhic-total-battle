@@ -14,6 +14,7 @@
  *  - the captain is not → only a lineup that fields it can gain, so the lineups that contain it (`lineupContaining`)
  *    are re-screened and the best of them planned in full. A star on a captain who stays on the bench gains 0.
  */
+import { CAMPAIGN } from '../config';
 import type { RosterCaptain } from './captains';
 import { allowedLineups, distinctCaptains, LINEUP_SIZE } from './captains';
 
@@ -121,4 +122,127 @@ export function lineupContaining<T extends RosterCaptain>(
   return allowedLineups(owned, allowed, size).filter((lineup) =>
     lineup.some((entry) => entry.captainId === captainId),
   );
+}
+
+// ---- The worth list ---------------------------------------------------------------------------------
+/** What a worth upgrade raises: stars (one to every remaining star) or levels (a probe step). */
+export type WorthKind = 'star' | 'level';
+
+/**
+ * One probe of the worth list (`docs/plans/captain-upgrade-worth.md`): the captain's strongest entry raised by `size`
+ * stars or levels. Unlike `CaptainUpgradeSpec` there is no fixed set of kinds: a star ladder and level steps.
+ */
+export interface WorthSpec {
+  /** `captain:<captainId>:star+<size>` or `captain:<captainId>:level+<size>`. */
+  id: string;
+  captainId: string;
+  entryId: string;
+  kind: WorthKind;
+  /** Stars or levels added. */
+  size: number;
+  from: { level: number; star: number };
+  to: { level: number; star: number };
+  /** The captain's level steps are not constant per level, so this level is probed itself and nothing is inferred. */
+  exact?: true;
+}
+
+export function worthId(captainId: string, kind: WorthKind, size: number): string {
+  return `captain:${captainId}:${kind}+${String(size)}`;
+}
+
+/** The per-level bonus of a captain is constant, within float noise, over the probed steps. */
+function constantPerLevel(
+  captainId: string,
+  level: number,
+  star: number,
+  steps: readonly number[],
+  worth: (captainId: string, level: number, star: number) => number,
+): boolean {
+  const base = worth(captainId, level, star);
+  const one = worth(captainId, level + 1, star) - base;
+  return steps.every(
+    (n) => Math.abs(worth(captainId, level + n, star) - base - n * one) <= 1e-9 * Math.max(1, n),
+  );
+}
+
+/**
+ * Every probe of the worth list, per distinct owned captain the march type admits: its level steps
+ * (`CAMPAIGN.captainLevelProbes`, each clamped to `maxLevel`, a clamp that repeats the step before dropped) then every
+ * remaining star alone and cumulative (`star+1`, `star+2`, … up to the top star). A captain whose level steps are not
+ * constant is probed at every level up to the largest step instead (`exact`). A probe that adds nothing to the
+ * captain's lines is left out: it cannot gain.
+ */
+export function worthUpgrades<T extends RosterCaptain & { id: string }>(
+  owned: readonly T[],
+  allowed: (captainId: string) => boolean,
+  worth: (captainId: string, level: number, star: number) => number,
+  maxLevel: number = CAMPAIGN.captainMaxLevel,
+): WorthSpec[] {
+  const out: WorthSpec[] = [];
+  const probes = CAMPAIGN.captainLevelProbes;
+  for (const entry of distinctCaptains(owned)) {
+    if (!allowed(entry.captainId)) continue;
+    const { captainId, level, star } = entry;
+    const before = worth(captainId, level, star);
+    const room = Math.max(0, maxLevel - level);
+    const clamped = [...new Set(probes.map((n) => Math.min(n, room)))].filter((n) => n > 0);
+    const widest = clamped.length === 0 ? 0 : Math.max(...clamped);
+    const steps = constantPerLevel(captainId, level, star, clamped, worth)
+      ? clamped.map((n) => ({ n, exact: false }))
+      : Array.from({ length: widest }, (_, at) => ({ n: at + 1, exact: true }));
+    for (const { n, exact } of steps) {
+      if (worth(captainId, level + n, star) <= before) continue;
+      out.push({
+        id: worthId(captainId, 'level', n),
+        captainId,
+        entryId: entry.id,
+        kind: 'level',
+        size: n,
+        from: { level, star },
+        to: { level: level + n, star },
+        ...(exact ? { exact: true as const } : {}),
+      });
+    }
+    for (let n = 1; star + n <= CAPTAIN_MAX_STAR; n += 1) {
+      if (worth(captainId, level, star + n) <= before) continue;
+      out.push({
+        id: worthId(captainId, 'star', n),
+        captainId,
+        entryId: entry.id,
+        kind: 'star',
+        size: n,
+        from: { level, star },
+        to: { level, star: star + n },
+      });
+    }
+  }
+  return out;
+}
+
+/** A level probe as the inference reads it: the levels added, the bonus points they add, the gain read. */
+export interface LevelProbe {
+  levels: number;
+  bonus: number;
+  gain: number;
+}
+
+/**
+ * The gain of a level step that was not probed: the nearest probe's gain (the smaller on a tie) scaled by the ratio of
+ * the two steps' bonus points. Never a fit of the gains alone; 0 with no probe.
+ */
+export function inferLevelGain(
+  probes: readonly LevelProbe[],
+  target: { levels: number; bonus: number },
+): number {
+  let near: LevelProbe | undefined;
+  for (const probe of probes)
+    if (
+      near === undefined ||
+      Math.abs(probe.levels - target.levels) < Math.abs(near.levels - target.levels) ||
+      (Math.abs(probe.levels - target.levels) === Math.abs(near.levels - target.levels) &&
+        probe.levels < near.levels)
+    )
+      near = probe;
+  if (near === undefined || near.bonus <= 0) return 0;
+  return near.gain * (target.bonus / near.bonus);
 }

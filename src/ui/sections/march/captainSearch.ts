@@ -35,11 +35,17 @@ import type { CampaignInput, CampaignPlan, PlanPick } from '@/engine/plan';
 import { distinctCaptains, LINEUP_SIZE } from '@/engine/captains';
 import { buildPlanRequest } from '@/state/derive';
 import { captainLineups, lineupSize } from '@/state/captainLineups';
-import { captainUpgradeCandidates } from '@/state/captainUpgrades';
+import { captainUpgradeCandidates, captainWorthCandidates } from '@/state/captainUpgrades';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { runCaptainAdvice, type CaptainAdviceResult } from '@/worker/captainAdvice';
-import { runCaptainUpgrades, type CaptainUpgradeResult, type UpgradeAsk } from '@/worker/captainUpgrades';
+import {
+  runCaptainUpgrades,
+  runUpgradeWorth,
+  type CaptainUpgradeResult,
+  type UpgradeAsk,
+  type WorthResult,
+} from '@/worker/captainUpgrades';
 import { isAbortError } from '@/worker/client';
 
 import { advisorKey, advisorPool, type AdvisorStatus } from './advisorSearch';
@@ -229,6 +235,52 @@ export async function computeCaptains(
     if (controller === own) controller = null;
     if (tick === ownTick) tick = null;
   }
+}
+
+/**
+ * **The upgrade worth list** (`docs/plans/captain-upgrade-worth.md`): the lineup advice for the lead lineup, then every
+ * captain's level steps and stars ranked by worth on it, tier 1 then tier 2. It shows nowhere yet (the profiling run's
+ * captain phase reads it); it takes no store and starts no pass of the card's, so it cannot disturb them.
+ * `null` when the account fields no lineup to read against, or the clock was out before the list could start.
+ */
+export async function computeCaptainWorth(
+  input: CampaignInput,
+  profile: Profile,
+  setup: BattleSetup,
+  signal?: AbortSignal,
+): Promise<WorthResult | null> {
+  const { currentKey, lineups, size } = captainLineups(profile, setup);
+  const began = performance.now();
+  const pool = advisorPool();
+  const advice = await runCaptainAdvice(
+    input,
+    lineups.map(({ key: lineup, totals }) => ({ key: lineup, totals })),
+    currentKey,
+    pool,
+    { signal },
+  );
+  const lead = leadLineup(advice.best, currentKey);
+  const leadCandidate = lineups.find((lineup) => lineup.key === lead);
+  const leadStops = advice.plans[lead];
+  const left = CAMPAIGN.budgets.extra - (performance.now() - began);
+  if (leadCandidate === undefined || leadStops === undefined || left <= 0) return null;
+  const asks = captainWorthCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
+    id: candidate.spec.id,
+    label: `${candidate.name} ${candidate.change}`,
+    captainId: candidate.spec.captainId,
+    kind: candidate.spec.kind,
+    size: candidate.spec.size,
+    perLevel: candidate.perLevel,
+    exact: candidate.spec.exact === true,
+    lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+  }));
+  return runUpgradeWorth(
+    input,
+    { key: lead, totals: leadCandidate.totals, stops: leadStops },
+    asks,
+    pool,
+    { signal, budgetMs: left },
+  );
 }
 
 /** What the card draws from. */

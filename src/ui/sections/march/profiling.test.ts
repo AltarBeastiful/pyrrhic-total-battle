@@ -42,6 +42,7 @@ test('the address and the stored flag switch it off over a build flag', () => {
 });
 
 const calls: string[] = [];
+const owned: string[] = [];
 
 vi.mock('./generate', () => ({
   runGenerate: () => {
@@ -58,10 +59,11 @@ vi.mock('./advisorSearch', () => ({
   },
 }));
 vi.mock('./captainSearch', () => ({
-  captainKey: () => 'key',
-  computeCaptains: () => {
+  computeCaptainWorth: () => {
     calls.push('captains');
-    return Promise.resolve();
+    return Promise.resolve({
+      rows: [{ label: 'Aydae ★1 → ★2', worth: 2, tier1: { gain: 1 }, tier2: { gain: 2 } }],
+    });
   },
 }));
 vi.mock('./otherSearch', () => ({
@@ -77,7 +79,10 @@ vi.mock('./runStore', () => ({
 }));
 vi.mock('@/state/derive', () => ({ buildPlanRequest: () => ({}) }));
 vi.mock('@/state/store', () => ({
-  selectActiveProfile: () => ({ upgrades: [], sources: { captains: [] } }),
+  selectActiveProfile: () => ({
+    upgrades: [],
+    sources: { captains: owned.length > 0 ? [{ captainId: 'aydae', level: 10, star: 1 }] : [] },
+  }),
   selectActiveSetup: () => ({}),
   useStore: { getState: () => ({}) },
 }));
@@ -96,4 +101,15 @@ test('Generate and the passes there is something to ask, in order', async () => 
   expect(report.phases.map((one) => one.phase)).toEqual(['generate', 'upgrades-default', 'other']);
   // No Chrome profile is started: it only sees the idle page thread (owner, 2026-10-10).
   expect('profile' in console).toBe(false);
+});
+
+test('the captain phase computes the worth list and prints it', async () => {
+  owned.push('aydae');
+  const { profileEverything } = await import('./profileRun');
+  await profileEverything();
+  owned.length = 0;
+  expect(calls).toEqual(['generate', 'advice:default', 'captains', 'other']);
+  expect(console.table).toHaveBeenCalledWith([
+    { upgrade: 'Aydae ★1 → ★2', worth: 2, tier1: 1, tier2: 2, perLevel: null },
+  ]);
 });

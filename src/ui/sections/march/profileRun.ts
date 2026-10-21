@@ -9,7 +9,8 @@
  *  1. `generate`: the plan, the opening stop and the bar's Tight tables (`runGenerate`);
  *  2. `upgrades-default`: the generic probes (`computeAdvice('default')`);
  *  3. `upgrades-mine`: the typed upgrades, when any are typed;
- *  4. `captains`: the lineup screen and the star / level pass, when a captain is owned;
+ *  4. `captains`: the lineup screen and the upgrade worth list (tier 1 and tier 2, printed as a table), when a captain
+ *     is owned;
  *  5. `other`: the dominance and leadership sweeps, next tier, merc stock, horizon, silver.
  *
  * There is no `console.profile` any more (owner, 2026-10-10: Chrome's own saved profile was empty and buggy; it
@@ -36,7 +37,7 @@ import {
 } from '@/worker/jobTiming';
 
 import { advisorKey, canAdvise, computeAdvice } from './advisorSearch';
-import { captainKey, computeCaptains } from './captainSearch';
+import { computeCaptainWorth } from './captainSearch';
 import { runGenerate } from './generate';
 import { downloadTrace, traceOf } from './profileTrace';
 import { computeOther, otherKey } from './otherSearch';
@@ -92,9 +93,20 @@ async function runPhases(spans: PhaseSpan[]): Promise<void> {
     );
   }
   if (distinctCaptains(profile.sources.captains).length > 0) {
-    await phase('captains', spans, () =>
-      computeCaptains(captainKey(plan, input, profile, setup), input, profile, setup),
-    );
+    await phase('captains', spans, async () => {
+      const worth = await computeCaptainWorth(input, profile, setup);
+      if (worth === null) return;
+      // eslint-disable-next-line no-console -- the list is the debug output
+      console.table(
+        worth.rows.map((row) => ({
+          upgrade: row.label,
+          worth: row.worth,
+          tier1: row.tier1.gain,
+          tier2: row.tier2?.gain ?? null,
+          perLevel: row.gainPerLevel ?? null,
+        })),
+      );
+    });
   }
   await phase('other', spans, () => computeOther(otherKey(plan, input), input, plan.silver, headline));
 }

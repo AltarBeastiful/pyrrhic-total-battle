@@ -15,7 +15,9 @@ import {
   captainUpgrades,
   inLeadLineup,
   lineupContaining,
+  worthUpgrades,
   type CaptainUpgradeSpec,
+  type WorthSpec,
 } from '../engine/captainUpgrades';
 import { lineupKey } from '../engine/captains';
 import type { CaptainRecord } from '../data/types';
@@ -45,7 +47,7 @@ function worthOf(record: CaptainRecord | undefined, level: number, star: number)
   return total;
 }
 
-const changeOf = (spec: CaptainUpgradeSpec): string =>
+const changeOf = (spec: Pick<CaptainUpgradeSpec, 'kind' | 'from' | 'to'>): string =>
   spec.kind === 'star'
     ? `★${String(spec.from.star)} → ★${String(spec.to.star)}`
     : `L${String(spec.from.level)} → L${String(spec.to.level)}`;
@@ -54,7 +56,7 @@ const changeOf = (spec: CaptainUpgradeSpec): string =>
  * The profile with one captain entry raised to `to`; every other entry, source and setup shared with the input
  * (nothing is mutated).
  */
-function raised(profile: Profile, spec: CaptainUpgradeSpec): Profile {
+function raised(profile: Profile, spec: Pick<CaptainUpgradeSpec, 'entryId' | 'to'>): Profile {
   return {
     ...profile,
     sources: {
@@ -113,5 +115,66 @@ export function captainUpgradeCandidates(
       },
     );
     return { spec, name, change: changeOf(spec), where: 'bench', lineups };
+  });
+}
+
+/** One probe of the worth list with the lineups to try it in (`docs/plans/captain-upgrade-worth.md`). */
+export interface WorthCandidate {
+  spec: WorthSpec;
+  name: string;
+  /** What changes: `★2 → ★4`, `L20 → L25`. */
+  change: string;
+  where: 'lead' | 'bench';
+  /** The bonus points one level adds on all the captain's lines, which the inference between level probes scales by. */
+  perLevel: number;
+  lineups: LineupCandidate[];
+}
+
+/**
+ * Every probe of the worth list (`worthUpgrades`: levels +5/+10/+15 clamped to the top level, every remaining star)
+ * with the lineups to try it in, read against `lead`: a captain in the lead lineup in that lineup alone, a benched
+ * one in every lineup of `size` that fields it. Owned captains only (`distinctCaptains`).
+ */
+export function captainWorthCandidates(
+  profile: Profile,
+  setup: BattleSetup,
+  lead: LineupCandidate,
+  size: number,
+  tables: DeriveTables = DEFAULT_TABLES,
+): WorthCandidate[] {
+  const record = (captainId: string): CaptainRecord | undefined =>
+    tables.captains.find((candidate) => candidate.id === captainId);
+  const counts = (captainId: string): boolean => captainCounts(record(captainId), setup.marchType);
+  const specs = worthUpgrades(profile.sources.captains, counts, (captainId, level, star) =>
+    worthOf(record(captainId), level, star),
+  );
+  return specs.map((spec): WorthCandidate => {
+    const after = raised(profile, spec);
+    const found = record(spec.captainId);
+    const perLevel = [found?.health, found?.strength, found?.special].reduce(
+      (sum, line) => sum + (line?.perLevel ?? 0),
+      0,
+    );
+    const base = { spec, name: found?.name ?? spec.captainId, change: changeOf(spec), perLevel };
+    if (inLeadLineup(spec, lead.captainIds))
+      return {
+        ...base,
+        where: 'lead',
+        lineups: [{ ...lead, totals: lineupTotals(after, setup, lead.entryIds, tables) }],
+      };
+    const lineups = lineupContaining(after.sources.captains, spec.captainId, counts, size).map(
+      (lineup): LineupCandidate => {
+        const captainIds = lineup.map((entry) => entry.captainId);
+        const entryIds = lineup.map((entry) => entry.id);
+        return {
+          key: lineupKey(captainIds),
+          entryIds,
+          captainIds,
+          current: false,
+          totals: lineupTotals(after, setup, entryIds, tables),
+        };
+      },
+    );
+    return { ...base, where: 'bench', lineups };
   });
 }

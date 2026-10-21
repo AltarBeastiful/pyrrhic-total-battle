@@ -365,6 +365,15 @@ export const CAMPAIGN = {
    */
   captainUpgradeConfirm: 2,
   /**
+   * The upgrade worth list (`docs/plans/captain-upgrade-worth.md`): the level steps probed, each clamped to
+   * `captainMaxLevel`; the levels between are inferred from the per-level bonus.
+   */
+  captainLevelProbes: [5, 10, 15] as readonly number[],
+  /** The highest level a captain reaches. Not in the game data: the editor allows 999, a probe stops here. */
+  captainMaxLevel: 100,
+  /** How many upgrades of the worth list's tier 1 are regenerated in full (tier 2), the best first. */
+  captainWorthTop: 8,
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

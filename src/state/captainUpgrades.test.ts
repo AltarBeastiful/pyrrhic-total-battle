@@ -4,7 +4,7 @@ import { captains as captainTable } from '../data';
 import { aggregateBonuses } from '../engine/bonuses';
 import { lineupKey } from '../engine/captains';
 import { captainLineups } from './captainLineups';
-import { captainUpgradeCandidates } from './captainUpgrades';
+import { captainUpgradeCandidates, captainWorthCandidates } from './captainUpgrades';
 import { newProfile } from './defaults';
 import { resolveSources } from './derive';
 import type { BattleSetup, Profile } from './schema';
@@ -103,6 +103,71 @@ describe('captainUpgradeCandidates', () => {
     const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
     const before = structuredClone(profile);
     upgradesOf(profile, setup);
+    expect(profile).toEqual(before);
+  });
+});
+
+describe('captainWorthCandidates', () => {
+  const worthOf = (profile: Profile, setup: BattleSetup) => {
+    const { lineups, size } = captainLineups(profile, setup);
+    return captainWorthCandidates(profile, setup, lineups[0]!, size);
+  };
+
+  it('asks levels +5/+10/+15 then every remaining star, alone and cumulative, of each captain', () => {
+    const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2'], 3);
+    const beowulf = worthOf(profile, setup).filter((c) => c.spec.captainId === 'beowulf');
+    expect(beowulf.map((c) => c.spec.id)).toEqual([
+      'captain:beowulf:level+5',
+      'captain:beowulf:level+10',
+      'captain:beowulf:level+15',
+      'captain:beowulf:star+1',
+      'captain:beowulf:star+2',
+      'captain:beowulf:star+3',
+    ]);
+    expect(beowulf.map((c) => c.change)).toEqual([
+      'L13 → L18',
+      'L13 → L23',
+      'L13 → L28',
+      '★3 → ★4',
+      '★3 → ★5',
+      '★3 → ★6',
+    ]);
+    const record = captainTable.find((r) => r.id === 'beowulf')!;
+    const perLevel =
+      (record.health?.perLevel ?? 0) + (record.strength?.perLevel ?? 0) + (record.special?.perLevel ?? 0);
+    expect(beowulf[0]?.perLevel).toBe(perLevel);
+  });
+
+  it('a level step never goes past the top level', () => {
+    const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2'], 6);
+    profile.sources.captains[3]!.level = 97;
+    const levels = worthOf(profile, setup).filter(
+      (c) => c.spec.captainId === 'beowulf' && c.spec.kind === 'level',
+    );
+    expect(levels.map((c) => c.spec.to.level)).toEqual([100]);
+    expect(levels[0]?.spec.size).toBe(3);
+  });
+
+  it('a captain in the lead lineup is tried in that lineup, a benched one in every lineup that fields it, upgraded', () => {
+    const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
+    const lead = captainLineups(profile, setup).lineups[0]!;
+    const all = worthOf(profile, setup);
+    const inLead = all.find((c) => c.spec.id === 'captain:skadi:star+2');
+    expect(inLead?.where).toBe('lead');
+    expect(inLead?.lineups.map((l) => l.key)).toEqual([lead.key]);
+    const raised = structuredClone(profile);
+    raised.sources.captains[1]!.star = 3;
+    expect(inLead?.lineups[0]?.totals).toEqual(aggregateBonuses(resolveSources(raised, setup)));
+    const bench = all.find((c) => c.spec.id === 'captain:beowulf:level+10');
+    expect(bench?.where).toBe('bench');
+    expect(bench?.lineups).toHaveLength(6);
+    expect(bench?.lineups.every((l) => l.captainIds.includes('beowulf'))).toBe(true);
+  });
+
+  it('does not touch the profile it reads', () => {
+    const { profile, setup } = withRoster(OWNED, ['c0', 'c1', 'c2']);
+    const before = structuredClone(profile);
+    worthOf(profile, setup);
     expect(profile).toEqual(before);
   });
 });
