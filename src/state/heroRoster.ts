@@ -29,13 +29,16 @@ export function heroRoster(
 ): HeroRoster {
   const owned = distinctCaptains(profile.sources.captains);
   const record = (captainId: string) => tables.captains.find((candidate) => candidate.id === captainId);
-  const heroes: HeroInfo[] = owned.map((entry) => ({
-    captainId: entry.captainId,
-    name: record(entry.captainId)?.name ?? entry.captainId,
-    level: entry.level,
-    star: entry.star,
-    ...(record(entry.captainId)?.onlyOn === undefined ? {} : { onlyOn: record(entry.captainId)?.onlyOn }),
-  }));
+  const heroes: HeroInfo[] = owned.map((entry) => {
+    const found = record(entry.captainId);
+    return {
+      captainId: entry.captainId,
+      name: found?.name ?? entry.captainId,
+      level: entry.level,
+      star: entry.star,
+      ...(found?.onlyOn === undefined ? {} : { onlyOn: found.onlyOn }),
+    };
+  });
   const lineup = (picked: typeof owned) => {
     const captainIds = picked.map((entry) => entry.captainId);
     return {

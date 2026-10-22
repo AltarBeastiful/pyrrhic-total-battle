@@ -45,7 +45,7 @@ function actionWords(action: HeroAction): string {
 }
 
 function Stars({ star }: { star: number }) {
-  return <span aria-label={`${String(star + 1)} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>;
+  return <span aria-label={`${String(Math.min(star + 1, 7))} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>;
 }
 
 /** Bars on one scale: solo and trio contribution, each against the best of its own kind. */
@@ -221,7 +221,7 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
         <Stack gap={4}>
           <Text fw={600}>Best trio across all plans</Text>
           <Text size="sm">
-            {trioNames.join(' · ')} — +{report.bestTrio.gain.toFixed(1)} rating on average over the five
+            {trioNames.join(' · ')} — +{report.bestTrio.gain.toFixed(1)} rating on average over the {String(report.stops.length)}
             stops.
           </Text>
           <Text size="sm" c="dimmed">

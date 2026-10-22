@@ -126,7 +126,7 @@ export function soloScore(reading: RoleReading, captainId: string): number {
   return mean(clamped(reading.solo[captainId] ?? []));
 }
 
-/** The trio with the highest mean over the bar (the first on a tie); `null` with no trio. */
+/** The trio with the highest mean over the bar (the first on a tie); `null` with no trio that gains. */
 export function bestTrioOf(
   trios: RoleReading['trios'],
   skip?: (captainIds: readonly string[]) => boolean,
@@ -136,7 +136,7 @@ export function bestTrioOf(
     if (skip?.(trio.captainIds) === true) continue;
     const stops = clamped(trio.stops);
     const gain = mean(stops);
-    if (best === null || gain > best.gain) best = { captainIds: trio.captainIds, stops, gain };
+    if (gain > (best?.gain ?? 0)) best = { captainIds: trio.captainIds, stops, gain };
   }
   return best;
 }
@@ -162,8 +162,11 @@ function bestSolo(reading: RoleReading, heroes: readonly HeroInfo[]): string | n
   return best;
 }
 
-const scoreOf = (row: WorthLike): number =>
-  row.cost === undefined ? row.worth : row.worth / row.cost.amount;
+/** Gain per cost when a cost was typed (a zero cost is none), else a star's gain per star and a level step's gain. */
+const scoreOf = (row: WorthLike): number => {
+  if (row.cost !== undefined && row.cost.amount > 0) return row.worth / row.cost.amount;
+  return row.kind === 'star' ? row.worth / Math.max(1, row.size) : row.worth;
+};
 
 function actionOf(row: WorthLike): HeroAction {
   return {
@@ -173,7 +176,7 @@ function actionOf(row: WorthLike): HeroAction {
     label: row.label,
     gain: row.worth,
     score: scoreOf(row),
-    unit: row.cost?.unit ?? null,
+    unit: row.cost !== undefined && row.cost.amount > 0 ? row.cost.unit : null,
   };
 }
 

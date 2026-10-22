@@ -72,7 +72,8 @@ export const useHeroStore = create<HeroState>()((set, get) => {
     entry: null,
     open: false,
     begin: (key) => {
-      set({ open: true, entry: { key, status: 'running', done: 0, total: 0, report: null, error: null } });
+      const report = get().entry?.report ?? null;
+      set({ open: true, entry: { key, status: 'running', done: 0, total: 0, report, error: null } });
     },
     progress: (key, done, total) => {
       const entry = running(key);
