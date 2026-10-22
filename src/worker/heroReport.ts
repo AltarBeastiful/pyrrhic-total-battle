@@ -68,6 +68,8 @@ export interface HeroReportOptions {
   onProgress?: ((done: number, total: number) => void) | undefined;
   budgetMs?: number | undefined;
   rates?: MarkerRates | undefined;
+  /** Trios planned in full; `CAMPAIGN.heroReport.trioConfirm` by default, 0 reads the re-priced screen alone. */
+  trioConfirm?: number | undefined;
   /** `false` reads the default situation only. */
   situations?: boolean | undefined;
 }
@@ -149,6 +151,8 @@ export async function runHeroReport(
   options: HeroReportOptions = {},
 ): Promise<HeroReport> {
   const { signal, onProgress } = options;
+  const mean = (values: readonly number[]): number =>
+    values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
   const budgetMs = options.budgetMs ?? CAMPAIGN.budgets.extra;
   const rates = options.rates ?? CAMPAIGN.markerRates;
   const settings = settingsOf(input);
@@ -207,6 +211,57 @@ export async function runHeroReport(
   const readings: Partial<Record<SituationId, RoleReading>> = {
     default: readingOf(first.value as CaptainScreenAnswer),
   };
+
+  // Tier 2 for the trios (experiment 193: the re-priced screen names the best trio on 57 % of stops, its top eight
+  // hold it on 91 %): the best-reading trios planned in full against the march with no hero planned the same way.
+  const defaultReading = readings.default!;
+  const quick = structuredClone(defaultReading);
+  const trioScore = (at: number): number =>
+    mean(defaultReading.trios[at]?.stops.map((gain) => Math.max(0, gain)) ?? []);
+  const trioTop = roster.trios
+    .map((trio, at) => ({ trio, at }))
+    .sort((a, b) => trioScore(b.at) - trioScore(a.at) || a.at - b.at)
+    .slice(0, Math.max(0, options.trioConfirm ?? CAMPAIGN.heroReport.trioConfirm));
+  if (trioTop.length > 0 && budgetMs - (performance.now() - began) > 0) {
+    total += 1 + trioTop.length;
+    const planNone: PoolJob<ProbeAnswer> = (client, jobSignal) =>
+      client.probe(
+        { plan: { ...settings, request: { ...settings.request, totals: roster.none.totals } } },
+        jobSignal,
+      );
+    const [noneOutcome] = await pool.map([planNone], {
+      budgetMs: budgetMs - (performance.now() - began),
+      signal,
+      onSettled,
+    });
+    if (noneOutcome?.kind === 'done') {
+      const baseline = noneOutcome.value.stops;
+      const confirmed = await pool.map(
+        trioTop.map(
+          ({ trio }): PoolJob<ProbeAnswer> =>
+            (client, jobSignal) =>
+              client.probe(
+                {
+                  plan: { ...settings, request: { ...settings.request, totals: trio.totals } },
+                  against: {
+                    probe: probeInfo({ id: trio.key, family: 'captains', label: trio.key }),
+                    baseline,
+                    rates,
+                  },
+                },
+                jobSignal,
+              ),
+        ),
+        { budgetMs: Math.max(0, budgetMs - (performance.now() - began)), signal, onSettled },
+      );
+      confirmed.forEach((outcome, index) => {
+        const at = trioTop[index]?.at;
+        const entry = at === undefined ? undefined : defaultReading.trios[at];
+        if (outcome.kind === 'done' && outcome.value.row !== null && entry !== undefined)
+          entry.stops = outcome.value.row.stops.map((stop) => stop.gain);
+      });
+    }
+  }
 
   const screenJobs: PoolJob<CaptainScreenAnswer>[] = [];
   const screened: Exclude<SituationId, 'default'>[] = [];
@@ -354,6 +409,7 @@ export async function runHeroReport(
     stops: lead.stops.map((stop) => stop.pick),
     heroes: roster.heroes,
     readings,
+    quick,
     skipped,
     worth: roster.upgrades === undefined ? null : worth,
     catalog: roster.catalog,

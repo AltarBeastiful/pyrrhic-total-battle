@@ -18,6 +18,7 @@ const heroes = ['a', 'b', 'c', 'd'].map((captainId) => ({
   name: captainId.toUpperCase(),
   level: 5,
   star: 1,
+  pairs: { types: captainId === 'a' ? ['melee'] : [], mercs: captainId === 'a' ? ['Legionary VI'] : [] },
 }));
 
 function reading(solo: Record<string, number>) {
@@ -80,6 +81,34 @@ test('draws the banner, the board, the best trio and the situation matrix marked
   expect(screen.getByTestId('hero-matrix')).toBeTruthy();
   expect(screen.getByText(/Zed — the best of the easiest heroes/)).toBeTruthy();
   expect(screen.getByText('Best trio across all plans')).toBeTruthy();
+});
+
+test('names what a hero pairs with, tells a surprising trio and keeps the lesser ones folded', () => {
+  const fold = buildHeroReport({
+    stops: ['sweet-spot'],
+    heroes,
+    worth: null,
+    readings: {
+      default: {
+        solo: { a: [10], b: [8], c: [6], d: [1] },
+        trios: [
+          { captainIds: ['a', 'b', 'c'], stops: [24] },
+          { captainIds: ['a', 'b', 'd'], stops: [22] },
+          { captainIds: ['a', 'c', 'd'], stops: [21] },
+          { captainIds: ['b', 'c', 'd'], stops: [21] },
+        ],
+      },
+    },
+  });
+  renderWithTheme(
+    <HeroReportDialog
+      view={view({ entry: { key: 'k', status: 'done', done: 1, total: 1, report: fold, error: null } })}
+    />,
+  );
+  expect(screen.getByTestId('hero-pairs-a').textContent).toContain('melee: Legionary VI');
+  expect(screen.getByTestId('hero-pairs-b').textContent).toContain('any merc');
+  expect(screen.getAllByTestId('hero-surprise')).toHaveLength(2);
+  expect(screen.getByText('Other close trios')).toBeTruthy();
 });
 
 test('says so when the report was asked about an earlier state of the account', () => {

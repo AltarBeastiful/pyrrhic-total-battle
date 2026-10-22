@@ -10,7 +10,7 @@ import { worthUpgrades } from '../engine/captainUpgrades';
 import type { CatalogHero, HeroInfo } from '../engine/heroReport';
 import { distinctCaptains, lineupKey } from '../engine/captains';
 import type { BattleSetup, Profile } from './schema';
-import { captainCounts, captainValue, DEFAULT_TABLES } from './derive';
+import { buildUnits, captainCounts, captainValue, DEFAULT_TABLES } from './derive';
 import type { DeriveTables } from './derive';
 import { lineupTotals } from './captainLineups';
 import { changeOf, raised, worthOf } from './captainUpgrades';
@@ -24,6 +24,18 @@ function topRating(record: DeriveTables['captains'][number]): number {
   return total;
 }
 
+/**
+ * The troop types a captain's lines are for: `melee`, `guardsmen`, … from the line keys, `monster` for a bonus
+ * against monsters; an army-wide line names none.
+ */
+function typesOf(record: DeriveTables['captains'][number] | undefined): string[] {
+  const keys = [record?.health, record?.strength].flatMap((line) =>
+    line === undefined ? [] : [line.key as string],
+  );
+  if (record?.special !== undefined) keys.push('monster');
+  return [...new Set(keys.filter((key) => key !== 'army'))];
+}
+
 export function heroRoster(
   profile: Profile,
   setup: BattleSetup,
@@ -35,9 +47,19 @@ export function heroRoster(
     const found = record(entry.captainId);
     return found?.health !== undefined || found?.strength !== undefined || found?.special !== undefined;
   });
+  // The mercenaries the account fields, to name the best matches of each hero (by the bonus keys they benefit from).
+  const fielded = buildUnits(profile).units.filter((unit) => unit.kind === 'mercenary');
+  const mercsFor = (types: readonly string[]): string[] =>
+    fielded
+      .filter((unit) => types.some((type) => (unit.keys as readonly string[]).includes(type)))
+      .sort((a, b) => b.tier - a.tier || b.strength - a.strength)
+      .slice(0, 3)
+      .map((unit) => unit.name);
   const heroes: HeroInfo[] = owned.map((entry) => {
     const found = record(entry.captainId);
+    const types = typesOf(found);
     return {
+      pairs: { types, mercs: mercsFor(types) },
       captainId: entry.captainId,
       name: found?.name ?? entry.captainId,
       level: entry.level,

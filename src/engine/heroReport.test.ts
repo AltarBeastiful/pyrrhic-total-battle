@@ -175,6 +175,60 @@ describe('buildHeroReport the whole ladder', () => {
   });
 });
 
+describe('buildHeroReport other trios', () => {
+  test('lists the trios within the share of the best, and marks the members that are no top-three solo hero', () => {
+    const trio = (captainIds: string[], gain: number) => ({ captainIds, stops: [gain] });
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      worth: null,
+      readings: {
+        default: {
+          solo: { a: [10], b: [8], c: [6], d: [1] },
+          trios: [
+            trio(['a', 'b', 'c'], 24),
+            trio(['a', 'b', 'd'], 22),
+            trio(['a', 'c', 'd'], 21),
+            trio(['b', 'c', 'd'], 10),
+          ],
+        },
+      },
+    });
+    expect(report.bestTrio?.captainIds).toEqual(['a', 'b', 'c']);
+    expect(report.otherTrios.map((other) => other.captainIds.join())).toEqual(['a,b,d', 'a,c,d']);
+    expect(report.otherTrios.map((other) => other.surprise)).toEqual([['d'], ['d']]);
+  });
+
+  test('a lone trio has no other', () => {
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      worth: null,
+      readings: { default: { solo: { a: [1] }, trios: [{ captainIds: ['a', 'b', 'c'], stops: [5] }] } },
+    });
+    expect(report.otherTrios).toEqual([]);
+  });
+
+  test('the matrix and the flips read the quick reading when one is given', () => {
+    const same = reading({ a: 10, b: 8, c: 6, d: 1 });
+    const planned = {
+      solo: same.solo,
+      trios: same.trios.map((trio) => ({ ...trio, stops: trio.stops.map((gain) => gain * 3) })),
+    };
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      worth: null,
+      readings: { default: planned, moreMercs: same },
+      quick: same,
+    });
+    expect(report.tiles.every((tile) => tile.flips.length === 0)).toBe(true);
+    expect(report.bestTrio?.gain).toBe(
+      planned.trios.map((t) => t.stops[0] ?? 0).reduce((a, b) => Math.max(a, b), 0),
+    );
+  });
+});
+
 describe('buildHeroReport worth getting', () => {
   const catalog = [
     { captainId: 'a', name: 'A', difficulty: 3, rating: 50, owned: true },

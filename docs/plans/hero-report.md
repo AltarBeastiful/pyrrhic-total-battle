@@ -36,6 +36,17 @@ re-plan's own noise, so the warning reads the net. Heroes with no fighting line 
 a hero outside the best trio has no trio reading; tier 2 is bounded by `confirm` (120 plans); on a 6-hero account the pass
 takes 25–35 s on one lane. Experiment 247's output predates this change.
 
+**Trios, outliers and pairs (owner, 2026-10-22, experiment 250).** The best trio is no longer the re-priced screen's: the
+best `trioConfirm` (8) trios are planned in full against the march with no hero planned the same way (experiment 250: on
+the two owner accounts with at least four heroes the re-priced screen alone names a different trio from the oracle that
+plans all 20, the confirmed top eight names the oracle's on both; 193 had 57 % of stops for the screen alone, 91 % for the
+top eight). The matrix and the flips keep reading the re-priced default (`quick`), like the situations. Trios within
+`outlierShare` (85 %) of the best are listed, up to `outlierMax` (4): those with a member that is no top-three solo hero are
+told as a surprising match under the best trio, the others stay folded under *Other close trios*. Each hero tile says what
+it pairs with: the troop types its lines name (`melee`, `monster`, … none for an army-wide hero) and the account's fielded
+mercenaries that match, or "none fielded" — awareness only, no figure moves. Known limit: situations still read trios
+re-priced only.
+
 ## Problem
 
 The captain advice answers "which lineup" and the worth list answers "which upgrade", each as a flat result the owner

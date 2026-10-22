@@ -22,6 +22,11 @@ export interface HeroInfo {
   star: number;
   /** The march type the hero is limited to, shown as a condition tag. */
   onlyOn?: string | undefined;
+  /**
+   * What the hero's bonus lines are for: the troop types they name (`melee`, `monster`, … empty for an army-wide hero) and,
+   * of the mercenaries the account fields, the best matches by name. Awareness only: it moves no figure.
+   */
+  pairs?: { types: string[]; mercs: string[] } | undefined;
 }
 
 /** One situation's readings: each hero alone, each trio, gains stop by stop (not clamped). */
@@ -108,6 +113,12 @@ export interface BestTrio {
   gain: number;
 }
 
+/** A trio other than the best, close to it. */
+export interface OtherTrio extends BestTrio {
+  /** Members that are no top-three solo hero: the trio works through the match, not through its stars. */
+  surprise: string[];
+}
+
 export interface SituationRow {
   id: SituationId;
   bestSolo: string | null;
@@ -133,6 +144,8 @@ export interface HeroReport {
   /** Heroes that count on one kind of march only (`onlyOn`), rated apart: their gain where they apply. */
   situational: HeroTile[];
   bestTrio: BestTrio | null;
+  /** The next best trios within `outlierShare` of the best, best first; those with a surprise member first-class. */
+  otherTrios: OtherTrio[];
   /** The best trio of each stop alone, in the bar's order: the footnote of the best trio (E1: how far it differs). */
   stopTrios: (BestTrio | null)[];
   /** The top actions of each role, best first; the third only when it is not marginal. */
@@ -294,6 +307,11 @@ export interface HeroReportInput {
   heroes: readonly HeroInfo[];
   /** The default reading, then the situations that could be read. */
   readings: Partial<Record<SituationId, RoleReading>>;
+  /**
+   * The default reading as the situations were read (re-priced, no trio planned in full): the matrix and the flips
+   * compare like with like. `readings.default` when absent.
+   */
+  quick?: RoleReading | undefined;
   skipped?: { id: SituationId; why: string }[];
   /** The upgrades read in each role; `null` when they were not computed (every verdict then holds). */
   worth: Partial<Record<Role, readonly WorthLike[]>> | null;
@@ -349,7 +367,7 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
 
   const situationRows: SituationRow[] = [];
   for (const id of SITUATIONS) {
-    const reading = input.readings[id];
+    const reading = id === 'default' ? (input.quick ?? input.readings.default) : input.readings[id];
     if (reading === undefined) continue;
     situationRows.push({
       id,
@@ -430,11 +448,36 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
     return plan;
   };
 
+  const topSolo = new Set(
+    heroes
+      .map((hero, index) => ({ id: hero.captainId, score: solos[index] ?? 0 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((entry) => entry.id),
+  );
+  const bestTrio = bestTrioOf(base.trios);
+  const otherTrios: OtherTrio[] = [];
+  if (bestTrio !== null) {
+    const chosen = bestTrio.captainIds.join();
+    const rest = base.trios
+      .filter((trio) => trio.captainIds.join() !== chosen)
+      .map((trio) => ({
+        captainIds: trio.captainIds,
+        stops: clamped(trio.stops),
+        gain: mean(clamped(trio.stops)),
+      }))
+      .filter((trio) => trio.gain >= CAMPAIGN.heroReport.outlierShare * bestTrio.gain && trio.gain > 0)
+      .sort((a, b) => b.gain - a.gain);
+    for (const trio of rest.slice(0, CAMPAIGN.heroReport.outlierMax))
+      otherTrios.push({ ...trio, surprise: trio.captainIds.filter((id) => !topSolo.has(id)) });
+  }
+
   return {
     stops,
     tiles,
     situational,
-    bestTrio: bestTrioOf(base.trios),
+    bestTrio,
+    otherTrios,
     stopTrios: stops.map((_, at) =>
       bestTrioOf(base.trios.map((trio) => ({ ...trio, stops: [trio.stops[at] ?? 0] }))),
     ),

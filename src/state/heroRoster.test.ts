@@ -72,6 +72,16 @@ describe('heroRoster', () => {
     expect(upgrades?.(null).some((probe) => probe.role === 'trio')).toBe(false);
   });
 
+  it('names what a hero pairs with: the troop types of its lines, and the fielded mercenaries that match', () => {
+    const { profile, setup } = withRoster(['leonidas', 'sofia'], [10, 10]);
+    const roster = heroRoster(profile, setup);
+    const leonidas = roster.heroes.find((hero) => hero.captainId === 'leonidas');
+    expect(leonidas?.pairs?.types).toEqual(['melee']);
+    // Sofia has army-wide lines only: any merc.
+    expect(roster.heroes.find((hero) => hero.captainId === 'sofia')?.pairs?.types).toEqual([]);
+    expect(leonidas?.pairs?.mercs.length ?? 0).toBeLessThanOrEqual(3);
+  });
+
   it('three heroes or fewer make one trio of them all', () => {
     const { profile, setup } = withRoster(['aydae', 'skadi'], [10, 10]);
     expect(heroRoster(profile, setup).trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi']]);

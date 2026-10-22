@@ -389,6 +389,11 @@ export const CAMPAIGN = {
     bannerMax: 3,
     bannerMarginal: 0.25,
     bothShare: 0.5,
+    /** Trios listed beside the best: within this share of its gain, at most `outlierMax` of them. */
+    outlierShare: 0.85,
+    outlierMax: 4,
+    /** Trios planned in full, best re-priced reading first (experiment 193: 0.3 % of the rating lost at 8, 4.4 % at 3). */
+    trioConfirm: 8,
     holdGain: 1,
     /**
      * A star count whose net rating over the bar (best reading per stop, planned in full) is below minus this is named

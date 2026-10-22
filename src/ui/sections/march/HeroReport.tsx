@@ -15,7 +15,7 @@ import {
   type SituationId,
   type Verdict,
 } from '@/engine/heroReport';
-import { Dialog } from '@/ui/kit';
+import { Dialog, Disclosure } from '@/ui/kit';
 
 import { planWords } from './picks';
 import { useHeroReport, type HeroEntry, type HeroView } from './heroReportSearch';
@@ -71,6 +71,15 @@ function tradeNote(action: HeroAction): string {
   return parts.join(' · ');
 }
 
+/** What the hero's lines are for, and the mercenaries of the account that match. */
+function pairsWords(pairs: NonNullable<HeroTile['pairs']>): string {
+  if (pairs.types.length === 0) return 'Pairs with any merc';
+  const kinds = pairs.types.join(' · ');
+  return pairs.mercs.length === 0
+    ? `Pairs with ${kinds} mercs`
+    : `Pairs with ${kinds}: ${pairs.mercs.join(', ')}`;
+}
+
 function Stars({ star }: { star: number }) {
   return (
     <span aria-label={`${String(Math.min(star + 1, 7))} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>
@@ -110,6 +119,11 @@ function Tile({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; max
         L{tile.level} <Stars star={tile.star} />
       </Text>
       <Bars tile={tile} maxSolo={maxSolo} maxTrio={maxTrio} />
+      {tile.pairs !== undefined && (
+        <Text size="sm" c="dimmed" data-testid={`hero-pairs-${tile.captainId}`}>
+          {pairsWords(tile.pairs)}
+        </Text>
+      )}
       <Group gap={4} mt={4}>
         {tile.onlyOn !== undefined && (
           <Badge size="sm" variant="light" color="gray" tt="none">
@@ -244,6 +258,36 @@ function Matrix({ report }: { report: HeroReport }) {
   );
 }
 
+/** The trios close to the best: a surprising match is told, the lesser ones stay folded. */
+function OtherTrios({ report }: { report: HeroReport }) {
+  const name = (id: string): string => report.tiles.find((tile) => tile.captainId === id)?.name ?? id;
+  const line = (trio: HeroReport['otherTrios'][number]): string =>
+    `${trio.captainIds.map(name).join(' · ')} — +${trio.gain.toFixed(1)}`;
+  const surprising = report.otherTrios.filter((trio) => trio.surprise.length > 0).slice(0, 2);
+  const lesser = report.otherTrios.filter((trio) => !surprising.includes(trio));
+  return (
+    <Stack gap={4}>
+      {surprising.map((trio) => (
+        <Text key={trio.captainIds.join()} size="sm" data-testid="hero-surprise">
+          Surprising match: {line(trio)} — {trio.surprise.map(name).join(', ')}{' '}
+          {trio.surprise.length === 1 ? 'is' : 'are'} no top-three solo hero and works through the match.
+        </Text>
+      ))}
+      {lesser.length > 0 && (
+        <Disclosure title="Other close trios" summary={String(lesser.length)}>
+          <Stack gap={2} data-testid="hero-other-trios">
+            {lesser.map((trio) => (
+              <Text key={trio.captainIds.join()} size="sm">
+                {line(trio)}
+              </Text>
+            ))}
+          </Stack>
+        </Disclosure>
+      )}
+    </Stack>
+  );
+}
+
 function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
   const maxSolo = Math.max(0, ...report.tiles.map((tile) => tile.solo));
   const maxTrio = Math.max(0, ...report.tiles.map((tile) => tile.trio));
@@ -334,6 +378,7 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
               .map((note) => ` · ${note}`)
               .join('')}
           </Text>
+          <OtherTrios report={report} />
         </Stack>
       )}
 
