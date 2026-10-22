@@ -175,6 +175,12 @@ function upWords(up: RoleUp | undefined, star: number): string {
 }
 
 function Plan({ report, role }: { report: HeroReport; role: Role }) {
+  if (report.plan[role].length === 0)
+    return (
+      <Text size="sm" c="dimmed">
+        No hero has an upgrade that gains in {role === 'solo' ? 'a solo march' : 'your best trio'}.
+      </Text>
+    );
   return (
     <Stack gap={4}>
       {report.plan[role].map((tile) => {

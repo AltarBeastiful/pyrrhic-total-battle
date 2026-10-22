@@ -153,7 +153,7 @@ export async function runHeroReport(
   const { signal, onProgress } = options;
   const mean = (values: readonly number[]): number =>
     values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
-  const budgetMs = options.budgetMs ?? CAMPAIGN.budgets.extra;
+  const budgetMs = options.budgetMs ?? CAMPAIGN.budgets.heroReport;
   const rates = options.rates ?? CAMPAIGN.markerRates;
   const settings = settingsOf(input);
   const lineups = [roster.none, ...roster.solos, ...roster.trios].map(({ key, totals }) => ({ key, totals }));

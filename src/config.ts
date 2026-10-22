@@ -475,6 +475,12 @@ export const CAMPAIGN = {
      * and this clock only stops the pass and reports each job it did not finish as cut.
      */
     extra: 20_000,
+    /**
+     * **The hero report's pass** (`docs/plans/hero-report.md`), its own clock: the report plans the top trios and
+     * the top upgrades in full, which one lane measured at 25-65 s (experiments 250/251) - under the advisor's 20 s
+     * it finished with no upgrade read at all. A guard for a slow device, not a target; the pool's lanes share it.
+     */
+    heroReport: 150_000,
   },
 } as const;
 
