@@ -46,6 +46,25 @@ describe('buildHeroReport situations', () => {
   });
 });
 
+describe('buildHeroReport situational heroes', () => {
+  test('a hero limited to one kind of march is rated apart and takes no solo, trio or banner place', () => {
+    const solo = { a: 10, b: 8, c: 6, g: 30 };
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes: [
+        ...heroes.slice(0, 3),
+        { captainId: 'g', name: 'g', level: 1, star: 0, onlyOn: 'group' },
+      ],
+      worth: [{ captainId: 'g', kind: 'star', size: 1, label: 'g ★1', worth: 5 }],
+      readings: { default: { solo: reading(solo).solo, trios: [{ captainIds: ['a', 'b', 'c'], stops: [24] }] } },
+    });
+    expect(report.tiles.map((tile) => tile.captainId)).toEqual(['a', 'b', 'c']);
+    expect(report.situational.map((tile) => [tile.captainId, tile.solo])).toEqual([['g', 30]]);
+    expect(report.situations[0]?.bestSolo).toBe('a');
+    expect(report.banner).toEqual([]);
+  });
+});
+
 describe('buildHeroReport worth getting', () => {
   const catalog = [
     { captainId: 'a', name: 'A', difficulty: 3, rating: 50, owned: true },

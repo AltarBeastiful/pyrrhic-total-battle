@@ -39,6 +39,20 @@ describe('heroRoster', () => {
     expect(roster.solos[1]?.totals).toEqual(aggregateBonuses(resolveSources(profile, solo)));
   });
 
+  it('leaves out a hero with no fighting line, which changes no battle', () => {
+    const { profile, setup } = withRoster(['aydae', 'carter', 'skadi', 'doria'], [10, 10, 10, 10]);
+    const roster = heroRoster(profile, setup);
+    expect(roster.heroes.map((hero) => hero.captainId)).toEqual(['aydae', 'skadi']);
+    expect(roster.trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi']]);
+  });
+
+  it('rates a hero limited to one kind of march alone, never in a trio', () => {
+    const { profile, setup } = withRoster(['aydae', 'skadi', 'amanitore', 'beowulf'], [10, 10, 10, 10]);
+    const roster = heroRoster(profile, setup);
+    expect(roster.solos.map((solo) => solo.key)).toContain('amanitore');
+    expect(roster.trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi', 'beowulf']]);
+  });
+
   it('three heroes or fewer make one trio of them all', () => {
     const { profile, setup } = withRoster(['aydae', 'skadi'], [10, 10]);
     expect(heroRoster(profile, setup).trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi']]);

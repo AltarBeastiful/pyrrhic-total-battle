@@ -1,7 +1,7 @@
 /**
  * **The heroes the hero report weighs** (`docs/plans/hero-report.md`), built on the main thread like the lineups
  * (`captainLineups.ts`): the worker takes totals already summed. The march with no hero is the baseline; a *solo* is one
- * hero alone, a *trio* three, every other source left exactly as the march has it. Owned heroes only (level 1 and above,
+ * hero alone, a *trio* three, every other source left exactly as the march has it. Owned heroes with a fighting line only (level 1 and above,
  * `distinctCaptains`); the catalog for "worth getting" lists every captain of the game.
  */
 import { CAMPAIGN } from '../config';
@@ -27,8 +27,12 @@ export function heroRoster(
   setup: BattleSetup,
   tables: DeriveTables = DEFAULT_TABLES,
 ): HeroRoster {
-  const owned = distinctCaptains(profile.sources.captains);
   const record = (captainId: string) => tables.captains.find((candidate) => candidate.id === captainId);
+  // A hero with no fighting line (an economy hero) changes no battle: it is left out of every role and trio.
+  const owned = distinctCaptains(profile.sources.captains).filter((entry) => {
+    const found = record(entry.captainId);
+    return found?.health !== undefined || found?.strength !== undefined || found?.special !== undefined;
+  });
   const heroes: HeroInfo[] = owned.map((entry) => {
     const found = record(entry.captainId);
     return {
@@ -52,10 +56,12 @@ export function heroRoster(
       ),
     };
   };
+  // A hero limited to one kind of march is rated on its own (the report's situational block), never in a trio.
+  const general = owned.filter((entry) => record(entry.captainId)?.onlyOn === undefined);
   const trios: ReturnType<typeof lineup>[] = [];
-  for (let i = 0; i < owned.length; i += 1)
-    for (let j = i + 1; j < owned.length; j += 1)
-      for (let k = j + 1; k < owned.length; k += 1) trios.push(lineup([owned[i]!, owned[j]!, owned[k]!]));
+  for (let i = 0; i < general.length; i += 1)
+    for (let j = i + 1; j < general.length; j += 1)
+      for (let k = j + 1; k < general.length; k += 1) trios.push(lineup([general[i]!, general[j]!, general[k]!]));
   const have = new Set(owned.map((entry) => entry.captainId));
   const catalog: CatalogHero[] = captainTable.map((captain) => ({
     captainId: captain.id,
@@ -69,7 +75,7 @@ export function heroRoster(
     none: { key: '', totals: lineupTotals(profile, setup, [], tables) },
     solos: owned.map((entry) => lineup([entry])),
     // A roster of three or fewer still has its one trio (every hero together), as `allowedLineups` has it.
-    trios: trios.length === 0 && owned.length > 0 ? [lineup(owned)] : trios,
+    trios: trios.length === 0 && general.length > 0 ? [lineup(general)] : trios,
     catalog,
   };
 }

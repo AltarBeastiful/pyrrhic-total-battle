@@ -383,7 +383,7 @@ export const CAMPAIGN = {
    * - `mattersShare` — a hero matters when its solo or trio score is at least this share of the best on that scale.
    * - `situations` — **pending validation (owner, 2026-10-22): an experiment, a situation that never flips a verdict is
    *   removed.** `monsterShift` squads of the enemy formation move toward the categories of the army's monsters;
-   *   `mercsAllowance` scales the mercenary stock; `otherMercs` re-plans without the mercenary the lead march uses most.
+   *   `mercsAllowance` scales the mercenary stock; `otherMercs` re-plans with the mercenary types the owner did not select added, each held as many as his largest stock.
    */
   heroReport: {
     bannerMax: 3,

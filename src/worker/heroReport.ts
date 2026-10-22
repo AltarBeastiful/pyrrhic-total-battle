@@ -9,6 +9,7 @@
  * position, so one worker and six give one report.
  */
 import { CAMPAIGN } from '@/config';
+import { getUnits } from '@/data';
 import { CATEGORIES, type Category } from '@/data/types';
 import {
   buildHeroReport,
@@ -72,7 +73,6 @@ export function monsterFormation(
 function situationRequest(
   id: Exclude<SituationId, 'default'>,
   request: StackRequest,
-  lead: UpgradeLead,
 ): { request: StackRequest } | { why: string } {
   const { monsterShift, mercsAllowance, otherMercs } = CAMPAIGN.heroReport.situations;
   if (id === 'monsters') {
@@ -84,21 +84,23 @@ function situationRequest(
     const enemy = monsterFormation(request.enemy, categories, monsterShift);
     return enemy === null ? { why: 'The army fields no monster.' } : { request: { ...request, enemy } };
   }
-  const mercs = request.units.filter(
-    (unit) => unit.pool === 'authority' && request.caps[unit.id] !== undefined,
-  );
-  if (mercs.length === 0) return { why: 'The army holds no mercenary.' };
+  const mercs = request.units.filter((unit) => unit.pool === 'authority');
   if (id === 'moreMercs') {
+    const held = mercs.filter((unit) => request.caps[unit.id] !== undefined);
+    if (held.length === 0) return { why: 'The army holds no capped mercenary.' };
     const caps = { ...request.caps };
-    for (const unit of mercs) caps[unit.id] = Math.ceil((caps[unit.id] ?? 0) * mercsAllowance);
+    for (const unit of held) caps[unit.id] = Math.ceil((caps[unit.id] ?? 0) * mercsAllowance);
     return { request: { ...request, caps } };
   }
   if (!otherMercs) return { why: 'Switched off.' };
-  const used = (unitId: string): number =>
-    lead.stops.reduce((sum, stop) => sum + (stop.counts[unitId] ?? 0), 0);
-  const top = [...mercs].sort((a, b) => used(b.id) - used(a.id))[0];
-  if (top === undefined || used(top.id) === 0) return { why: 'The lead march hires no mercenary.' };
-  return { request: { ...request, caps: { ...request.caps, [top.id]: 0 } } };
+  // The mercenary types the owner did not select join the pool, each held as many as his largest stock.
+  const fielded = new Set(request.units.map((unit) => unit.id));
+  const extra = getUnits().filter((unit) => unit.kind === 'mercenary' && !fielded.has(unit.id));
+  if (extra.length === 0) return { why: 'Every mercenary type is already fielded.' };
+  const stocks = mercs.flatMap((unit) => (request.caps[unit.id] === undefined ? [] : [request.caps[unit.id] ?? 0]));
+  const caps = { ...request.caps };
+  if (stocks.length > 0) for (const unit of extra) caps[unit.id] = Math.max(...stocks);
+  return { request: { ...request, units: [...request.units, ...extra], caps } };
 }
 
 function settingsOf(input: CampaignInput): CampaignInput {
@@ -134,7 +136,7 @@ export async function runHeroReport(
   const skipped: { id: SituationId; why: string }[] = [];
   const planned: { id: Exclude<SituationId, 'default'>; request: StackRequest }[] = [];
   for (const id of wanted) {
-    const made = situationRequest(id, settings.request, lead);
+    const made = situationRequest(id, settings.request);
     if ('why' in made) skipped.push({ id, why: made.why });
     else planned.push({ id, request: made.request });
   }

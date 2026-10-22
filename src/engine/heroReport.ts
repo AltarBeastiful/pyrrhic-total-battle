@@ -100,6 +100,8 @@ export interface CatalogHero {
 export interface HeroReport {
   stops: PlanPick[];
   tiles: HeroTile[];
+  /** Heroes that count on one kind of march only (`onlyOn`), rated apart: their gain where they apply. */
+  situational: HeroTile[];
   bestTrio: BestTrio | null;
   /** The best trio of each stop alone, in the bar's order: the footnote of the best trio (E1: how far it differs). */
   stopTrios: (BestTrio | null)[];
@@ -260,7 +262,11 @@ export function worthGetting(catalog: readonly CatalogHero[]): CatalogHero | nul
 
 /** Build the report from the readings. */
 export function buildHeroReport(input: HeroReportInput): HeroReport {
-  const { heroes, stops } = input;
+  const { stops } = input;
+  // A hero that only counts on one kind of march (Amanitore in a group, Hercules against epic monsters) is rated on
+  // its own, as a situational hero: it takes no solo or trio place and no banner line.
+  const heroes = input.heroes.filter((hero) => hero.onlyOn === undefined);
+  const conditional = input.heroes.filter((hero) => hero.onlyOn !== undefined);
   const base = input.readings.default;
   if (base === undefined) throw new Error('The hero report needs the default reading.');
   const rows = input.worth ?? [];
@@ -302,11 +308,8 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
       })
       .map((row) => row.id);
 
-  const tiles: HeroTile[] = heroes.map((hero, index) => {
+  const tileOf = (hero: HeroInfo, solo: number, trio: number, flips: SituationId[]): HeroTile => {
     const { level, star } = actionsOf(rows, hero.captainId);
-    const solo = solos[index] ?? 0;
-    const trio = trios[index] ?? 0;
-    const flips = flipsOf(hero.captainId);
     const share = CAMPAIGN.heroReport.mattersShare;
     const verdict = verdictOf(level, star, topOf);
     return {
@@ -323,7 +326,12 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
         verdict !== 'hold' ||
         flips.length > 0,
     };
-  });
+  };
+  const tiles = heroes.map((hero, index) =>
+    tileOf(hero, solos[index] ?? 0, trios[index] ?? 0, flipsOf(hero.captainId)),
+  );
+  // Its gain where it applies: the solo reading (a lineup with the hero alone, march type left open).
+  const situational = conditional.map((hero) => tileOf(hero, soloScore(base, hero.captainId), 0, []));
 
   const ranked = rankActions(all);
   const { bannerMax, bannerMarginal } = CAMPAIGN.heroReport;
@@ -347,6 +355,7 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
   return {
     stops,
     tiles,
+    situational,
     bestTrio: bestTrioOf(base.trios),
     stopTrios: stops.map((_, at) =>
       bestTrioOf(base.trios.map((trio) => ({ ...trio, stops: [trio.stops[at] ?? 0] }))),

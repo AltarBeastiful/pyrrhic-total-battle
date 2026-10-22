@@ -135,6 +135,31 @@ function Plan({ report }: { report: HeroReport }) {
   );
 }
 
+const ONLY_ON_WORD: Record<string, string> = { group: 'group marches and raids', epic: 'epic monsters' };
+
+/** Heroes that count on one kind of march only: their gain where they apply, with the upgrade that pays. */
+function Situational({ tiles }: { tiles: readonly HeroReport['tiles'][number][] }) {
+  return (
+    <Stack gap={4}>
+      <Text fw={600}>Situational heroes</Text>
+      <Text size="sm" c="dimmed">
+        They count on one kind of march only, so they take no solo or trio place and no line of the banner above.
+      </Text>
+      {tiles.map((tile) => {
+        const parts = [tile.levelUp, tile.starUp]
+          .filter((action) => action !== undefined)
+          .map((action) => `${actionWords(action)} ${figure(action)}`);
+        return (
+          <Text key={tile.captainId} size="sm">
+            <b>{tile.name}</b> — {ONLY_ON_WORD[tile.onlyOn ?? ''] ?? tile.onlyOn}: +{tile.solo.toFixed(1)} rating
+            where it applies{parts.length === 0 ? '' : ` · ${parts.join(' · ')}`}
+          </Text>
+        );
+      })}
+    </Stack>
+  );
+}
+
 function Matrix({ report }: { report: HeroReport }) {
   const name = (id: string | null): string => report.tiles.find((tile) => tile.captainId === id)?.name ?? '—';
   const shown = report.tiles.filter((tile) => tile.matters);
@@ -211,6 +236,8 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
           </Text>
         )}
       </Stack>
+
+      {report.situational.length > 0 && <Situational tiles={report.situational} />}
 
       <Stack gap={4}>
         <Text fw={600}>The top three</Text>
