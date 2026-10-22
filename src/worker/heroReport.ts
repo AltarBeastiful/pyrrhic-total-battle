@@ -216,6 +216,8 @@ export async function runHeroReport(
   // hold it on 91 %): the best-reading trios planned in full against the march with no hero planned the same way.
   const defaultReading = readings.default!;
   const quick = structuredClone(defaultReading);
+  /** What the clock cut, in words: the report names it, since a cut pass reads less than a whole one. */
+  const cuts: string[] = [];
   const trioScore = (at: number): number =>
     mean(defaultReading.trios[at]?.stops.map((gain) => Math.max(0, gain)) ?? []);
   const trioTop = roster.trios
@@ -234,6 +236,7 @@ export async function runHeroReport(
       signal,
       onSettled,
     });
+    if (noneOutcome?.kind !== 'done') cuts.push('the trios were not planned in full');
     if (noneOutcome?.kind === 'done') {
       const baseline = noneOutcome.value.stops;
       const confirmed = await pool.map(
@@ -254,6 +257,9 @@ export async function runHeroReport(
         ),
         { budgetMs: Math.max(0, budgetMs - (performance.now() - began)), signal, onSettled },
       );
+      const planned = confirmed.filter((outcome) => outcome.kind === 'done').length;
+      if (planned < trioTop.length)
+        cuts.push(`only ${String(planned)} of the ${String(trioTop.length)} best trios were planned in full`);
       confirmed.forEach((outcome, index) => {
         const at = trioTop[index]?.at;
         const entry = at === undefined ? undefined : defaultReading.trios[at];
@@ -314,6 +320,9 @@ export async function runHeroReport(
     else skipped.push({ id, why: outcome?.kind === 'error' ? outcome.message : 'Cut by the clock.' });
   });
   const worth: Record<Role, WorthLike[]> = { solo: [], trio: [] };
+  const unread = grouped.filter((_, at) => outcomes[screenJobs.length + at]?.kind !== 'done').length;
+  if (unread > 0)
+    cuts.push(`${String(unread)} of ${String(grouped.length)} lineups had their upgrades unread`);
   grouped.forEach((group, at) => {
     const outcome = outcomes[screenJobs.length + at];
     if (outcome?.kind === 'error') throw new Error(outcome.message);
@@ -387,6 +396,11 @@ export async function runHeroReport(
             { budgetMs: left3, signal, onSettled },
           )
         : [];
+    const replanned = replans.filter((outcome) => outcome.kind === 'done').length;
+    if (replanned < picked.length)
+      cuts.push(
+        `${String(replanned)} of the ${String(picked.length)} best upgrades were planned in full, the others are quick figures`,
+      );
     ready.forEach((probe, at) => {
       const outcome = replans[at];
       if (outcome?.kind !== 'done' || outcome.value.row === null) return;
@@ -411,6 +425,7 @@ export async function runHeroReport(
     readings,
     quick,
     skipped,
+    cuts,
     worth: roster.upgrades === undefined ? null : worth,
     catalog: roster.catalog,
   });

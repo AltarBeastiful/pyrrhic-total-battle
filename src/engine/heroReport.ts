@@ -159,6 +159,8 @@ export interface HeroReport {
   getting: CatalogHero | null;
   /** Situations that could not be read on this account (no monster, no mercenary), with why. */
   skipped: { id: SituationId; why: string }[];
+  /** What the clock cut from the pass, in words; empty when it read everything. */
+  cuts: string[];
   /** Cost unit of the banner, `null` when the figures are raw gain. */
   unit: string | null;
 }
@@ -313,6 +315,7 @@ export interface HeroReportInput {
    */
   quick?: RoleReading | undefined;
   skipped?: { id: SituationId; why: string }[];
+  cuts?: string[];
   /** The upgrades read in each role; `null` when they were not computed (every verdict then holds). */
   worth: Partial<Record<Role, readonly WorthLike[]>> | null;
   /** Every captain of the game, owned or not, for the last block. */
@@ -487,6 +490,7 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
     situations: situationRows,
     getting: worthGetting(input.catalog ?? []),
     skipped: input.skipped ?? [],
+    cuts: input.cuts ?? [],
     unit: banner.solo[0]?.unit ?? banner.trio[0]?.unit ?? null,
   };
 }

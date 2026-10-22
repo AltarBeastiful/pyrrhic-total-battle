@@ -207,6 +207,25 @@ describe('runHeroReport upgrades', () => {
   );
 });
 
+describe('runHeroReport clock', () => {
+  test(
+    'names what the clock cut, and nothing when it cuts nothing',
+    async () => {
+      const whole = await reportWith(upgradesOf({ a: [20], b: [20] }));
+      expect(whole.cuts).toEqual([]);
+      const pool = poolOf(1);
+      const report = await runHeroReport(campaign(), await leadOf(), roster(upgradesOf({ a: [20] })), pool, {
+        situations: false,
+        budgetMs: 1,
+      });
+      pool.dispose();
+      expect(report.cuts.length).toBeGreaterThan(0);
+      expect(report.worth.solo).toEqual([]);
+    },
+    TIMEOUT,
+  );
+});
+
 describe('runHeroReport situations', () => {
   test(
     'reads the mercenary situations, and says why the monster one could not be read on an army without a monster',

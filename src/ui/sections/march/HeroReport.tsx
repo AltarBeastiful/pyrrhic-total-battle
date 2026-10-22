@@ -4,7 +4,7 @@
  * three, best trio, situation matrix, worth getting. Stock Mantine only (design rule 23); text 13 px and up (rule 19);
  * emoji glyphs for the verdicts, never the only signal (rules 21, 24).
  */
-import { Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import { Alert, Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
 
 import {
   type HeroAction,
@@ -307,6 +307,12 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
         <Text size="sm" c="dimmed">
           Asked about an earlier state of your account. Analyse again to refresh it.
         </Text>
+      )}
+      {report.cuts.length > 0 && (
+        <Alert color="yellow" variant="light" data-testid="hero-cut">
+          The time limit cut this analysis short: {report.cuts.join('; ')}. Some figures are missing or
+          rougher, and the order may change on a full read.
+        </Alert>
       )}
       <Stack gap={4}>
         <Text fw={600}>Where to put effort next</Text>

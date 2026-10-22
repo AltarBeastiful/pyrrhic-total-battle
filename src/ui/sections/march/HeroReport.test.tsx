@@ -111,6 +111,19 @@ test('names what a hero pairs with, tells a surprising trio and keeps the lesser
   expect(screen.getByText('Other close trios')).toBeTruthy();
 });
 
+test('warns when the clock cut the pass, and stays quiet otherwise', () => {
+  const { unmount } = renderWithTheme(<HeroReportDialog view={view()} />);
+  expect(screen.queryByTestId('hero-cut')).toBeNull();
+  unmount();
+  const cut = { ...report, cuts: ['3 of 4 lineups had their upgrades unread'] };
+  renderWithTheme(
+    <HeroReportDialog
+      view={view({ entry: { key: 'k', status: 'done', done: 1, total: 1, report: cut, error: null } })}
+    />,
+  );
+  expect(screen.getByTestId('hero-cut').textContent).toContain('3 of 4 lineups had their upgrades unread');
+});
+
 test('says so when the report was asked about an earlier state of the account', () => {
   renderWithTheme(<HeroReportDialog view={view({ stale: true })} />);
   expect(screen.getByText(/earlier state of your account/)).toBeTruthy();
