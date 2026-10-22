@@ -26,12 +26,10 @@ import { leadLineup } from '../../src/engine/captainUpgrades';
 import type { HeroReport } from '../../src/engine/heroReport';
 import { parseImport } from '../../src/share/exportImport';
 import { captainLineups } from '../../src/state/captainLineups';
-import { captainWorthCandidates } from '../../src/state/captainUpgrades';
 import { buildPlanRequest } from '../../src/state/derive';
 import { heroRoster } from '../../src/state/heroRoster';
 import type { BattleSetup, Profile } from '../../src/state/schema';
 import { runCaptainAdvice } from '../../src/worker/captainAdvice';
-import { runUpgradeWorth } from '../../src/worker/captainUpgrades';
 import { createInlineClient } from '../../src/worker/client';
 import { runHeroReport } from '../../src/worker/heroReport';
 import { createCalcPool } from '../../src/worker/pool';
@@ -97,7 +95,7 @@ async function reportOf(one: Case): Promise<HeroReport> {
   });
   try {
     const input = buildPlanRequest(one.profile, one.setup);
-    const { currentKey, lineups, size } = captainLineups(one.profile, one.setup);
+    const { currentKey, lineups } = captainLineups(one.profile, one.setup);
     const advice = await runCaptainAdvice(
       input,
       lineups.map(({ key, totals }) => ({ key, totals })),
@@ -110,18 +108,7 @@ async function reportOf(one: Case): Promise<HeroReport> {
     const stops = advice.plans[lead];
     if (candidate === undefined || stops === undefined) throw new Error('no lead lineup');
     const leadOf = { key: lead, totals: candidate.totals, stops };
-    const asks = captainWorthCandidates(one.profile, one.setup, candidate, size).map((c) => ({
-      id: c.spec.id,
-      label: `${c.name} ${c.change}`,
-      captainId: c.spec.captainId,
-      kind: c.spec.kind,
-      size: c.spec.size,
-      perLevel: c.perLevel,
-      exact: c.spec.exact === true,
-      lineups: c.lineups.map(({ key, totals }) => ({ key, totals })),
-    }));
-    const worth = await runUpgradeWorth(input, leadOf, asks, pool, { budgetMs: NO_CLOCK });
-    return await runHeroReport(input, leadOf, heroRoster(one.profile, one.setup), worth, pool, {
+    return await runHeroReport(input, leadOf, heroRoster(one.profile, one.setup), pool, {
       budgetMs: NO_CLOCK,
     });
   } finally {
@@ -144,7 +131,7 @@ describe.skipIf(!process.env.THEORY)('247 — the hero report', () => {
 
       lines.push('### E1 — roles', '', '| hero | solo | trio | verdict |', '|---|---|---|---|');
       for (const tile of [...report.tiles].sort((a, b) => b.solo - a.solo).slice(0, 12))
-        lines.push(`| ${tile.name} | ${f(tile.solo)} | ${f(tile.trio)} | ${tile.verdict} |`);
+        lines.push(`| ${tile.name} | ${f(tile.solo)} | ${f(tile.trio)} | ${tile.soloUp.verdict} |`);
       const avg = report.bestTrio;
       const agree = report.stopTrios.filter((t) => t?.captainIds.join() === avg?.captainIds.join()).length;
       const given = report.stopTrios.map((t, at) => (t?.gain ?? 0) - (avg?.stops[at] ?? 0));
@@ -170,18 +157,11 @@ describe.skipIf(!process.env.THEORY)('247 — the hero report', () => {
 
       lines.push('### E3 — verdicts', '');
       const counts: Record<string, number> = {};
-      for (const tile of report.tiles) counts[tile.verdict] = (counts[tile.verdict] ?? 0) + 1;
+      for (const tile of report.tiles) counts[tile.soloUp.verdict] = (counts[tile.soloUp.verdict] ?? 0) + 1;
       lines.push(`Verdicts: ${JSON.stringify(counts)}.`);
       lines.push(
-        `Banner: ${report.banner.map((a) => `${name(a.captainId)} ${a.kind}+${String(a.size)} ${f(a.score, 3)}`).join(' | ') || 'empty'}.`,
+        `Banner: ${report.banner.solo.map((a) => `${name(a.captainId)} ${a.kind}+${String(a.size)} ${f(a.score, 3)}`).join(' | ') || 'empty'}.`,
       );
-      const both = report.tiles
-        .filter((tile) => tile.verdict === 'both' && tile.levelUp && tile.starUp)
-        .map((tile) => {
-          const small = Math.min(tile.levelUp?.score ?? 0, tile.starUp?.score ?? 0);
-          const large = Math.max(tile.levelUp?.score ?? 0, tile.starUp?.score ?? 0);
-          return f(small / large);
-        });
       lines.push(
         'Top solo heroes, level / star action score (star: per star): ' +
           [...report.tiles]
@@ -189,11 +169,10 @@ describe.skipIf(!process.env.THEORY)('247 — the hero report', () => {
             .slice(0, 6)
             .map(
               (tile) =>
-                `${tile.name} ${f(tile.levelUp?.score ?? 0, 3)} / ${f(tile.starUp?.score ?? 0, 3)} (${tile.verdict})`,
+                `${tile.name} ${f(tile.soloUp.level?.score ?? 0, 3)} / ${f(tile.soloUp.star?.score ?? 0, 3)} (${tile.soloUp.verdict})`,
             )
             .join('; '),
       );
-      lines.push(`Smaller/larger action of the "both" heroes: ${both.join(', ') || '—'}.`);
       if (report.getting !== null)
         lines.push(
           `Worth getting: ${report.getting.name} (difficulty ${String(report.getting.difficulty)}).`,

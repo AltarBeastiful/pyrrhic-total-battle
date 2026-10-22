@@ -6,13 +6,15 @@
  */
 import { CAMPAIGN } from '../config';
 import { captains as captainTable } from '../data';
+import { worthUpgrades } from '../engine/captainUpgrades';
 import type { CatalogHero, HeroInfo } from '../engine/heroReport';
 import { distinctCaptains, lineupKey } from '../engine/captains';
 import type { BattleSetup, Profile } from './schema';
-import { captainValue, DEFAULT_TABLES } from './derive';
+import { captainCounts, captainValue, DEFAULT_TABLES } from './derive';
 import type { DeriveTables } from './derive';
 import { lineupTotals } from './captainLineups';
-import type { HeroRoster } from '../worker/heroReport';
+import { changeOf, raised, worthOf } from './captainUpgrades';
+import type { HeroProbe, HeroRoster } from '../worker/heroReport';
 
 /** The bonus points a captain gives on all its lines at the top star, at level 1: how the catalog rates it. */
 function topRating(record: DeriveTables['captains'][number]): number {
@@ -61,7 +63,8 @@ export function heroRoster(
   const trios: ReturnType<typeof lineup>[] = [];
   for (let i = 0; i < general.length; i += 1)
     for (let j = i + 1; j < general.length; j += 1)
-      for (let k = j + 1; k < general.length; k += 1) trios.push(lineup([general[i]!, general[j]!, general[k]!]));
+      for (let k = j + 1; k < general.length; k += 1)
+        trios.push(lineup([general[i]!, general[j]!, general[k]!]));
   const have = new Set(owned.map((entry) => entry.captainId));
   const catalog: CatalogHero[] = captainTable.map((captain) => ({
     captainId: captain.id,
@@ -70,6 +73,53 @@ export function heroRoster(
     rating: topRating(captain),
     owned: have.has(captain.id),
   }));
+  const entryOf = new Map(owned.map((entry) => [entry.captainId, entry]));
+  const counts = (captainId: string): boolean => captainCounts(record(captainId), setup.marchType);
+  const specs = worthUpgrades(owned, counts, (captainId, level, star) =>
+    worthOf(record(captainId), level, star),
+  );
+  const upgrades = (trio: readonly string[] | null): HeroProbe[] => {
+    const trioEntries = trio === null ? [] : trio.flatMap((id) => entryOf.get(id) ?? []);
+    const trioBase = trioEntries.length === 0 ? null : lineup(trioEntries);
+    const out: HeroProbe[] = [];
+    const bases = new Map<string, ReturnType<typeof lineup>>();
+    const baseOf = (picked: typeof owned) => {
+      const key = lineupKey(picked.map((entry) => entry.captainId));
+      const found = bases.get(key) ?? lineup(picked);
+      bases.set(key, found);
+      return found;
+    };
+    const probe = (spec: (typeof specs)[number], role: 'solo' | 'trio', picked: typeof owned) => {
+      const after = raised(profile, spec);
+      const base = baseOf(picked);
+      const name = record(spec.captainId)?.name ?? spec.captainId;
+      out.push({
+        id: `${role}:${spec.id}`,
+        label: `${name} ${changeOf(spec)}`,
+        captainId: spec.captainId,
+        role,
+        kind: spec.kind,
+        size: spec.size,
+        base: { key: base.key, totals: base.totals },
+        upgraded: {
+          key: `${base.key}+${spec.id}`,
+          totals: lineupTotals(
+            after,
+            setup,
+            picked.map((entry) => entry.id),
+            tables,
+          ),
+        },
+      });
+    };
+    for (const spec of specs) {
+      const entry = entryOf.get(spec.captainId);
+      if (entry === undefined) continue;
+      probe(spec, 'solo', [entry]);
+      if (trioBase !== null && trioEntries.includes(entry)) probe(spec, 'trio', trioEntries);
+    }
+    return out;
+  };
   return {
     heroes,
     none: { key: '', totals: lineupTotals(profile, setup, [], tables) },
@@ -77,5 +127,6 @@ export function heroRoster(
     // A roster of three or fewer still has its one trio (every hero together), as `allowedLineups` has it.
     trios: trios.length === 0 && general.length > 0 ? [lineup(general)] : trios,
     catalog,
+    upgrades,
   };
 }

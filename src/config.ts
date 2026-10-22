@@ -390,6 +390,18 @@ export const CAMPAIGN = {
     bannerMarginal: 0.25,
     bothShare: 0.5,
     holdGain: 1,
+    /**
+     * A star count whose net rating over the bar (best reading per stop, planned in full) is below minus this is named
+     * as worsening the trade, rating units. Experiment 249: 7 of 200 upgrades below −1, 3 below −2; a single stop is
+     * no signal, it swings by 5 or more on the re-plan's own noise.
+     */
+    tradeWarn: 1,
+    /**
+     * Upgrades planned in full after the re-priced reading, best score first (experiment 249: the re-priced reading
+     * alone ranks the re-plan's top three first on 58 % of solo and 33 % of trio reads, and cries a worse trade on
+     * every third upgrade the re-plan finds fine).
+     */
+    confirm: 120,
     holdShare: 0.1,
     mattersShare: 0.05,
     situations: { monsterShift: 1, mercsAllowance: 1.25, otherMercs: true },

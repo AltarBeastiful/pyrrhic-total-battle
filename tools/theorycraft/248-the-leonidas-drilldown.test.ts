@@ -121,13 +121,13 @@ describe.skipIf(!process.env.THEORY)('248 — Leonidas drilled down', () => {
           '|---|---|---|',
         );
         for (const row of mine) lines.push(`| ${row.label} | ${row.worth.toFixed(2)} | ${String(ranked.indexOf(row) + 1)} |`);
-        const report = await runHeroReport(input, leadOf, heroRoster(one.profile, one.setup), worth, pool, {
+        const report = await runHeroReport(input, leadOf, heroRoster(one.profile, one.setup), pool, {
           budgetMs: NO_CLOCK,
         });
         const tile = report.tiles.find((t) => t.captainId === 'leonidas');
         lines.push(
           '',
-          `Hero report: solo ${tile?.solo.toFixed(2)}, trio ${tile?.trio.toFixed(2)}, verdict ${String(tile?.verdict)}; best trio ${report.bestTrio?.captainIds.join(', ') ?? '—'}.`,
+          `Hero report: solo ${tile?.solo.toFixed(2)}, trio ${tile?.trio.toFixed(2)}, verdict ${String(tile?.soloUp.verdict)}; best trio ${report.bestTrio?.captainIds.join(', ') ?? '—'}.`,
           '',
         );
       } finally {

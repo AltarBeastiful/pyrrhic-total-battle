@@ -14,8 +14,7 @@ import type { BonusTotals, StackRequest } from '@/engine/types';
 import { runCaptainAdvice } from './captainAdvice';
 import { createInlineClient, type CalcClient } from './client';
 import { createCalcPool } from './pool';
-import type { WorthResult } from './captainUpgrades';
-import { runHeroReport, type HeroRoster } from './heroReport';
+import { runHeroReport, type HeroProbe, type HeroRoster } from './heroReport';
 
 const TIMEOUT = 120_000;
 
@@ -63,12 +62,46 @@ function poolOf(size: number) {
 /** Five heroes whose army bonus is their name's weight; a lineup's bonus is the sum of its heroes'. */
 const POINTS: Record<string, number> = { a: 100, b: 40, c: 30, d: 5, e: 0 };
 
-function roster(): HeroRoster {
+const pointsOf = (captainIds: readonly string[]): number =>
+  captainIds.reduce((sum, id) => sum + (POINTS[id] ?? 0), 0);
+
+const lineupOf = (captainIds: string[]) => ({
+  key: captainIds.join(','),
+  totals: withArmy(pointsOf(captainIds)),
+});
+
+/** Star `k` of a hero adds `adds[id][k - 1]` army points to the lineup it is read in (negative: a worse trade). */
+function upgradesOf(adds: Record<string, number[]>): NonNullable<HeroRoster['upgrades']> {
+  return (trio) => {
+    const out: HeroProbe[] = [];
+    for (const [captainId, steps] of Object.entries(adds))
+      steps.forEach((extra, at) => {
+        const make = (role: 'solo' | 'trio', members: string[]) => {
+          const base = lineupOf(members);
+          out.push({
+            id: `${role}:${captainId}:${String(at + 1)}`,
+            label: `${captainId} ★${String(at + 1)}`,
+            captainId,
+            role,
+            kind: 'star',
+            size: at + 1,
+            base,
+            upgraded: {
+              key: `${base.key}+${captainId}${String(at + 1)}`,
+              totals: withArmy(pointsOf(members) + extra),
+            },
+          });
+        };
+        make('solo', [captainId]);
+        if (trio?.includes(captainId) === true) make('trio', [...trio]);
+      });
+    return out;
+  };
+}
+
+function roster(upgrades?: HeroRoster['upgrades']): HeroRoster {
   const ids = Object.keys(POINTS);
-  const lineup = (captainIds: string[]) => ({
-    key: captainIds.join(','),
-    totals: withArmy(captainIds.reduce((sum, id) => sum + (POINTS[id] ?? 0), 0)),
-  });
+  const lineup = lineupOf;
   const trios: string[][] = [];
   for (let i = 0; i < ids.length; i += 1)
     for (let j = i + 1; j < ids.length; j += 1)
@@ -78,6 +111,7 @@ function roster(): HeroRoster {
     none: { key: '', totals: withArmy(0) },
     solos: ids.map((id) => ({ captainIds: [id], ...lineup([id]) })),
     trios: trios.map((captainIds) => ({ captainIds, ...lineup(captainIds) })),
+    upgrades,
   };
 }
 
@@ -95,7 +129,7 @@ describe('runHeroReport roles', () => {
     'scores each hero alone, picks the best trio over the bar, and credits the trio members only',
     async () => {
       const pool = poolOf(2);
-      const report = await runHeroReport(campaign(), await leadOf(), roster(), null, pool, {
+      const report = await runHeroReport(campaign(), await leadOf(), roster(), pool, {
         situations: false,
       });
       pool.dispose();
@@ -120,99 +154,54 @@ describe('runHeroReport roles', () => {
   );
 });
 
-/** A worth list as the pass would give it: only the fields the report reads. */
-function worthOf(
-  rows: [string, 'level' | 'star', number, number, { amount: number; unit: string }?][],
-): WorthResult {
-  return {
-    lead: 'now',
-    inferred: [],
-    cut: [],
-    failed: [],
-    rows: rows.map(([captainId, kind, size, worth, cost]) => ({
-      id: `captain:${captainId}:${kind}+${String(size)}`,
-      label: `${captainId} ${kind}+${String(size)}`,
-      captainId,
-      kind,
-      size,
-      worth,
-      ...(cost === undefined ? {} : { cost }),
-      tier1: { stops: [], gain: worth, lineups: [] },
-    })),
-  };
-}
-
-async function reportWith(worth: WorthResult, situations = false) {
+async function reportWith(upgrades: HeroRoster['upgrades'], situations = false) {
   const pool = poolOf(2);
-  const report = await runHeroReport(campaign(), await leadOf(), roster(), worth, pool, { situations });
+  const report = await runHeroReport(campaign(), await leadOf(), roster(upgrades), pool, { situations });
   pool.dispose();
   return report;
 }
 
-describe('runHeroReport actions', () => {
+describe('runHeroReport upgrades', () => {
   test(
-    'names level only, stars only, both or hold per hero, and a banner of the best actions',
+    'reads each upgrade in the lineup it plays in: every hero alone, the best trio members in the trio',
     async () => {
-      const report = await reportWith(
-        worthOf([
-          ['a', 'level', 5, 4],
-          ['a', 'star', 1, 4],
-          ['b', 'star', 1, 10],
-          ['b', 'level', 5, 1],
-          ['c', 'level', 5, 0.2],
-          ['d', 'level', 5, 3],
-        ]),
-      );
-      const verdict = (id: string) => report.tiles.find((tile) => tile.captainId === id)?.verdict;
-      expect(verdict('a')).toBe('both');
-      expect(verdict('b')).toBe('star');
-      expect(verdict('c')).toBe('hold');
-      expect(verdict('d')).toBe('level');
-      expect(verdict('e')).toBe('hold');
-      expect(report.banner.map((action) => [action.captainId, action.kind])).toEqual([
-        ['b', 'star'],
-        ['a', 'level'],
-        ['a', 'star'],
-      ]);
-      expect(report.plan.map((tile) => tile.captainId)).toEqual(['b', 'a', 'd']);
-      expect(report.unit).toBeNull();
+      const report = await reportWith(upgradesOf({ a: [20], b: [20], d: [20] }));
+      const tile = (id: string) => report.tiles.find((candidate) => candidate.captainId === id);
+      expect(tile('a')?.soloUp.star?.size).toBe(1);
+      expect(tile('d')?.soloUp.star?.size).toBe(1);
+      // d is outside the best trio (a, b, c): it has no trio reading.
+      expect(tile('d')?.trioUp).toBeUndefined();
+      expect(tile('b')?.trioUp?.star?.size).toBe(1);
+      expect(report.banner.solo.length).toBeGreaterThan(0);
+      // The best of them are planned in full (tier 2): they carry the re-priced gain they started from.
+      expect(report.worth.solo.some((row) => row.tier1 !== undefined)).toBe(true);
+      expect(report.banner.trio.every((action) => ['a', 'b'].includes(action.captainId))).toBe(true);
     },
     TIMEOUT,
   );
 
   test(
-    'the banner shows two when the third gain is marginal, and ranks gain per cost when a cost was typed',
+    'names the star count to add, and a count that worsens the trade by far',
     async () => {
-      const marginal = await reportWith(
-        worthOf([
-          ['a', 'star', 1, 10],
-          ['b', 'star', 1, 8],
-          ['c', 'star', 1, 1],
-        ]),
+      const report = await reportWith(upgradesOf({ a: [30, 45, -90] }));
+      const star = report.tiles.find((tile) => tile.captainId === 'a')?.soloUp.star;
+      expect(star?.size).toBeGreaterThanOrEqual(1);
+      expect(star?.worse.map((entry) => entry.size)).toContain(3);
+      expect(Math.min(...(star?.worse.map((entry) => entry.trade) ?? [0]))).toBeLessThan(
+        -CAMPAIGN.heroReport.tradeWarn,
       );
-      expect(marginal.banner.map((action) => action.captainId)).toEqual(['a', 'b']);
-
-      const costed = await reportWith(
-        worthOf([
-          ['a', 'star', 1, 10, { amount: 100, unit: 'shards' }],
-          ['b', 'star', 1, 6, { amount: 20, unit: 'shards' }],
-        ]),
-      );
-      expect(costed.banner.map((action) => action.captainId)).toEqual(['b', 'a']);
-      expect(costed.banner[0]?.score).toBeCloseTo(0.3);
-      expect(costed.unit).toBe('shards');
+      const trio = report.tiles.find((tile) => tile.captainId === 'a')?.trioUp?.star;
+      expect(trio?.worse.map((entry) => entry.size)).toContain(3);
     },
     TIMEOUT,
   );
 
   test(
-    'a hero that matters nowhere is flagged to fold, and no worth list leaves every verdict on hold',
+    'with no upgrades every hero holds',
     async () => {
-      const report = await reportWith(worthOf([]));
-      expect(report.tiles.every((tile) => tile.verdict === 'hold')).toBe(true);
-      const matters = (id: string) => report.tiles.find((tile) => tile.captainId === id)?.matters;
-      expect(matters('a')).toBe(true);
-      expect(matters('e')).toBe(false);
+      const report = await reportWith(undefined);
+      expect(report.tiles.every((tile) => tile.soloUp.verdict === 'hold')).toBe(true);
+      expect(report.banner).toEqual({ solo: [], trio: [] });
     },
     TIMEOUT,
   );
@@ -222,7 +211,7 @@ describe('runHeroReport situations', () => {
   test(
     'reads the mercenary situations, and says why the monster one could not be read on an army without a monster',
     async () => {
-      const report = await reportWith(worthOf([]), true);
+      const report = await reportWith(undefined, true);
       expect(report.situations.map((row) => row.id)).toEqual(['default', 'moreMercs', 'otherMercs']);
       expect(report.skipped).toEqual([{ id: 'monsters', why: 'The army fields no monster.' }]);
       for (const row of report.situations) expect(row.bestSolo).toBe('a');
@@ -242,7 +231,11 @@ describe('runHeroReport determinism', () => {
       const answers = [];
       for (const size of [1, 3]) {
         const pool = poolOf(size);
-        answers.push(await runHeroReport(input, lead, roster(), null, pool));
+        answers.push(
+          await runHeroReport(input, lead, roster(upgradesOf({ a: [20, 30], b: [10] })), pool, {
+            budgetMs: 1_000_000_000,
+          }),
+        );
         pool.dispose();
       }
       expect(answers[1]).toEqual(answers[0]);

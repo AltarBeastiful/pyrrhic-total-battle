@@ -30,15 +30,29 @@ export interface RoleReading {
   trios: { captainIds: string[]; stops: number[] }[];
 }
 
-/** The slice of a worth row the report reads (`WorthRow`). */
+/** Solo and trio marches weigh equally and are rated apart: a hero's upgrade is read in the lineup it plays in. */
+export type Role = 'solo' | 'trio';
+
+export const ROLES: readonly Role[] = ['solo', 'trio'];
+
+/**
+ * One upgrade read in one role (`src/worker/heroReport.ts`): the hero's lineup of that role with the upgrade
+ * applied, against the same lineup without it, on the lead march's counts.
+ */
 export interface WorthLike {
   id: string;
   label: string;
   captainId: string;
   kind: WorthKind;
+  /** Stars or levels added. */
   size: number;
   cost?: { amount: number; unit: string } | undefined;
+  /** The mean over the bar of the gain, clamped at 0 on every stop. */
   worth: number;
+  /** The rating on each stop of the bar, not clamped: its mean below 0 is an upgrade that worsens the trade. */
+  raw?: number[] | undefined;
+  /** Set when the row was planned in full (tier 2): the re-priced gain it started from. */
+  tier1?: number | undefined;
 }
 
 export type Verdict = 'level' | 'star' | 'both' | 'hold';
@@ -55,6 +69,21 @@ export interface HeroAction {
   score: number;
   /** The cost's unit, `null` when the score is the raw gain. */
   unit: string | null;
+  /** The net rating over the bar, not clamped (`WorthLike.raw`); below 0 the upgrade worsens the trade. */
+  trade: number;
+  /** The step after this one (stars: the next probed star count), as the change in gain it brings; may be negative. */
+  next?: { size: number; delta: number } | undefined;
+  /** The star count with the largest total gain, when it is not this one (the cheapest step is not the biggest). */
+  most?: { size: number; gain: number } | undefined;
+  /** The star counts of this hero whose net trade over the bar is below minus `tradeWarn`, with that rating. */
+  worse: { size: number; trade: number }[];
+}
+
+/** What one role says of a hero: the verdict and the two actions it comes from. */
+export interface RoleUp {
+  verdict: Verdict;
+  level?: HeroAction;
+  star?: HeroAction;
 }
 
 export interface HeroTile extends HeroInfo {
@@ -62,9 +91,10 @@ export interface HeroTile extends HeroInfo {
   solo: number;
   /** What the hero adds to the best trio over the best trio without them. */
   trio: number;
-  verdict: Verdict;
-  levelUp?: HeroAction;
-  starUp?: HeroAction;
+  /** Upgrades read in the hero's solo lineup. */
+  soloUp: RoleUp;
+  /** Upgrades read in the best trio; absent for a hero outside it. */
+  trioUp?: RoleUp;
   /** Situations that change the verdict for this hero (becomes, or stops being, the best). */
   flips: SituationId[];
   /** False for a hero that matters nowhere: the board folds it into one line. */
@@ -105,10 +135,12 @@ export interface HeroReport {
   bestTrio: BestTrio | null;
   /** The best trio of each stop alone, in the bar's order: the footnote of the best trio (E1: how far it differs). */
   stopTrios: (BestTrio | null)[];
-  /** The top actions, best first; the third only when it is not marginal. */
-  banner: HeroAction[];
-  /** The three heroes to put effort in, best action first. */
-  plan: HeroTile[];
+  /** The top actions of each role, best first; the third only when it is not marginal. */
+  banner: Record<Role, HeroAction[]>;
+  /** The three heroes to put effort in for each role, best action first. */
+  plan: Record<Role, HeroTile[]>;
+  /** The upgrades as read, by role (the rows the actions are taken from). */
+  worth: Record<Role, readonly WorthLike[]>;
   situations: SituationRow[];
   /** The unowned hero worth getting, the last block; `null` when the catalog was not given or has none above. */
   getting: CatalogHero | null;
@@ -165,12 +197,24 @@ function bestSolo(reading: RoleReading, heroes: readonly HeroInfo[]): string | n
 }
 
 /** Gain per cost when a cost was typed (a zero cost is none), else a star's gain per star and a level step's gain. */
-const scoreOf = (row: WorthLike): number => {
+export const scoreOf = (row: WorthLike): number => {
   if (row.cost !== undefined && row.cost.amount > 0) return row.worth / row.cost.amount;
   return row.kind === 'star' ? row.worth / Math.max(1, row.size) : row.worth;
 };
 
-function actionOf(row: WorthLike): HeroAction {
+/**
+ * The net trade of a row: its mean rating over the bar, not clamped (experiment 249: a single stop swings by 5 or
+ * more on the re-plan's own noise, the mean over the bar is below −1 on 3.5 % of the upgrades).
+ */
+const tradeOf = (row: WorthLike): number => mean(row.raw ?? [row.worth]);
+
+function actionOf(row: WorthLike, rows: readonly WorthLike[]): HeroAction {
+  const own = rows.filter((other) => other.captainId === row.captainId && other.kind === row.kind);
+  const after = own.filter((other) => other.size > row.size).sort((a, b) => a.size - b.size)[0];
+  const most = own.reduce<WorthLike | undefined>(
+    (top, other) => (top === undefined || other.worth > top.worth ? other : top),
+    undefined,
+  );
   return {
     captainId: row.captainId,
     kind: row.kind,
@@ -179,23 +223,35 @@ function actionOf(row: WorthLike): HeroAction {
     gain: row.worth,
     score: scoreOf(row),
     unit: row.cost !== undefined && row.cost.amount > 0 ? row.cost.unit : null,
+    trade: tradeOf(row),
+    ...(after === undefined || row.kind !== 'star'
+      ? {}
+      : { next: { size: after.size, delta: after.worth - row.worth } }),
+    ...(most === undefined || row.kind !== 'star' || most.worth <= row.worth + 1e-9
+      ? {}
+      : { most: { size: most.size, gain: most.worth } }),
+    worse: own
+      .filter((other) => other.kind === 'star' && tradeOf(other) <= -CAMPAIGN.heroReport.tradeWarn)
+      .map((other) => ({ size: other.size, trade: tradeOf(other) })),
   };
 }
 
 /**
- * A hero's level action is its smallest probed level step; its star action the star step with the best score
- * (`scoreOf`: per star). Rows that gain nothing are not actions.
+ * A hero's level action is its smallest probed level step; its star action the star count with the best score
+ * (`scoreOf`: per star), so the count to add is the most efficient one, not the biggest. Rows that gain nothing
+ * are not actions, but a star count that worsens the trade is still named on the action (`worse`).
  */
 function actionsOf(rows: readonly WorthLike[], captainId: string): { level?: HeroAction; star?: HeroAction } {
-  const own = rows.filter((row) => row.captainId === captainId && row.worth > 0);
+  const mine = rows.filter((row) => row.captainId === captainId);
+  const own = mine.filter((row) => row.worth > 0);
   const levels = own.filter((row) => row.kind === 'level').sort((a, b) => a.size - b.size);
   let star: WorthLike | undefined;
-  for (const row of own.filter((candidate) => candidate.kind === 'star'))
+  for (const row of own.filter((candidate) => candidate.kind === 'star').sort((a, b) => a.size - b.size))
     if (star === undefined || scoreOf(row) > scoreOf(star)) star = row;
   const level = levels[0];
   return {
-    ...(level === undefined ? {} : { level: actionOf(level) }),
-    ...(star === undefined ? {} : { star: actionOf(star) }),
+    ...(level === undefined ? {} : { level: actionOf(level, mine) }),
+    ...(star === undefined ? {} : { star: actionOf(star, mine) }),
   };
 }
 
@@ -239,8 +295,8 @@ export interface HeroReportInput {
   /** The default reading, then the situations that could be read. */
   readings: Partial<Record<SituationId, RoleReading>>;
   skipped?: { id: SituationId; why: string }[];
-  /** The worth list's rows; `null` when it was not computed (every verdict then holds). */
-  worth: readonly WorthLike[] | null;
+  /** The upgrades read in each role; `null` when they were not computed (every verdict then holds). */
+  worth: Partial<Record<Role, readonly WorthLike[]>> | null;
   /** Every captain of the game, owned or not, for the last block. */
   catalog?: readonly CatalogHero[] | undefined;
 }
@@ -269,20 +325,27 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
   const conditional = input.heroes.filter((hero) => hero.onlyOn !== undefined);
   const base = input.readings.default;
   if (base === undefined) throw new Error('The hero report needs the default reading.');
-  const rows = input.worth ?? [];
+  const rows: Record<Role, readonly WorthLike[]> = {
+    solo: input.worth?.solo ?? [],
+    trio: input.worth?.trio ?? [],
+  };
 
   const solos = heroes.map((hero) => soloScore(base, hero.captainId));
   const trios = heroes.map((hero) => trioContribution(base, hero.captainId));
   const maxSolo = Math.max(0, ...solos);
   const maxTrio = Math.max(0, ...trios);
 
-  // The best action of each unit group, to tell a hero that holds from one that pays.
-  const all = heroes.flatMap((hero) => {
-    const { level, star } = actionsOf(rows, hero.captainId);
-    return [level, star].filter((action): action is HeroAction => action !== undefined);
-  });
-  const topOf = (unit: string | null): number =>
-    Math.max(0, ...all.filter((action) => action.unit === unit).map((action) => action.score));
+  // The best action of each unit group in a role, to tell a hero that holds from one that pays.
+  const allOf = (role: Role): HeroAction[] =>
+    heroes.flatMap((hero) => {
+      const { level, star } = actionsOf(rows[role], hero.captainId);
+      return [level, star].filter((action): action is HeroAction => action !== undefined);
+    });
+  const all: Record<Role, HeroAction[]> = { solo: allOf('solo'), trio: allOf('trio') };
+  const topOf =
+    (role: Role) =>
+    (unit: string | null): number =>
+      Math.max(0, ...all[role].filter((action) => action.unit === unit).map((action) => action.score));
 
   const situationRows: SituationRow[] = [];
   for (const id of SITUATIONS) {
@@ -308,22 +371,31 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
       })
       .map((row) => row.id);
 
+  const upOf = (role: Role, hero: HeroInfo): RoleUp => {
+    const { level, star } = actionsOf(rows[role], hero.captainId);
+    return {
+      verdict: verdictOf(level, star, topOf(role)),
+      ...(level ? { level } : {}),
+      ...(star ? { star } : {}),
+    };
+  };
   const tileOf = (hero: HeroInfo, solo: number, trio: number, flips: SituationId[]): HeroTile => {
-    const { level, star } = actionsOf(rows, hero.captainId);
+    const soloUp = upOf('solo', hero);
+    const inTrio = rows.trio.some((row) => row.captainId === hero.captainId);
+    const trioUp = inTrio ? upOf('trio', hero) : undefined;
     const share = CAMPAIGN.heroReport.mattersShare;
-    const verdict = verdictOf(level, star, topOf);
     return {
       ...hero,
       solo,
       trio,
-      verdict,
-      ...(level === undefined ? {} : { levelUp: level }),
-      ...(star === undefined ? {} : { starUp: star }),
+      soloUp,
+      ...(trioUp === undefined ? {} : { trioUp }),
       flips,
       matters:
         (maxSolo > 0 && solo >= share * maxSolo) ||
         (maxTrio > 0 && trio >= share * maxTrio) ||
-        verdict !== 'hold' ||
+        soloUp.verdict !== 'hold' ||
+        (trioUp?.verdict ?? 'hold') !== 'hold' ||
         flips.length > 0,
     };
   };
@@ -333,24 +405,30 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
   // Its gain where it applies: the solo reading (a lineup with the hero alone, march type left open).
   const situational = conditional.map((hero) => tileOf(hero, soloScore(base, hero.captainId), 0, []));
 
-  const ranked = rankActions(all);
   const { bannerMax, bannerMarginal } = CAMPAIGN.heroReport;
-  let banner = ranked.slice(0, bannerMax);
-  const first = banner[0];
-  const last = banner.length === bannerMax ? banner.at(-1) : undefined;
-  if (
-    first !== undefined &&
-    last !== undefined &&
-    last.unit === first.unit &&
-    last.score < bannerMarginal * first.score
-  )
-    banner = banner.slice(0, -1);
-
-  const plan: HeroTile[] = [];
-  for (const action of ranked) {
-    const tile = tiles.find((candidate) => candidate.captainId === action.captainId);
-    if (tile !== undefined && !plan.includes(tile) && plan.length < 3) plan.push(tile);
-  }
+  const bannerOf = (ranked: readonly HeroAction[]): HeroAction[] => {
+    let banner = ranked.slice(0, bannerMax);
+    const first = banner[0];
+    const last = banner.length === bannerMax ? banner.at(-1) : undefined;
+    if (
+      first !== undefined &&
+      last !== undefined &&
+      last.unit === first.unit &&
+      last.score < bannerMarginal * first.score
+    )
+      banner = banner.slice(0, -1);
+    return banner;
+  };
+  const ranked: Record<Role, HeroAction[]> = { solo: rankActions(all.solo), trio: rankActions(all.trio) };
+  const banner: Record<Role, HeroAction[]> = { solo: bannerOf(ranked.solo), trio: bannerOf(ranked.trio) };
+  const planOf = (role: Role): HeroTile[] => {
+    const plan: HeroTile[] = [];
+    for (const action of ranked[role]) {
+      const tile = tiles.find((candidate) => candidate.captainId === action.captainId);
+      if (tile !== undefined && !plan.includes(tile) && plan.length < 3) plan.push(tile);
+    }
+    return plan;
+  };
 
   return {
     stops,
@@ -361,10 +439,11 @@ export function buildHeroReport(input: HeroReportInput): HeroReport {
       bestTrioOf(base.trios.map((trio) => ({ ...trio, stops: [trio.stops[at] ?? 0] }))),
     ),
     banner,
-    plan,
+    plan: { solo: planOf('solo'), trio: planOf('trio') },
+    worth: rows,
     situations: situationRows,
     getting: worthGetting(input.catalog ?? []),
     skipped: input.skipped ?? [],
-    unit: banner[0]?.unit ?? null,
+    unit: banner.solo[0]?.unit ?? banner.trio[0]?.unit ?? null,
   };
 }

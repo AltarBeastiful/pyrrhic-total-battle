@@ -10,6 +10,8 @@ import {
   type HeroAction,
   type HeroReport,
   type HeroTile,
+  type Role,
+  type RoleUp,
   type SituationId,
   type Verdict,
 } from '@/engine/heroReport';
@@ -40,12 +42,39 @@ function figure(action: HeroAction): string {
   return action.kind === 'star' ? `+${value} rating per star` : `+${value} rating`;
 }
 
-function actionWords(action: HeroAction): string {
-  return action.kind === 'star' ? `★ +${String(action.size)}` : `+${String(action.size)} levels`;
+/** What to do: the stars to add and the star it ends on, or the levels to add. */
+function actionWords(action: HeroAction, star?: number): string {
+  if (action.kind !== 'star') return `+${String(action.size)} levels`;
+  const to = star === undefined ? '' : ` (★${String(star)} → ★${String(star + action.size)})`;
+  return `+${String(action.size)} ${action.size === 1 ? 'star' : 'stars'}${to}`;
+}
+
+const signed = (value: number): string => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}`;
+
+/** The trade side of a star step: the next star's change, and any star count that worsens the trade by far. */
+function tradeNote(action: HeroAction): string {
+  const parts: string[] = [];
+  if (action.next !== undefined)
+    parts.push(
+      action.next.delta < 0
+        ? `a further star (to +${String(action.next.size)}) loses ${Math.abs(action.next.delta).toFixed(1)}`
+        : `a further star (to +${String(action.next.size)}) adds ${signed(action.next.delta)}`,
+    );
+  if (action.most !== undefined)
+    parts.push(
+      `all the way, +${String(action.most.size)} stars, gives +${action.most.gain.toFixed(1)} in all`,
+    );
+  for (const worse of action.worse)
+    parts.push(
+      `⚠️ +${String(worse.size)} stars worsen the trade by ${Math.abs(worse.trade).toFixed(1)} over the bar`,
+    );
+  return parts.join(' · ');
 }
 
 function Stars({ star }: { star: number }) {
-  return <span aria-label={`${String(Math.min(star + 1, 7))} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>;
+  return (
+    <span aria-label={`${String(Math.min(star + 1, 7))} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>
+  );
 }
 
 /** Bars on one scale: solo and trio contribution, each against the best of its own kind. */
@@ -64,15 +93,17 @@ function Bars({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; max
 }
 
 function Tile({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; maxTrio: number }) {
-  const verdict = VERDICT[tile.verdict];
+  const solo = VERDICT[tile.soloUp.verdict];
+  const trio = tile.trioUp === undefined ? null : VERDICT[tile.trioUp.verdict];
   return (
     <Paper withBorder p="xs" radius="sm" data-testid={`hero-${tile.captainId}`}>
       <Group justify="space-between" wrap="nowrap" gap={6}>
         <Text size="sm" fw={600} truncate>
           {tile.name}
         </Text>
-        <Text size="sm" aria-label={verdict.word} title={verdict.word}>
-          {verdict.glyph}
+        <Text size="sm" aria-label={`Solo ${solo.word}${trio === null ? '' : `, trio ${trio.word}`}`}>
+          {solo.glyph}
+          {trio === null ? '' : ` ${trio.glyph}`}
         </Text>
       </Group>
       <Text size="sm" c="dimmed">
@@ -95,31 +126,47 @@ function Tile({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; max
   );
 }
 
-function Banner({ report }: { report: HeroReport }) {
-  if (report.banner.length === 0) return <Text size="sm">No upgrade of yours gains on this march.</Text>;
+function Banner({ report, role }: { report: HeroReport; role: Role }) {
+  const banner = report.banner[role];
+  if (banner.length === 0)
+    return (
+      <Text size="sm" data-testid={`hero-banner-${role}`}>
+        No upgrade of yours gains in {role === 'solo' ? 'a solo march' : 'your best trio'}.
+      </Text>
+    );
   return (
-    <Stack gap={4} data-testid="hero-banner">
-      {report.banner.map((action, index) => (
-        <Text key={`${action.captainId}-${action.kind}`} size="sm">
-          <Text span fw={700}>
-            {index + 1}.{' '}
+    <Stack gap={4} data-testid={`hero-banner-${role}`}>
+      {banner.map((action, index) => {
+        const tile = report.tiles.find((candidate) => candidate.captainId === action.captainId);
+        const note = tradeNote(action);
+        return (
+          <Text key={`${action.captainId}-${action.kind}`} size="sm">
+            <Text span fw={700}>
+              {index + 1}.{' '}
+            </Text>
+            {tile?.name ?? action.captainId} {actionWords(action, tile?.star)} — {figure(action)}
+            {note === '' ? '' : ` · ${note}`}
           </Text>
-          {report.tiles.find((tile) => tile.captainId === action.captainId)?.name ?? action.captainId}{' '}
-          {actionWords(action)} — {figure(action)}
-        </Text>
-      ))}
+        );
+      })}
     </Stack>
   );
 }
 
-function Plan({ report }: { report: HeroReport }) {
+function upWords(up: RoleUp | undefined, star: number): string {
+  return [up?.level, up?.star]
+    .filter((action): action is HeroAction => action !== undefined)
+    .map((action) => `${actionWords(action, action.kind === 'star' ? star : undefined)} (${figure(action)})`)
+    .join(' · ');
+}
+
+function Plan({ report, role }: { report: HeroReport; role: Role }) {
   return (
     <Stack gap={4}>
-      {report.plan.map((tile) => {
-        const verdict = VERDICT[tile.verdict];
-        const parts = [tile.levelUp, tile.starUp]
-          .filter((action): action is HeroAction => action !== undefined)
-          .map((action) => `${actionWords(action)} (${figure(action)})`);
+      {report.plan[role].map((tile) => {
+        const up = role === 'solo' ? tile.soloUp : tile.trioUp;
+        const verdict = VERDICT[up?.verdict ?? 'hold'];
+        const words = upWords(up, tile.star);
         return (
           <Text key={tile.captainId} size="sm">
             {verdict.glyph}{' '}
@@ -127,7 +174,7 @@ function Plan({ report }: { report: HeroReport }) {
               {tile.name}
             </Text>
             : {verdict.word.toLowerCase()}
-            {tile.verdict === 'hold' || parts.length === 0 ? '' : ` — ${parts.join(' · ')}`}
+            {up?.verdict === 'hold' || words === '' ? '' : ` — ${words}`}
           </Text>
         );
       })}
@@ -143,16 +190,15 @@ function Situational({ tiles }: { tiles: readonly HeroReport['tiles'][number][] 
     <Stack gap={4}>
       <Text fw={600}>Situational heroes</Text>
       <Text size="sm" c="dimmed">
-        They count on one kind of march only, so they take no solo or trio place and no line of the banner above.
+        They count on one kind of march only, so they take no solo or trio place and no line of the banner
+        above.
       </Text>
       {tiles.map((tile) => {
-        const parts = [tile.levelUp, tile.starUp]
-          .filter((action) => action !== undefined)
-          .map((action) => `${actionWords(action)} ${figure(action)}`);
+        const words = upWords(tile.soloUp, tile.star);
         return (
           <Text key={tile.captainId} size="sm">
-            <b>{tile.name}</b> — {ONLY_ON_WORD[tile.onlyOn ?? ''] ?? tile.onlyOn}: +{tile.solo.toFixed(1)} rating
-            where it applies{parts.length === 0 ? '' : ` · ${parts.join(' · ')}`}
+            <b>{tile.name}</b> — {ONLY_ON_WORD[tile.onlyOn ?? ''] ?? tile.onlyOn}: +{tile.solo.toFixed(1)}{' '}
+            rating where it applies{words === '' ? '' : ` · ${words}`}
           </Text>
         );
       })}
@@ -214,14 +260,25 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
       )}
       <Stack gap={4}>
         <Text fw={600}>Where to put effort next</Text>
-        <Banner report={report} />
+        <Text size="sm" c="dimmed">
+          Solo and trio marches weigh the same, so each is rated apart, on the upgrade read in the lineup it
+          plays in.
+        </Text>
+        <Text size="sm" fw={600}>
+          Solo marches
+        </Text>
+        <Banner report={report} role="solo" />
+        <Text size="sm" fw={600}>
+          Trio marches
+        </Text>
+        <Banner report={report} role="trio" />
       </Stack>
 
       <Stack gap="xs">
         <Text fw={600}>Your heroes</Text>
         <Text size="sm" c="dimmed">
           Blue: alone with troops. Violet: what the hero adds to your best trio. ⬆️ level · ⭐ stars · ⏸️
-          hold.
+          hold; solo first, then trio.
         </Text>
         <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="xs">
           {report.tiles
@@ -241,14 +298,22 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
 
       <Stack gap={4}>
         <Text fw={600}>The top three</Text>
-        <Plan report={report} />
+        <Text size="sm" fw={600}>
+          Solo marches
+        </Text>
+        <Plan report={report} role="solo" />
+        <Text size="sm" fw={600}>
+          Trio marches
+        </Text>
+        <Plan report={report} role="trio" />
       </Stack>
 
       {report.bestTrio !== null && trioNames !== undefined && (
         <Stack gap={4}>
           <Text fw={600}>Best trio across all plans</Text>
           <Text size="sm">
-            {trioNames.join(' · ')} — +{report.bestTrio.gain.toFixed(1)} rating on average over the {String(report.stops.length)}
+            {trioNames.join(' · ')} — +{report.bestTrio.gain.toFixed(1)} rating on average over the{' '}
+            {String(report.stops.length)}
             stops.
           </Text>
           <Text size="sm" c="dimmed">

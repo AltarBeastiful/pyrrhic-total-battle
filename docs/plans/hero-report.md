@@ -19,6 +19,23 @@ mercenary the lead march uses most is taken out), and the difficulty draft in `c
 (`docs/plans/captain-upgrade-worth.md`: `runUpgradeWorth`, level probes, star ladder, tier 1 / tier 2) and the lineup
 screen (`src/worker/captainAdvice.ts`, `src/state/captainLineups.ts`).
 
+**Roles apart (owner, 2026-10-22, after the Leonidas drill-down, experiments 248/249).** Solo and trio marches weigh the
+same, so they are no longer averaged: every upgrade is read in the lineup it plays in — each hero alone, and each member of
+the best trio inside that trio — against the same lineup without it, on the lead march's counts re-priced (tier 1), then
+the best `CAMPAIGN.heroReport.confirm` upgrades are planned in full (tier 2). The report has a banner and a top three per
+role (`banner.solo` / `banner.trio`, `plan.solo` / `plan.trio`); a tile carries `soloUp` and, for a trio member, `trioUp`.
+The worth list pass is no longer run by the report (the lead-lineup reading it gave is replaced by the two roles).
+*Stars to add:* the star count with the best gain per star, told with the star it ends on, the change a further star
+brings, and the count with the largest total when that is a different one. *The trade:* a star count whose net rating over
+the bar (best reading per stop, planned in full) is below −`tradeWarn` (1) is named as worsening the trade. Measured on
+the live camp and three battle profiles (`out/249-the-roles-apart.md`, tier-1-only run in `…-tier1-only.md`): the re-priced
+reading alone puts the re-plan's top three in its own top three on 7/12 solo and 4/12 trio, so tier 2 ships; 81 of 200
+upgrades have a single stop below −1 but only 7 a net below −1 (3 below −2), a single stop swings by 5 or more on the
+re-plan's own noise, so the warning reads the net. Heroes with no fighting line are out; a hero limited to one march type
+(Amanitore, Hercules) is rated apart in *Situational heroes*; *other mercs* adds the unselected merc types. Known limits:
+a hero outside the best trio has no trio reading; tier 2 is bounded by `confirm` (120 plans); on a 6-hero account the pass
+takes 25–35 s on one lane. Experiment 247's output predates this change.
+
 ## Problem
 
 The captain advice answers "which lineup" and the worth list answers "which upgrade", each as a flat result the owner

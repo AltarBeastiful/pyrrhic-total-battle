@@ -53,6 +53,25 @@ describe('heroRoster', () => {
     expect(roster.trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi', 'beowulf']]);
   });
 
+  it('builds each upgrade against its own lineup: every hero alone, and the trio members in the trio', () => {
+    const { profile, setup } = withRoster(['aydae', 'skadi', 'beowulf', 'brann'], [10, 10, 10, 10]);
+    const { upgrades, solos } = heroRoster(profile, setup);
+    const probes = upgrades?.(['aydae', 'skadi', 'beowulf']) ?? [];
+    expect(probes.filter((probe) => probe.role === 'solo').map((probe) => probe.captainId)).toContain(
+      'brann',
+    );
+    const inTrio = probes.filter((probe) => probe.role === 'trio');
+    expect(inTrio.length).toBeGreaterThan(0);
+    expect(inTrio.every((probe) => ['aydae', 'skadi', 'beowulf'].includes(probe.captainId))).toBe(true);
+    const star = probes.find(
+      (probe) => probe.role === 'solo' && probe.captainId === 'aydae' && probe.kind === 'star',
+    );
+    expect(star?.base.key).toBe(solos[0]?.key);
+    expect(star?.upgraded.totals).not.toEqual(star?.base.totals);
+    expect(star?.upgraded.key).not.toBe(star?.base.key);
+    expect(upgrades?.(null).some((probe) => probe.role === 'trio')).toBe(false);
+  });
+
   it('three heroes or fewer make one trio of them all', () => {
     const { profile, setup } = withRoster(['aydae', 'skadi'], [10, 10]);
     expect(heroRoster(profile, setup).trios.map((trio) => trio.captainIds)).toEqual([['aydae', 'skadi']]);

@@ -11,18 +11,15 @@
 import { useCallback, useMemo } from 'react';
 import { create } from 'zustand';
 
-import { CAMPAIGN } from '@/config';
 import { leadLineup } from '@/engine/captainUpgrades';
 import type { HeroReport } from '@/engine/heroReport';
 import type { CampaignInput } from '@/engine/plan';
 import { buildPlanRequest } from '@/state/derive';
 import { captainLineups } from '@/state/captainLineups';
-import { captainWorthCandidates } from '@/state/captainUpgrades';
 import { heroRoster } from '@/state/heroRoster';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { runCaptainAdvice } from '@/worker/captainAdvice';
-import { runUpgradeWorth } from '@/worker/captainUpgrades';
 import { isAbortError } from '@/worker/client';
 import { runHeroReport } from '@/worker/heroReport';
 
@@ -112,7 +109,7 @@ export async function computeHeroReport(
   profile: Profile,
   setup: BattleSetup,
 ): Promise<void> {
-  const { currentKey, lineups, size } = captainLineups(profile, setup);
+  const { currentKey, lineups } = captainLineups(profile, setup);
   abort();
   const own = new AbortController();
   controller = own;
@@ -152,23 +149,7 @@ export async function computeHeroReport(
       throw new Error('The current march could not be read in time.');
     const leadOf = { key: lead, totals: leadCandidate.totals, stops: leadStops };
 
-    const asks = captainWorthCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
-      id: candidate.spec.id,
-      label: `${candidate.name} ${candidate.change}`,
-      captainId: candidate.spec.captainId,
-      kind: candidate.spec.kind,
-      size: candidate.spec.size,
-      perLevel: candidate.perLevel,
-      exact: candidate.spec.exact === true,
-      lineups: candidate.lineups.map(({ key: lineup, totals }) => ({ key: lineup, totals })),
-    }));
-    const worth = await runUpgradeWorth(input, leadOf, asks, pool, {
-      signal: own.signal,
-      budgetMs: CAMPAIGN.budgets.extra,
-      onProgress: pass,
-    });
-    nextStage();
-    const report = await runHeroReport(input, leadOf, heroRoster(profile, setup), worth, pool, {
+    const report = await runHeroReport(input, leadOf, heroRoster(profile, setup), pool, {
       signal: own.signal,
       onProgress: pass,
     });

@@ -35,10 +35,14 @@ const report = buildHeroReport({
   stops: ['sweet-spot'],
   heroes,
   readings: { default: reading({ a: 10, b: 8, c: 6, d: 0 }), monsters: reading({ a: 4, b: 8, c: 6, d: 9 }) },
-  worth: [
-    { id: 'a-star', label: 'A', captainId: 'a', kind: 'star', size: 1, worth: 10 },
-    { id: 'b-level', label: 'B', captainId: 'b', kind: 'level', size: 5, worth: 6 },
-  ],
+  worth: {
+    solo: [
+      { id: 'a-star', label: 'A', captainId: 'a', kind: 'star', size: 1, worth: 10, raw: [10] },
+      { id: 'a-star2', label: 'A', captainId: 'a', kind: 'star', size: 2, worth: 3, raw: [-6] },
+      { id: 'b-level', label: 'B', captainId: 'b', kind: 'level', size: 5, worth: 6, raw: [6] },
+    ],
+    trio: [{ id: 'c-star', label: 'C', captainId: 'c', kind: 'star', size: 1, worth: 4, raw: [4] }],
+  },
   catalog: [
     { captainId: 'a', name: 'A', difficulty: 2, rating: 5, owned: true },
     { captainId: 'z', name: 'Zed', difficulty: 3, rating: 9, owned: false },
@@ -66,9 +70,11 @@ afterEach(cleanup);
 
 test('draws the banner, the board, the best trio and the situation matrix marked pending validation', () => {
   renderWithTheme(<HeroReportDialog view={view()} />);
-  const banner = screen.getByTestId('hero-banner');
-  expect(within(banner).getByText(/A ★ \+1/)).toBeTruthy();
-  expect(within(banner).getByText(/B \+5 levels/)).toBeTruthy();
+  const solo = screen.getByTestId('hero-banner-solo');
+  expect(within(solo).getByText(/A \+1 star \(★1 → ★2\)/)).toBeTruthy();
+  expect(within(solo).getByText(/\+2 stars worsen the trade by 6\.0/)).toBeTruthy();
+  expect(within(solo).getByText(/B \+5 levels/)).toBeTruthy();
+  expect(within(screen.getByTestId('hero-banner-trio')).getByText(/C \+1 star/)).toBeTruthy();
   expect(screen.getByTestId('hero-a')).toBeTruthy();
   expect(screen.getByText(/pending validation/)).toBeTruthy();
   expect(screen.getByTestId('hero-matrix')).toBeTruthy();

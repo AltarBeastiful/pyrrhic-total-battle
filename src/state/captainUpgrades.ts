@@ -39,7 +39,7 @@ export interface UpgradeCandidate {
 }
 
 /** What a captain gives on all its lines at one level and star: the sum of the bonus points. */
-function worthOf(record: CaptainRecord | undefined, level: number, star: number): number {
+export function worthOf(record: CaptainRecord | undefined, level: number, star: number): number {
   if (record === undefined) return 0;
   let total = 0;
   for (const line of [record.health, record.strength, record.special])
@@ -47,7 +47,7 @@ function worthOf(record: CaptainRecord | undefined, level: number, star: number)
   return total;
 }
 
-const changeOf = (spec: Pick<CaptainUpgradeSpec, 'kind' | 'from' | 'to'>): string =>
+export const changeOf = (spec: Pick<CaptainUpgradeSpec, 'kind' | 'from' | 'to'>): string =>
   spec.kind === 'star'
     ? `★${String(spec.from.star)} → ★${String(spec.to.star)}`
     : `L${String(spec.from.level)} → L${String(spec.to.level)}`;
@@ -56,7 +56,7 @@ const changeOf = (spec: Pick<CaptainUpgradeSpec, 'kind' | 'from' | 'to'>): strin
  * The profile with one captain entry raised to `to`; every other entry, source and setup shared with the input
  * (nothing is mutated).
  */
-function raised(profile: Profile, spec: Pick<CaptainUpgradeSpec, 'entryId' | 'to'>): Profile {
+export function raised(profile: Profile, spec: Pick<CaptainUpgradeSpec, 'entryId' | 'to'>): Profile {
   return {
     ...profile,
     sources: {

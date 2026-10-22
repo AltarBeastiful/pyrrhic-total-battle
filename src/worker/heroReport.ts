@@ -11,22 +11,28 @@
 import { CAMPAIGN } from '@/config';
 import { getUnits } from '@/data';
 import { CATEGORIES, type Category } from '@/data/types';
+import { probeInfo } from '@/engine/advisor';
+import type { WorthKind } from '@/engine/captainUpgrades';
 import {
+  bestTrioOf,
   buildHeroReport,
   type CatalogHero,
   type HeroInfo,
   type HeroReport,
+  type Role,
   type RoleReading,
   type SituationId,
+  scoreOf,
+  type WorthLike,
 } from '@/engine/heroReport';
 import type { ScreenLineup } from '@/engine/captains';
 import type { CampaignInput } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
-import type { EnemyFormation, StackRequest } from '@/engine/types';
+import type { BonusTotals, EnemyFormation, StackRequest } from '@/engine/types';
 
 import type { CalcPool, PoolJob } from './pool';
 import type { CaptainScreenAnswer, ProbeAnswer } from './protocol';
-import type { UpgradeLead, WorthResult } from './captainUpgrades';
+import type { UpgradeLead } from './captainUpgrades';
 
 /** The heroes and the lineups to screen, built on the main thread (`src/state/heroLineups.ts`). */
 export interface HeroRoster {
@@ -37,6 +43,24 @@ export interface HeroRoster {
   catalog?: CatalogHero[] | undefined;
   solos: (ScreenLineup & { captainIds: string[] })[];
   trios: (ScreenLineup & { captainIds: string[] })[];
+  /**
+   * The upgrades to read once the best trio is known: for every hero its solo lineup, and for each member of
+   * `trio` the trio. Each probe carries the lineup with the upgrade and the one without. Omitted: no upgrades.
+   */
+  upgrades?: ((trio: readonly string[] | null) => HeroProbe[]) | undefined;
+}
+
+/** One upgrade of one hero in one role, as totals (built on the main thread: the worker takes no profile). */
+export interface HeroProbe {
+  id: string;
+  label: string;
+  captainId: string;
+  role: Role;
+  kind: WorthKind;
+  /** Stars or levels added. */
+  size: number;
+  base: ScreenLineup;
+  upgraded: ScreenLineup;
 }
 
 export interface HeroReportOptions {
@@ -97,7 +121,9 @@ function situationRequest(
   const fielded = new Set(request.units.map((unit) => unit.id));
   const extra = getUnits().filter((unit) => unit.kind === 'mercenary' && !fielded.has(unit.id));
   if (extra.length === 0) return { why: 'Every mercenary type is already fielded.' };
-  const stocks = mercs.flatMap((unit) => (request.caps[unit.id] === undefined ? [] : [request.caps[unit.id] ?? 0]));
+  const stocks = mercs.flatMap((unit) =>
+    request.caps[unit.id] === undefined ? [] : [request.caps[unit.id] ?? 0],
+  );
   const caps = { ...request.caps };
   if (stocks.length > 0) for (const unit of extra) caps[unit.id] = Math.max(...stocks);
   return { request: { ...request, units: [...request.units, ...extra], caps } };
@@ -112,14 +138,13 @@ function settingsOf(input: CampaignInput): CampaignInput {
 
 /**
  * Run the hero report: the lineups of `roster` screened against the march with no hero, on the lead march's bar
- * and, unless switched off, under each situation. `worth` is the upgrade worth list (`null`: no verdicts).
- * Rejects when `signal` aborts.
+ * and, unless switched off, under each situation; then the upgrades of the solo lineups and of the best trio, each
+ * read against its own lineup without it (tier 1: the lead march's counts re-priced). Rejects when `signal` aborts.
  */
 export async function runHeroReport(
   input: CampaignInput,
   lead: UpgradeLead,
   roster: HeroRoster,
-  worth: WorthResult | null,
   pool: CalcPool,
   options: HeroReportOptions = {},
 ): Promise<HeroReport> {
@@ -141,7 +166,7 @@ export async function runHeroReport(
     else planned.push({ id, request: made.request });
   }
 
-  const total = 1 + planned.length * 2;
+  let total = 1 + planned.length * 2;
   let done = 0;
   const onSettled = (): void => {
     done += 1;
@@ -198,23 +223,139 @@ export async function runHeroReport(
     screened.push(situation.id);
     screenJobs.push(screenJob(situation.request, (outcome.value as ProbeAnswer).stops));
   });
+  // The upgrades are read in the lineups the roles play in: every hero alone, and the best trio's members in it.
+  const probes = roster.upgrades?.(bestTrioOf(readings.default!.trios)?.captainIds ?? null) ?? [];
+  const groups = new Map<string, HeroProbe[]>();
+  for (const probe of probes) {
+    const at = `${probe.role}|${probe.base.key}`;
+    groups.set(at, [...(groups.get(at) ?? []), probe]);
+  }
+  const grouped = [...groups.values()];
+  total += grouped.length;
+  const upgradeJobs = grouped.map(
+    (group): PoolJob<CaptainScreenAnswer> =>
+      (client, jobSignal) =>
+        client.captains(
+          {
+            request: settings.request,
+            lineups: [group[0]!.base, ...group.map((probe) => ({ ...probe.upgraded, key: probe.id }))].map(
+              ({ key, totals }) => ({ key, totals }),
+            ),
+            currentKey: group[0]!.base.key,
+            stops: stopsOf(lead.stops),
+            rates,
+          },
+          jobSignal,
+        ),
+  );
   const left = budgetMs - (performance.now() - began);
   const outcomes =
-    screenJobs.length > 0 && left > 0
-      ? await pool.map(screenJobs, { budgetMs: left, signal, onSettled })
+    screenJobs.length + upgradeJobs.length > 0 && left > 0
+      ? await pool.map([...screenJobs, ...upgradeJobs], { budgetMs: left, signal, onSettled })
       : [];
   screened.forEach((id, at) => {
     const outcome = outcomes[at];
     if (outcome?.kind === 'done' && complete(outcome.value)) readings[id] = readingOf(outcome.value);
     else skipped.push({ id, why: outcome?.kind === 'error' ? outcome.message : 'Cut by the clock.' });
   });
+  const worth: Record<Role, WorthLike[]> = { solo: [], trio: [] };
+  grouped.forEach((group, at) => {
+    const outcome = outcomes[screenJobs.length + at];
+    if (outcome?.kind === 'error') throw new Error(outcome.message);
+    if (outcome?.kind !== 'done' || outcome.value.screens.length !== group.length + 1) return;
+    const byKey = new Map(outcome.value.screens.map((screen) => [screen.key, screen.repriced]));
+    for (const probe of group) {
+      const raw = byKey.get(probe.id) ?? [];
+      worth[probe.role].push({
+        id: probe.id,
+        label: probe.label,
+        captainId: probe.captainId,
+        kind: probe.kind,
+        size: probe.size,
+        worth: raw.length === 0 ? 0 : raw.reduce((sum, rating) => sum + Math.max(0, rating), 0) / raw.length,
+        raw,
+      });
+    }
+  });
+
+  // Tier 2 (experiment 249: tier 1 alone puts the re-plan's top three in its own top three on 58 % of solo and 33 % of
+  // trio reads): the best-scoring probes planned in full, the base lineup planned once and each upgrade read against it.
+  if (worth.solo.length + worth.trio.length > 0) {
+    const byId = new Map(probes.map((probe) => [probe.id, probe]));
+    const picked = [...worth.solo, ...worth.trio]
+      .sort((a, b) => scoreOf(b) - scoreOf(a))
+      .slice(0, CAMPAIGN.heroReport.confirm)
+      .flatMap((row) => byId.get(row.id) ?? []);
+    const bases = [...new Map(picked.map((probe) => [probe.base.key, probe.base])).values()];
+    const planOf = (totals: BonusTotals): CampaignInput => ({
+      ...settings,
+      request: { ...settings.request, totals },
+    });
+    total += bases.length + picked.length;
+    const left2 = budgetMs - (performance.now() - began);
+    const baseOutcomes =
+      left2 > 0
+        ? await pool.map(
+            bases.map(
+              (base): PoolJob<ProbeAnswer> =>
+                (client, jobSignal) =>
+                  client.probe({ plan: planOf(base.totals) }, jobSignal),
+            ),
+            { budgetMs: left2, signal, onSettled },
+          )
+        : [];
+    const baselines = new Map<string, ProbeAnswer['stops']>();
+    bases.forEach((base, at) => {
+      const outcome = baseOutcomes[at];
+      if (outcome?.kind === 'done') baselines.set(base.key, outcome.value.stops);
+    });
+    const ready = picked.filter((probe) => baselines.has(probe.base.key));
+    const left3 = budgetMs - (performance.now() - began);
+    const replans =
+      ready.length > 0 && left3 > 0
+        ? await pool.map(
+            ready.map(
+              (probe): PoolJob<ProbeAnswer> =>
+                (client, jobSignal) =>
+                  client.probe(
+                    {
+                      plan: planOf(probe.upgraded.totals),
+                      against: {
+                        probe: probeInfo({ id: probe.id, family: 'captains', label: probe.label }),
+                        baseline: baselines.get(probe.base.key)!,
+                        rates,
+                      },
+                    },
+                    jobSignal,
+                  ),
+            ),
+            { budgetMs: left3, signal, onSettled },
+          )
+        : [];
+    ready.forEach((probe, at) => {
+      const outcome = replans[at];
+      if (outcome?.kind !== 'done' || outcome.value.row === null) return;
+      const row = worth[probe.role].find((candidate) => candidate.id === probe.id);
+      if (row === undefined) return;
+      const stopsOf2 = outcome.value.row.stops;
+      row.tier1 = row.worth;
+      row.worth =
+        stopsOf2.length === 0 ? 0 : stopsOf2.reduce((sum, stop) => sum + stop.gain, 0) / stopsOf2.length;
+      row.raw = stopsOf2.map((stop) =>
+        Math.max(stop.repricedRating, stop.replannedRating ?? Number.NEGATIVE_INFINITY),
+      );
+    });
+  }
+
+  // Only a planned row may say a trade worsens: the re-priced reading cries it on counts the upgrade would change.
+  for (const row of [...worth.solo, ...worth.trio]) if (row.tier1 === undefined) delete row.raw;
 
   return buildHeroReport({
     stops: lead.stops.map((stop) => stop.pick),
     heroes: roster.heroes,
     readings,
     skipped,
-    worth: worth?.rows ?? null,
+    worth: roster.upgrades === undefined ? null : worth,
     catalog: roster.catalog,
   });
 }

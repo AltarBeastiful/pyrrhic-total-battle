@@ -51,17 +51,127 @@ describe('buildHeroReport situational heroes', () => {
     const solo = { a: 10, b: 8, c: 6, g: 30 };
     const report = buildHeroReport({
       stops: ['sweet-spot'],
-      heroes: [
-        ...heroes.slice(0, 3),
-        { captainId: 'g', name: 'g', level: 1, star: 0, onlyOn: 'group' },
-      ],
-      worth: [{ captainId: 'g', kind: 'star', size: 1, label: 'g ★1', worth: 5 }],
-      readings: { default: { solo: reading(solo).solo, trios: [{ captainIds: ['a', 'b', 'c'], stops: [24] }] } },
+      heroes: [...heroes.slice(0, 3), { captainId: 'g', name: 'g', level: 1, star: 0, onlyOn: 'group' }],
+      worth: { solo: [{ id: 'g1', captainId: 'g', kind: 'star', size: 1, label: 'g ★1', worth: 5 }] },
+      readings: {
+        default: { solo: reading(solo).solo, trios: [{ captainIds: ['a', 'b', 'c'], stops: [24] }] },
+      },
     });
     expect(report.tiles.map((tile) => tile.captainId)).toEqual(['a', 'b', 'c']);
     expect(report.situational.map((tile) => [tile.captainId, tile.solo])).toEqual([['g', 30]]);
     expect(report.situations[0]?.bestSolo).toBe('a');
-    expect(report.banner).toEqual([]);
+    expect(report.banner).toEqual({ solo: [], trio: [] });
+    expect(report.situational[0]?.soloUp.star?.size).toBe(1);
+  });
+});
+
+const row = (
+  captainId: string,
+  kind: 'level' | 'star',
+  size: number,
+  raw: number[],
+  cost?: { amount: number; unit: string },
+) => ({
+  id: `${captainId}${kind}${String(size)}`,
+  label: `${captainId} ${kind}+${String(size)}`,
+  captainId,
+  kind,
+  size,
+  worth: raw.reduce((sum, rating) => sum + Math.max(0, rating), 0) / raw.length,
+  raw,
+  ...(cost === undefined ? {} : { cost }),
+});
+
+describe('buildHeroReport roles apart', () => {
+  const readings = { default: reading({ a: 10, b: 8, c: 6, d: 1 }) };
+
+  test('solo and trio are rated on their own rows, a hero outside the trio has no trio reading', () => {
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      readings,
+      worth: {
+        solo: [row('d', 'star', 1, [9])],
+        trio: [row('a', 'star', 1, [4])],
+      },
+    });
+    expect(report.banner.solo.map((action) => action.captainId)).toEqual(['d']);
+    expect(report.banner.trio.map((action) => action.captainId)).toEqual(['a']);
+    const d = report.tiles.find((tile) => tile.captainId === 'd');
+    expect(d?.soloUp.verdict).toBe('star');
+    expect(d?.trioUp).toBeUndefined();
+    expect(report.tiles.find((tile) => tile.captainId === 'a')?.trioUp?.verdict).toBe('star');
+    expect(report.plan.solo.map((tile) => tile.captainId)).toEqual(['d']);
+  });
+
+  test('the star count to add is the best per star, and a further star that loses is told', () => {
+    // Gains by stars added: 1 → 2, 2 → 3, 3 → 12, 4 → 4.
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      readings,
+      worth: {
+        solo: [
+          row('a', 'star', 1, [2]),
+          row('a', 'star', 2, [3]),
+          row('a', 'star', 3, [12]),
+          row('a', 'star', 4, [4]),
+        ],
+      },
+    });
+    const star = report.tiles.find((tile) => tile.captainId === 'a')?.soloUp.star;
+    expect(star?.size).toBe(3);
+    expect(star?.score).toBeCloseTo(4);
+    expect(star?.next).toEqual({ size: 4, delta: -8 });
+    // Three stars give 12 in all, the most of the ladder: nothing bigger to name.
+    expect(star?.most).toBeUndefined();
+  });
+
+  test('a star count that worsens the trade over the bar is named, one stop dipping is not', () => {
+    const report = buildHeroReport({
+      stops: ['sweet-spot', 'all-in'],
+      heroes,
+      readings,
+      worth: {
+        solo: [row('a', 'star', 1, [6, -3]), row('a', 'star', 2, [2, -8])],
+      },
+    });
+    const star = report.tiles.find((tile) => tile.captainId === 'a')?.soloUp.star;
+    expect(star?.worse).toEqual([{ size: 2, trade: -3 }]);
+  });
+
+  test('with costs typed the order follows gain per cost, and a zero cost counts as none', () => {
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      readings,
+      worth: {
+        solo: [
+          row('a', 'star', 1, [10], { amount: 100, unit: 'shards' }),
+          row('b', 'star', 1, [6], { amount: 20, unit: 'shards' }),
+          row('c', 'star', 1, [3], { amount: 0, unit: 'shards' }),
+        ],
+      },
+    });
+    expect(report.banner.solo.map((action) => action.captainId)).toEqual(['b', 'a', 'c']);
+    expect(report.banner.solo[2]?.unit).toBeNull();
+    expect(report.unit).toBe('shards');
+  });
+});
+
+describe('buildHeroReport the whole ladder', () => {
+  test('names the star count with the largest total gain when it is not the efficient one', () => {
+    const report = buildHeroReport({
+      stops: ['sweet-spot'],
+      heroes,
+      readings: { default: reading({ a: 10, b: 8, c: 6, d: 1 }) },
+      worth: {
+        solo: [row('a', 'star', 1, [4]), row('a', 'star', 2, [5]), row('a', 'star', 3, [9])],
+      },
+    });
+    const star = report.tiles.find((tile) => tile.captainId === 'a')?.soloUp.star;
+    expect(star?.size).toBe(1);
+    expect(star?.most).toEqual({ size: 3, gain: 9 });
   });
 });
 
