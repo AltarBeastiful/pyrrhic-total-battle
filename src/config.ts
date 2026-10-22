@@ -374,6 +374,57 @@ export const CAMPAIGN = {
   /** How many upgrades of the worth list's tier 1 are regenerated in full (tier 2), the best first. */
   captainWorthTop: 8,
   /**
+   * **The hero report** (`docs/plans/hero-report.md`, owner, 2026-10-22). Shares of a figure and counts, never a duration.
+   *
+   * - `bannerMax` — actions in the verdict banner; the last is dropped when it gains under `bannerMarginal` of the first.
+   * - `bothShare` — a hero's level and star both pay when the smaller action is at least this share of the larger.
+   * - `holdGain` — a hero holds when no action gains this many rating units; `holdShare` — with a cost typed, when its
+   *   best action is under this share of the best of its unit.
+   * - `mattersShare` — a hero matters when its solo or trio score is at least this share of the best on that scale.
+   * - `situations` — **pending validation (owner, 2026-10-22): an experiment, a situation that never flips a verdict is
+   *   removed.** `monsterShift` squads of the enemy formation move toward the categories of the army's monsters;
+   *   `mercsAllowance` scales the mercenary stock; `otherMercs` re-plans without the mercenary the lead march uses most.
+   */
+  heroReport: {
+    bannerMax: 3,
+    bannerMarginal: 0.25,
+    bothShare: 0.5,
+    holdGain: 1,
+    holdShare: 0.1,
+    mattersShare: 0.05,
+    situations: { monsterShift: 1, mercsAllowance: 1.25, otherMercs: true },
+    /**
+     * **How hard a captain is to own**, 0 (easiest) to 10; equal numbers form a tier (the "worth getting" block). A
+     * first draft proposed from the captain table, **for the owner to correct**: the game data holds no rarity, so the
+     * draft ranks the bonus a captain gives at the top star (`captains.json`: 0 for those the table does not fill yet,
+     * left at `defaultDifficulty`).
+     */
+    difficulty: {
+      sofia: 2,
+      'xi-guiying': 2,
+      brann: 3,
+      logos: 3,
+      aydae: 4,
+      bernard: 4,
+      brunhild: 4,
+      cleopatra: 4,
+      ingrid: 4,
+      lucius: 4,
+      'ramses-ii': 4,
+      'ye-ho-sung': 4,
+      amanitore: 5,
+      alexander: 6,
+      leonidas: 6,
+      minamoto: 6,
+      'wu-zetian': 6,
+      heimdall: 7,
+      beowulf: 8,
+      hercules: 8,
+      skadi: 9,
+    } as Readonly<Record<string, number>>,
+    defaultDifficulty: 5,
+  },
+  /**
    * Wall-clock budgets, in milliseconds: how long a search may run before it answers with the best it has
    * found. They are caps and not durations — the engine stops when it has finished — so raising one buys a
    * better answer on a slow device and never a different kind of one.

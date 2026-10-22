@@ -1,0 +1,361 @@
+/**
+ * **The Heroes report** (`docs/plans/hero-report.md`): a launcher button and the full-page popup it opens. The popup
+ * holds the report until the next ask. Blocks in the plan's order: verdict banner, roster board, what to do on the top
+ * three, best trio, situation matrix, worth getting. Stock Mantine only (design rule 23); text 13 px and up (rule 19);
+ * emoji glyphs for the verdicts, never the only signal (rules 21, 24).
+ */
+import { Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+
+import {
+  type HeroAction,
+  type HeroReport,
+  type HeroTile,
+  type SituationId,
+  type Verdict,
+} from '@/engine/heroReport';
+import { Dialog } from '@/ui/kit';
+
+import { planWords } from './picks';
+import { useHeroReport, type HeroEntry, type HeroView } from './heroReportSearch';
+
+const VERDICT: Record<Verdict, { glyph: string; word: string }> = {
+  level: { glyph: '⬆️', word: 'Level' },
+  star: { glyph: '⭐', word: 'Stars' },
+  both: { glyph: '⬆️⭐', word: 'Both' },
+  hold: { glyph: '⏸️', word: 'Hold' },
+};
+
+const SITUATION_WORD: Record<SituationId, string> = {
+  default: 'As is',
+  monsters: 'More monsters',
+  moreMercs: 'More mercs',
+  otherMercs: 'Other mercs',
+};
+
+/** The figure of an action, with its unit on every row: gain per cost where a cost was typed, raw gain otherwise. */
+function figure(action: HeroAction): string {
+  const value =
+    action.score >= 100 ? Math.round(action.score).toLocaleString('en') : action.score.toPrecision(3);
+  if (action.unit !== null) return `+${value} per ${action.unit}`;
+  return action.kind === 'star' ? `+${value} rating per star` : `+${value} rating`;
+}
+
+function actionWords(action: HeroAction): string {
+  return action.kind === 'star' ? `★ +${String(action.size)}` : `+${String(action.size)} levels`;
+}
+
+function Stars({ star }: { star: number }) {
+  return <span aria-label={`${String(star + 1)} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>;
+}
+
+/** Bars on one scale: solo and trio contribution, each against the best of its own kind. */
+function Bars({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; maxTrio: number }) {
+  return (
+    <Stack gap={2}>
+      <Progress value={maxSolo > 0 ? (100 * tile.solo) / maxSolo : 0} size="sm" aria-label="Solo" />
+      <Progress
+        value={maxTrio > 0 ? (100 * tile.trio) / maxTrio : 0}
+        size="sm"
+        color="grape"
+        aria-label="Trio"
+      />
+    </Stack>
+  );
+}
+
+function Tile({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; maxTrio: number }) {
+  const verdict = VERDICT[tile.verdict];
+  return (
+    <Paper withBorder p="xs" radius="sm" data-testid={`hero-${tile.captainId}`}>
+      <Group justify="space-between" wrap="nowrap" gap={6}>
+        <Text size="sm" fw={600} truncate>
+          {tile.name}
+        </Text>
+        <Text size="sm" aria-label={verdict.word} title={verdict.word}>
+          {verdict.glyph}
+        </Text>
+      </Group>
+      <Text size="sm" c="dimmed">
+        L{tile.level} <Stars star={tile.star} />
+      </Text>
+      <Bars tile={tile} maxSolo={maxSolo} maxTrio={maxTrio} />
+      <Group gap={4} mt={4}>
+        {tile.onlyOn !== undefined && (
+          <Badge size="sm" variant="light" color="gray" tt="none">
+            {tile.onlyOn} only
+          </Badge>
+        )}
+        {tile.flips.length > 0 && (
+          <Badge size="sm" variant="light" color="orange" tt="none">
+            flips: {tile.flips.map((id) => SITUATION_WORD[id].toLowerCase()).join(', ')}
+          </Badge>
+        )}
+      </Group>
+    </Paper>
+  );
+}
+
+function Banner({ report }: { report: HeroReport }) {
+  if (report.banner.length === 0) return <Text size="sm">No upgrade of yours gains on this march.</Text>;
+  return (
+    <Stack gap={4} data-testid="hero-banner">
+      {report.banner.map((action, index) => (
+        <Text key={`${action.captainId}-${action.kind}`} size="sm">
+          <Text span fw={700}>
+            {index + 1}.{' '}
+          </Text>
+          {report.tiles.find((tile) => tile.captainId === action.captainId)?.name ?? action.captainId}{' '}
+          {actionWords(action)} — {figure(action)}
+        </Text>
+      ))}
+    </Stack>
+  );
+}
+
+function Plan({ report }: { report: HeroReport }) {
+  return (
+    <Stack gap={4}>
+      {report.plan.map((tile) => {
+        const verdict = VERDICT[tile.verdict];
+        const parts = [tile.levelUp, tile.starUp]
+          .filter((action): action is HeroAction => action !== undefined)
+          .map((action) => `${actionWords(action)} (${figure(action)})`);
+        return (
+          <Text key={tile.captainId} size="sm">
+            {verdict.glyph}{' '}
+            <Text span fw={600}>
+              {tile.name}
+            </Text>
+            : {verdict.word.toLowerCase()}
+            {tile.verdict === 'hold' || parts.length === 0 ? '' : ` — ${parts.join(' · ')}`}
+          </Text>
+        );
+      })}
+    </Stack>
+  );
+}
+
+function Matrix({ report }: { report: HeroReport }) {
+  const name = (id: string | null): string => report.tiles.find((tile) => tile.captainId === id)?.name ?? '—';
+  const shown = report.tiles.filter((tile) => tile.matters);
+  return (
+    <Table.ScrollContainer minWidth={420}>
+      <Table withTableBorder withColumnBorders data-testid="hero-matrix">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Solo score</Table.Th>
+            {report.situations.map((row) => (
+              <Table.Th key={row.id}>{SITUATION_WORD[row.id]}</Table.Th>
+            ))}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {shown.map((tile) => (
+            <Table.Tr key={tile.captainId}>
+              <Table.Td>{tile.name}</Table.Td>
+              {report.situations.map((row) => (
+                <Table.Td key={row.id} fw={row.bestSolo === tile.captainId ? 700 : 400}>
+                  {(row.solo[tile.captainId] ?? 0).toFixed(1)}
+                  {row.bestSolo === tile.captainId ? ' 👑' : ''}
+                </Table.Td>
+              ))}
+            </Table.Tr>
+          ))}
+          <Table.Tr>
+            <Table.Td fw={600}>Best trio</Table.Td>
+            {report.situations.map((row) => (
+              <Table.Td key={row.id}>{row.bestTrio?.map(name).join(', ') ?? '—'}</Table.Td>
+            ))}
+          </Table.Tr>
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
+  );
+}
+
+function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
+  const maxSolo = Math.max(0, ...report.tiles.map((tile) => tile.solo));
+  const maxTrio = Math.max(0, ...report.tiles.map((tile) => tile.trio));
+  const folded = report.tiles.filter((tile) => !tile.matters);
+  const trioNames = report.bestTrio?.captainIds.map(
+    (id) => report.tiles.find((tile) => tile.captainId === id)?.name ?? id,
+  );
+  return (
+    <Stack gap="lg">
+      {stale && (
+        <Text size="sm" c="dimmed">
+          Asked about an earlier state of your account. Analyse again to refresh it.
+        </Text>
+      )}
+      <Stack gap={4}>
+        <Text fw={600}>Where to put effort next</Text>
+        <Banner report={report} />
+      </Stack>
+
+      <Stack gap="xs">
+        <Text fw={600}>Your heroes</Text>
+        <Text size="sm" c="dimmed">
+          Blue: alone with troops. Violet: what the hero adds to your best trio. ⬆️ level · ⭐ stars · ⏸️
+          hold.
+        </Text>
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="xs">
+          {report.tiles
+            .filter((tile) => tile.matters)
+            .map((tile) => (
+              <Tile key={tile.captainId} tile={tile} maxSolo={maxSolo} maxTrio={maxTrio} />
+            ))}
+        </SimpleGrid>
+        {folded.length > 0 && (
+          <Text size="sm" c="dimmed">
+            Matter nowhere: {folded.map((tile) => tile.name).join(', ')}.
+          </Text>
+        )}
+      </Stack>
+
+      <Stack gap={4}>
+        <Text fw={600}>The top three</Text>
+        <Plan report={report} />
+      </Stack>
+
+      {report.bestTrio !== null && trioNames !== undefined && (
+        <Stack gap={4}>
+          <Text fw={600}>Best trio across all plans</Text>
+          <Text size="sm">
+            {trioNames.join(' · ')} — +{report.bestTrio.gain.toFixed(1)} rating on average over the five
+            stops.
+          </Text>
+          <Text size="sm" c="dimmed">
+            {report.stops
+              .map(
+                (pick, index) => `${planWords({ pick })} +${(report.bestTrio?.stops[index] ?? 0).toFixed(1)}`,
+              )
+              .join(' · ')}
+            {report.stopTrios
+              .map((trio, index) =>
+                trio === null || trio.captainIds.join() === report.bestTrio?.captainIds.join()
+                  ? null
+                  : `${planWords({ pick: report.stops[index] ?? 'sweet-spot' })} alone: ${trio.captainIds
+                      .map((id) => report.tiles.find((tile) => tile.captainId === id)?.name ?? id)
+                      .join(', ')}`,
+              )
+              .filter((note): note is string => note !== null)
+              .map((note) => ` · ${note}`)
+              .join('')}
+          </Text>
+        </Stack>
+      )}
+
+      <Stack gap="xs">
+        <Group gap="xs">
+          <Text fw={600}>Situations</Text>
+          <Badge size="sm" variant="light" color="yellow" tt="none">
+            pending validation
+          </Badge>
+        </Group>
+        <Matrix report={report} />
+        {report.skipped.map((skip) => (
+          <Text key={skip.id} size="sm" c="dimmed">
+            {SITUATION_WORD[skip.id]} not read: {skip.why}
+          </Text>
+        ))}
+      </Stack>
+
+      {report.getting !== null && (
+        <Stack gap={4}>
+          <Text fw={600}>Worth getting</Text>
+          <Text size="sm">
+            {report.getting.name} — the best of the easiest heroes you do not own yet (difficulty{' '}
+            {report.getting.difficulty} of 10, a draft).
+          </Text>
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+function Status({ entry, onCancel }: { entry: HeroEntry; onCancel: () => void }) {
+  if (entry.status === 'running')
+    return (
+      <Group gap="sm">
+        <Text size="sm" c="dimmed" aria-live="polite">
+          Reading your heroes… {entry.done} of {entry.total}
+        </Text>
+        <Button size="xs" variant="default" onClick={onCancel}>
+          Cancel
+        </Button>
+      </Group>
+    );
+  if (entry.status === 'failed')
+    return (
+      <Text size="sm" c="red">
+        The heroes could not be read: {entry.error}
+      </Text>
+    );
+  if (entry.status === 'cancelled')
+    return (
+      <Text size="sm" c="dimmed">
+        Cancelled.
+      </Text>
+    );
+  return null;
+}
+
+/** The popup, controlled by the view. */
+export function HeroReportDialog({ view }: { view: HeroView }) {
+  const { entry } = view;
+  return (
+    <Dialog
+      opened={view.open}
+      onClose={() => {
+        view.setOpen(false);
+      }}
+      title="Heroes report"
+      size="full"
+    >
+      <Stack gap="md" data-testid="hero-report">
+        {entry !== null && <Status entry={entry} onCancel={view.cancel} />}
+        {entry?.report != null && <Body report={entry.report} stale={view.stale} />}
+        <Group>
+          <Button
+            size="xs"
+            variant="default"
+            disabled={!view.ready || entry?.status === 'running'}
+            onClick={view.analyse}
+          >
+            Analyse my heroes again
+          </Button>
+        </Group>
+      </Stack>
+    </Dialog>
+  );
+}
+
+/** The one button, under the captain chips: it asks, and opens the popup (or reopens the kept report). */
+export function HeroReportLauncher() {
+  const view = useHeroReport();
+  if (view.owned === 0) return null;
+  const kept = view.entry?.report != null;
+  return (
+    <>
+      <Group gap="sm">
+        <Button
+          size="xs"
+          variant="default"
+          disabled={!view.ready && !kept}
+          onClick={() => {
+            if (kept) view.setOpen(true);
+            else view.analyse();
+          }}
+        >
+          {kept ? 'Heroes report' : 'Analyse my heroes'}
+        </Button>
+        {!view.ready && !kept && (
+          <Text size="sm" c="dimmed">
+            Generate a march first.
+          </Text>
+        )}
+      </Group>
+      <HeroReportDialog view={view} />
+    </>
+  );
+}

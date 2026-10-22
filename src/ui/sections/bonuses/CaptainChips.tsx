@@ -30,6 +30,7 @@ import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
 import type { SetupMarchType } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
+import { HeroReportLauncher } from '@/ui/sections/march/HeroReport';
 import { Figures, NumberField, Sections, useRovingTabs, type Figure } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
@@ -332,6 +333,7 @@ export function CaptainChips({
           }}
         />
       )}
+      <HeroReportLauncher />
     </Stack>
   );
 }

@@ -26,12 +26,12 @@ export interface DialogProps {
   children?: ReactNode;
   /** The row of buttons at the foot: the confirmation and the way out. */
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'full';
   /** `alertdialog` is the variant that interrupts: no overlay dismissal, no Escape. */
   role?: 'dialog' | 'alertdialog';
 }
 
-const SIZE = { sm: '22rem', md: '30rem', lg: '40rem' } as const;
+const SIZE = { sm: '22rem', md: '30rem', lg: '40rem', full: '100%' } as const;
 
 /**
  * One step above a `Sheet` (`LAYERS.sheet`): a dialog is the one thing allowed to interrupt one —
@@ -66,9 +66,10 @@ export function Dialog({
       onClose={onClose}
       title={title}
       size={SIZE[size]}
-      radius="md"
+      fullScreen={size === 'full'}
+      radius={size === 'full' ? 0 : 'md'}
       padding="md"
-      centered
+      centered={size !== 'full'}
       withinPortal
       zIndex={LAYERS.dialog}
       closeOnClickOutside={!alert}
