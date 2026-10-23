@@ -176,6 +176,12 @@ export async function computeHeroReport(
         signal: own.signal,
         onProgress: pass,
         budgetMs: CAMPAIGN.budgets.heroReport,
+        // The page's "Right now" podium: the three best by their solo gain as the army stands.
+        podium: [...report.tiles]
+          .sort((x, y) => y.solo - x.solo)
+          .slice(0, 3)
+          .filter((tile) => tile.solo > 0)
+          .map((tile) => tile.captainId),
         onWave: (wave) => {
           useHeroStore.getState().wave(key, { ...report, champion: wave });
         },

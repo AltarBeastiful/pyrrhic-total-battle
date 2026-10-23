@@ -55,6 +55,11 @@ export interface ChampionOptions {
   budgetMs?: number | undefined;
   /** Called with the champion as it stands after each wave. */
   onWave?: ((champion: HeroChampion) => void) | undefined;
+  /**
+   * The heroes best right now, as the page's "Right now" podium names them, so a "surprising trio" is judged against
+   * what the page shows. Left out, the three best by their rating at their own star and level.
+   */
+  podium?: readonly string[] | undefined;
 }
 
 export interface ChampionResult {
@@ -74,6 +79,9 @@ export function levelsFrom(level: number, step: number): number[] {
   return out;
 }
 
+/** A grid point's key in a hero's ratings. */
+const pointKey = (star: number, level: number): string => `${String(star)}/${String(level)}`;
+
 const mean = (values: readonly number[]): number =>
   values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 
@@ -90,22 +98,44 @@ export async function runHeroChampion(
   const cuts: string[] = [];
   let done = 0;
   let total = 0;
+  let shown = 0;
+  // The count grows as waves add batches, so the share is held where it was rather than stepping back.
+  const report = (): void => {
+    // Later waves add jobs, so the bar stays short of full until `finish`.
+    const share = total === 0 ? 0 : Math.min(done, total - 1) / total;
+    if (share < shown) {
+      onProgress?.(Math.ceil(shown * total - 1e-9), total);
+      return;
+    }
+    shown = share;
+    onProgress?.(Math.min(done, total - 1), total);
+  };
   const onSettled = (): void => {
     done += 1;
-    onProgress?.(done, total);
+    report();
+  };
+  /** The pass is over: jobs the clock cut never settled, so the count is closed here. */
+  const finish = (): void => {
+    done = total;
+    shown = 1;
+    onProgress?.(total, total);
   };
 
   const racers = roster.heroes.filter((hero) => hero.onlyOn === undefined);
   const ratings = new Map<string, Map<string, GridRating>>(racers.map((hero) => [hero.captainId, new Map()]));
   const valleyCurves: Record<string, number[]> = {};
   let trios: { now: TrioNow[]; ladders: TrioLadder[] } | undefined;
-  let podium: string[] = [];
+  let podium: readonly string[] = options.podium ?? [];
+  /** Per hero, the grid points the pass meant to read, whatever the clock then allowed. */
+  const planned: Record<string, number> = {};
+  const meant = new Map<string, Set<string>>();
 
   const snapshot = (): HeroChampion =>
     buildHeroChampion({
       heroes: roster.heroes,
       ratings: Object.fromEntries([...ratings].map(([id, points]) => [id, [...points.values()]])),
       valleyCurves,
+      planned,
       podium,
       ...(trios === undefined ? {} : { trios }),
     });
@@ -145,31 +175,38 @@ export async function runHeroChampion(
     return { ...settings, request: { ...settings.request, totals } };
   };
 
-  /** Rate the lineups under one housing shift; `NaN` where the clock cut or the plan failed. */
-  const rate = async (jitter: number, totalsList: readonly BonusTotals[]): Promise<number[]> => {
-    const base = await prepare(jitter);
-    if (base === null || left() <= 0) return totalsList.map(() => Number.NaN);
-    total += totalsList.length;
+  /**
+   * Rate lineups, each under its own housing shift, as one batch so every worker stays busy to the end; `NaN` where
+   * the clock cut or the plan failed.
+   */
+  const rateJobs = async (items: readonly { jitter: number; totals: BonusTotals }[]): Promise<number[]> => {
+    const shifts = [...new Set(items.map((item) => item.jitter))];
+    const bases = new Map(
+      await Promise.all(shifts.map(async (jitter) => [jitter, await prepare(jitter)] as const)),
+    );
+    if (left() <= 0 || shifts.some((jitter) => bases.get(jitter) === null))
+      return items.map(() => Number.NaN);
+    total += items.length;
     const outcomes = await pool.map(
-      totalsList.map(
-        (totals, at): PoolJob<ProbeAnswer> =>
-          (client, jobSignal) =>
-            client.probe(
-              {
-                plan: planOf(base.variant, totals),
-                against: {
-                  probe: probeInfo({
-                    id: `${String(jitter)}:${String(at)}`,
-                    family: 'captains',
-                    label: 'champion',
-                  }),
-                  baseline: base.baseline,
-                  rates: CAMPAIGN.markerRates,
-                },
+      items.map(({ jitter, totals }, at): PoolJob<ProbeAnswer> => {
+        const base = bases.get(jitter)!;
+        return (client, jobSignal) =>
+          client.probe(
+            {
+              plan: planOf(base.variant, totals),
+              against: {
+                probe: probeInfo({
+                  id: `${String(jitter)}:${String(at)}`,
+                  family: 'captains',
+                  label: 'champion',
+                }),
+                baseline: base.baseline,
+                rates: CAMPAIGN.markerRates,
               },
-              jobSignal,
-            ),
-      ),
+            },
+            jobSignal,
+          );
+      }),
       { budgetMs: left(), signal, onSettled },
     );
     return outcomes.map((outcome) => {
@@ -179,13 +216,25 @@ export async function runHeroChampion(
         : Number.NaN;
     });
   };
+  /** Rate the lineups under one housing shift. */
+  const rate = (jitter: number, totalsList: readonly BonusTotals[]): Promise<number[]> =>
+    rateJobs(totalsList.map((totals) => ({ jitter, totals })));
 
+  /** Note the points the pass means to read, so a wave the clock skips still shows as missing. */
+  const meaning = (wanted: { captainId: string; star: number; level: number }[]): void => {
+    for (const { captainId, star, level } of wanted) {
+      const keys = (meant.get(captainId) ?? new Set<string>()).add(pointKey(star, level));
+      meant.set(captainId, keys);
+      planned[captainId] = keys.size;
+    }
+  };
   /** Plan the points of heroes not yet read, store what came back; returns how many were cut. */
   const readPoints = async (
     wanted: { captainId: string; star: number; level: number }[],
   ): Promise<number> => {
+    meaning(wanted);
     const fresh = wanted.filter(
-      ({ captainId, star, level }) => !ratings.get(captainId)?.has(`${String(star)}/${String(level)}`),
+      ({ captainId, star, level }) => !ratings.get(captainId)?.has(pointKey(star, level)),
     );
     if (fresh.length === 0) return 0;
     const variant = roster.variant(0);
@@ -197,7 +246,7 @@ export async function runHeroChampion(
     fresh.forEach(({ captainId, star, level }, at) => {
       const value = values[at] ?? Number.NaN;
       if (Number.isNaN(value)) cut += 1;
-      else ratings.get(captainId)?.set(`${String(star)}/${String(level)}`, { star, level, rating: value });
+      else ratings.get(captainId)?.set(pointKey(star, level), { star, level, rating: value });
     });
     return cut;
   };
@@ -211,6 +260,16 @@ export async function runHeroChampion(
     STARS.map((star) => ({ captainId: hero.captainId, star, level: own(hero) })),
   );
   note('the stars at each hero’s level', await readPoints(wave1), wave1.length);
+  // Right now: the rating at the hero's own star and level, unless the page told who it shows.
+  if (options.podium === undefined)
+    podium = racers
+      .flatMap((hero) => {
+        const today = ratings.get(hero.captainId)?.get(pointKey(hero.star, own(hero)))?.rating;
+        return today === undefined ? [] : [{ id: hero.captainId, today }];
+      })
+      .sort((a, b) => b.today - a.today)
+      .slice(0, 3)
+      .map((entry) => entry.id);
   emit();
 
   // Wave 2: the remaining level steps, the leading heroes first.
@@ -222,14 +281,11 @@ export async function runHeroChampion(
       STARS.map((star) => ({ captainId: hero.captainId, star, level })),
     ),
   );
+  meaning(wave2);
   if (left() > 0) {
     note('the level steps', await readPoints(wave2), wave2.length);
     emit();
   } else cuts.push('the level steps were not read');
-  podium = [...racers]
-    .sort((a, b) => bestOf(b.captainId) - bestOf(a.captainId))
-    .slice(0, 3)
-    .map((hero) => hero.captainId);
 
   // Wave 3: the champion's and the challenger's curves sharpened, their star curves read on three plans.
   const front = snapshot();
@@ -237,39 +293,42 @@ export async function runHeroChampion(
     const hero = racers.find((candidate) => candidate.captainId === entry?.captainId);
     return hero === undefined ? [] : [hero];
   });
+  const sharp = duo.flatMap((hero) =>
+    levelsFrom(own(hero), sharpStep).flatMap((level) =>
+      STARS.map((star) => ({ captainId: hero.captainId, star, level })),
+    ),
+  );
+  meaning(sharp);
   if (duo.length > 0 && left() > 0) {
-    const sharp = duo.flatMap((hero) =>
-      levelsFrom(own(hero), sharpStep).flatMap((level) =>
-        STARS.map((star) => ({ captainId: hero.captainId, star, level })),
-      ),
-    );
     note('the sharpened curves', await readPoints(sharp), sharp.length);
     await readValleys(duo.map((hero) => ({ captainId: hero.captainId, level: own(hero) })));
     emit();
   } else if (duo.length > 0) cuts.push('the champion’s curves were not sharpened');
 
+  /** The star curves of these heroes on the shifted plans, all in one batch; the plan as it stands is already read. */
   async function readValleys(members: { captainId: string; level: number }[]): Promise<void> {
-    for (const { captainId, level } of members) {
-      const plans = [
-        STARS.map(
-          (star) => ratings.get(captainId)?.get(`${String(star)}/${String(level)}`)?.rating ?? Number.NaN,
-        ),
-      ];
-      for (const jitter of valleyJitters.filter((shift) => shift !== 0)) {
+    const shifts = valleyJitters.filter((shift) => shift !== 0);
+    const items = members.flatMap(({ captainId, level }) =>
+      shifts.flatMap((jitter) => {
         const variant = roster.variant(jitter);
-        plans.push(
-          await rate(
-            jitter,
-            STARS.map((star) => variant.hero(captainId, star, level)),
-          ),
-        );
-      }
+        return STARS.map((star) => ({ jitter, totals: variant.hero(captainId, star, level) }));
+      }),
+    );
+    const read = await rateJobs(items);
+    members.forEach(({ captainId, level }, index) => {
+      const plans = [
+        STARS.map((star) => ratings.get(captainId)?.get(pointKey(star, level))?.rating ?? Number.NaN),
+        ...shifts.map((_, at) => {
+          const from = (index * shifts.length + at) * STARS.length;
+          return read.slice(from, from + STARS.length);
+        }),
+      ];
       if (plans.some((curve) => curve.some(Number.isNaN))) {
         cuts.push(`the valleys of ${captainId} were read on fewer than three plans`);
-        continue;
+        return;
       }
       valleyCurves[captainId] = STARS.map((star) => mean(plans.map((curve) => curve[star] ?? 0)));
-    }
+    });
   }
 
   // Wave 4: the trios as they stand, then the ladders of the best few.
@@ -296,28 +355,41 @@ export async function runHeroChampion(
 
     const best = [...now].sort((a, b) => b.rating - a.rating).slice(0, trioLadders);
     const ladders: TrioLadder[] = [];
-    for (const trio of best) {
-      for (const captainId of trio.captainIds) {
+    // Every member's ladder of every best trio goes out as one batch.
+    const asked = best.flatMap((trio) =>
+      trio.captainIds.map((captainId) => {
         const hero = racers.find((candidate) => candidate.captainId === captainId)!;
-        if (left() <= 0) break;
         const levels = levelsFrom(own(hero), levelStep).slice(1);
-        const read = await rate(0, [
-          ...STARS.map((star) => variant.trio(trio.captainIds, { captainId, star, level: own(hero) })),
-          ...levels.map((level) => variant.trio(trio.captainIds, { captainId, star: hero.star, level })),
-        ]);
-        if (read.some(Number.isNaN)) {
-          cuts.push(`the ladder of ${hero.name} in a trio was cut`);
-          continue;
-        }
-        ladders.push({
-          captainIds: trio.captainIds,
-          captainId,
-          level: own(hero),
-          star: hero.star,
-          stars: read.slice(0, STARS.length),
-          levels: levels.map((level, at) => ({ level, rating: read[STARS.length + at] ?? 0 })),
-        });
+        return { trio, hero, levels };
+      }),
+    );
+    const read = await rate(
+      0,
+      asked.flatMap(({ trio, hero, levels }) => [
+        ...STARS.map((star) =>
+          variant.trio(trio.captainIds, { captainId: hero.captainId, star, level: own(hero) }),
+        ),
+        ...levels.map((level) =>
+          variant.trio(trio.captainIds, { captainId: hero.captainId, star: hero.star, level }),
+        ),
+      ]),
+    );
+    let from = 0;
+    for (const { trio, hero, levels } of asked) {
+      const mine = read.slice(from, from + STARS.length + levels.length);
+      from += mine.length;
+      if (mine.some(Number.isNaN)) {
+        cuts.push(`the ladder of ${hero.name} in a trio was cut`);
+        continue;
       }
+      ladders.push({
+        captainIds: trio.captainIds,
+        captainId: hero.captainId,
+        level: own(hero),
+        star: hero.star,
+        stars: mine.slice(0, STARS.length),
+        levels: levels.map((level, at) => ({ level, rating: mine[STARS.length + at] ?? 0 })),
+      });
     }
     trios = { now, ladders };
     emit();
@@ -325,32 +397,43 @@ export async function runHeroChampion(
     // The advised trio's star ladders on three plans, so a valley it tells is not the plan's own noise.
     const advised = snapshot().trios?.advised;
     if (advised !== null && advised !== undefined && left() > 0) {
-      for (const member of advised.order) {
-        const hero = racers.find((candidate) => candidate.captainId === member.captainId)!;
-        const plans = [member.ladder.stars];
-        for (const jitter of valleyJitters.filter((shift) => shift !== 0)) {
-          const shifted = roster.variant(jitter);
-          plans.push(
-            await rate(
+      const shifts = valleyJitters.filter((shift) => shift !== 0);
+      const members = advised.order.map((member) => ({
+        member,
+        hero: racers.find((candidate) => candidate.captainId === member.captainId)!,
+      }));
+      const shiftedRead = await rateJobs(
+        members.flatMap(({ hero }) =>
+          shifts.flatMap((jitter) => {
+            const shifted = roster.variant(jitter);
+            return STARS.map((star) => ({
               jitter,
-              STARS.map((star) =>
-                shifted.trio(advised.captainIds, { captainId: hero.captainId, star, level: own(hero) }),
-              ),
-            ),
-          );
-        }
+              totals: shifted.trio(advised.captainIds, { captainId: hero.captainId, star, level: own(hero) }),
+            }));
+          }),
+        ),
+      );
+      members.forEach(({ member, hero }, index) => {
+        const plans = [
+          member.ladder.stars,
+          ...shifts.map((_, at) => {
+            const start = (index * shifts.length + at) * STARS.length;
+            return shiftedRead.slice(start, start + STARS.length);
+          }),
+        ];
         if (plans.some((curve) => curve.some(Number.isNaN))) {
           cuts.push(`the star ladder of ${hero.name} was read on fewer than three plans`);
-          continue;
+          return;
         }
         const averaged = STARS.map((star) => mean(plans.map((curve) => curve[star] ?? 0)));
         const at = ladders.indexOf(member.ladder);
         if (at !== -1) ladders[at] = { ...member.ladder, stars: averaged };
-      }
+      });
       trios = { now, ladders };
       emit();
     }
   } else if (all.length > 0) cuts.push('the trios were not read');
 
+  finish();
   return { champion: snapshot(), cuts };
 }

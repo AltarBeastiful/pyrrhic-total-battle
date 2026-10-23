@@ -53,6 +53,20 @@ function roads(tile: ChampionTile): { stars: number | null; levels: number | nul
   return { stars: gain(tile.starPath), levels: gain(tile.levelPath) };
 }
 
+/** A hero whose planned points were partly cut: its lead is read on fewer points than the others'. */
+function CutBadge({ cut, id }: { cut: number; id: string }) {
+  if (cut <= 0) return null;
+  return (
+    <Tooltip
+      label={`${String(cut)} planned star/level points were not read: the lead is told on fewer points`}
+    >
+      <Badge size="sm" variant="light" color="yellow" tt="none" data-testid={`champion-partial-${id}`}>
+        partial
+      </Badge>
+    </Tooltip>
+  );
+}
+
 function Tile({ tile, champion }: { tile: ChampionTile; champion: boolean }) {
   const { stars, levels } = roads(tile);
   return (
@@ -62,6 +76,7 @@ function Tile({ tile, champion }: { tile: ChampionTile; champion: boolean }) {
           {tile.name}
           {champion ? ' 👑' : ''}
         </Text>
+        <CutBadge cut={tile.cut} id={tile.captainId} />
         <Tooltip label="Average lead over the best other hero at every point this hero reaches">
           <Text size="sm" c="dimmed">
             {signed(tile.lead)}

@@ -129,4 +129,46 @@ describe('runHeroChampion', () => {
     },
     TIMEOUT,
   );
+
+  test(
+    'progress never steps back and reaches the whole count when the pass ends',
+    async () => {
+      const pool = poolOf();
+      const seen: [number, number][] = [];
+      try {
+        await runHeroChampion(rosterOf(), pool, {
+          budgetMs: 1_000_000,
+          onProgress: (done, total) => seen.push([done, total]),
+        });
+        const ratios = seen.map(([done, total]) => done / total);
+        ratios.forEach((ratio, at) => {
+          if (at > 0) expect(ratio).toBeGreaterThanOrEqual(ratios[at - 1]! - 1e-12);
+        });
+        const [done, total] = seen.at(-1)!;
+        expect(done).toBe(total);
+      } finally {
+        pool.dispose();
+      }
+    },
+    TIMEOUT,
+  );
+
+  test(
+    'progress reaches the whole count even when the clock cuts the pass',
+    async () => {
+      const pool = poolOf();
+      const seen: [number, number][] = [];
+      try {
+        await runHeroChampion(rosterOf(), pool, {
+          budgetMs: 0,
+          onProgress: (done, total) => seen.push([done, total]),
+        });
+        const [done, total] = seen.at(-1) ?? [0, 0];
+        expect(done).toBe(total);
+      } finally {
+        pool.dispose();
+      }
+    },
+    TIMEOUT,
+  );
 });

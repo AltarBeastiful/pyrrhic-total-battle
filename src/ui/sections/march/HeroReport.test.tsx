@@ -121,6 +121,33 @@ test('draws the champion, the podium, the tiers and the Replaced row, the situat
   expect(screen.getByText(/Zed — the best of the easiest heroes/)).toBeTruthy();
 });
 
+test('flags a hero whose planned points were partly cut, and only that hero', () => {
+  const cut = buildHeroChampion({
+    heroes: [
+      { captainId: 'a', name: 'A', level: 5, star: 1 },
+      { captainId: 'b', name: 'B', level: 5, star: 1 },
+    ],
+    ratings: { a: grid((star) => 30 + star), b: grid((star) => 40 + star).slice(0, 4) },
+    planned: { a: 14, b: 14 },
+  });
+  renderWithTheme(
+    <HeroReportDialog
+      view={view({
+        entry: {
+          key: 'k',
+          status: 'done',
+          done: 3,
+          total: 3,
+          report: { ...report, champion: cut },
+          error: null,
+        },
+      })}
+    />,
+  );
+  expect(screen.getByTestId('champion-partial-b')).toBeTruthy();
+  expect(screen.queryByTestId('champion-partial-a')).toBeNull();
+});
+
 test('tells a surprising trio, and draws the report before the champion lands', () => {
   const withChampion = { ...report, champion };
   const { unmount } = renderWithTheme(

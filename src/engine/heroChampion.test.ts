@@ -68,6 +68,28 @@ describe('the champion', () => {
   });
 });
 
+describe('partial data', () => {
+  test('a hero whose planned points were partly cut says how many are missing; the others say none', () => {
+    const result = buildHeroChampion({
+      heroes: [hero('a'), hero('b')],
+      ratings: {
+        a: grid(LEVELS, (s) => 20 + s),
+        b: grid([10], (s) => 30 + s),
+      },
+      planned: { a: 21, b: 21 },
+    });
+    const cutOf = (id: string) => result.board.find((entry) => entry.captainId === id)?.cut;
+    expect(cutOf('a')).toBe(0);
+    expect(cutOf('b')).toBe(14);
+    expect(result.tiles.find((tile) => tile.captainId === 'b')?.cut).toBe(14);
+  });
+
+  test('without a plan told, nothing is flagged', () => {
+    const result = buildHeroChampion({ heroes: [hero('a')], ratings: { a: grid(LEVELS, (s) => s) } });
+    expect(result.board[0]?.cut).toBe(0);
+  });
+});
+
 describe('valleys', () => {
   const two = [hero('a'), hero('b')];
   const ratings = { a: grid(LEVELS, () => 10), b: grid(LEVELS, () => 5) };

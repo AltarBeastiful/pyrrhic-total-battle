@@ -525,9 +525,15 @@ async function journey6(page: Page, phone: boolean): Promise<void> {
 async function journey7(page: Page, phone: boolean): Promise<void> {
   await seedHiredStock(page);
   // Three captains on the march (set up once, like the stock: not counted), so the card has a captain section.
+  // A captain at level 0 is one the account does not own (`CAMPAIGN.captainsIncludeUnowned`), so each is set to level 1.
   for (const name of ['Beowulf', 'Aydae', 'Skadi']) {
     await (await chipLabel(page, name)).click();
     await expect(captainChip(page, name)).toBeChecked();
+    await captainGear(page, name).click();
+    const level = page.getByRole('textbox', { name: 'Base level' });
+    await level.fill('1');
+    await level.press('Enter');
+    await expect(level).toBeHidden();
   }
   await toTop(page);
 
@@ -645,7 +651,7 @@ async function journey7(page: Page, phone: boolean): Promise<void> {
     expect(text).not.toMatch(/(^|\s)[-−][\d.]+% worth/);
   }
   await expect(card.getByText('A suggestion: your march keeps the captains you chose.')).toBeVisible();
-  // Beowulf, Aydae and Skadi each add to the army at level 0 and star 0, so a star or a level is worth asking.
+  // Beowulf, Aydae and Skadi each add to the army at level 1 and star 0, so a star or a level is worth asking.
   await expect(card.getByText('Next captain upgrades', { exact: true })).toBeVisible();
   await expect(card.getByTestId('advisor-row').filter({ hasText: /^Beowulf ★0 → ★1/ })).not.toHaveCount(0);
 

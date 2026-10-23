@@ -48,6 +48,8 @@ export interface BoardEntry {
   lead: number;
   /** The points where the lead is positive, of the points compared. */
   leadsAt: { wins: number; of: number };
+  /** Grid points the pass meant to read for this hero and the clock or a failure cut: its lead is read on fewer. */
+  cut: number;
 }
 
 /**
@@ -115,6 +117,8 @@ export interface ChampionInput {
    * noise is larger than most valleys). A valley is told only for a hero that has one.
    */
   valleyCurves?: Readonly<Record<string, readonly number[]>>;
+  /** Per hero, how many grid points the pass meant to read; the shortfall against `ratings` is flagged as `cut`. */
+  planned?: Readonly<Record<string, number>>;
   /** The solo podium (the heroes best right now), to tell which trio members surprise. */
   podium?: readonly string[];
   trios?: { now: readonly TrioNow[]; ladders: readonly TrioLadder[] };
@@ -250,7 +254,12 @@ export function buildHeroChampion(input: ChampionInput): HeroChampion {
         of += 1;
         if (lead > 0) wins += 1;
       }
-      return { captainId: hero.captainId, lead: of === 0 ? 0 : sum / of, leadsAt: { wins, of } };
+      return {
+        captainId: hero.captainId,
+        lead: of === 0 ? 0 : sum / of,
+        leadsAt: { wins, of },
+        cut: Math.max(0, (input.planned?.[hero.captainId] ?? 0) - pointsOf(hero.captainId).length),
+      };
     })
     .sort((a, b) => b.lead - a.lead);
 
