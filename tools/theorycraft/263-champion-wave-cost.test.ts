@@ -81,6 +81,10 @@ describe.skipIf(!process.env.THEORY)('263 — the champion pass, wave by wave', 
           return (await inner.map(wrapped as never, options as never)) as never;
         } finally {
           batch.wall = performance.now() - began;
+          const sorted = [...batch.jobs].sort((x, y) => y - x);
+          process.stderr.write(
+            `[263] wave ${String(batch.wave + 1)}: ${String(batch.jobs.length)} jobs, ${f(batch.wall / 1000)} s, longest ${f((sorted[0] ?? 0) / 1000, 2)} s, median ${f((sorted[Math.floor(sorted.length / 2)] ?? 0) / 1000, 2)} s\n`,
+          );
         }
       },
     };
