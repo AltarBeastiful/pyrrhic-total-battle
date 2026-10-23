@@ -19,7 +19,7 @@
  */
 /// <reference types="node" />
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CAMPAIGN } from '../../src/config';
 import { captains as captainTable } from '../../src/data';
@@ -34,7 +34,25 @@ import { runCaptainAdvice } from '../../src/worker/captainAdvice';
 import { runUpgradeWorth, type WorthAsk, type WorthResult } from '../../src/worker/captainUpgrades';
 import { createInlineClient } from '../../src/worker/client';
 import { createCalcPool } from '../../src/worker/pool';
+import { commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
 import { loadLiveAccount } from './harness';
+
+/**
+ * Experiment C reads the benchmark's scenarios, which hold a built request rather than a profile and a setup.
+ * `buildStackRequest` is wrapped to remember, by the request it returns, what it was built from.
+ */
+const BUILT = vi.hoisted(() => new WeakMap<object, { profile: unknown; setup: unknown }>());
+vi.mock('../../src/state/derive', async (original) => {
+  const real = await original<typeof import('../../src/state/derive')>();
+  return {
+    ...real,
+    buildStackRequest: (...args: Parameters<typeof real.buildStackRequest>) => {
+      const request = real.buildStackRequest(...args);
+      BUILT.set(request, { profile: structuredClone(args[0]), setup: structuredClone(args[1]) });
+      return request;
+    },
+  };
+});
 
 const OUT = 'tools/theorycraft/out/246-the-captain-worth';
 /** A pass clock no run reaches: nothing is cut, so the figures are the engine's own. */
@@ -100,6 +118,27 @@ function cases(): Case[] {
   const latest = fromFile(ACCOUNT_1007);
   if (latest !== null) out.push({ label: 'owner account 2026-10-07', ...latest });
   return out.map((one) => ({ ...one, profile: withEveryCaptain(one.profile) }));
+}
+
+/** Every benchmark scenario whose request was built straight from a profile and a setup. */
+function benchmarkCases(): { cases: Case[]; skipped: string[] } {
+  const owner = ownerProfile();
+  const scenarios = [...commonScenarios(), ...(owner === null ? [] : ownerScenarios(owner))];
+  const out: Case[] = [];
+  const skipped: string[] = [];
+  for (const scenario of scenarios) {
+    const built = BUILT.get(scenario.request);
+    if (built === undefined) {
+      skipped.push(scenario.label);
+      continue;
+    }
+    out.push({
+      label: scenario.label,
+      profile: withEveryCaptain(built.profile as Profile),
+      setup: built.setup as BattleSetup,
+    });
+  }
+  return { cases: out, skipped };
 }
 
 interface Read {
@@ -283,4 +322,65 @@ describe.skipIf(!process.env.THEORY)('246 — the captain worth list', () => {
     writeFileSync(`${OUT}-B.md`, `# 246 B — inferred levels against exhaustive\n\n${lines.join('\n')}`);
     console.log(lines.join('\n'));
   }, 3_600_000);
+
+  it('C: the benchmark scenarios — worst worthwhile rank, tier 1 against tier 2', async () => {
+    const { cases: all, skipped } = benchmarkCases();
+    const lines: string[] = [
+      `${String(all.length)} scenarios read; ${String(skipped.length)} left out (request not built straight from a profile): ${skipped.join('; ') || '—'}.`,
+      '',
+      '| scenario | probes | best full gain | worthwhile ≥90 % | worst rank (≥90 %) | worthwhile ≥50 % | worst rank (≥50 %) | worst tier 1 − full, relative |',
+      '|---|---|---|---|---|---|---|---|',
+    ];
+    const raw: unknown[] = [];
+    let worst90 = 0;
+    let worst50 = 0;
+    for (const one of all) {
+      try {
+        const { result } = await read(one, true);
+        const rows = result.rows.filter((row) => row.tier2 !== undefined);
+        const order = new Map(
+          [...result.rows]
+            .map((row, at) => ({ row, at }))
+            .sort((a, b) => b.row.tier1.gain - a.row.tier1.gain || a.at - b.at)
+            .map(({ row }, rank) => [row.id, rank + 1]),
+        );
+        const best = Math.max(0, ...rows.map((row) => row.tier2?.gain ?? 0));
+        const rankOf = (share: number): { count: number; worst: number } => {
+          const kept = rows.filter((row) => best > 0 && (row.tier2?.gain ?? 0) >= share * best);
+          return { count: kept.length, worst: Math.max(0, ...kept.map((row) => order.get(row.id) ?? 0)) };
+        };
+        const a = rankOf(0.9);
+        const b = rankOf(0.5);
+        worst90 = Math.max(worst90, a.worst);
+        worst50 = Math.max(worst50, b.worst);
+        const gap = Math.max(
+          0,
+          ...rows.map((row) => Math.abs(row.tier1.gain - (row.tier2?.gain ?? 0)) / Math.max(best, 1e-9)),
+        );
+        lines.push(
+          `| ${one.label} | ${String(rows.length)} | ${f(best)} | ${String(a.count)} | ${String(a.worst)} | ${String(b.count)} | ${String(b.worst)} | ${f(gap, 3)} |`,
+        );
+        raw.push({
+          label: one.label,
+          rows: rows.map((row) => ({
+            id: row.id,
+            label: row.label,
+            tier1: row.tier1.gain,
+            tier2: row.tier2?.gain,
+          })),
+        });
+      } catch (error) {
+        lines.push(
+          `| ${one.label} | failed: ${error instanceof Error ? error.message.slice(0, 80) : 'error'} | | | | | | |`,
+        );
+      }
+    }
+    lines.push(
+      '',
+      `**Worst tier 1 rank of a worthwhile upgrade over all scenarios: ${String(worst90)} (≥ 90 % of the best), ${String(worst50)} (≥ 50 %).** The last column is the largest |tier 1 − full| as a share of the scenario's best full gain.`,
+    );
+    writeFileSync(`${OUT}-C.md`, `# 246 C — the benchmark scenarios\n\n${lines.join('\n')}\n`);
+    writeFileSync(`${OUT}-C.json`, JSON.stringify(raw));
+    console.log(lines.join('\n'));
+  }, 7_200_000);
 });

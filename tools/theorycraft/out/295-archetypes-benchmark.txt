@@ -1,0 +1,18 @@
+stops 39; frontier-based improves 7, archetypes improve 3, union improves 10; archetype > frontier 3, frontier > archetype 7; worse than shipped: 0 by construction
+sum gain frontier 13.54 archetype 9.55 union 23.09
+sweet-spot n 19 F>0 6 A>0 2 A>F 2
+burn-saver n 10 F>0 1 A>0 1 A>F 1
+silver-saver n 10 F>0 0 A>0 0 A>F 0
+arch ms per stop: mean 6082 median 57 max 221507 ; frontier-read ms per stop: mean 14368 median 85 max 511754
+archetype count: mean 34 max 82
+
+first-run army, Bear V ×10 (20 000 leadershi sweet-spot   burn  1 ship 5265025 F +3.74 A +0.00
+live account, evening (hunters 83, legionari sweet-spot   burn 14 ship 7678708 F +0.38 A +0.00
+Aydae alone, 4 975 (one captain, four hired  burn-saver   burn  4 ship 2202796 F +0.05 A +0.00
+his camp of 2026-09-19, the localStorage dum sweet-spot   burn  4 ship 2449884 F +0.00 A +0.28
+his camp of 2026-09-19, as his message reads burn-saver   burn  1 ship 1513423 F +0.00 A +9.25
+his camp of 2026-09-19, as his message reads sweet-spot   burn  5 ship 2807275 F +0.00 A +0.01
+his TotalStack profile of 2026-09-19 (5 225  sweet-spot   burn  5 ship 2104714 F +4.53 A +0.00
+his usual setup of 2026-09-19 (Aydae alone,  sweet-spot   burn  2 ship 2941677 F +3.21 A +0.00
+first-run army, monster tiers 3–7 at 20 000  sweet-spot   burn  5 ship 478934864 F +0.09 A +0.00
+the 4 000-leadership case of 2026-09-15 (Tot sweet-spot   burn  5 ship 2193719 F +1.55 A +0.00

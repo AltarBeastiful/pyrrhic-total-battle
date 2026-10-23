@@ -12,9 +12,9 @@ A few ideas in random order, to verify plan and validate:
   or lose damage, and a second press puts it back. Per pool rather than per stack; measured on every benchmark
   stop (experiment 225: 38 of 68 stops gain, median +6.99 %; the monsters' mark has nothing to add - the plan
   never rations a monster, so they already stand at their line).
-- UI: When editiing counts, validate with enter key
-- UI: Same in popup validate on entry
-- UI: Help to know which hero is at what level. For now we have to click to see level and stars. Could at least be on hover. Would be best visually but might be too much. Perhaps the level could be in hte badge and entered hero woudl have a small icon with the star number. It would double as an indicator of any hero with the level entered. To design in an artifact first as we don't want to crowd the UI.
+- [done] UI: When editiing counts, validate with enter key
+- UI: Same in sidebar, validate on entry
+- [done] UI: Help to know which hero is at what level. For now we have to click to see level and stars. Could at least be on hover. Would be best visually but might be too much. Perhaps the level could be in hte badge and entered hero woudl have a small icon with the star number. It would double as an indicator of any hero with the level entered. To design in an artifact first as we don't want to crowd the UI.
 - Long term: Offer advices on what could improve greatly the plan, ex: "up the dominance..." or "add a monster..."
   - Could help the user tweak the marches even more or guide his next best moves in terms of research or training
 - We should check again, on the cases with aydea, varying some parameters doesn't seem to produce linear results:
@@ -22,8 +22,8 @@ A few ideas in random order, to verify plan and validate:
   - upping army modernization strength (when monsters added), needs to be checked again if no dominance is selected
 - Long term: Offer a quick way to use less monsters, we already have using less mercs in the plan table and thats mainly from my point of gaming. maybe user feedback could help there
 - Long term: offer account with googlelogin, already planned and partly deployed (backend at lezast I think)
-- UI: Remove em dashes in the UI (and possibly every files)
-- UI: [Equipment] Revamp so preview is not so crowded, show an example of an actual usage.
+- [done] UI: Remove em dashes in the UI (and possibly every files)
+- * UI: [Equipment] Revamp so preview is not so crowded, show an example of an actual usage.
   - ![alt text](image.png) on this picture two heroes have a 3 set equipement qui different quality each
   - Sets can be unequiped and requipped on another hero and usually are as we usually only keep a max of 9 items at high level and more probably a 3piece set very high and the rest a lit bit less
   - Change badge to display equipement grade (poor, uncommon...) using a letter and maybe code color ?
@@ -33,16 +33,17 @@ A few ideas in random order, to verify plan and validate:
   - We can even use actual planning algorithm as it's pretty fast now
   - One problem that could be addressed when doing this: With high dominance there seems to be a pattern of silver saving which keep minimal merc stack (usually 10 or under) and other plans which all pretty much fill dominance getting some pretty unequal stacks.
   - We could solve this by keeping track of monster spent, maybe making it less important using ranking (0.5 monster/dmg, 1 merc/dmg)
-- UI [Mobile]: Press back on mobile closes popup (like troop settings..)
 - coulb be a safe push numbers of mercs or monsters to fill the stack
+- [done] UI [Mobile]: Press back on mobile closes popup (like troop settings..)
+- * UI: on small view in battle summary open, if we open a troop detail, esc closes both. it should only close troop detail and click esc again to close battle summary
 - [done 2026-10-10, B-07] [game] Fill vip table with game data for each level
-- [game] Fix hall of fame form to match the actual game bonuses
-- maybe creating a quick change to numbers of mercs dying, at least giving some options. sometimes a heroe level increase or more leadership just make the merc dies go up too much and I would like to fine tune it sometimes. Only give me the best options tough and don't let me get lower than merc saver. Lets first check if theres spikes when moving that number
-- Teaking the melee health, I discovered that sometimes we offer a way lesser trade, for example using the json below, I get a march with spIII and SW1 left out, if I add back SW1 I get 27M damage for dominance (so gold for reviving), mercs and silver. And the only way to get this trade tight now, is moving up the ladder in the table to next trade for more mercs. SO it might not be a problem but putting back troops seems to stack way too much mercs. and the only way to get good damage is to up hte mercs dead by 2-4 using the table. Might be linked to the mercs slider, but also users might feel that its hard to obtain. Maybe solution would be to help the user with another list of trades ? or an alternative one to let him understand why that trade can't be made with those settings. Its just weird as a user to improve a research, regenrate and get its damage cut in half in a seamlinglt bad trade. 
+- * [game] Fix hall of fame form to match the actual game bonuses
+- [done] maybe creating a quick change to numbers of mercs dying, at least giving some options. sometimes a heroe level increase or more leadership just make the merc dies go up too much and I would like to fine tune it sometimes. Only give me the best options tough and don't let me get lower than merc saver. Lets first check if theres spikes when moving that number
+- [done] Teaking the melee health, I discovered that sometimes we offer a way lesser trade, for example using the json below, I get a march with spIII and SW1 left out, if I add back SW1 I get 27M damage for dominance (so gold for reviving), mercs and silver. And the only way to get this trade tight now, is moving up the ladder in the table to next trade for more mercs. SO it might not be a problem but putting back troops seems to stack way too much mercs. and the only way to get good damage is to up hte mercs dead by 2-4 using the table. Might be linked to the mercs slider, but also users might feel that its hard to obtain. Maybe solution would be to help the user with another list of trades ? or an alternative one to let him understand why that trade can't be made with those settings. Its just weird as a user to improve a research, regenrate and get its damage cut in half in a seamlinglt bad trade. 
 [text](pyrrhic-my-account-2026-10-07.json)
-- UI sometimes on mobile, hearoe tooltip opens and closes immediatly
-- when clicking generate, battle summary quickly changes to other numbers when waiting the generation
-- few times, adding one merc is still possible and adds a ton of damage (ex: 20 to 30 1m damage no loss on other criterias so not enough mercs were sheltered, maybe something to try SP1 1468
+- [done] UI sometimes on mobile, hearoe tooltip opens and closes immediatly
+- [done] when clicking generate, battle summary quickly changes to other numbers when waiting the generation
+- [done] few times, adding one merc is still possible and adds a ton of damage (ex: 20 to 30 1m damage no loss on other criterias so not enough mercs were sheltered, maybe something to try SP1 1468
 SW2 1391
 SW1 2497
 SP2 812
@@ -75,11 +76,11 @@ EMH6 47
 - UI: minus/plus buttons for heroe level
 - Not sure best captains is wht were looking for, we dont want to change captain with the same march, we want to generate march with each captain combination to get the best ones across the board
 - Why are some plans so different when activating an army strength boost
-- with the new propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
+- with the new compted propositions, we sometimes get the plan gets worse here: search issue (re-planned 19M) wht is it and how to fix it or is there something to fix?
 - gitbisect the performance improvements to check hte trend over a few cases
-- UI: differentiate menu and login. make it a sane menu bar 
-- UI: if artifacts or titles are active or was open before, keep it open after a refresh or when reopening the site
-- UI: merc search should: focus first result when searching, reset search when validated
+- [done] UI: differentiate menu and login. make it a sane menu bar 
+- [done] UI: if artifacts or titles are active or was open before, keep it open after a refresh or when reopening the site
+- [done] UI: merc search should: focus first result when searching, reset search when validated.
 - [done, tight default 1cb2ac9] Tight almost alwyas feels better than as is and no other even compares as they always use more mercs. Lets first check if we cna optimize tight further to get better trades, then lets move it as default; removing the table and other options on the selector; lets keep as is for now, but lets add a hover to preview the trade it offers (usually a bit less gold and less damage), showing only silver, gold and damage.
 - [done 2026-10-10, Critical 04; 12 units open as B-13] [UI] order troops as they appear in the battle selection. and allow to switch to order by health from hte battle summary.
 - [done 2026-10-10, Critical 01] when logged out and logged in don't import the local profile each time. If possible lets import only if we create an account, lot when logging in. Logging in should just silently overwrite the profile with the account profile. Logging out should just puts us back to a new profile.

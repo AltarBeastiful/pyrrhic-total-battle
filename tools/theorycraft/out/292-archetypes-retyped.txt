@@ -1,0 +1,29 @@
+★0 burn-saver   | archetypes 111 | shipped 25476323/4069270 | arch best +5.67 24329391/4007971 [dpl-0/flat/Hf+retype] | frontier best +8.88 25135555/4000756 | proxy top 6.39/6.31/5.67 | ms gen 67 proxy 4732 full3 4378
+★0 silver-saver | archetypes 176 | shipped 20200719/2431627 | arch best +0.00 20200719/2431627 [shipped] | frontier best +0.00 20200911/2431627 | proxy top 31.46/28.20/27.08 | ms gen 78 proxy 8456 full3 0
+★0 sweet-spot   | archetypes 110 | shipped 32870404/4061709 | arch best +0.00 32870404/4061709 [shipped] | frontier best +1.92 33434866/4061709 | proxy top 3.77/3.75/2.32 | ms gen 49 proxy 3638 full3 10517
+★1 burn-saver   | archetypes 173 | shipped 23374807/4006830 | arch best +20.97 27004896/4073259 [dpl-0/flat/Hf/ball-rank] | frontier best +22.61 25364417/4001056 | proxy top 20.97/20.97/20.97 | ms gen 70 proxy 6825 full3 16758
+★1 silver-saver | archetypes 127 | shipped 20507305/2657782 | arch best +0.00 20507305/2657782 [shipped] | frontier best +0.00 20507497/2657782 | proxy top 33.96/33.53/31.06 | ms gen 57 proxy 4622 full3 0
+★1 sweet-spot   | archetypes 131 | shipped 34448497/4061709 | arch best +0.00 34448497/4061709 [shipped] | frontier best +1.84 35012959/4061709 | proxy top 1.88/1.88/1.87 | ms gen 53 proxy 3800 full3 0
+★2 burn-saver   | archetypes 114 | shipped 26596899/4110896 | arch best +0.00 26596899/4110896 [shipped] | frontier best +8.65 25373594/3998520 | proxy top 5.87/5.78/5.68 | ms gen 45 proxy 5590 full3 356
+★2 silver-saver | archetypes 149 | shipped 21717125/2727882 | arch best +0.00 21717125/2727882 [shipped] | frontier best +0.00 21717125/2727882 | proxy top 31.95/31.52/29.66 | ms gen 74 proxy 7306 full3 0
+★2 sweet-spot   | archetypes 115 | shipped 34680467/4106172 | arch best +0.00 34680467/4106172 [shipped] | frontier best +2.48 35189420/4090128 | proxy top 4.59/4.57/3.15 | ms gen 46 proxy 4640 full3 0
+
+monotone: star a best played under star b (Tight, full); rate(star b best vs played), >= 0 means star b best is at least as good
+burn-saver   ★0→★1 arch∪frontier | ★0 best at ★1 25345063/4000756 vs ★1 best 25364417/4001056 | 0.08
+burn-saver   ★0→★1 arch only     | ★0 best at ★1 24576655/4007971 vs ★1 best 27004896/4073259 | -4.96
+burn-saver   ★1→★2 arch∪frontier | ★1 best at ★2 25156246/4001056 vs ★2 best 25373594/3998520 | 1.46
+burn-saver   ★1→★2 arch only     | ★1 best at ★2 24661552/4022453 vs ★2 best 26596899/4110896 | -8.79
+burn-saver   ★0→★2 arch∪frontier | ★0 best at ★2 25152460/4000756 vs ★2 best 25373594/3998520 | 1.48
+burn-saver   ★0→★2 arch only     | ★0 best at ★2 24658482/4007971 vs ★2 best 26596899/4110896 | -12.26
+silver-saver ★0→★1 arch∪frontier | ★0 best at ★1 20345887/2431627 vs ★1 best 20507497/2657782 | -1.49
+silver-saver ★0→★1 arch only     | ★0 best at ★1 20345695/2431627 vs ★1 best 20507305/2657782 | -1.49
+silver-saver ★1→★2 arch∪frontier | ★1 best at ★2 20357914/2657782 vs ★2 best 21717125/2727882 | -1.49
+silver-saver ★1→★2 arch only     | ★1 best at ★2 20357722/2657782 vs ★2 best 21717125/2727882 | -1.49
+silver-saver ★0→★2 arch∪frontier | ★0 best at ★2 20345887/2431627 vs ★2 best 21717125/2727882 | -3.68
+silver-saver ★0→★2 arch only     | ★0 best at ★2 20345695/2431627 vs ★2 best 21717125/2727882 | -3.67
+sweet-spot   ★0→★1 arch∪frontier | ★0 best at ★1 35012959/4061709 vs ★1 best 35012959/4061709 | 0.00
+sweet-spot   ★0→★1 arch only     | ★0 best at ★1 34448497/4061709 vs ★1 best 34448497/4061709 | 0.00
+sweet-spot   ★1→★2 arch∪frontier | ★1 best at ★2 34351529/4061709 vs ★2 best 35189420/4090128 | -1.11
+sweet-spot   ★1→★2 arch only     | ★1 best at ★2 33905870/4061709 vs ★2 best 34680467/4106172 | -2.16
+sweet-spot   ★0→★2 arch∪frontier | ★0 best at ★2 33976553/4061709 vs ★2 best 35189420/4090128 | 0.26
+sweet-spot   ★0→★2 arch only     | ★0 best at ★2 33905870/4061709 vs ★2 best 34680467/4106172 | -2.16

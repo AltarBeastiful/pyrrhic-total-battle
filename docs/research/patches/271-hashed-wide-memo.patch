@@ -1,0 +1,120 @@
+--- a/kernel/assembly/index.ts	2026-10-18 19:51:29.986223237 +0200
++++ b/kernel/assembly/index.ts	2026-10-23 04:54:44.466752021 +0200
+@@ -2425,6 +2425,24 @@
+ let rPointAt: i32 = 0; // the memo index of `rPoint`, kept as its slots move (`raiseSet`)
+ let rPointBurn: f64 = 0; // Σ chunks over `rPoint`'s authority slots, kept the same way
+ let rForceWhole: bool = false; // test hook: every box takes the whole-roster point
++// EXPERIMENT 271: a hashed memo for boxes wider than MEMO_CAP (answer-preserving: a vector's score is pure).
++const H_BITS: i32 = 16;
++const H_SIZE: i32 = 1 << H_BITS;
++const H_MASK: i32 = H_SIZE - 1;
++const H_FILL: i32 = (H_SIZE >> 2) * 3;
++let hKeys: usize = 0;
++let hVals: usize = 0;
++let hGen: usize = 0;
++let hCur: i32 = 0;
++let hOn: bool = false;
++let hCount: i32 = 0;
++let hHits: f64 = 0;
++let hMiss: f64 = 0;
++let rKeyStride: usize = 0; // f64 x rN
++let rPointKey: f64 = 0;
++export function hashStats(i: i32): f64 { return i == 0 ? hHits : i == 1 ? hMiss : <f64>hCount; }
++let hDisabled: bool = false;
++export function hashDisable(on: i32): void { hDisabled = on != 0; }
+ 
+ /** Reserve the raise's scratch, once per instance. */
+ function raiseAlloc(): void {
+@@ -2463,6 +2481,7 @@
+   rSlotCost = heap.alloc(n << 3);
+   rSlotPool = heap.alloc(n << 2);
+   rSlotStride = heap.alloc(n << 2);
++  rKeyStride = heap.alloc(n << 3);
+ }
+ 
+ /**
+@@ -2927,6 +2946,26 @@
+       return known;
+     }
+   }
++  let hAt: i32 = -1;
++  if (memo == 0 && hOn) {
++    let h = <i32>((<u64>rPointKey * 0x9E3779B97F4A7C15) >> (64 - H_BITS));
++    hAt = h;
++    if (load<i32>(hGen + ((<usize>h) << 2)) == hCur && load<f64>(hKeys + ((<usize>h) << 3)) == rPointKey) {
++      {
++        hHits += 1.0;
++        const known = load<f64>(hVals + ((<usize>h) << 3));
++        if (rRated && known > -Infinity) {
++          for (let s = 0; s < rN; s += 1) {
++            const t = i32At(rSlots, s);
++            store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
++          }
++          return raiseRating(known);
++        }
++        return known;
++      }
++    }
++    hMiss += 1.0;
++  }
+   let used1: f64 = rHeldUsed1;
+   let used2: f64 = rHeldUsed2;
+   for (let s = 0; s < rN; s += 1) {
+@@ -2940,6 +2979,12 @@
+   let value: f64 = -Infinity;
+   if (!(used1 > header(H_HOUSING_AUTHORITY) || used2 > header(H_HOUSING_DOMINANCE))) value = raiseScore(rWork);
+   if (memo != 0) store<f64>(slot, value);
++  if (hAt >= 0) {
++    store<i32>(hGen + ((<usize>hAt) << 2), hCur);
++    store<f64>(hKeys + ((<usize>hAt) << 3), rPointKey);
++    store<f64>(hVals + ((<usize>hAt) << 3), value);
++    hCount += 1;
++  }
+   return rRated && value > -Infinity ? raiseRating(value) : value;
+ }
+ 
+@@ -2953,6 +2998,7 @@
+     const old = f64At(rPoint, t);
+     rPointAt += <i32>(n - old) * i32At(rSlotStride, s);
+     if (i32At(rSlotPool, s) == 1) rPointBurn += chunks(max(0.0, n)) - chunks(max(0.0, old));
++    rPointKey += (n - old) * f64At(rKeyStride, s);
+   }
+   store<f64>(rPoint + ((<usize>t) << 3), n);
+ }
+@@ -2969,6 +3015,12 @@
+   }
+   rPointAt = at;
+   rPointBurn = burn;
++  let key: f64 = 0.0;
++  for (let s = 0; s < rN; s += 1) {
++    const t = i32At(rSlots, s);
++    key += (f64At(rPoint, t) - f64At(rSlotFrom, s)) * f64At(rKeyStride, s);
++  }
++  rPointKey = key;
+ }
+ 
+ /** Whether `x` is an integer JavaScript would call one (`Number.isInteger`): finite, no fraction. */
+@@ -3025,6 +3077,23 @@
+     } else rHeldUsed2 += count * cost;
+   }
+   rFast = whole && bound1 < MAX_SAFE && bound2 < MAX_SAFE && boundBurn < MAX_SAFE;
++  let ks: f64 = 1.0;
++  for (let s = rN - 1; s >= 0; s -= 1) {
++    const t = i32At(rSlots, s);
++    store<f64>(rKeyStride + ((<usize>s) << 3), ks);
++    ks *= f64At(rTo, t) - f64At(rFrom, t) + 1.0;
++  }
++  hOn = !hDisabled && rFast && rSpace > MEMO_CAP && rSpace < MAX_SAFE;
++  hHits = 0; hMiss = 0; hCount = 0;
++  if (hOn) {
++    if (hKeys == 0) {
++      hKeys = heap.alloc((<usize>H_SIZE) << 3);
++      hVals = heap.alloc((<usize>H_SIZE) << 3);
++      hGen = heap.alloc((<usize>H_SIZE) << 2);
++      for (let i = 0; i < H_SIZE; i += 1) store<i32>(hGen + ((<usize>i) << 2), 0);
++    }
++    hCur += 1;
++  }
+ }
+ 
+ /**

@@ -1,0 +1,35 @@
+★0 burn-saver   | archetypes 156 (seeds rank,rank~swap,tier~swap,asis,asis~swap,rank~adj2) | shipped 25476323/4069270 | arch best +0.52 24456659/4036413 [asis~swap] | frontier best +8.88 25135555/4000756 | proxy top 0.52/0.43/0.01 | ms gen 3 proxy 3547 full3 553
+      arch perm SP2 RD1 SP1 SW1 SP3 SW2 AR1 RD2 RD3 AR3 AR2
+★0 silver-saver | archetypes 102 (seeds rank,rank~swap,tier,tier~swap,asis,asis~swap,rank~adj2) | shipped 20200719/2431627 | arch best +0.00 20200911/2431627 [asis~swap] | frontier best +0.00 20200911/2431627 | proxy top 0.00/0.00/-0.00 | ms gen 1 proxy 761 full3 828
+      arch perm SP1 SP3 SP2 RD2 AR1 AR3 RD3 AR2
+★0 sweet-spot   | archetypes 163 (seeds rank,rank~swap,tier~swap,asis,asis~swap,rank~adj2) | shipped 32870404/4061709 | arch best +0.00 32871200/4062328 [asis~swap] | frontier best +1.92 33434866/4061709 | proxy top 0.00/0.00/0.00 | ms gen 1 proxy 83 full3 3
+      arch perm SP2 AR1 SP1 RD1 SP3 RD3 AR2 RD2 AR3 SW1 SW2
+★1 burn-saver   | archetypes 102 (seeds rank,rank~swap,tier,tier~swap,asis,asis~swap,rank~adj2) | shipped 23374807/4006830 | arch best +0.00 23374807/4006830 [shipped] | frontier best +22.61 25364417/4001056 | proxy top 0.34/0.34/0.34 | ms gen 1 proxy 686 full3 948
+★1 silver-saver | archetypes 102 (seeds rank,rank~swap,tier,tier~swap,asis,asis~swap,rank~adj2) | shipped 20507305/2657782 | arch best +0.00 20507497/2657782 [asis~swap] | frontier best +0.00 20507497/2657782 | proxy top 0.00/0.00/-0.00 | ms gen 1 proxy 759 full3 1024
+      arch perm SP1 SW2 SP3 SP2 RD2 AR3 RD3 AR2
+★1 sweet-spot   | archetypes 163 (seeds rank,rank~swap,tier~swap,asis,asis~swap,rank~adj2) | shipped 34448497/4061709 | arch best +0.00 34449799/4062328 [asis~swap] | frontier best +1.84 35012959/4061709 | proxy top 0.00/0.00/0.00 | ms gen 3 proxy 87 full3 1
+      arch perm SP2 AR1 SP1 RD1 SP3 RD3 AR2 RD2 AR3 SW1 SW2
+★2 burn-saver   | archetypes 156 (seeds rank,rank~swap,tier~swap,asis,asis~swap,rank~adj2) | shipped 26596899/4110896 | arch best +0.00 26596899/4110896 [shipped] | frontier best +8.65 25373594/3998520 | proxy top 0.77/0.76/0.76 | ms gen 1 proxy 3622 full3 476
+★2 silver-saver | archetypes 102 (seeds rank,rank~swap,tier,tier~swap,asis,asis~swap,rank~adj2) | shipped 21717125/2727882 | arch best +0.00 21717125/2727882 [shipped] | frontier best +0.00 21717125/2727882 | proxy top 0.12/0.00/0.00 | ms gen 1 proxy 2652 full3 375
+★2 sweet-spot   | archetypes 163 (seeds rank,rank~swap,tier~swap,asis,asis~swap,rank~adj2) | shipped 34680467/4106172 | arch best +0.00 34682668/4107372 [rank~adj2] | frontier best +2.48 35189420/4090128 | proxy top 0.00/0.00/0.00 | ms gen 1 proxy 74 full3 1
+      arch perm SP1 SP3 SP2 RD1 AR1 RD2 AR2 RD3 AR3 SW1 SW2
+
+monotone: star a best played under star b (Tight, full) rated against star b best; <= 0 means star b best is at least as good
+burn-saver   ★0→★1 arch∪frontier | ★0 best at ★1 25345063/4000756 vs ★1 best 25364417/4001056 | rate(★1best vs played) 0.08
+burn-saver   ★0→★1 arch only     | ★0 best at ★1 25940567/4071175 vs ★1 best 23374807/4006830 | rate(★1best vs played) -16.50
+burn-saver   ★1→★2 arch∪frontier | ★1 best at ★2 25156246/4001056 vs ★2 best 25373594/3998520 | rate(★2best vs played) 1.46
+burn-saver   ★1→★2 arch only     | ★1 best at ★2 23104452/4006830 vs ★2 best 26596899/4110896 | rate(★2best vs played) 17.37
+burn-saver   ★0→★2 arch∪frontier | ★0 best at ★2 25152460/4000756 vs ★2 best 25373594/3998520 | rate(★2best vs played) 1.48
+burn-saver   ★0→★2 arch only     | ★0 best at ★2 24464735/4036413 vs ★2 best 26596899/4110896 | rate(★2best vs played) -1.15
+silver-saver ★0→★1 arch∪frontier | ★0 best at ★1 20345887/2431627 vs ★1 best 20507497/2657782 | rate(★1best vs played) -1.49
+silver-saver ★0→★1 arch only     | ★0 best at ★1 20345887/2431627 vs ★1 best 20507497/2657782 | rate(★1best vs played) -1.49
+silver-saver ★1→★2 arch∪frontier | ★1 best at ★2 20357914/2657782 vs ★2 best 21717125/2727882 | rate(★2best vs played) -1.49
+silver-saver ★1→★2 arch only     | ★1 best at ★2 20357914/2657782 vs ★2 best 21717125/2727882 | rate(★2best vs played) -1.49
+silver-saver ★0→★2 arch∪frontier | ★0 best at ★2 20345887/2431627 vs ★2 best 21717125/2727882 | rate(★2best vs played) -3.68
+silver-saver ★0→★2 arch only     | ★0 best at ★2 20345887/2431627 vs ★2 best 21717125/2727882 | rate(★2best vs played) -3.68
+sweet-spot   ★0→★1 arch∪frontier | ★0 best at ★1 35012959/4061709 vs ★1 best 35012959/4061709 | rate(★1best vs played) 0.00
+sweet-spot   ★0→★1 arch only     | ★0 best at ★1 34449799/4062328 vs ★1 best 34449799/4062328 | rate(★1best vs played) 0.00
+sweet-spot   ★1→★2 arch∪frontier | ★1 best at ★2 34351529/4061709 vs ★2 best 35189420/4090128 | rate(★2best vs played) -1.11
+sweet-spot   ★1→★2 arch only     | ★1 best at ★2 33917027/4062328 vs ★2 best 34682668/4107372 | rate(★2best vs played) -2.19
+sweet-spot   ★0→★2 arch∪frontier | ★0 best at ★2 33976553/4061709 vs ★2 best 35189420/4090128 | rate(★2best vs played) 0.26
+sweet-spot   ★0→★2 arch only     | ★0 best at ★2 33917027/4062328 vs ★2 best 34682668/4107372 | rate(★2best vs played) -2.19
