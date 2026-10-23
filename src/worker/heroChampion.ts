@@ -6,7 +6,7 @@
  * 2. the remaining level steps, the leading heroes first;
  * 3. the champion's and the challenger's curves sharpened to `sharpStep`, and their star curves read on three plans
  *    (housing −1 %, 0, +1 %: experiment 262, a valley is told only in the mean);
- * 4. the trios as they stand, then the ladders of the best few, the advised trio's star ladders on three plans.
+ * 4. the trios as they stand, then the ladders of the best few (read on one plan: no trio valley is told).
  *
  * A point's rating is the mean gain over the stops of the march with no hero planned the same way, its all-in left
  * out (experiments 260 and 261). Every job is the existing `client.probe`, run through the pool; none carries a
@@ -393,45 +393,6 @@ export async function runHeroChampion(
     }
     trios = { now, ladders };
     emit();
-
-    // The advised trio's star ladders on three plans, so a valley it tells is not the plan's own noise.
-    const advised = snapshot().trios?.advised;
-    if (advised !== null && advised !== undefined && left() > 0) {
-      const shifts = valleyJitters.filter((shift) => shift !== 0);
-      const members = advised.order.map((member) => ({
-        member,
-        hero: racers.find((candidate) => candidate.captainId === member.captainId)!,
-      }));
-      const shiftedRead = await rateJobs(
-        members.flatMap(({ hero }) =>
-          shifts.flatMap((jitter) => {
-            const shifted = roster.variant(jitter);
-            return STARS.map((star) => ({
-              jitter,
-              totals: shifted.trio(advised.captainIds, { captainId: hero.captainId, star, level: own(hero) }),
-            }));
-          }),
-        ),
-      );
-      members.forEach(({ member, hero }, index) => {
-        const plans = [
-          member.ladder.stars,
-          ...shifts.map((_, at) => {
-            const start = (index * shifts.length + at) * STARS.length;
-            return shiftedRead.slice(start, start + STARS.length);
-          }),
-        ];
-        if (plans.some((curve) => curve.some(Number.isNaN))) {
-          cuts.push(`the star ladder of ${hero.name} was read on fewer than three plans`);
-          return;
-        }
-        const averaged = STARS.map((star) => mean(plans.map((curve) => curve[star] ?? 0)));
-        const at = ladders.indexOf(member.ladder);
-        if (at !== -1) ladders[at] = { ...member.ladder, stars: averaged };
-      });
-      trios = { now, ladders };
-      emit();
-    }
   } else if (all.length > 0) cuts.push('the trios were not read');
 
   finish();

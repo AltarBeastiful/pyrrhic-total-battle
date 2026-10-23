@@ -380,8 +380,8 @@ export const CAMPAIGN = {
     /** Tiers on the average lead: S within `s` of the field's best, A within `a`, B below (rating points). */
     tiers: { s: 3, a: 10 },
     /** Levels between two grid points; the champion's and the challenger's curves are sharpened to `sharpStep`. */
-    levelStep: 20,
-    sharpStep: 5,
+    levelStep: 25,
+    sharpStep: 10,
     /** Housing shifts of the three plans a valley is read on (experiment 262: noise median 5.5, mean of three cuts it by 1.7). */
     valleyJitters: [-0.01, 0, 0.01],
     /** The trios as they stand whose members' ladders are read. */

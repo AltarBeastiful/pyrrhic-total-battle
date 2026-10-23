@@ -83,6 +83,8 @@ export interface TrioLadder {
   star: number;
   /** The trio's rating at stars 0..6 (the member's level). */
   stars: readonly number[];
+  /** How many plans the star ladder is the mean of; a valley is told from three or more (experiment 262). */
+  plans?: number;
   /** The trio's rating at the levels above the member's (its star). */
   levels: readonly { level: number; rating: number }[];
 }
@@ -94,7 +96,7 @@ export interface TrioMember {
   /** The star of that rung (the ladder stops at ★5 when ★6 is below it). */
   bestStar: number;
   stopsAt: number;
-  /** The valleys of its star ladder; told for the advised trio only, whose ladders are read on three plans. */
+  /** The valleys of its star ladder; told only when the ladder is the mean of three plans, one plan is noisier than a valley. */
   valleys?: Valley[];
   ladder: TrioLadder;
 }
@@ -217,7 +219,11 @@ function adviseTrios(input: NonNullable<ChampionInput['trios']>, podium: readonl
         captainIds: trio.captainIds,
         ceiling: tidy(ceiling),
         now: trio.rating,
-        order: order.map((member) => ({ ...member, valleys: valleysOf(effectiveStars(member.ladder)) })),
+        order: order.map((member) =>
+          (member.ladder.plans ?? 1) >= 3
+            ? { ...member, valleys: valleysOf(effectiveStars(member.ladder)) }
+            : member,
+        ),
       };
   }
   const best = ranked[0]?.rating ?? 0;

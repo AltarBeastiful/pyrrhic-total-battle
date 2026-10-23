@@ -184,9 +184,10 @@ describe('trios', () => {
     c: grid(LEVELS, () => 26),
     d: grid(LEVELS, () => 5),
   };
-  const ladder = (captainIds: string[], captainId: string, stars: number[]) => ({
+  const ladder = (captainIds: string[], captainId: string, stars: number[], plans?: number) => ({
     captainIds,
     captainId,
+    ...(plans === undefined ? {} : { plans }),
     level: 10,
     star: 0,
     stars,
@@ -226,12 +227,24 @@ describe('trios', () => {
       ratings,
       trios: {
         now: [{ captainIds: ['a', 'b', 'c'], rating: 40 }],
-        ladders: [ladder(['a', 'b', 'c'], 'a', [40, 42, 41, 46, 47, 48, 49])],
+        ladders: [ladder(['a', 'b', 'c'], 'a', [40, 42, 41, 46, 47, 48, 49], 3)],
       },
     });
     expect(result.trios?.advised?.order[0]?.valleys).toEqual([
       { kind: 'package', from: 1, dip: 2, to: 3, loss: 1, gain: 4 },
     ]);
+  });
+
+  test('a ladder read on one plan is told no valley: one plan is below the noise floor', () => {
+    const result = buildHeroChampion({
+      heroes,
+      ratings,
+      trios: {
+        now: [{ captainIds: ['a', 'b', 'c'], rating: 40 }],
+        ladders: [ladder(['a', 'b', 'c'], 'a', [40, 42, 41, 46, 47, 48, 49])],
+      },
+    });
+    expect(result.trios?.advised?.order[0]?.valleys).toBeUndefined();
   });
 
   test('a ladder whose top star is below the one before stops there', () => {
