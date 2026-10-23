@@ -380,12 +380,12 @@ export const CAMPAIGN = {
     /** Tiers on the average lead: S within `s` of the field's best, A within `a`, B below (rating points). */
     tiers: { s: 3, a: 10 },
     /** Levels between two grid points; the champion's and the challenger's curves are sharpened to `sharpStep`. */
-    levelStep: 10,
+    levelStep: 20,
     sharpStep: 5,
     /** Housing shifts of the three plans a valley is read on (experiment 262: noise median 5.5, mean of three cuts it by 1.7). */
     valleyJitters: [-0.01, 0, 0.01],
     /** The trios as they stand whose members' ladders are read. */
-    trioLadders: 5,
+    trioLadders: 3,
   },
   /**
    * **The hero report** (`docs/plans/hero-report.md`, owner, 2026-10-22). Shares of a figure and counts, never a duration.
