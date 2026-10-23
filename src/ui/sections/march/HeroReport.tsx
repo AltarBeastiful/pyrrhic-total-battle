@@ -4,28 +4,14 @@
  * three, best trio, situation matrix, worth getting. Stock Mantine only (design rule 23); text 13 px and up (rule 19);
  * emoji glyphs for the verdicts, never the only signal (rules 21, 24).
  */
-import { Alert, Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import { Alert, Badge, Button, Group, Stack, Table, Text, Tooltip } from '@mantine/core';
 
-import {
-  type HeroAction,
-  type HeroReport,
-  type HeroTile,
-  type Role,
-  type RoleUp,
-  type SituationId,
-  type Verdict,
-} from '@/engine/heroReport';
+import { type HeroAction, type HeroReport, type RoleUp, type SituationId } from '@/engine/heroReport';
 import { Dialog, Disclosure } from '@/ui/kit';
 
 import { planWords } from './picks';
+import { ChampionStory } from './HeroChampionView';
 import { useHeroReport, type HeroEntry, type HeroView } from './heroReportSearch';
-
-const VERDICT: Record<Verdict, { glyph: string; word: string }> = {
-  level: { glyph: '⬆️', word: 'Level' },
-  star: { glyph: '⭐', word: 'Stars' },
-  both: { glyph: '⬆️⭐', word: 'Both' },
-  hold: { glyph: '⏸️', word: 'Hold' },
-};
 
 const SITUATION_WORD: Record<SituationId, string> = {
   default: 'As is',
@@ -34,171 +20,38 @@ const SITUATION_WORD: Record<SituationId, string> = {
   otherMercs: 'Other mercs',
 };
 
-/** The figure of an action, with its unit on every row: gain per cost where a cost was typed, raw gain otherwise. */
-function figure(action: HeroAction): string {
-  const value =
-    action.score >= 100 ? Math.round(action.score).toLocaleString('en') : action.score.toPrecision(3);
-  if (action.unit !== null) return `+${value} per ${action.unit}`;
-  return action.kind === 'star' ? `+${value} rating per star` : `+${value} rating`;
-}
-
-/** What to do: the stars to add and the star it ends on, or the levels to add. */
-function actionWords(action: HeroAction, star?: number): string {
-  if (action.kind !== 'star') return `+${String(action.size)} levels`;
-  const to = star === undefined ? '' : ` (★${String(star)} → ★${String(star + action.size)})`;
-  return `+${String(action.size)} ${action.size === 1 ? 'star' : 'stars'}${to}`;
-}
-
 const signed = (value: number): string => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}`;
 
-/** The trade side of a star step: the next star's change, and any star count that worsens the trade by far. */
-function tradeNote(action: HeroAction): string {
-  const parts: string[] = [];
-  if (action.next !== undefined)
-    parts.push(
-      action.next.delta < 0
-        ? `a further star (to +${String(action.next.size)}) loses ${Math.abs(action.next.delta).toFixed(1)}`
-        : `a further star (to +${String(action.next.size)}) adds ${signed(action.next.delta)}`,
-    );
-  if (action.most !== undefined)
-    parts.push(
-      `all the way, +${String(action.most.size)} stars, gives +${action.most.gain.toFixed(1)} in all`,
-    );
-  for (const worse of action.worse)
-    parts.push(
-      `⚠️ +${String(worse.size)} stars worsen the trade by ${Math.abs(worse.trade).toFixed(1)} over the bar`,
-    );
-  return parts.join(' · ');
-}
-
-/** What the hero's lines are for, and the mercenaries of the account that match. */
-function pairsWords(pairs: NonNullable<HeroTile['pairs']>): string {
-  if (pairs.types.length === 0) return 'Pairs with any merc';
-  const kinds = pairs.types.join(' · ');
-  return pairs.mercs.length === 0
-    ? `Pairs with ${kinds} mercs`
-    : `Pairs with ${kinds}: ${pairs.mercs.join(', ')}`;
-}
-
-function Stars({ star }: { star: number }) {
-  return (
-    <span aria-label={`${String(Math.min(star + 1, 7))} stars`}>{'★'.repeat(Math.min(star + 1, 7))}</span>
-  );
-}
-
-/** Bars on one scale: solo and trio contribution, each against the best of its own kind. */
-function Bars({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; maxTrio: number }) {
-  return (
-    <Stack gap={2}>
-      <Progress value={maxSolo > 0 ? (100 * tile.solo) / maxSolo : 0} size="sm" aria-label="Solo" />
-      <Progress
-        value={maxTrio > 0 ? (100 * tile.trio) / maxTrio : 0}
-        size="sm"
-        color="grape"
-        aria-label="Trio"
-      />
-    </Stack>
-  );
-}
-
-function Tile({ tile, maxSolo, maxTrio }: { tile: HeroTile; maxSolo: number; maxTrio: number }) {
-  const solo = VERDICT[tile.soloUp.verdict];
-  const trio = tile.trioUp === undefined ? null : VERDICT[tile.trioUp.verdict];
-  return (
-    <Paper withBorder p="xs" radius="sm" data-testid={`hero-${tile.captainId}`}>
-      <Group justify="space-between" wrap="nowrap" gap={6}>
-        <Text size="sm" fw={600} truncate>
-          {tile.name}
-        </Text>
-        <Text size="sm" aria-label={`Solo ${solo.word}${trio === null ? '' : `, trio ${trio.word}`}`}>
-          {solo.glyph}
-          {trio === null ? '' : ` ${trio.glyph}`}
-        </Text>
-      </Group>
-      <Text size="sm" c="dimmed">
-        L{tile.level} <Stars star={tile.star} />
-      </Text>
-      <Bars tile={tile} maxSolo={maxSolo} maxTrio={maxTrio} />
-      {tile.pairs !== undefined && (
-        <Text size="sm" c="dimmed" data-testid={`hero-pairs-${tile.captainId}`}>
-          {pairsWords(tile.pairs)}
-        </Text>
-      )}
-      <Group gap={4} mt={4}>
-        {tile.onlyOn !== undefined && (
-          <Badge size="sm" variant="light" color="gray" tt="none">
-            {tile.onlyOn} only
-          </Badge>
-        )}
-        {tile.flips.length > 0 && (
-          <Badge size="sm" variant="light" color="orange" tt="none">
-            flips: {tile.flips.map((id) => SITUATION_WORD[id].toLowerCase()).join(', ')}
-          </Badge>
-        )}
-      </Group>
-    </Paper>
-  );
-}
-
-function Banner({ report, role }: { report: HeroReport; role: Role }) {
-  const banner = report.banner[role];
-  if (banner.length === 0)
-    return (
-      <Text size="sm" data-testid={`hero-banner-${role}`}>
-        No upgrade of yours gains in {role === 'solo' ? 'a solo march' : 'your best trio'}.
-      </Text>
-    );
-  return (
-    <Stack gap={4} data-testid={`hero-banner-${role}`}>
-      {banner.map((action, index) => {
-        const tile = report.tiles.find((candidate) => candidate.captainId === action.captainId);
-        const note = tradeNote(action);
-        return (
-          <Text key={`${action.captainId}-${action.kind}`} size="sm">
-            <Text span fw={700}>
-              {index + 1}.{' '}
-            </Text>
-            {tile?.name ?? action.captainId} {actionWords(action, tile?.star)} — {figure(action)}
-            {note === '' ? '' : ` · ${note}`}
-          </Text>
-        );
-      })}
-    </Stack>
-  );
-}
-
+/** What a situational hero's best upgrade is, in words. */
 function upWords(up: RoleUp | undefined, star: number): string {
   return [up?.level, up?.star]
     .filter((action): action is HeroAction => action !== undefined)
-    .map((action) => `${actionWords(action, action.kind === 'star' ? star : undefined)} (${figure(action)})`)
+    .map((action) =>
+      action.kind === 'star'
+        ? `+${String(action.size)} stars (★${String(star)} → ★${String(star + action.size)}) ${signed(action.gain)}`
+        : `+${String(action.size)} levels ${signed(action.gain)}`,
+    )
     .join(' · ');
 }
 
-function Plan({ report, role }: { report: HeroReport; role: Role }) {
-  if (report.plan[role].length === 0)
-    return (
-      <Text size="sm" c="dimmed">
-        No hero has an upgrade that gains in {role === 'solo' ? 'a solo march' : 'your best trio'}.
-      </Text>
-    );
+/** Who is best right now: the top three by their solo gain as the army stands, the podium. */
+function Podium({ report }: { report: HeroReport }) {
+  const top = [...report.tiles]
+    .sort((a, b) => b.solo - a.solo)
+    .slice(0, 3)
+    .filter((tile) => tile.solo > 0);
+  if (top.length === 0) return null;
   return (
-    <Stack gap={4}>
-      {report.plan[role].map((tile) => {
-        const up = role === 'solo' ? tile.soloUp : tile.trioUp;
-        const verdict = VERDICT[up?.verdict ?? 'hold'];
-        const words = upWords(up, tile.star);
-        return (
-          <Text key={tile.captainId} size="sm">
-            {verdict.glyph}{' '}
-            <Text span fw={600}>
-              {tile.name}
-            </Text>
-            : {verdict.word.toLowerCase()}
-            {up?.verdict === 'hold' || words === '' ? '' : ` — ${words}`}
-          </Text>
-        );
-      })}
-    </Stack>
+    <Group gap="md" data-testid="hero-podium">
+      <Tooltip label="Best right now, with the levels and stars you have">
+        <Text fw={600}>Right now</Text>
+      </Tooltip>
+      {top.map((tile, index) => (
+        <Text key={tile.captainId} size="sm">
+          {['🥇', '🥈', '🥉'][index]} {tile.name} {tile.solo.toFixed(1)}
+        </Text>
+      ))}
+    </Group>
   );
 }
 
@@ -295,9 +148,6 @@ function OtherTrios({ report }: { report: HeroReport }) {
 }
 
 function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
-  const maxSolo = Math.max(0, ...report.tiles.map((tile) => tile.solo));
-  const maxTrio = Math.max(0, ...report.tiles.map((tile) => tile.trio));
-  const folded = report.tiles.filter((tile) => !tile.matters);
   const trioNames = report.bestTrio?.captainIds.map(
     (id) => report.tiles.find((tile) => tile.captainId === id)?.name ?? id,
   );
@@ -314,57 +164,21 @@ function Body({ report, stale }: { report: HeroReport; stale: boolean }) {
           rougher, and the order may change on a full read.
         </Alert>
       )}
-      <Stack gap={4}>
-        <Text fw={600}>Where to put effort next</Text>
-        <Text size="sm" c="dimmed">
-          Solo and trio marches weigh the same, so each is rated apart, on the upgrade read in the lineup it
-          plays in.
-        </Text>
-        <Text size="sm" fw={600}>
-          Solo marches
-        </Text>
-        <Banner report={report} role="solo" />
-        <Text size="sm" fw={600}>
-          Trio marches
-        </Text>
-        <Banner report={report} role="trio" />
-      </Stack>
-
-      <Stack gap="xs">
-        <Text fw={600}>Your heroes</Text>
-        <Text size="sm" c="dimmed">
-          Blue: alone with troops. Violet: what the hero adds to your best trio. ⬆️ level · ⭐ stars · ⏸️
-          hold; solo first, then trio.
-        </Text>
-        <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="xs">
-          {report.tiles
-            .filter((tile) => tile.matters)
-            .map((tile) => (
-              <Tile key={tile.captainId} tile={tile} maxSolo={maxSolo} maxTrio={maxTrio} />
-            ))}
-        </SimpleGrid>
-        {folded.length > 0 && (
-          <Text size="sm" c="dimmed">
-            Matter nowhere: {folded.map((tile) => tile.name).join(', ')}.
-          </Text>
-        )}
-      </Stack>
+      <Podium report={report} />
+      {report.champion !== undefined && (
+        <ChampionStory
+          champion={report.champion}
+          nameOf={(id) =>
+            report.tiles.find((tile) => tile.captainId === id)?.name ??
+            report.situational.find((tile) => tile.captainId === id)?.name ??
+            id
+          }
+        />
+      )}
 
       {report.situational.length > 0 && <Situational tiles={report.situational} />}
 
-      <Stack gap={4}>
-        <Text fw={600}>The top three</Text>
-        <Text size="sm" fw={600}>
-          Solo marches
-        </Text>
-        <Plan report={report} role="solo" />
-        <Text size="sm" fw={600}>
-          Trio marches
-        </Text>
-        <Plan report={report} role="trio" />
-      </Stack>
-
-      {report.bestTrio !== null && trioNames !== undefined && (
+      {report.champion?.trios === undefined && report.bestTrio !== null && trioNames !== undefined && (
         <Stack gap={4}>
           <Text fw={600}>Best trio across all plans</Text>
           <Text size="sm">

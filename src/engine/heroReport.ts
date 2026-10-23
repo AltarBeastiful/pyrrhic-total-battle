@@ -9,6 +9,7 @@
 import { CAMPAIGN } from '../config';
 import type { PlanPick } from './plan';
 import type { WorthKind } from './captainUpgrades';
+import type { HeroChampion } from './heroChampion';
 
 export type SituationId = 'default' | 'monsters' | 'moreMercs' | 'otherMercs';
 
@@ -163,6 +164,8 @@ export interface HeroReport {
   cuts: string[];
   /** Cost unit of the banner, `null` when the figures are raw gain. */
   unit: string | null;
+  /** The champion pass (`docs/plans/the-hero-champion.md`), drawn wave by wave; absent until its first wave lands. */
+  champion?: HeroChampion | undefined;
 }
 
 const mean = (values: readonly number[]): number =>

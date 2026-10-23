@@ -5,8 +5,10 @@
  * report is built by the model (`buildHeroReport`); what it computes is held in `src/engine/heroReport.test.ts`.
  */
 import { cleanup, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
+import { buildHeroChampion } from '@/engine/heroChampion';
 import { buildHeroReport } from '@/engine/heroReport';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
@@ -69,46 +71,71 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-test('draws the banner, the board, the best trio and the situation matrix marked pending validation', () => {
-  renderWithTheme(<HeroReportDialog view={view()} />);
-  const solo = screen.getByTestId('hero-banner-solo');
-  expect(within(solo).getByText(/A \+1 star \(★1 → ★2\)/)).toBeTruthy();
-  expect(within(solo).getByText(/\+2 stars worsen the trade by 6\.0/)).toBeTruthy();
-  expect(within(solo).getByText(/B \+5 levels/)).toBeTruthy();
-  expect(within(screen.getByTestId('hero-banner-trio')).getByText(/C \+1 star/)).toBeTruthy();
-  expect(screen.getByTestId('hero-a')).toBeTruthy();
+const champion = buildHeroChampion({
+  heroes: [...heroes, { captainId: 'e', name: 'E' }].map(({ captainId, name }) => ({
+    captainId,
+    name,
+    level: 5,
+    star: 1,
+  })),
+  ratings: {
+    a: grid((star) => 30 + 3 * star),
+    b: grid((star) => 31 + 2 * star),
+    c: grid((star) => 31.5 - 5 * star),
+    d: grid(() => 1),
+    e: grid(() => 0.5),
+  },
+  valleyCurves: { a: [30, 33, 31, 40, 42, 44, 46] },
+  podium: ['a', 'b', 'c'],
+  trios: {
+    now: [
+      { captainIds: ['a', 'b', 'c'], rating: 40 },
+      { captainIds: ['a', 'b', 'd'], rating: 38 },
+    ],
+    ladders: [],
+  },
+});
+
+function grid(f: (star: number) => number) {
+  return [0, 1, 2, 3, 4, 5, 6].flatMap((star) => [5, 100].map((level) => ({ star, level, rating: f(star) })));
+}
+
+test('draws the champion, the podium, the tiers and the Replaced row, the situations marked pending validation', async () => {
+  const withChampion = { ...report, champion };
+  renderWithTheme(
+    <HeroReportDialog
+      view={view({
+        entry: { key: 'k', status: 'done', done: 3, total: 3, report: withChampion, error: null },
+      })}
+    />,
+  );
+  expect(screen.getByTestId('hero-podium')).toBeTruthy();
+  expect(screen.getByTestId('champion-name').textContent).toContain('A');
+  expect(screen.getByTestId('champion-challenger').textContent).toContain('Challenger B');
+  expect(within(screen.getByTestId('champion-tier-S')).getByTestId('champion-tile-a')).toBeTruthy();
+  await userEvent.click(screen.getByText('Replaced'));
+  expect(within(screen.getByTestId('champion-replaced')).getByText(/e — beaten everywhere by/)).toBeTruthy();
+  expect(screen.getByTestId('champion-valleys').textContent).toContain('★2 loses 2.0');
   expect(screen.getByText(/pending validation/)).toBeTruthy();
   expect(screen.getByTestId('hero-matrix')).toBeTruthy();
   expect(screen.getByText(/Zed — the best of the easiest heroes/)).toBeTruthy();
-  expect(screen.getByText('Best trio across all plans')).toBeTruthy();
 });
 
-test('names what a hero pairs with, tells a surprising trio and keeps the lesser ones folded', () => {
-  const fold = buildHeroReport({
-    stops: ['sweet-spot'],
-    heroes,
-    worth: null,
-    readings: {
-      default: {
-        solo: { a: [10], b: [8], c: [6], d: [1] },
-        trios: [
-          { captainIds: ['a', 'b', 'c'], stops: [24] },
-          { captainIds: ['a', 'b', 'd'], stops: [22] },
-          { captainIds: ['a', 'c', 'd'], stops: [21] },
-          { captainIds: ['b', 'c', 'd'], stops: [21] },
-        ],
-      },
-    },
-  });
-  renderWithTheme(
+test('tells a surprising trio, and draws the report before the champion lands', () => {
+  const withChampion = { ...report, champion };
+  const { unmount } = renderWithTheme(
     <HeroReportDialog
-      view={view({ entry: { key: 'k', status: 'done', done: 1, total: 1, report: fold, error: null } })}
+      view={view({
+        entry: { key: 'k', status: 'running', done: 1, total: 3, report: withChampion, error: null },
+      })}
     />,
   );
-  expect(screen.getByTestId('hero-pairs-a').textContent).toContain('melee: Legionary VI');
-  expect(screen.getByTestId('hero-pairs-b').textContent).toContain('any merc');
-  expect(screen.getAllByTestId('hero-surprise')).toHaveLength(2);
-  expect(screen.getByText('Other close trios')).toBeTruthy();
+  expect(screen.getAllByTestId('hero-surprise')).toHaveLength(1);
+  unmount();
+  renderWithTheme(<HeroReportDialog view={view()} />);
+  expect(screen.queryByTestId('champion-story')).toBeNull();
+  expect(screen.getByTestId('hero-podium')).toBeTruthy();
+  expect(screen.getByText('Best trio across all plans')).toBeTruthy();
 });
 
 test('warns when the clock cut the pass, and stays quiet otherwise', () => {

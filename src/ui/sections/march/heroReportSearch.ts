@@ -11,16 +11,19 @@
 import { useCallback, useMemo } from 'react';
 import { create } from 'zustand';
 
+import { CAMPAIGN } from '@/config';
 import { leadLineup } from '@/engine/captainUpgrades';
 import type { HeroReport } from '@/engine/heroReport';
 import type { CampaignInput } from '@/engine/plan';
 import { buildPlanRequest } from '@/state/derive';
 import { captainLineups } from '@/state/captainLineups';
+import { championRoster } from '@/state/heroChampionRoster';
 import { heroRoster } from '@/state/heroRoster';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { runCaptainAdvice } from '@/worker/captainAdvice';
 import { isAbortError } from '@/worker/client';
+import { runHeroChampion } from '@/worker/heroChampion';
 import { runHeroReport } from '@/worker/heroReport';
 
 import { advisorPool, type AdvisorStatus } from './advisorSearch';
@@ -43,6 +46,8 @@ export interface HeroState {
   open: boolean;
   begin: (key: string) => void;
   progress: (key: string, done: number, total: number) => void;
+  /** A report drawn while the pass still runs (the champion's waves). */
+  wave: (key: string, report: HeroReport) => void;
   settle: (key: string, report: HeroReport) => void;
   fail: (key: string, message: string) => void;
   cancel: () => void;
@@ -75,6 +80,10 @@ export const useHeroStore = create<HeroState>()((set, get) => {
     progress: (key, done, total) => {
       const entry = running(key);
       if (entry !== null) set({ entry: { ...entry, done, total } });
+    },
+    wave: (key, report) => {
+      const entry = running(key);
+      if (entry !== null) set({ entry: { ...entry, report } });
     },
     settle: (key, report) => {
       const entry = running(key);
@@ -149,12 +158,42 @@ export async function computeHeroReport(
       throw new Error('The current march could not be read in time.');
     const leadOf = { key: lead, totals: leadCandidate.totals, stops: leadStops };
 
-    const report = await runHeroReport(input, leadOf, heroRoster(profile, setup), pool, {
-      signal: own.signal,
-      onProgress: pass,
-    });
+    // The marginal upgrade lists give way to the champion's curves (`docs/plans/the-hero-champion.md`).
+    const report = await runHeroReport(
+      input,
+      leadOf,
+      { ...heroRoster(profile, setup), upgrades: undefined },
+      pool,
+      { signal: own.signal, onProgress: pass },
+    );
+    nextStage();
+    useHeroStore.getState().wave(key, report);
+    // Its own clock: the report's pass above never eats into the grid's. A failure here keeps the report on screen.
+    let result: Awaited<ReturnType<typeof runHeroChampion>> | null = null;
+    let failure: string | null = null;
+    try {
+      result = await runHeroChampion(championRoster(profile, setup), pool, {
+        signal: own.signal,
+        onProgress: pass,
+        budgetMs: CAMPAIGN.budgets.heroReport,
+        onWave: (wave) => {
+          useHeroStore.getState().wave(key, { ...report, champion: wave });
+        },
+      });
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      failure = error instanceof Error ? error.message : String(error);
+    }
     ownTick.flush();
-    useHeroStore.getState().settle(key, report);
+    useHeroStore.getState().settle(key, {
+      ...report,
+      ...(result === null ? {} : { champion: result.champion }),
+      cuts: [
+        ...report.cuts,
+        ...(result?.cuts ?? []),
+        ...(failure === null ? [] : [`the champion pass failed: ${failure}`]),
+      ],
+    });
   } catch (error) {
     if (isAbortError(error)) return;
     ownTick.flush();
