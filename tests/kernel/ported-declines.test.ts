@@ -35,7 +35,7 @@ import { LADDER_SHAPE, setKernel } from '@/engine/fast';
 import { eliteOrder } from '@/engine/killOrder';
 import type { CampaignInput, Effective } from '@/engine/plan';
 import { DEPTHS, LADDER_GROWTHS, effectiveTable, marchOf, planCampaign, rankTroops } from '@/engine/plan';
-import { retrainOne } from '@/engine/recovery';
+import { recoveryCosts, retrainOne, reviveOne } from '@/engine/recovery';
 import { sizeStacks } from '@/engine/stacker';
 import type { RecoverySettings, StackRequest, StackingOptions } from '@/engine/types';
 import { createPlanKernel } from '@/kernel/plan';
@@ -124,9 +124,17 @@ function referenceMarch(
   const unitOf = new Map(stacks.map((stack) => [stack.entry.id, stack.entry.unit]));
   let silver = 0;
   let gold = 0;
+  // A dominance monster the table's recovery plan revives pays the tenth in silver, and no gold (owner, 2026-10-24).
+  const plan = stacks[0]?.entry.plan ?? recovery.plan;
+  const kept = { ...recovery, plan };
+  const selective =
+    plan.mode === 'selective'
+      ? new Set(recoveryCosts(ts.stacks, [...unitOf.values()], kept).selectiveRevived)
+      : new Set<string>();
   for (const stack of ts.stacks) {
     const unit = unitOf.get(stack.unitId) as UnitDef;
-    const one = retrainOne(unit, stack.count, recovery);
+    const revived = unit.pool === 'dominance' && (plan.mode === 'revive' || selective.has(unit.id));
+    const one = revived ? { ...reviveOne(unit, stack.count, recovery), gold: 0 } : retrainOne(unit, stack.count, recovery);
     silver += one.silver;
     if (unit.pool !== 'leadership') gold += one.gold;
   }

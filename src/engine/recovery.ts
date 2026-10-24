@@ -161,7 +161,8 @@ function add(into: RecoveryCost, other: RecoveryCost): RecoveryCost {
 export function retrainOne(unit: UnitDef, count: number, settings: RecoverySettings): RecoveryCost {
   const cost = empty();
   const training = unit.training;
-  const billed = unit.pool === 'leadership' ? count : chunks(count);
+  // Every dead unit is trained again at its full price, a monster as a G1 troop is (owner, 2026-10-24).
+  const billed = count;
   if (training) {
     const reduction = 1 - percent(settings.trainingCostReduction, unit.group) / 100;
     const speed = 1 + percent(settings.trainingSpeed, unit.group) / 100;

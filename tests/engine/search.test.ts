@@ -72,12 +72,23 @@ describe('damage per silver', () => {
    * instead of on its midpoint. The old figure was **4.3098**; it is kept here because the story of how this
    * search was built is told against it, and because the gap between the two is what the change is worth.
    */
-  const PER_SILVER_OPTIMUM = 3.4819196;
+  /**
+   * **Re-based 2026-10-24 (the figure was 3.4819196 on the monsters-only peak) on the owner's rule: a retrained monster pays its full price per unit** (silver, queue
+   * and dragon coins, as a G1 troop does; the Lair asks 1,200 coins for 10 Water Elementals). The monsters
+   * are not "retrained ten at a time" any more, so the monsters-only peak above is gone: the best
+   * damage-per-silver march on this army keeps every troop tier and the four monsters, and drops only the two
+   * tier-1 specialists. The same twelve types are the best a dragon coin, on all five seeds.
+   */
+  const PER_SILVER_OPTIMUM_PER_UNIT = 0.8150548;
+  const TWELVE_TYPES = [
+    'archer-1', 'spearman-2', 'archer-2', 'rider-1', 'spearman-3', 'archer-3', 'rider-2', 'rider-3',
+    'water-elemental', 'battle-boar', 'emerald-dragon', 'stone-gargoyle',
+  ];
 
-  it('finds the monsters-only peak that no chain of one- or two-type drops leads to', () => {
+  it('keeps the four monsters and drops only the tier-1 specialists, now that monsters are paid per unit', () => {
     const found = search(ALL, 'damagePerSilver');
-    expect(found.score).toBeCloseTo(PER_SILVER_OPTIMUM, 4);
-    expect(found.includedUnitIds).toEqual(['water-elemental', 'emerald-dragon', 'stone-gargoyle']);
+    expect(found.score).toBeCloseTo(PER_SILVER_OPTIMUM_PER_UNIT, 4);
+    expect(found.includedUnitIds).toEqual(TWELVE_TYPES);
   });
 
   it('gives the same answer whatever the seed', () => {
@@ -90,13 +101,13 @@ describe('damage per silver', () => {
           seed,
         }).score,
     );
-    for (const score of scores) expect(score).toBeCloseTo(PER_SILVER_OPTIMUM, 4);
+    for (const score of scores) expect(score).toBeCloseTo(PER_SILVER_OPTIMUM_PER_UNIT, 4);
   });
 
-  it('finds a different formation for dragon coins than for silver', () => {
+  it('finds the same formation for dragon coins as for silver, both being paid per unit', () => {
     const coins = search(ALL, 'damagePerDragonCoin');
     const silver = search(ALL, 'damagePerSilver');
-    expect(coins.includedUnitIds).not.toEqual(silver.includedUnitIds);
+    expect(coins.includedUnitIds).toEqual(silver.includedUnitIds);
     expect(coins.score).toBeGreaterThan(scoreOf(ALL, 'damagePerDragonCoin'));
   });
 });

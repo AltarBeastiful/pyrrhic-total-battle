@@ -81,12 +81,15 @@ describe('chunks of ten', () => {
 describe('retrain all — run ep-8stacks at temple 0', () => {
   const cost = recoveryCosts(EP8, UNITS, settings()).retrain;
 
-  it('reproduces the silver (1,435,200 = troops per unit + monsters per chunk)', () => {
-    expect(cost.silver).toBe(1_435_200);
+  // **Every unit is trained again at its full price, a monster as a G1 troop is** (owner, 2026-10-24; the Lair
+  // asks 1,200 dragon coins for 10 Water Elementals). TotalStack's own figures for this run — 1,435,200 silver,
+  // 1,080 coins, "5d 23h" — bill the monsters per chunk of ten, which is what this file read until then.
+  it('bills the silver per unit: troops and monsters alike (TotalStack: 1,435,200 with monsters per chunk)', () => {
+    expect(cost.silver).toBe(1_916_800);
   });
 
-  it('reproduces the dragon coins (1,080 = monsters per chunk)', () => {
-    expect(cost.dragonCoins).toBe(1_080);
+  it('bills the dragon coins per monster (TotalStack: 1,080 with monsters per chunk)', () => {
+    expect(cost.dragonCoins).toBe(7_960);
   });
 
   it('spends no gold at all: every unit of this army can be recruited again', () => {
@@ -97,9 +100,9 @@ describe('retrain all — run ep-8stacks at temple 0', () => {
     expect(cost.gold).toBe(0);
   });
 
-  it('reproduces the duration shown as "5d 23h"', () => {
-    expect(Math.floor(cost.seconds / 86_400)).toBe(5);
-    expect(Math.floor((cost.seconds % 86_400) / 3_600)).toBe(23);
+  it('bills the queue per unit: "9d 7h" (TotalStack: "5d 23h" with monsters per chunk)', () => {
+    expect(Math.floor(cost.seconds / 86_400)).toBe(9);
+    expect(Math.floor((cost.seconds % 86_400) / 3_600)).toBe(7);
   });
 });
 
@@ -114,13 +117,13 @@ describe('run temple20-training-reductions (temple 20, guardsmen −30 % cost / 
     }),
   );
 
-  it('applies the training-cost reduction to the troops only (1,027,320)', () => {
-    expect(cost.retrain.silver).toBe(1_027_320);
+  it('applies the training-cost reduction to the troops only (1,508,920; TotalStack, monsters per chunk: 1,027,320)', () => {
+    expect(cost.retrain.silver).toBe(1_508_920);
   });
 
-  it('applies the training-speed bonus to the troops only ("4d 3h")', () => {
-    expect(Math.floor(cost.retrain.seconds / 86_400)).toBe(4);
-    expect(Math.floor((cost.retrain.seconds % 86_400) / 3_600)).toBe(3);
+  it('applies the training-speed bonus to the troops only ("7d 11h"; TotalStack, monsters per chunk: "4d 3h")', () => {
+    expect(Math.floor(cost.retrain.seconds / 86_400)).toBe(7);
+    expect(Math.floor((cost.retrain.seconds % 86_400) / 3_600)).toBe(11);
   });
 
   it('has no gold left to divide by the temple multiplier under the retrain plan', () => {
@@ -168,7 +171,7 @@ describe('run temple20-training-reductions (temple 20, guardsmen −30 % cost / 
 });
 
 describe('other captured runs', () => {
-  it('reproduces run mp-10stacks (silver 1,294,800, "4d 11h"; its 1,536 gold was the monsters\u2019)', () => {
+  it('bills run mp-10stacks per unit (silver 1,563,600, "6d 7h"; TotalStack, monsters per chunk: 1,294,800, "4d 11h")', () => {
     const army = [
       stack('ARC1', 455),
       stack('SP2', 251),
@@ -191,14 +194,14 @@ describe('other captured runs', () => {
       { ...stack('ARC1', 455), unitId: 'spearman-1' },
     ];
     const cost = recoveryCosts(withTier1, units, settings()).retrain;
-    expect(cost.silver).toBe(1_294_800);
+    expect(cost.silver).toBe(1_563_600);
     // 1,536 under the old reading, where a retrain revived the monsters (2026-09-21).
     expect(cost.gold).toBe(0);
-    expect(cost.dragonCoins).toBe(1_080);
-    expect(Math.floor(cost.seconds / 3_600)).toBe(4 * 24 + 11);
+    expect(cost.dragonCoins).toBe(4_920);
+    expect(Math.floor(cost.seconds / 3_600)).toBe(6 * 24 + 7);
   });
 
-  it('reproduces run ep-round-to-10s (Water Elemental 10 → 120 dragon coins; its 432 gold was the monster\u2019s)', () => {
+  it('bills run ep-round-to-10s per unit (Water Elemental 10 → 1,200 dragon coins, as the Lair asks; its 432 gold was the monster\u2019s)', () => {
     const army = [
       stack('ARC1', 660),
       stack('ARC2', 363),
@@ -211,8 +214,9 @@ describe('other captured runs', () => {
       stack('WE', 10),
     ];
     const cost = recoveryCosts(army, UNITS, settings()).retrain;
-    expect(cost.silver).toBe(1_364_600);
-    expect(cost.dragonCoins).toBe(120);
+    expect(cost.silver).toBe(1_440_200);
+    // TotalStack's 120 is one chunk of ten; the Lair asks 120 a monster.
+    expect(cost.dragonCoins).toBe(1_200);
     // 432 under the old reading (2026-09-21): the ten elementals are recruited again, not revived.
     expect(cost.gold).toBe(0);
   });

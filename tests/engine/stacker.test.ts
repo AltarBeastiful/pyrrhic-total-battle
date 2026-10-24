@@ -326,18 +326,18 @@ describe('relaxed preservation (investigation 0003, D-04)', () => {
     expect(relaxed.avgDamage).toBeGreaterThan(plain.avgDamage);
     expect(relaxed.minDamage).toBeGreaterThan(plain.minDamage);
     /**
-     * **And it is free under a retrain**, which this line is here to pin rather than to praise. The trade
-     * grows BB to 6 and ED to 5 — both still inside one chunk of ten — and a monster is billed by the
-     * chunk, so the retrain bill does not move by a coin. It read `gold` until 2026-09-21, when a monster
-     * stopped being bought back from the Temple under this plan and became a unit the Lair recruits
-     * (`retrainOne`).
-     *
-     * Whether *that* is the game's own arithmetic is the one open question of the recovery model
-     * (`src/engine/recovery.ts`): it turns on whether a monster's `training.silver` is the price of one
-     * monster or of ten, which a screenshot of the Lair's recruit screen would settle. Under a **revive**
-     * the same trade is paid for, and visibly: two more monsters to buy back from the Temple.
+     * **And it is paid for under a retrain**, to the unit. The trade grows BB to 6 and ED to 5: two more
+     * monsters. Until 2026-10-24 a monster was billed by the chunk of ten, both still inside one chunk, so the
+     * retrain bill did not move by a coin. A retrained monster now pays its full silver, queue and dragon coins
+     * per unit (owner; the Lair asks 1,200 coins for 10 Water Elementals), so the bill moves by exactly one
+     * Battle Boar and one Emerald Dragon. Under a **revive** the same trade is paid for in Temple gold.
      */
-    expect(relaxed.recovery).toEqual(plain.recovery);
+    const priced = (label: string) => units.find((unit) => unit.label === label)!.training!;
+    expect(relaxed.recovery.silver - plain.recovery.silver).toBe(priced('BB').silver + priced('ED').silver);
+    expect(relaxed.recovery.dragonCoins - plain.recovery.dragonCoins).toBe(
+      (priced('BB').dragonCoins ?? 0) + (priced('ED').dragonCoins ?? 0),
+    );
+    expect(relaxed.recovery.seconds - plain.recovery.seconds).toBe(priced('BB').seconds + priced('ED').seconds);
     const reviveGold = (result: StackResult): number =>
       recoveryCosts(result.stacks, units, {
         templeLevel: 0,

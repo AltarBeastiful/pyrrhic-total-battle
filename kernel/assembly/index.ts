@@ -298,7 +298,7 @@ function recoveryOf(k: i32): void {
       seconds += trained ? (c * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED) : 0.0;
     } else {
       // `retrainOne`
-      const billed = pool == 0 ? count : chunks(count);
+      const billed = count;
       // Without a training block silver, coins and queue are nought, and `x + 0` is `x`.
       if (trained) {
         silver += billed * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION);
@@ -473,7 +473,18 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
       cursor = 0;
     }
   }
-  // The bill, stack by stack in kill order: `retrainOne(unit, count, SEARCH_RECOVERY)`.
+  // The bill, stack by stack in kill order: `retrainOne(unit, count, SEARCH_RECOVERY)` — except a dominance
+  // monster the setup revives, which pays what `reviveOne` charges (owner, 2026-10-24).
+  if (mode == 2) {
+    for (let f = 0; f < FAMILIES; f += 1) store<f64>(topTier + ((<usize>f) << 3), -Infinity);
+    for (let s = 0; s < k; s += 1) {
+      const type = i32At(stackType, s);
+      if (cell(type, T_FAMILY_REVIVED) == 0) continue;
+      const slot = topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3);
+      const tier = cell(type, T_TIER);
+      if (tier > load<f64>(slot)) store<f64>(slot, tier);
+    }
+  }
   let silver: f64 = 0.0;
   let gold: f64 = 0.0;
   let mercLost: f64 = 0.0;
@@ -481,9 +492,19 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
     const type = i32At(stackType, s);
     const count = f64At(stackCount, s);
     const pool = <i32>cell(type, T_POOL);
-    const billed = pool == 0 ? count : chunks(count);
+    let revived = false;
+    if (pool == 2) {
+      revived = mode == 1;
+      if (mode == 2) {
+        revived =
+          cell(type, T_FAMILY_REVIVED) != 0 &&
+          load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+      }
+    }
     // `cost.silver = billed × training.silver × reduction`, the reduction `1 − percent / 100` of the search's
-    // recovery (`1 − 0 / 100` under `SEARCH_RECOVERY`); 0 without training.
+    // recovery (`1 − 0 / 100` under `SEARCH_RECOVERY`); 0 without training. A revived monster is billed the
+    // tenth the Temple cannot bring back; the Temple's gold is a price the payload prints, not one the search ranks.
+    const billed = revived ? chunks(count) : count;
     const reduction: f64 = searchReduction == 0 ? 1.0 : f64At(searchReduction, type);
     silver += cell(type, T_HAS_TRAINING) != 0 ? billed * cell(type, T_TRAINING_SILVER) * reduction : 0.0;
     if (pool != 0) {
@@ -601,7 +622,7 @@ function recoveryBill(k: i32, outPtr: usize): void {
       dragonCoins += pool == 2 ? c * cell(type, T_TRAINING_DRAGON_COINS) : 0.0;
       seconds += trained ? (c * cell(type, T_TRAINING_SECONDS)) / cell(type, T_SPEED) : 0.0;
     } else {
-      const billed = pool == 0 ? count : chunks(count);
+      const billed = count;
       if (trained) {
         silver += billed * cell(type, T_TRAINING_SILVER) * cell(type, T_REDUCTION);
         dragonCoins += billed * cell(type, T_TRAINING_DRAGON_COINS);

@@ -107,10 +107,11 @@ describe('summary of run ep-8stacks', () => {
   });
 
   it('divides the average by the recovery plan to get the three ratios', () => {
-    expect(summary.recovery.silver).toBe(1_435_200);
-    expect(summary.recovery.dragonCoins).toBe(1_080);
+    // TotalStack's 1,435,200 bills monsters per chunk of ten; they are retrained per unit now (2026-10-24).
+    expect(summary.recovery.silver).toBe(1_916_800);
+    expect(summary.recovery.dragonCoins).toBe(7_960);
     expect(summary.damagePerSilver).toBeCloseTo(summary.avgDamage / summary.recovery.silver, 6);
-    expect(summary.damagePerDragonCoin).toBeCloseTo(summary.avgDamage / 1_080, 6);
+    expect(summary.damagePerDragonCoin).toBeCloseTo(summary.avgDamage / 7_960, 6);
     // **And no gold at all under a retrain** (2026-09-21): this army hires nothing, and a monster is
     // recruited again in the Lair rather than bought back from the Temple, so the third purse is not
     // opened. A ratio with nothing under the line is reported as nought, never as `Infinity`.
