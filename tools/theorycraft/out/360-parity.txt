@@ -1,0 +1,12 @@
+acct ★0 burn-saver full 25.476M s4.069M g7616 h9 c4000 q1165559 | 25.476M s4.069M g7616 h9 c4000 q1165559 SAME; proxy SAME
+acct ★0 burn-saver burn 9 descent rf 8.9073 25.145M s4.002M g5176 h9 c2920 q1121422 3259 ms
+acct ★0 silver-saver full 20.201M s2.432M g5362 h15 c2920 q885629 | 20.201M s2.432M g5362 h15 c2920 q885629 SAME; proxy SAME
+acct ★0 silver-saver burn 15 descent rf -  948 ms
+acct ★1 burn-saver full 23.375M s4.007M g9437 h9 c4800 q1185840 | 23.375M s4.007M g9437 h9 c4800 q1185840 SAME; proxy SAME
+acct ★1 burn-saver burn 9 descent rf 22.6393 25.373M s4.002M g5176 h9 c2920 q1120622 4171 ms
+acct ★1 silver-saver full 20.507M s2.658M g5362 h15 c2920 q1037645 | 20.507M s2.658M g5362 h15 c2920 q1037645 SAME; proxy SAME
+acct ★1 silver-saver burn 15 descent rf 9.2791 22.176M s2.655M g5234 h15 c2920 q768865 1151 ms
+acct ★2 burn-saver full 26.597M s4.111M g8253 h9 c4680 q1207986 | 26.597M s4.111M g8253 h9 c4680 q1207986 SAME; proxy SAME
+acct ★2 burn-saver burn 9 descent rf 8.5992 25.361M s3.998M g5017 h9 c2920 q1134086 2830 ms
+acct ★2 silver-saver full 21.717M s2.728M g6685 h16 c3360 q824306 | 21.717M s2.728M g6685 h16 c3360 q824306 SAME; proxy SAME
+acct ★2 silver-saver burn 16 descent rf 9.5219 23.045M s2.545M g6225 h16 c3240 q743611 1152 ms

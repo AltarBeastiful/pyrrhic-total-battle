@@ -1,0 +1,8 @@
+off: one worker 51438 ms, replayed on 15 workers 5928 ms, generate steps 709 ms, Σ Tight 16246 ms, position() 771
+on: one worker 395563 ms, replayed on 15 workers 46005 ms, generate steps 4160 ms, Σ Tight 327291 ms, position() 8495
+off: one worker 50630 ms, replayed on 15 workers 5605 ms, generate steps 560 ms, Σ Tight 16096 ms, position() 771
+on: one worker 403397 ms, replayed on 15 workers 46255 ms, generate steps 4018 ms, Σ Tight 333450 ms, position() 8495
+min many: off 5605 → on 46005 ms (×8.21)
+min one: off 50630 → on 395563 ms (×7.81)
+min generate: off 560 → on 4018 ms (×7.17)
+min tight: off 16096 → on 327291 ms (×20.33)

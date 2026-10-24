@@ -1,0 +1,28 @@
+first-run army, Bear V ×1 (20 000 leadership): plan 28 -> 9 ms, stops 1 -> 1
+first-run army, Bear V ×2 (20 000 leadership): plan 21 -> 15 ms, stops 1 -> 1
+first-run army, Bear V ×3 (20 000 leadership): plan 17 -> 8 ms, stops 2 -> 2
+first-run army, Bear V ×10 (20 000 leadership): plan 26 -> 18 ms, stops 2 -> 2
+first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed): plan 47 -> 77 ms, stops 4 -> 4
+first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp): plan 530 -> 491 ms, stops 5 -> 5
+first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp): plan 523 -> 1810 ms, stops 6 -> 6
+the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows): plan 81 -> 109 ms, stops 4 -> 4
+  silver-saver MOVED  tight 1.253M s0.767M g184 h4 c0 q171345 -> 1.378M s0.760M g216 h4 c0 q171345 rate 6.65
+     pre-Tight repeat 1.074M s0.767M g144 h4 c0 q171345 -> 1.073M s0.760M g144 h4 c0 q171345 rate 0.05
+     campaign dmg 5268771 -> 5265165 silver 3803700 -> 3785400 gold 736 -> 736 hired 19 -> 19 coins 0 -> 0 queue 847680 -> 847680
+2026-09-17 export, its setup (7 000 leadership): plan 213 -> 355 ms, stops 6 -> 6
+2026-09-17 export, 12 000 leadership: plan 177 -> 295 ms, stops 4 -> 4
+live account of 2026-09-18 (one hired type, 20 000 leadership): plan 51 -> 106 ms, stops 4 -> 4
+live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000): plan 132 -> 298 ms, stops 6 -> 6
+Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp): plan 61 -> 76 ms, stops 4 -> 4
+the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited): plan 77 -> 224 ms, stops 6 -> 6
+his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450): plan 39 -> 152 ms, stops 5 -> 5
+  silver-saver MOVED  tight 1.883M s1.790M g216 h3 c0 q596430 -> 2.112M s1.790M g216 h3 c0 q505785 rate 12.53
+     pre-Tight repeat 1.883M s1.790M g216 h3 c0 q596430 -> 2.112M s1.790M g216 h3 c0 q505785 rate 12.53
+     campaign dmg 7843070 -> 8529332 silver 7313200 -> 7312600 gold 848 -> 848 hired 12 -> 12 coins 0 -> 0 queue 2258460 -> 1986525
+his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120): plan 35 -> 143 ms, stops 5 -> 5
+  burn-saver MOVED  tight 1.513M s1.902M g72 h1 c0 q529035 -> 1.665M s1.993M g72 h1 c0 q481275 rate 9.25
+     pre-Tight repeat 1.513M s1.902M g72 h1 c0 q529035 -> 1.665M s1.993M g72 h1 c0 q481275 rate 9.25
+     campaign dmg 6737415 -> 7190733 silver 7674900 -> 7947900 gold 408 -> 408 hired 6 -> 6 coins 0 -> 0 queue 2055780 -> 1912500
+his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80): plan 117 -> 111 ms, stops 3 -> 3
+his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90): plan 143 -> 147 ms, stops 3 -> 3
+his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14): plan 134 -> 129 ms, stops 2 -> 2

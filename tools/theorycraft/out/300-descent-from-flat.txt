@@ -1,0 +1,200 @@
+# 300 descent from the flat shape — V3 (8 flat seeds: rank/tier/dpl/hpl x Hf/H0, lay fitted to the stop's pre-Tight queue and a silver saver's silver; retype with silver+seconds ceilings; greedy drop-one-type, moves a=flat re-lay, b=drop slot keep shape; proxy Tight ranking; 295-style full-Tight read of top 6). v1 = 2 rank seeds, no fit; v2 = 8 seeds + violation ordering, no fit. Timing split (search vs full-Tight read) in 300-acct-v3-timing.jsonl.
+
+== account v1
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+acct ★0                                  | burn-saver   |  9 | 25.48M/4.069M k11 | +5.67 24.33M/4.008M k11 | +8.88 |  | 21 | 2360 | flat/Hf k11 5.67
+acct ★0                                  | silver-saver | 15 | 20.20M/2.432M k8 | +0.00 20.20M/2.432M k8 | +0.00 |  | 44 | 1333 | flat/Hf k11 24.00! > -swordsman-1/b k10 24.07!
+acct ★0                                  | sweet-spot   | 21 | 32.87M/4.062M k11 | +0.00 32.87M/4.062M k11 | +1.92 |  | 41 | 1616 | flat/H0 k11 1.95! > -rider-2/b k10 -2.24
+acct ★1                                  | burn-saver   |  9 | 23.37M/4.007M k8 | +19.29 24.60M/4.007M k11 | +22.61 |  | 22 | 8862 | flat/Hf k11 21.12
+acct ★1                                  | silver-saver | 15 | 20.51M/2.658M k8 | +0.00 20.51M/2.658M k8 | +0.00 |  | 24 | 549 | flat/Hf k11 28.86!
+acct ★1                                  | sweet-spot   | 21 | 34.45M/4.062M k11 | +0.00 34.45M/4.062M k11 | +1.84 |  | 43 | 1595 | flat/H0 k11 1.88! > -spearman-3/a k10 -3.73
+acct ★2                                  | burn-saver   |  9 | 26.60M/4.111M k11 | +0.00 26.60M/4.111M k11 | +8.65 |  | 44 | 1738 | flat/Hf k11 5.62! > -rider-1/a k10 5.72!
+acct ★2                                  | silver-saver | 16 | 21.72M/2.728M k8 | +0.00 21.72M/2.728M k8 | +0.00 |  | 24 | 324 | flat/H0 k11 25.97!
+acct ★2                                  | sweet-spot   | 22 | 34.68M/4.106M k11 | +0.00 34.68M/4.106M k11 | +2.48 |  | 44 | 1566 | flat/Hf k11 3.15! > -swordsman-1/a k10 4.59!
+
+stops 9: descent improves 2, equal 7, worse 0 (added candidate, gated); gains sum 24.96 max 19.29
+descent vs frontier: better 0 same 3 worse 6
+descent ms per stop: mean 2216 median 1595 max 8862
+monotone burn-saver ★0→★1: ★a best played 24.58M/4.008M vs ★b best 24.60M/4.007M rate +0.10
+monotone burn-saver ★1→★2: ★a best played 25.13M/4.007M vs ★b best 26.60M/4.111M rate -14.28
+monotone burn-saver ★0→★2: ★a best played 24.66M/4.008M vs ★b best 26.60M/4.111M rate -12.26
+
+== benchmark v1
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+first-run army, Bear V ×1 (20 000 leader | sweet-spot   |  1 | 4.70M/8.131M k10 | +0.00 4.70M/8.131M k10 | +0.00 | +0.00 | 21 | 40 | flat/Hf k10 0.04!
+first-run army, Bear V ×2 (20 000 leader | sweet-spot   |  1 | 4.82M/8.131M k10 | +0.00 4.82M/8.131M k10 | +0.00 | +0.00 | 21 | 24 | flat/Hf k10 0.04!
+first-run army, Bear V ×3 (20 000 leader | sweet-spot   |  1 | 4.93M/8.131M k10 | +0.00 4.93M/8.131M k10 | +0.00 | +0.00 | 21 | 22 | flat/Hf k10 0.04!
+first-run army, Bear V ×10 (20 000 leade | sweet-spot   |  1 | 5.27M/8.131M k10 | +0.00 5.27M/8.131M k10 | +3.74 | +0.00 | 21 | 23 | flat/Hf k10 0.03!
+first-run army, Epic Monster Hunter VI × | burn-saver   |  1 | 5.02M/8.131M k10 | +0.00 5.02M/8.131M k10 | +0.00 | +0.00 | 21 | 30 | flat/Hf k10 0.04!
+first-run army, Epic Monster Hunter VI × | sweet-spot   |  6 | 7.18M/8.131M k10 | +0.00 7.18M/8.131M k10 | +0.00 | +0.00 | 21 | 27 | flat/Hf k10 0.02!
+first-run army, monster tiers 3–5 at 900 | burn-saver   |  2 | 20.84M/8.762M k10 | +0.00 20.84M/8.762M k10 | +0.00 | +0.00 | 21 | 63 | flat/Hf k10 0.00!
+first-run army, monster tiers 3–5 at 900 | sweet-spot   |  5 | 23.62M/8.789M k10 | +0.00 23.62M/8.789M k10 | +0.00 | +0.00 | 22 | 686 | flat/Hf k10 0.00!
+first-run army, monster tiers 3–7 at 20  | silver-saver |  4 | 222.23M/12.086M k2 | +0.00 222.23M/12.086M k2 | +0.00 | +0.00 | 56 | 108 | flat/H0 k10 -16.91! > -spearman-2/a k9 -16.90! > -spearman-3/b k8 -16.18!
+first-run army, monster tiers 3–7 at 20  | sweet-spot   |  5 | 478.93M/22.033M k2 | +0.00 478.93M/22.033M k2 | +0.09 | +0.00 | 38 | 118 | flat/H0 k10 -21.01! > -spearman-3/a k9 -20.78!
+the 4 000-leadership case of 2026-09-15  | silver-saver |  4 | 1.25M/0.767M k8 | +0.00 1.25M/0.767M k8 | +0.00 | +0.00 | 29 | 40 | flat/Hf k8 15.47! > -spearman-2/a k7 18.02!
+the 4 000-leadership case of 2026-09-15  | sweet-spot   |  5 | 2.19M/1.522M k8 | +0.00 2.19M/1.522M k8 | +1.55 | +0.00 | 14 | 16 | flat/Hf k8 -3.15!
+2026-09-17 export, its setup (7 000 lead | burn-saver   |  4 | 3.20M/2.482M k7 | +0.00 3.20M/2.482M k7 | +0.00 | +0.00 | 15 | 38 | flat/Hf k7 3.82!
+2026-09-17 export, its setup (7 000 lead | silver-saver |  6 | 3.55M/1.985M k7 | +0.00 3.55M/1.985M k7 | +0.00 | +0.00 | 15 | 35 | flat/Hf k7 -5.94!
+2026-09-17 export, its setup (7 000 lead | sweet-spot   |  7 | 4.44M/2.723M k7 | +0.00 4.44M/2.723M k7 | +0.00 | +0.00 | 15 | 35 | flat/Hf k7 0.87!
+2026-09-17 export, 12 000 leadership     | burn-saver   |  4 | 4.40M/4.370M k7 | +0.00 4.40M/4.370M k7 | +0.00 | +0.00 | 15 | 36 | flat/Hf k7 4.29!
+2026-09-17 export, 12 000 leadership     | silver-saver | 10 | 5.10M/2.477M k7 | +0.00 5.10M/2.477M k7 | +0.00 | +0.00 | 15 | 43 | flat/Hf k7 -1.72!
+2026-09-17 export, 12 000 leadership     | sweet-spot   | 17 | 9.19M/4.698M k7 | +0.00 9.19M/4.698M k7 | +0.00 | +0.00 | 15 | 37 | flat/Hf k7 0.00!
+live account of 2026-09-18 (one hired ty | silver-saver |  4 | 3.70M/3.587M k7 | +0.00 3.70M/3.587M k7 | +0.00 | +0.00 | 15 | 26 | flat/Hf k7 36.92!
+live account of 2026-09-18 (one hired ty | sweet-spot   |  6 | 7.12M/7.700M k7 | +0.00 7.12M/7.700M k7 | +0.00 | +0.00 | 15 | 29 | flat/Hf k7 0.98!
+live account, evening (hunters 83, legio | burn-saver   |  4 | 4.13M/3.666M k7 | +0.00 4.13M/3.666M k7 | +0.00 | +0.00 | 15 | 34 | flat/Hf k7 6.62!
+live account, evening (hunters 83, legio | silver-saver | 10 | 5.45M/2.682M k7 | +0.00 5.45M/2.682M k7 | +0.00 | +0.00 | 13 | 38 | flat/Hf k7 1.61!
+live account, evening (hunters 83, legio | sweet-spot   | 14 | 7.68M/4.243M k7 | +0.00 7.68M/4.243M k7 | +0.38 | +0.00 | 15 | 36 | flat/Hf k7 0.30!
+Aydae alone, 4 975 (one captain, four hi | burn-saver   |  4 | 2.20M/1.313M k8 | +0.00 2.20M/1.313M k8 | +0.05 | +0.00 | 15 | 17 | flat/Hf k8 9.45!
+Aydae alone, 4 975 (one captain, four hi | sweet-spot   | 10 | 4.25M/1.949M k7 | +0.00 4.25M/1.949M k7 | +0.00 | +0.00 | 29 | 26 | flat/Hf k8 -28.22! > -swordsman-1/b k7 -0.00!
+the owner’s live camp of 2026-09-18 (arb | burn-saver   |  3 | 2.02M/1.761M k7 | +0.00 2.02M/1.761M k7 | +0.00 | +0.00 | 15 | 29 | flat/Hf k7 3.80!
+the owner’s live camp of 2026-09-18 (arb | silver-saver | 10 | 2.54M/1.669M k4 | +0.00 2.54M/1.669M k4 | +0.00 | +0.00 | 15 | 30 | flat/Hf k7 4.33!
+the owner’s live camp of 2026-09-18 (arb | sweet-spot   | 15 | 4.36M/2.635M k4 | +0.00 4.36M/2.635M k4 | +0.00 | +0.00 | 15 | 32 | flat/Hf k7 -20.92!
+his camp of 2026-09-19, the localStorage | burn-saver   |  1 | 1.58M/1.921M k7 | +0.00 1.58M/1.921M k7 | +0.00 | +0.00 | 15 | 24 | flat/Hf k7 0.74!
+his camp of 2026-09-19, the localStorage | silver-saver |  3 | 1.88M/1.790M k5 | +12.51 2.11M/1.788M k6 | +0.00 | +0.00 | 27 | 34 | flat/Hf k7 -30.73! > -rider-2/a k6 12.51
+his camp of 2026-09-19, the localStorage | sweet-spot   |  4 | 2.45M/2.268M k5 | +0.28 2.46M/2.267M k5 | +0.00 | +0.28 | 36 | 39 | flat/Hf k7 -28.68! > -rider-1/b k6 -28.64! > -spearman-1/a k5 0.28
+his camp of 2026-09-19, as his message r | burn-saver   |  1 | 1.51M/1.902M k6 | +9.25 1.66M/1.993M k7 | +0.00 | +9.25 | 14 | 23 | flat/Hf k7 9.25
+his camp of 2026-09-19, as his message r | silver-saver |  2 | 1.85M/1.795M k7 | +0.00 1.85M/1.795M k7 | +0.00 | +0.00 | 26 | 31 | flat/Hf k7 -1.98! > -archer-1/a k6 3.46!
+his camp of 2026-09-19, as his message r | sweet-spot   |  5 | 2.81M/2.321M k5 | +0.01 2.81M/2.323M k5 | +0.00 | +0.01 | 37 | 36 | flat/Hf k7 -37.84! > -archer-1/a k6 -34.70! > -spearman-1/a k5 0.01
+his TotalStack profile of 2026-09-19 (5  | silver-saver |  1 | 1.01M/0.811M k8 | +0.00 1.01M/0.811M k8 | +0.00 | +0.00 | 30 | 21 | flat/Hf k8 11.80! > -swordsman-1/b k7 22.96!
+his TotalStack profile of 2026-09-19 (5  | sweet-spot   |  5 | 2.10M/2.115M k7 | +0.00 2.10M/2.115M k7 | +4.53 | +0.00 | 28 | 26 | flat/Hf k8 -18.10! > -swordsman-1/a k7 -0.49!
+his usual setup of 2026-09-19 (Aydae alo | burn-saver   |  1 | 2.15M/1.387M k8 | +0.00 2.15M/1.387M k8 | +0.00 | +0.00 | 15 | 20 | flat/Hf k8 7.47!
+his usual setup of 2026-09-19 (Aydae alo | sweet-spot   |  2 | 2.94M/2.032M k8 | +0.00 2.94M/2.032M k8 | +3.21 | +0.00 | 16 | 20 | flat/Hf k8 0.02!
+his browser setup of 2026-09-24 (Aydae 5 | sweet-spot   |  1 | 4.21M/2.370M k7 | +0.00 4.21M/2.370M k7 | +0.00 | +0.00 | 15 | 917 | flat/Hf k7 -0.26!
+
+stops 39: descent improves 4, equal 35, worse 0 (added candidate, gated); gains sum 22.05 max 12.51
+descent vs frontier: better 4 same 28 worse 7
+descent ms per stop: mean 75 median 32 max 917
+
+== account v2
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+acct ★0                                  | burn-saver   |  9 | 25.48M/4.069M k11 | +8.91 25.14M/4.002M k11 | +8.88 |  | 28 | 7587 | flat-tier/Hf k11 8.39
+acct ★0                                  | silver-saver | 15 | 20.20M/2.432M k8 | +0.00 20.20M/2.432M k8 | +0.00 |  | 60 | 1627 | flat-tier/Hf k11 25.71!QS > -archer-3/b k10 16.38!QS > -swordsman-2/b k9 9.08!QS > -archer-2/a k8 -1.05!S
+acct ★0                                  | sweet-spot   | 21 | 32.87M/4.062M k11 | +0.00 32.87M/4.062M k11 | +1.92 |  | 47 | 1706 | flat-hpl/H0 k11 0.01!Q > -rider-2/b k10 -0.64
+acct ★1                                  | burn-saver   |  9 | 23.37M/4.007M k8 | +22.64 25.37M/4.002M k11 | +22.61 |  | 28 | 7213 | flat-tier/Hf k11 23.97
+acct ★1                                  | silver-saver | 15 | 20.51M/2.658M k8 | +0.00 20.51M/2.658M k8 | +0.00 |  | 60 | 1691 | flat-tier/Hf k11 28.29!QS > -swordsman-2/b k10 21.40!QS > -rider-3/a k9 13.25!S > -rider-2/b k8 4.16!S
+acct ★1                                  | sweet-spot   | 21 | 34.45M/4.062M k11 | +0.00 34.45M/4.062M k11 | +1.84 |  | 49 | 1789 | flat-hpl/H0 k11 0.01!Q > -spearman-3/a k10 -3.73
+acct ★2                                  | burn-saver   |  9 | 26.60M/4.111M k11 | +8.60 25.36M/3.998M k11 | +8.65 |  | 29 | 5104 | flat-dpl/Hf k11 8.62
+acct ★2                                  | silver-saver | 16 | 21.72M/2.728M k8 | +0.00 21.72M/2.728M k8 | +0.00 |  | 60 | 1957 | flat-hpl/Hf k11 20.74!QS > -rider-3/b k10 16.35!QS > -archer-3/b k9 8.14!QS > -rider-2/b k8 2.97!QS
+acct ★2                                  | sweet-spot   | 22 | 34.68M/4.106M k11 | +0.00 34.68M/4.106M k11 | +2.48 |  | 50 | 1494 | flat-hpl/H0 k11 0.01!Q > -archer-2/a k10 -4.60
+
+stops 9: descent improves 3, equal 6, worse 0 (added candidate, gated); gains sum 40.15 max 22.64
+descent vs frontier: better 2 same 3 worse 4
+descent ms per stop: mean 3352 median 1789 max 7587
+monotone burn-saver ★0→★1: ★a best played 25.35M/4.002M vs ★b best 25.37M/4.002M rate +0.08
+monotone burn-saver ★1→★2: ★a best played 25.16M/4.002M vs ★b best 25.36M/3.998M rate +1.38
+monotone burn-saver ★0→★2: ★a best played 25.16M/4.002M vs ★b best 25.36M/3.998M rate +1.40
+
+== benchmark v2
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+first-run army, Bear V ×1 (20 000 leader | sweet-spot   |  1 | 4.70M/8.131M k10 | +0.00 4.70M/8.131M k10 | +0.00 | +0.00 | 23 | 56 | flat-tier/Hf k10 0.01!Q
+first-run army, Bear V ×2 (20 000 leader | sweet-spot   |  1 | 4.82M/8.131M k10 | +0.00 4.82M/8.131M k10 | +0.00 | +0.00 | 23 | 33 | flat-tier/Hf k10 0.01!Q
+first-run army, Bear V ×3 (20 000 leader | sweet-spot   |  1 | 4.93M/8.131M k10 | +0.00 4.93M/8.131M k10 | +0.00 | +0.00 | 23 | 35 | flat-tier/Hf k10 0.01!Q
+first-run army, Bear V ×10 (20 000 leade | sweet-spot   |  1 | 5.27M/8.131M k10 | +0.00 5.27M/8.131M k10 | +3.74 | +0.00 | 23 | 34 | flat-tier/Hf k10 0.01!Q
+first-run army, Epic Monster Hunter VI × | burn-saver   |  1 | 5.02M/8.131M k10 | +0.00 5.02M/8.131M k10 | +0.00 | +0.00 | 23 | 45 | flat-tier/Hf k10 0.01!Q
+first-run army, Epic Monster Hunter VI × | sweet-spot   |  6 | 7.18M/8.131M k10 | +0.00 7.18M/8.131M k10 | +0.00 | +0.00 | 23 | 40 | flat-tier/Hf k10 0.01!Q
+first-run army, monster tiers 3–5 at 900 | burn-saver   |  2 | 20.84M/8.762M k10 | +0.00 20.84M/8.762M k10 | +0.00 | +0.00 | 24 | 78 | flat-dpl/Hf k10 0.00!Q
+first-run army, monster tiers 3–5 at 900 | sweet-spot   |  5 | 23.62M/8.789M k10 | +0.00 23.62M/8.789M k10 | +0.00 | +0.00 | 28 | 763 | flat-dpl/Hf k10 0.00!Q
+first-run army, monster tiers 3–7 at 20  | silver-saver |  4 | 222.23M/12.086M k2 | +0.00 222.23M/12.086M k2 | +0.00 | +0.00 | 60 | 168 | flat-dpl/H0 k10 -16.91!DS > -spearman-3/a k9 -17.06!D > -archer-2/a k8 -16.18!D
+first-run army, monster tiers 3–7 at 20  | sweet-spot   |  5 | 478.93M/22.033M k2 | +0.00 478.93M/22.033M k2 | +0.09 | +0.00 | 60 | 201 | flat-rank/H0 k10 -21.01!D > -spearman-1/b k9 -21.25!D > -spearman-1/a k8 -21.48!D > -rider-1/a k7 -21.92!D > -spearman-2/b k6 -21.88!D
+the 4 000-leadership case of 2026-09-15  | silver-saver |  4 | 1.25M/0.767M k8 | +0.00 1.25M/0.767M k8 | +0.00 | +0.00 | 60 | 114 | flat-dpl/Hf k8 19.75!QS > -rider-3/b k7 4.38!QS > -rider-2/b k6 -8.09!QS > -archer-2/b k5 -24.99!S > -spearman-2/a k4 -28.79!DS
+the 4 000-leadership case of 2026-09-15  | sweet-spot   |  5 | 2.19M/1.522M k8 | +0.00 2.19M/1.522M k8 | +1.55 | +0.00 | 17 | 22 | flat-tier/Hf k8 0.03!Q
+2026-09-17 export, its setup (7 000 lead | burn-saver   |  4 | 3.20M/2.482M k7 | +0.00 3.20M/2.482M k7 | +0.00 | +0.00 | 17 | 59 | flat-tier/Hf k7 3.50!Q
+2026-09-17 export, its setup (7 000 lead | silver-saver |  6 | 3.55M/1.985M k7 | +0.00 3.55M/1.985M k7 | +0.00 | +0.00 | 40 | 83 | flat-hpl/Hf k7 -6.96!QS > -rider-3/a k6 -17.28!DQS > -archer-2/b k5 -28.74!DS
+2026-09-17 export, its setup (7 000 lead | sweet-spot   |  7 | 4.44M/2.723M k7 | +0.00 4.44M/2.723M k7 | +0.00 | +0.00 | 17 | 59 | flat-tier/Hf k7 0.64!Q
+2026-09-17 export, 12 000 leadership     | burn-saver   |  4 | 4.40M/4.370M k7 | +0.00 4.40M/4.370M k7 | +0.00 | +0.00 | 18 | 58 | flat-dpl/Hf k7 4.29!Q
+2026-09-17 export, 12 000 leadership     | silver-saver | 10 | 5.10M/2.477M k7 | +0.00 5.10M/2.477M k7 | +0.00 | +0.00 | 46 | 110 | flat-tier/Hf k7 -2.16!QS > -rider-3/a k6 -13.97!QS > -archer-2/a k5 -27.88!DQS > -rider-2/a k4 -41.91!DS
+2026-09-17 export, 12 000 leadership     | sweet-spot   | 17 | 9.19M/4.698M k7 | +0.00 9.19M/4.698M k7 | +0.00 | +0.00 | 16 | 57 | flat-hpl/Hf k7 0.00!Q
+live account of 2026-09-18 (one hired ty | silver-saver |  4 | 3.70M/3.587M k7 | +0.00 3.70M/3.587M k7 | +0.00 | +0.00 | 46 | 66 | flat-hpl/Hf k7 15.72!QS > -rider-3/b k6 -17.98!QS > -archer-2/b k5 -23.65!QS > -spearman-2/a k4 -50.06!DS
+live account of 2026-09-18 (one hired ty | sweet-spot   |  6 | 7.12M/7.700M k7 | +0.00 7.12M/7.700M k7 | +0.00 | +0.00 | 17 | 44 | flat-rank/Hf k7 0.98!Q
+live account, evening (hunters 83, legio | burn-saver   |  4 | 4.13M/3.666M k7 | +0.00 4.13M/3.666M k7 | +0.00 | +0.00 | 17 | 59 | flat-tier/Hf k7 7.44!Q
+live account, evening (hunters 83, legio | silver-saver | 10 | 5.45M/2.682M k7 | +0.00 5.45M/2.682M k7 | +0.00 | +0.00 | 39 | 93 | flat-tier/Hf k7 -5.59!QS > -rider-3/a k6 -16.56!DQS > -archer-2/b k5 -30.58!DS
+live account, evening (hunters 83, legio | sweet-spot   | 14 | 7.68M/4.243M k7 | +0.00 7.68M/4.243M k7 | +0.38 | +0.00 | 17 | 59 | flat-tier/Hf k7 0.74!Q
+Aydae alone, 4 975 (one captain, four hi | burn-saver   |  4 | 2.20M/1.313M k8 | +0.00 2.20M/1.313M k8 | +0.05 | +0.00 | 17 | 22 | flat-rank/Hf k8 9.45!Q
+Aydae alone, 4 975 (one captain, four hi | sweet-spot   | 10 | 4.25M/1.949M k7 | +0.00 4.25M/1.949M k7 | +0.00 | +0.00 | 28 | 29 | flat-tier/Hf k8 -27.89!D > -swordsman-1/a k7 -0.00!Q
+the owner’s live camp of 2026-09-18 (arb | burn-saver   |  3 | 2.02M/1.761M k7 | +0.00 2.02M/1.761M k7 | +0.00 | +0.00 | 27 | 61 | flat-hpl/Hf k7 4.03!Q > -rider-3/b k6 -11.81!D
+the owner’s live camp of 2026-09-18 (arb | silver-saver | 10 | 2.54M/1.669M k4 | +0.00 2.54M/1.669M k4 | +0.00 | +0.00 | 28 | 67 | flat-tier/Hf k7 -1.95!QS > -rider-3/a k6 -5.55!QS
+the owner’s live camp of 2026-09-18 (arb | sweet-spot   | 15 | 4.36M/2.635M k4 | +0.00 4.36M/2.635M k4 | +0.00 | +0.00 | 52 | 80 | flat-hpl/Hf k7 -20.91!D > -archer-1/b k6 -21.77!D > -spearman-1/b k5 -19.89!D > -spearman-1/a k4 -8.69!DQ > -rider-2/a k3 -9.15
+his camp of 2026-09-19, the localStorage | burn-saver   |  1 | 1.58M/1.921M k7 | +0.00 1.58M/1.921M k7 | +0.00 | +0.00 | 16 | 39 | flat-hpl/Hf k7 1.04!Q
+his camp of 2026-09-19, the localStorage | silver-saver |  3 | 1.88M/1.790M k5 | +12.51 2.11M/1.788M k6 | +0.00 | +0.00 | 29 | 48 | flat-rank/Hf k7 -30.73!DS > -rider-2/a k6 12.51
+his camp of 2026-09-19, the localStorage | sweet-spot   |  4 | 2.45M/2.268M k5 | +0.28 2.46M/2.267M k5 | +0.00 | +0.28 | 38 | 53 | flat-rank/Hf k7 -28.68!D > -rider-1/b k6 -28.64!D > -spearman-1/a k5 0.28
+his camp of 2026-09-19, as his message r | burn-saver   |  1 | 1.51M/1.902M k6 | +9.25 1.66M/1.993M k7 | +0.00 | +9.25 | 14 | 37 | flat-rank/Hf k7 9.25
+his camp of 2026-09-19, as his message r | silver-saver |  2 | 1.85M/1.795M k7 | +0.00 1.85M/1.795M k7 | +0.00 | +0.00 | 26 | 44 | flat-rank/Hf k7 -1.98!QS > -archer-2/b k6 -12.21!DS
+his camp of 2026-09-19, as his message r | sweet-spot   |  5 | 2.81M/2.321M k5 | +0.01 2.81M/2.323M k5 | +0.00 | +0.01 | 38 | 50 | flat-rank/Hf k7 -37.84!D > -archer-1/a k6 -34.70!D > -spearman-1/a k5 0.01
+his TotalStack profile of 2026-09-19 (5  | silver-saver |  1 | 1.01M/0.811M k8 | +0.00 1.01M/0.811M k8 | +0.00 | +0.00 | 56 | 76 | flat-tier/Hf k8 16.23!QS > -rider-3/b k7 5.59!QS > -archer-2/b k6 -19.01!QS > -rider-2/b k5 -30.31!DQS
+his TotalStack profile of 2026-09-19 (5  | sweet-spot   |  5 | 2.10M/2.115M k7 | +0.00 2.10M/2.115M k7 | +4.53 | +0.00 | 30 | 29 | flat-tier/Hf k8 -18.10!D > -swordsman-1/a k7 -0.49!Q
+his usual setup of 2026-09-19 (Aydae alo | burn-saver   |  1 | 2.15M/1.387M k8 | +0.00 2.15M/1.387M k8 | +0.00 | +0.00 | 17 | 25 | flat-rank/Hf k8 7.47!Q
+his usual setup of 2026-09-19 (Aydae alo | sweet-spot   |  2 | 2.94M/2.032M k8 | +0.00 2.94M/2.032M k8 | +3.21 | +0.00 | 20 | 25 | flat-rank/Hf k8 0.02!Q
+his browser setup of 2026-09-24 (Aydae 5 | sweet-spot   |  1 | 4.21M/2.370M k7 | +0.00 4.21M/2.370M k7 | +0.00 | +0.00 | 19 | 164 | flat-dpl/H0 k7 0.03!Q
+
+stops 39: descent improves 4, equal 35, worse 0 (added candidate, gated); gains sum 22.05 max 12.51
+descent vs frontier: better 4 same 28 worse 7
+descent ms per stop: mean 82 median 57 max 763
+
+== account v3
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+acct ★0                                  | burn-saver   |  9 | 25.48M/4.069M k11 | +8.91 25.14M/4.002M k11 | +8.88 |  | 29 | 9917 | flat-tier/Hf k11 8.39
+acct ★0                                  | silver-saver | 15 | 20.20M/2.432M k8 | +0.00 20.20M/2.432M k8 | +0.00 |  | 45 | 756 | flat-tier/Hf k11 0.36!S > -rider-1/a k10 3.32!D
+acct ★0                                  | sweet-spot   | 21 | 32.87M/4.062M k11 | +0.00 32.88M/4.064M k11 | +1.92 |  | 29 | 390 | flat-hpl/H0 k11 0.00
+acct ★1                                  | burn-saver   |  9 | 23.37M/4.007M k8 | +22.64 25.37M/4.002M k11 | +22.61 |  | 28 | 10469 | flat-tier/Hf k11 23.97
+acct ★1                                  | silver-saver | 15 | 20.51M/2.658M k8 | +9.28 22.18M/2.655M k11 | +0.00 |  | 29 | 1024 | flat-tier/H0 k11 9.28
+acct ★1                                  | sweet-spot   | 21 | 34.45M/4.062M k11 | +0.01 34.46M/4.064M k11 | +1.84 |  | 29 | 407 | flat-hpl/H0 k11 0.01
+acct ★2                                  | burn-saver   |  9 | 26.60M/4.111M k11 | +8.60 25.36M/3.998M k11 | +8.65 |  | 28 | 6028 | flat-dpl/Hf k11 8.62
+acct ★2                                  | silver-saver | 16 | 21.72M/2.728M k8 | +9.52 23.05M/2.545M k10 | +0.00 |  | 47 | 715 | flat-dpl/H0 k11 0.26 > -spearman-2/b k10 9.52
+acct ★2                                  | sweet-spot   | 22 | 34.68M/4.106M k11 | +0.01 34.68M/4.107M k11 | +2.48 |  | 30 | 983 | flat-hpl/H0 k11 0.01
+
+stops 9: descent improves 7, equal 2, worse 0 (added candidate, gated); gains sum 58.96 max 22.64
+descent vs frontier: better 4 same 1 worse 4
+descent ms per stop: mean 3410 median 983 max 10469
+monotone burn-saver ★0→★1: ★a best played 25.35M/4.002M vs ★b best 25.37M/4.002M rate +0.08
+monotone burn-saver ★1→★2: ★a best played 25.16M/4.002M vs ★b best 25.36M/3.998M rate +1.38
+monotone burn-saver ★0→★2: ★a best played 25.16M/4.002M vs ★b best 25.36M/3.998M rate +1.40
+monotone silver-saver ★1→★2: ★a best played 21.44M/2.655M vs ★b best 23.05M/2.545M rate +1.92
+monotone sweet-spot ★0→★1: ★a best played 33.87M/4.064M vs ★b best 34.46M/4.064M rate +1.73
+monotone sweet-spot ★1→★2: ★a best played 33.95M/4.064M vs ★b best 34.68M/4.107M rate -2.26
+monotone sweet-spot ★0→★2: ★a best played 33.95M/4.064M vs ★b best 34.68M/4.107M rate -2.29
+
+== benchmark v3
+label | pick | burn | shipped | descent rf (bill) k types | frontier rf | arch rf (295) | visited | ms | path
+first-run army, Bear V ×1 (20 000 leader | sweet-spot   |  1 | 4.70M/8.131M k10 | +0.01 4.70M/8.132M k10 | +0.00 | +0.00 | 22 | 80 | flat-tier/Hf k10 0.01
+first-run army, Bear V ×2 (20 000 leader | sweet-spot   |  1 | 4.82M/8.131M k10 | +0.01 4.82M/8.132M k10 | +0.00 | +0.00 | 22 | 53 | flat-tier/Hf k10 0.01
+first-run army, Bear V ×3 (20 000 leader | sweet-spot   |  1 | 4.93M/8.131M k10 | +0.01 4.93M/8.132M k10 | +0.00 | +0.00 | 22 | 46 | flat-tier/Hf k10 0.01
+first-run army, Bear V ×10 (20 000 leade | sweet-spot   |  1 | 5.27M/8.131M k10 | +0.01 5.27M/8.132M k10 | +3.74 | +0.00 | 22 | 52 | flat-tier/Hf k10 0.01
+first-run army, Epic Monster Hunter VI × | burn-saver   |  1 | 5.02M/8.131M k10 | +0.01 5.02M/8.132M k10 | +0.00 | +0.00 | 22 | 56 | flat-tier/Hf k10 0.01
+first-run army, Epic Monster Hunter VI × | sweet-spot   |  6 | 7.18M/8.131M k10 | +0.01 7.18M/8.132M k10 | +0.00 | +0.00 | 22 | 45 | flat-tier/Hf k10 0.01
+first-run army, monster tiers 3–5 at 900 | burn-saver   |  2 | 20.84M/8.762M k10 | +0.00 20.84M/8.762M k10 | +0.00 | +0.00 | 23 | 141 | flat-dpl/Hf k10 0.00
+first-run army, monster tiers 3–5 at 900 | sweet-spot   |  5 | 23.62M/8.789M k10 | +0.00 23.62M/8.789M k10 | +0.00 | +0.00 | 27 | 142 | flat-dpl/H0 k10 0.00
+first-run army, monster tiers 3–7 at 20  | silver-saver |  4 | 222.23M/12.086M k2 | +0.00 222.23M/12.086M k2 | +0.00 | +0.00 | 60 | 345 | flat-rank/H0 k10 -16.35!D > -rider-1/a k9 -16.38!D > -spearman-1/a k8 -16.29!D > -archer-1/a k7 -16.29!D > -archer-1/a k6 -16.32!D
+first-run army, monster tiers 3–7 at 20  | sweet-spot   |  5 | 478.93M/22.033M k2 | +0.00 478.93M/22.033M k2 | +0.09 | +0.00 | 60 | 219 | flat-rank/H0 k10 -21.01!D > -spearman-1/b k9 -21.25!D > -spearman-1/a k8 -21.48!D > -rider-1/a k7 -21.92!D > -spearman-2/b k6 -21.88!D
+the owner’s live camp of 2026-09-18 (arb | burn-saver   |  3 | 2.02M/1.761M k7 | +0.00 2.02M/1.761M k7 | +0.00 | +0.00 | 16 | 116 | flat-rank/Hf k7 -6.87!D
+the owner’s live camp of 2026-09-18 (arb | silver-saver | 10 | 2.54M/1.669M k4 | +0.00 2.54M/1.669M k4 | +0.00 | +0.00 | 38 | 179 | flat-rank/Hf k7 -15.47!D > -archer-2/b k6 -16.31!D > -rider-3/b k5 -13.21!D
+the owner’s live camp of 2026-09-18 (arb | sweet-spot   | 15 | 4.36M/2.635M k4 | +0.00 4.36M/2.635M k4 | +0.00 | +0.00 | 51 | 139 | flat-hpl/Hf k7 -20.91!D > -archer-1/b k6 -21.77!D > -spearman-1/b k5 -19.89!D > -spearman-1/b k4 -8.65!D > -archer-2/a k3 -9.14
+his camp of 2026-09-19, the localStorage | burn-saver   |  1 | 1.58M/1.921M k7 | +0.49 1.58M/1.894M k7 | +0.00 | +0.00 | 17 | 88 | flat-tier/Hf k7 0.49
+his camp of 2026-09-19, the localStorage | silver-saver |  3 | 1.88M/1.790M k5 | +12.53 2.11M/1.790M k6 | +0.00 | +0.00 | 26 | 111 | flat-rank/Hf k7 -19.78!D > -archer-1/a k6 12.53
+his camp of 2026-09-19, the localStorage | sweet-spot   |  4 | 2.45M/2.268M k5 | +0.28 2.46M/2.267M k5 | +0.00 | +0.28 | 38 | 99 | flat-rank/Hf k7 -28.68!D > -rider-1/b k6 -28.64!D > -spearman-1/a k5 0.28
+his camp of 2026-09-19, as his message r | burn-saver   |  1 | 1.51M/1.902M k6 | +9.25 1.66M/1.993M k7 | +0.00 | +9.25 | 13 | 76 | flat-rank/Hf k7 9.25
+his camp of 2026-09-19, as his message r | silver-saver |  2 | 1.85M/1.795M k7 | +0.00 1.85M/1.795M k7 | +0.00 | +0.00 | 28 | 110 | flat-rank/Hf k7 -9.00!D > -rider-2/b k6 -6.54!D
+his camp of 2026-09-19, as his message r | sweet-spot   |  5 | 2.81M/2.321M k5 | +0.01 2.81M/2.323M k5 | +0.00 | +0.01 | 37 | 80 | flat-rank/Hf k7 -37.84!D > -archer-1/a k6 -34.70!D > -spearman-1/a k5 0.01
+his TotalStack profile of 2026-09-19 (5  | silver-saver |  1 | 1.01M/0.811M k8 | +0.48 1.01M/0.789M k8 | +0.00 | +0.00 | 15 | 53 | flat-tier/Hf k8 0.48
+his TotalStack profile of 2026-09-19 (5  | sweet-spot   |  5 | 2.10M/2.115M k7 | +0.00 2.10M/2.115M k7 | +4.53 | +0.00 | 30 | 49 | flat-tier/Hf k8 -18.10!D > -swordsman-1/b k7 -0.65
+his usual setup of 2026-09-19 (Aydae alo | burn-saver   |  1 | 2.15M/1.387M k8 | +0.55 2.15M/1.349M k8 | +0.00 | +0.00 | 14 | 42 | flat-rank/Hf k8 0.55
+his usual setup of 2026-09-19 (Aydae alo | sweet-spot   |  2 | 2.94M/2.032M k8 | +0.01 2.94M/2.031M k8 | +3.21 | +0.00 | 18 | 35 | flat-dpl/H0 k8 0.01
+his browser setup of 2026-09-24 (Aydae 5 | sweet-spot   |  1 | 4.21M/2.370M k7 | +0.03 4.21M/2.370M k7 | +0.00 | +0.00 | 21 | 234 | flat-hpl/H0 k7 0.03
+the 4 000-leadership case of 2026-09-15  | silver-saver |  4 | 1.25M/0.767M k8 | +6.65 1.38M/0.760M k8 | +0.00 | +0.00 | 17 | 60 | flat-dpl/Hf k8 6.65
+the 4 000-leadership case of 2026-09-15  | sweet-spot   |  5 | 2.19M/1.522M k8 | +0.00 2.19M/1.522M k8 | +1.55 | +0.00 | 15 | 40 | flat-tier/Hf k8 -0.43
+2026-09-17 export, its setup (7 000 lead | burn-saver   |  4 | 3.20M/2.482M k7 | +0.00 3.20M/2.482M k7 | +0.00 | +0.00 | 17 | 104 | flat-tier/Hf k7 -4.85!D
+2026-09-17 export, its setup (7 000 lead | silver-saver |  6 | 3.55M/1.985M k7 | +0.00 3.55M/1.985M k7 | +0.00 | +0.00 | 18 | 111 | flat-hpl/Hf k7 -4.13
+2026-09-17 export, its setup (7 000 lead | sweet-spot   |  7 | 4.44M/2.723M k7 | +0.00 4.44M/2.723M k7 | +0.00 | +0.00 | 15 | 109 | flat-tier/Hf k7 -3.78
+2026-09-17 export, 12 000 leadership     | burn-saver   |  4 | 4.40M/4.370M k7 | +0.46 4.41M/4.331M k7 | +0.00 | +0.00 | 16 | 147 | flat-tier/Hf k7 0.46
+2026-09-17 export, 12 000 leadership     | silver-saver | 10 | 5.10M/2.477M k7 | +0.00 5.10M/2.477M k7 | +0.00 | +0.00 | 17 | 141 | flat-rank/Hf k7 -2.30
+2026-09-17 export, 12 000 leadership     | sweet-spot   | 17 | 9.19M/4.698M k7 | +0.00 9.19M/4.698M k7 | +0.00 | +0.00 | 16 | 105 | flat-hpl/Hf k7 -0.01
+live account of 2026-09-18 (one hired ty | silver-saver |  4 | 3.70M/3.587M k7 | +0.45 3.71M/3.542M k7 | +0.00 | +0.00 | 17 | 108 | flat-rank/Hf k7 0.45
+live account of 2026-09-18 (one hired ty | sweet-spot   |  6 | 7.12M/7.700M k7 | +0.45 7.13M/7.604M k7 | +0.00 | +0.00 | 17 | 81 | flat-rank/Hf k7 0.45
+live account, evening (hunters 83, legio | burn-saver   |  4 | 4.13M/3.666M k7 | +0.00 4.13M/3.666M k7 | +0.00 | +0.00 | 28 | 138 | flat-rank/Hf k7 -5.95!D > -archer-2/a k6 -6.09
+live account, evening (hunters 83, legio | silver-saver | 10 | 5.45M/2.682M k7 | +0.00 5.45M/2.682M k7 | +0.00 | +0.00 | 17 | 133 | flat-hpl/Hf k7 -3.46
+live account, evening (hunters 83, legio | sweet-spot   | 14 | 7.68M/4.243M k7 | +0.36 7.69M/4.191M k7 | +0.38 | +0.00 | 16 | 106 | flat-rank/Hf k7 0.36
+Aydae alone, 4 975 (one captain, four hi | burn-saver   |  4 | 2.20M/1.313M k8 | +0.59 2.20M/1.273M k8 | +0.05 | +0.00 | 15 | 47 | flat-rank/Hf k8 0.59
+Aydae alone, 4 975 (one captain, four hi | sweet-spot   | 10 | 4.25M/1.949M k7 | +0.01 4.25M/1.947M k7 | +0.00 | +0.00 | 27 | 50 | flat-tier/Hf k8 -27.89!D > -swordsman-1/a k7 0.01
+
+stops 39: descent improves 22, equal 17, worse 0 (added candidate, gated); gains sum 32.65 max 12.53
+descent vs frontier: better 19 same 14 worse 6
+descent ms per stop: mean 104 median 104 max 345

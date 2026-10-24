@@ -1,0 +1,817 @@
+diff --git a/src/config.ts b/src/config.ts
+index 89483ff..4f30f10 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -161,6 +161,16 @@ export const CAMPAIGN = {
+       damageFloor: 0.95,
+       thriftyReads: 'before' as const,
+     },
++    /**
++     * **The descent from the flat shape** (owner, 2026-10-24; `CampaignInput.descent`, `engine/descent.ts`,
++     * experiments 300 V3, 353, 360): the burn saver and the silver saver may take the march found by laying every
++     * troop type flat and dropping one type a step, read on Tight as the March opens it, when it rates more than
++     * `ratedStops.minRating` above the stop under the rated stops' gates. Delete the entry and the bar is what it was.
++     *
++     * - `maxVisits` — **60**: marches the descent reads on the cheap Tight reading (0 restarts).
++     * - `topK` — **6**: of those, the best read with the full Tight raise (top-1 and top-2 picked the same in 353).
++     */
++    descent: { maxVisits: 60, topK: 6 },
+   },
+   /**
+    * **The bar** is three stops along the hired units a march burns for good — the thriftiest rung the band
+diff --git a/src/engine/descent.ts b/src/engine/descent.ts
+new file mode 100644
+index 0000000..b99e357
+--- /dev/null
++++ b/src/engine/descent.ts
+@@ -0,0 +1,291 @@
++/**
++ * **The descent from the flat shape** (owner, 2026-10-24; experiments 300 V3, 301, 353;
++ * `CAMPAIGN.planFixes.descent`). A candidate generator for the burn saver and the silver saver, read from the
++ * request and the stop alone — no history, so the same stop on the same account always gets the same answer.
++ *
++ * Seeds: every troop type on near-flat slots, in four orders (ranking, kill order, damage per leadership, HP per
++ * leadership) under two hired variants (the stop's own hired stacks, and the same with every dominance stack at
++ * one chunk), each laid at the largest slot HP that fits the leadership and stays within the stop's queue (a
++ * silver saver also its silver), then re-typed (`retypeMarch`, silver and queue held). Greedy descent: drop one
++ * troop type a step (re-laid flat, or its slot dropped keeping the shape), ranked on a cheap Tight reading (no
++ * restarts), at most `maxVisits` marches. The best `topK` are then read with the full Tight raise — the march
++ * the March opens on — and the best one that rates above the stop by more than `minRating`, burns no more,
++ * keeps `damageFloor` of its damage, trains no longer and (a silver saver) costs no more silver is the answer.
++ */
++import { RAISE_TIGHT, raiseKernel } from './fast';
++import { buildKillOrder } from './killOrder';
++import { effectiveTable, marchResult, rankTroops } from './plan';
++import type { Bill, MarkerRates } from './rating';
++import { rate } from './rating';
++import { chunks } from './recovery';
++import { marchBill, retypeMarch } from './retype';
++import type { StackRequest } from './types';
++
++/** The rule's numbers (`CAMPAIGN.planFixes.descent`). */
++export interface DescentRule {
++  /** Marches the descent reads at most (seeds included). */
++  maxVisits: number;
++  /** Candidates read with the full Tight raise. */
++  topK: number;
++}
++
++/** What the descent hands the plan: the march as the plan fields it (pre-raise) and its Tight reading. */
++export interface Descended {
++  counts: Record<string, number>;
++  bill: Bill;
++  /** Its rating against the stop's own Tight reading. */
++  rating: number;
++}
++
++/** 292's near-flat step between two slots. */
++const SPREAD = 0.0019;
++const TIGHT = { authority: RAISE_TIGHT, dominance: RAISE_TIGHT };
++
++const keyOf = (counts: Record<string, number>): string =>
++  JSON.stringify(Object.entries(counts).filter(([, v]) => v > 0).sort());
++
++/** The march as the March opens on it: raised by Tight (`restarts` 0: the cheap reading), and its bill. */
++export function tightBill(
++  request: StackRequest,
++  counts: Record<string, number>,
++  restarts?: number,
++): Bill {
++  const base = marchResult(request, counts).result;
++  const own: Record<string, number> = {};
++  for (const stack of base.stacks) own[stack.unitId] = stack.count;
++  const kernel = raiseKernel();
++  const fast =
++    kernel === null
++      ? null
++      : kernel.position({ request, base, modes: TIGHT, ...(restarts === undefined ? {} : { restarts }) });
++  const raised = fast !== null ? { ...own, ...fast.counts } : own;
++  const bill = marchBill(request, raised);
++  let hired = 0;
++  for (const stack of base.stacks) if (stack.pool === 'authority') hired += chunks(raised[stack.unitId] ?? 0);
++  return { ...bill, hired };
++}
++
++/** The bar's gates on a replacement, on Tight readings (290-common's `admissible`). */
++function admissible(pick: string, shipped: Bill, next: Bill, damageFloor: number): boolean {
++  if ((next.hired ?? 0) > (shipped.hired ?? 0)) return false;
++  if (next.damage < shipped.damage * damageFloor) return false;
++  if ((next.seconds ?? 0) > (shipped.seconds ?? 0) + 1e-6) return false;
++  if (pick === 'silver-saver' && (next.silver ?? 0) > (shipped.silver ?? 0) + 1e-6) return false;
++  return true;
++}
++
++/** How far outside the gates, in summed percent (0 inside): the descent's order among refused marches. */
++function outside(pick: string, shipped: Bill, next: Bill, damageFloor: number): number {
++  let v = 0;
++  const pct = (a: number, b: number): number => ((a - b) / Math.max(1, b)) * 100;
++  if ((next.hired ?? 0) > (shipped.hired ?? 0)) v += 100 * ((next.hired ?? 0) - (shipped.hired ?? 0));
++  if (next.damage < shipped.damage * damageFloor)
++    v += ((shipped.damage * damageFloor - next.damage) / shipped.damage) * 100;
++  if ((next.seconds ?? 0) > (shipped.seconds ?? 0) + 1e-6) v += pct(next.seconds ?? 0, shipped.seconds ?? 0);
++  if (pick === 'silver-saver' && (next.silver ?? 0) > (shipped.silver ?? 0) + 1e-6)
++    v += pct(next.silver ?? 0, shipped.silver ?? 0);
++  return v;
++}
++
++interface Node {
++  counts: Record<string, number>;
++  troops: { id: string; hp: number }[];
++  hired: Record<string, number>;
++  bill: Bill;
++  r: number;
++  adm: boolean;
++  v: number;
++}
++
++/**
++ * The descent's best march for one stop, or `null` when none rates above it by more than `minRating`.
++ * `pick` is the stop's kind (`silver-saver` holds its silver), `stopCounts` its repeated march.
++ */
++export function descend(
++  request: StackRequest,
++  pick: string,
++  stopCounts: Record<string, number>,
++  rates: MarkerRates,
++  rule: DescentRule & { minRating: number; damageFloor: number; tierCandidate?: boolean | undefined },
++): Descended | null {
++  if (raiseKernel() === null) return null;
++  const floor = rule.damageFloor;
++  const table = effectiveTable(request);
++  const lead = table.filter((e) => e.pool === 'leadership');
++  const byId = new Map(lead.map((e) => [e.id, e]));
++  const rankMap = new Map(rankTroops(table).map((e, i) => [e.id, i]));
++  const allIds = lead.map((e) => e.id);
++  const byRank = (ids: string[]): string[] =>
++    [...ids].sort((a, b) => (rankMap.get(a) ?? 99) - (rankMap.get(b) ?? 99));
++  const flat = (k: number): number[] => Array.from({ length: k }, (_, j) => 1 - SPREAD * j);
++  const stop = marchResult(request, stopCounts).result;
++  if (!stop.stacks.some((s) => s.pool === 'leadership' && s.count > 0)) return null;
++  const H0: Record<string, number> = {};
++  const Hf: Record<string, number> = {};
++  for (const s of stop.stacks)
++    if (s.pool !== 'leadership') {
++      H0[s.unitId] = s.count;
++      Hf[s.unitId] = s.pool === 'dominance' ? Math.min(s.count, 10) : s.count;
++    }
++  const stopBill = marchBill(request, stopCounts);
++  const silverCeiling = pick === 'silver-saver' ? stopBill.silver : undefined;
++  const secondsCeiling = stopBill.seconds;
++  const shipped = tightBill(request, stopCounts);
++  const shippedProxy = tightBill(request, stopCounts, 0);
++  const L = request.housing.leadership;
++
++  /** The types laid over a slot shape (weights, biggest first) at the largest H the leadership and caps allow. */
++  const lay = (hired: Record<string, number>, perm: string[], shape: number[]): Record<string, number> | null => {
++    const build = (H: number): { counts: Record<string, number>; used: number } => {
++      const counts: Record<string, number> = { ...hired };
++      let used = 0;
++      perm.forEach((id, i) => {
++        const t = byId.get(id);
++        if (t === undefined) return;
++        const c = Math.ceil((H * (shape[i] ?? 0)) / t.hp);
++        counts[id] = c;
++        used += c * t.cost;
++      });
++      return { counts, used };
++    };
++    let lo = 0;
++    let hi = 1e9;
++    for (let i = 0; i < 70; i += 1) {
++      const mid = (lo + hi) / 2;
++      if (build(mid).used <= L) lo = mid;
++      else hi = mid;
++    }
++    const over = (H: number): boolean => {
++      const bill = marchBill(request, build(H).counts);
++      return (
++        (bill.seconds ?? 0) > (secondsCeiling ?? Infinity) + 1e-6 ||
++        (silverCeiling !== undefined && (bill.silver ?? 0) > silverCeiling + 1e-6)
++      );
++    };
++    if (over(lo)) {
++      let a = 0;
++      let b = lo;
++      for (let i = 0; i < 24; i += 1) {
++        const mid = (a + b) / 2;
++        if (over(mid)) b = mid;
++        else a = mid;
++      }
++      lo = a;
++    }
++    const built = build(lo);
++    if (perm.some((id) => (built.counts[id] ?? 0) <= 0)) return null;
++    return built.counts;
++  };
++  const legal = (counts: Record<string, number>): boolean => {
++    const p = marchResult(request, counts).result.pools;
++    return (
++      p.leadership.used <= p.leadership.capacity &&
++      p.authority.used <= p.authority.capacity &&
++      p.dominance.used <= p.dominance.capacity
++    );
++  };
++
++  const seen = new Set<string>([keyOf(stopCounts)]);
++  const visited: Node[] = [];
++  const evaluate = (counts: Record<string, number> | null): Node | null => {
++    if (counts === null || visited.length >= rule.maxVisits) return null;
++    if (!legal(counts)) return null;
++    const found = retypeMarch(request, counts, rates, {
++      ...(rule.tierCandidate === true ? { tierCandidate: true } : {}),
++      silverCeiling,
++      secondsCeiling,
++    });
++    const next = found?.counts ?? counts;
++    const k = keyOf(next);
++    if (seen.has(k)) return null;
++    seen.add(k);
++    const bill = tightBill(request, next, 0);
++    const { result } = marchResult(request, next);
++    const hired: Record<string, number> = {};
++    for (const s of result.stacks) if (s.pool !== 'leadership') hired[s.unitId] = s.count;
++    const troops = result.stacks
++      .filter((s) => s.pool === 'leadership' && s.count > 0)
++      .map((s) => ({ id: s.unitId, hp: s.totalHp }))
++      .sort((a, b) => b.hp - a.hp);
++    const node: Node = {
++      counts: next,
++      troops,
++      hired,
++      bill,
++      r: rate(shippedProxy, bill, rates),
++      adm: admissible(pick, shippedProxy, bill, floor),
++      v: outside(pick, shippedProxy, bill, floor),
++    };
++    visited.push(node);
++    return node;
++  };
++  const better = (a: Node, b: Node): boolean =>
++    a.adm !== b.adm
++      ? a.adm
++      : a.adm
++        ? a.r > b.r + 1e-6
++        : a.v < b.v - 1e-9 || (Math.abs(a.v - b.v) <= 1e-9 && a.r > b.r + 1e-6);
++
++  const killRank = new Map(buildKillOrder(request.units, request.options).map((id, i) => [id, i]));
++  const by =
++    (f: (id: string) => number) =>
++    (ids: string[]): string[] =>
++      [...ids].sort((a, b) => f(a) - f(b));
++  const orders: ((ids: string[]) => string[])[] = [
++    byRank,
++    by((id) => killRank.get(id) ?? 99),
++    by((id) => {
++      const e = byId.get(id);
++      return e ? e.damagePerUnit / e.cost : 0;
++    }),
++    by((id) => {
++      const e = byId.get(id);
++      return e ? e.hp / e.cost : 0;
++    }),
++  ];
++  const seeds: Node[] = [];
++  for (const order of orders)
++    for (const hired of [Hf, H0]) {
++      const n = evaluate(lay(hired, order(allIds), flat(allIds.length)));
++      if (n) seeds.push(n);
++    }
++  if (seeds.length === 0) return null;
++  let cur = seeds.reduce((m, n) => (better(n, m) ? n : m));
++  while (visited.length < rule.maxVisits && cur.troops.length > 1) {
++    const kids: Node[] = [];
++    const ids = cur.troops.map((t) => t.id);
++    for (let i = 0; i < ids.length && visited.length < rule.maxVisits; i += 1) {
++      const rest = ids.filter((_, j) => j !== i);
++      const a = evaluate(lay(cur.hired, byRank(rest), flat(rest.length)));
++      if (a) kids.push(a);
++      const restHp = cur.troops.filter((_, j) => j !== i).map((t) => t.hp);
++      const mean = restHp.reduce((s, x) => s + x, 0) / restHp.length;
++      const b = evaluate(
++        lay(
++          cur.hired,
++          rest,
++          restHp.map((h) => h / mean),
++        ),
++      );
++      if (b) kids.push(b);
++    }
++    if (kids.length === 0) break;
++    const best = kids.reduce((m, n) => (better(n, m) ? n : m));
++    if (!better(best, cur)) break;
++    cur = best;
++  }
++
++  // The read: admissible on the cheap reading against the stop's full one, the best `topK` read in full.
++  const ranked = visited
++    .map((node) => ({ node, r0: rate(shipped, node.bill, rates) }))
++    .filter((row) => admissible(pick, shipped, row.node.bill, floor))
++    .sort((a, b) => b.r0 - a.r0);
++  let best: Descended | null = null;
++  for (const { node } of ranked.slice(0, rule.topK)) {
++    const bill = tightBill(request, node.counts);
++    if (!admissible(pick, shipped, bill, floor)) continue;
++    const rating = rate(shipped, bill, rates);
++    if (rating > (best?.rating ?? 0)) best = { counts: node.counts, bill, rating };
++  }
++  return best !== null && best.rating > rule.minRating ? best : null;
++}
+diff --git a/src/engine/fast.ts b/src/engine/fast.ts
+index ed980bc..508b919 100644
+--- a/src/engine/fast.ts
++++ b/src/engine/fast.ts
+@@ -323,6 +323,8 @@ export interface RaiseInput {
+    * already be at or under it (`liftedCounts` trims it first): a raise only ever adds.
+    */
+   burnCap?: number;
++  /** The box search's restarts for this call (the descent's cheap proxy reads 0); left out, the kernel's own. */
++  restarts?: number;
+ }
+ 
+ /**
+diff --git a/src/engine/plan.ts b/src/engine/plan.ts
+index 6afef10..c100a52 100644
+--- a/src/engine/plan.ts
++++ b/src/engine/plan.ts
+@@ -45,6 +45,8 @@ import type { Bill, MarkerRates } from './rating';
+ import { rate, saved } from './rating';
+ import { marchBill, retypeMarch } from './retype';
+ import { planTrace } from './plan-trace';
++import { descend } from './descent';
++import type { DescentRule } from './descent';
+ import { LADDER_ENGINE, LADDER_NONE, LADDER_SHAPE, requiredPlanKernel } from './fast';
+ import type { LadderKernel, MarchFigures, PlanKernel } from './fast';
+ import type {
+@@ -318,6 +320,13 @@ export interface CampaignInput {
+         thriftyReads?: 'after' | 'before' | undefined;
+       }
+     | undefined;
++  /**
++   * **The descent from the flat shape** (owner, 2026-10-24; `engine/descent.ts`, experiments 300 V3, 353, 360). Set,
++   * with `ratedStops` and `putBack.rates`, the burn saver and the silver saver each take the descent's march when its
++   * Tight reading rates above the stop's by more than `ratedStops.minRating` under `ratedStops`' damage floor, burns
++   * no more, trains no longer and (silver saver) costs no more silver. Omitted, the bar is what it was.
++   */
++  descent?: DescentRule | undefined;
+   /**
+    * **The fewest troop stacks a plan the bar offers may stand on** — the band's third arm, experiment 72's
+    * criterion. Omitted it is **2**, as it has always been. Exposed for experiment 151 (2026-09-23), which found
+@@ -8382,6 +8391,68 @@ export function planCampaign(input: CampaignInput): CampaignPlan {
+     }
+     stops.sort(byBurn);
+   }
++  /**
++   * **The descent** (`CampaignInput.descent`, `engine/descent.ts`): the burn saver and the silver saver, read on the
++   * bar as the rated stops left it, may take the descent's march — a pure function of the request and the stop, so
++   * the same account always gets the same answer. Only the repeated march moves (its hired stacks are the stop's,
++   * so the stock, the finale and the tail stand); the campaign is re-priced by difference.
++   */
++  if (input.descent !== undefined && input.ratedStops !== undefined && ratedRates !== undefined) {
++    for (let index = 0; index < stops.length; index += 1) {
++      const current = stops[index] as PlanRow;
++      if (current.pick !== 'burn-saver' && current.pick !== 'silver-saver') continue;
++      if (current.sequence !== undefined) continue;
++      const found = descend(request, current.pick, current.counts, ratedRates, {
++        ...input.descent,
++        minRating: input.ratedStops.minRating,
++        damageFloor: input.ratedStops.damageFloor ?? 0,
++        tierCandidate: input.tierCandidate,
++      });
++      if (found === null) continue;
++      // No hired stack above the stop's, so its stock still carries its marches and finale.
++      if (mercTypes.some((entry) => (found.counts[entry.id] ?? 0) > (current.counts[entry.id] ?? 0))) continue;
++      const times = current.marches - (current.finaleCounts ? 1 : 0) - (current.tail?.marches ?? 0);
++      const was = priceCounts(current.counts);
++      const now = priceCounts(found.counts);
++      const totalDamage = current.totalDamage + times * (now.damage - was.damage);
++      const hiredDamage = current.hiredDamage + times * (now.hiredDamage - was.hiredDamage);
++      const silver = current.silver + times * (now.silver - was.silver);
++      const dragonCoins = current.dragonCoins + times * (now.dragonCoins - was.dragonCoins);
++      const mercLost = current.mercLost + times * (now.mercLost - was.mercLost);
++      const next: PlanRow = {
++        ...current,
++        counts: found.counts,
++        repeat: {
++          damage: now.damage,
++          hiredDamage: now.hiredDamage,
++          silver: now.silver,
++          gold: now.gold,
++          dragonCoins: now.dragonCoins,
++          seconds: now.seconds,
++          mercLost: now.mercLost,
++        },
++        totalDamage,
++        hiredDamage,
++        silver,
++        gold: current.gold + times * (now.gold - was.gold),
++        dragonCoins,
++        seconds: current.seconds + times * (now.seconds - was.seconds),
++        mercLost,
++        damagePerSilver: silver > 0 ? totalDamage / silver : Infinity,
++        damagePerMercenary: mercLost > 0 ? hiredDamage / mercLost : Infinity,
++        damagePerDragonCoin: dragonCoins > 0 ? totalDamage / dragonCoins : Infinity,
++      };
++      if (refuseDroppedTypes && !required.every((entry) => fieldsRequired(next, entry.id))) continue;
++      if (stops.some((other) => other !== current && sameCounts(other, next))) continue;
++      const troopStacks = Object.keys(found.counts).filter(
++        (id) => leadershipIds.has(id) && (found.counts[id] ?? 0) > 0,
++      ).length;
++      const hiredCount = Object.values(now.mercFielded).reduce((sum, count) => sum + count, 0);
++      next.label = `${String(troopStacks)} ${troopStacks === 1 ? 'stack' : 'stacks'} · ${String(hiredCount)} hired · ${compact(now.silver)} silver a march`;
++      stops[index] = next;
++    }
++    stops.sort(byBurn);
++  }
+   let typesOutPool: TradeRow[] = [];
+   if (input.fifthStop !== undefined) {
+     const sizedFrom = [...generatedOf.values()];
+diff --git a/src/kernel/raise.ts b/src/kernel/raise.ts
+index 759ba8e..907c8e8 100644
+--- a/src/kernel/raise.ts
++++ b/src/kernel/raise.ts
+@@ -208,7 +208,7 @@ export function createRaiseKernelProbe(
+     forceWhole: (request, base, on) => {
+       bound(request, base).raiseForceWhole(on ? 1 : 0);
+     },
+-    position({ request, base, modes, burnCap }: RaiseInput): RaiseAnswer | null {
++    position({ request, base, modes, burnCap, restarts }: RaiseInput): RaiseAnswer | null {
+       const bound = bind(request, base);
+       if (bound === null) return null;
+       views(bound);
+@@ -227,7 +227,7 @@ export function createRaiseKernelProbe(
+         bound.outPtr,
+         bound.statsPtr,
+         search.walkCap,
+-        search.restarts,
++        restarts ?? search.restarts,
+         search.maxSweeps,
+         search.seed,
+         // The player's burn ceiling (`RaiseInput.burnCap`); `Infinity` leaves each position its own cap.
+diff --git a/tests/engine/plan-descent.test.ts b/tests/engine/plan-descent.test.ts
+new file mode 100644
+index 0000000..5bd8d4a
+--- /dev/null
++++ b/tests/engine/plan-descent.test.ts
+@@ -0,0 +1,115 @@
++/**
++ * **The descent from the flat shape** (`CampaignInput.descent`, `CAMPAIGN.planFixes.descent`; owner, 2026-10-24;
++ * `engine/descent.ts`, experiments 300 V3, 353, 360).
++ *
++ *  - On the owner's 2026-10-22 account at Leonidas ★0, ★1 and ★2, the burn saver of a lower star, played under a
++ *    higher star, rates no better than that star's own burn saver (the owner's rating on the march as the March
++ *    opens it, Tight): a star never makes the merc saver worse. Before the descent, ★1's burn saver was beaten by
++ *    ★0's march played at ★1.
++ *  - On every benchmark army, the bar with the descent against the same bar without: a stop that moved is a burn
++ *    saver or a silver saver and rates more than `minRating` above the stop it replaced on Tight, burns no more,
++ *    keeps `damageFloor` of its damage, trains no longer and (silver saver) costs no more silver; no stop is lost.
++ *  - The answer is a function of the request: planned twice, the bar is the same.
++ */
++import { readFileSync } from 'node:fs';
++
++import { describe, expect, test } from 'vitest';
++
++import { CAMPAIGN } from '@/config';
++import { tightBill } from '@/engine/descent';
++import type { CampaignInput, CampaignPlan } from '@/engine/plan';
++import { planCampaign } from '@/engine/plan';
++import { rate } from '@/engine/rating';
++import { parseImport } from '@/share/exportImport';
++import { buildPlanRequest } from '@/state/derive';
++import type { Profile } from '@/state/schema';
++
++import { HORIZON, commonScenarios, ownerProfile, ownerScenarios } from './plan-scenarios';
++
++const ACCOUNT = new URL('../fixtures/pyrrhic-my-account-2026-10-22.json', import.meta.url);
++const rule = CAMPAIGN.planFixes.ratedStops;
++
++function accountAt(star: number): CampaignInput {
++  const parsed = parseImport(readFileSync(ACCOUNT, 'utf8'));
++  if (parsed.kind !== 'profile') throw new Error('the fixture is not a profile');
++  const profile = structuredClone(parsed.payload) as Profile;
++  const leonidas = profile.sources.captains.find((c) => c.captainId === 'leonidas');
++  if (!leonidas) throw new Error('no Leonidas on the account');
++  leonidas.star = star;
++  const setup = profile.setups[0];
++  if (!setup) throw new Error('no setup');
++  return buildPlanRequest(profile, setup);
++}
++
++describe('the descent on the 2026-10-22 account', () => {
++  const inputs = [0, 1, 2].map(accountAt);
++  const plans = inputs.map((input) => planCampaign(input));
++  const burnSaver = (plan: CampaignPlan) => plan.alternatives.find((row) => row.pick === 'burn-saver');
++
++  test.each([
++    [0, 1],
++    [1, 2],
++    [0, 2],
++  ] as const)('the merc saver at ★%i played at ★%i rates no better than that star’s own', (a, b) => {
++    const low = burnSaver(plans[a] as CampaignPlan);
++    const high = burnSaver(plans[b] as CampaignPlan);
++    expect(low && high).toBeTruthy();
++    if (!low || !high) return;
++    const request = (inputs[b] as CampaignInput).request;
++    const played = tightBill(request, low.counts);
++    const own = tightBill(request, high.counts);
++    expect(rate(played, own, CAMPAIGN.markerRates)).toBeGreaterThanOrEqual(0);
++  });
++
++  test('planned twice, the bar is the same', () => {
++    const again = planCampaign(accountAt(1));
++    expect(again.alternatives.map((row) => row.counts)).toEqual(
++      (plans[1] as CampaignPlan).alternatives.map((row) => row.counts),
++    );
++  });
++}, 600_000);
++
++const profile = ownerProfile();
++const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
++
++const plan = (input: CampaignInput): CampaignPlan | undefined => {
++  try {
++    return planCampaign(input);
++  } catch {
++    return undefined;
++  }
++};
++
++describe('the descent on the benchmark armies', () => {
++  test.each(scenarios.map((s) => [s.label, s] as const))(
++    '%s',
++    (_label, scenario) => {
++      const base = {
++        request: scenario.request,
++        marchTarget: HORIZON,
++        ...CAMPAIGN.planFixes,
++        putBack: CAMPAIGN.putBack,
++      };
++      const off = plan({ ...base, descent: undefined });
++      const on = plan(base);
++      expect(off === undefined).toBe(on === undefined);
++      if (!off || !on) return;
++      expect(on.alternatives.map((row) => row.pick)).toEqual(off.alternatives.map((row) => row.pick));
++      for (const was of off.alternatives) {
++        const now = on.alternatives.find((row) => row.pick === was.pick);
++        if (!now || JSON.stringify(now.counts) === JSON.stringify(was.counts)) continue;
++        const tag = `${was.pick} moved`;
++        expect(['burn-saver', 'silver-saver'], tag).toContain(was.pick);
++        const before = tightBill(scenario.request, was.counts);
++        const after = tightBill(scenario.request, now.counts);
++        expect(rate(before, after, CAMPAIGN.markerRates), `${tag}: rating`).toBeGreaterThan(rule.minRating);
++        expect(after.hired ?? 0, `${tag}: burn`).toBeLessThanOrEqual(before.hired ?? 0);
++        expect(after.damage, `${tag}: damage floor`).toBeGreaterThanOrEqual(before.damage * rule.damageFloor);
++        expect(after.seconds ?? 0, `${tag}: queue`).toBeLessThanOrEqual((before.seconds ?? 0) + 1e-6);
++        if (was.pick === 'silver-saver')
++          expect(after.silver ?? 0, `${tag}: silver`).toBeLessThanOrEqual((before.silver ?? 0) + 1e-6);
++      }
++    },
++    600_000,
++  );
++});
+diff --git a/tests/engine/plan-rated-stops.test.ts b/tests/engine/plan-rated-stops.test.ts
+index 8da45f5..3fc71f6 100644
+--- a/tests/engine/plan-rated-stops.test.ts
++++ b/tests/engine/plan-rated-stops.test.ts
+@@ -33,6 +33,8 @@ const plan = (request: StackRequest, rated: boolean): CampaignPlan | undefined =
+       marchTarget: HORIZON,
+       ...CAMPAIGN.planFixes,
+       ratedStops: rated ? rule : undefined,
++      // The rated stops alone: the descent rides on them and is held by its own test (plan-descent).
++      descent: undefined,
+       putBack: CAMPAIGN.putBack,
+     });
+   } catch {
+diff --git a/tools/theorycraft/360-descent-ship.test.ts b/tools/theorycraft/360-descent-ship.test.ts
+new file mode 100644
+index 0000000..96a052b
+--- /dev/null
++++ b/tools/theorycraft/360-descent-ship.test.ts
+@@ -0,0 +1,72 @@
++/**
++ * 360 — **shipping 300 V3's descent** (`src/engine/descent.ts`): parity of the engine port against 300/353's
++ * figures (the Tight bill through `marchBill` against 290-common's `applyCounts` reading, and the descent's rating
++ * per stop), then the plan with `descent` on against off, stop by stop, on the account at Leonidas ★0-★2 and on the
++ * benchmark armies.
++ *
++ * `THEORY=1 ACCT=<file> OUTF=<txt> [RUN=parity|acct|bench] pnpm vitest run tools/theorycraft/360-descent-ship.test.ts`
++ */
++/// <reference types="node" />
++import { appendFileSync, writeFileSync } from 'node:fs';
++import { describe, it } from 'vitest';
++
++import { descend, tightBill } from '../../src/engine/descent';
++import type { CampaignInput } from '../../src/engine/plan';
++import type { Bill } from '../../src/engine/rating';
++import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
++import { CAMPAIGN, STOPS, accountInput, fullKernel, planCampaign, proxyKernel, rate, tight, useFull } from './290-common';
++
++const f = (b: Bill): string =>
++  `${(b.damage / 1e6).toFixed(3)}M s${(((b.silver ?? 0)) / 1e6).toFixed(3)}M g${Math.round(b.gold ?? 0)} h${String(b.hired)} c${Math.round(b.dragonCoins ?? 0)} q${Math.round(b.seconds ?? 0)}`;
++
++describe.skipIf(!process.env.THEORY)('360 — descent ship', () => {
++  it('runs', () => {
++    useFull();
++    const outf = process.env.OUTF!;
++    writeFileSync(outf, '');
++    const say = (s: string): void => appendFileSync(outf, s + '\n');
++    const run = process.env.RUN ?? 'parity';
++    const inputs: [string, CampaignInput][] =
++      run === 'bench'
++        ? criteriaScenarios().map((sc) => [sc.label, { request: sc.request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack }] as [string, CampaignInput])
++        : [0, 1, 2].map((s) => [`acct ★${String(s)}`, accountInput(s)] as [string, CampaignInput]);
++    if (run !== 'parity') {
++      const pre = (r: { repeat: { damage: number; silver: number; gold: number; mercLost: number; dragonCoins?: number; seconds: number } }): Bill => ({ damage: r.repeat.damage, silver: r.repeat.silver, gold: r.repeat.gold, hired: r.repeat.mercLost, dragonCoins: r.repeat.dragonCoins ?? 0, seconds: r.repeat.seconds });
++      for (const [label, input0] of inputs) {
++        let off, on, msOff = 0, msOn = 0;
++        try {
++          let t = performance.now(); off = planCampaign({ ...input0, descent: undefined }); msOff = performance.now() - t;
++          t = performance.now(); on = planCampaign({ ...input0, descent: CAMPAIGN.planFixes.descent }); msOn = performance.now() - t;
++        } catch (e) { say(`${label} skipped ${String(e)}`); continue; }
++        say(`${label}: plan ${Math.round(msOff)} -> ${Math.round(msOn)} ms, stops ${String(off.alternatives.length)} -> ${String(on.alternatives.length)}`);
++        for (const was of off.alternatives) {
++          const now = on.alternatives.find((r) => r.pick === was.pick);
++          if (!now) { say(`  ${was.pick} LOST`); continue; }
++          if (JSON.stringify(now.counts) === JSON.stringify(was.counts) && now.totalDamage === was.totalDamage) continue;
++          const tw = tightBill(input0.request, was.counts), tn = tightBill(input0.request, now.counts);
++          say(`  ${was.pick} MOVED  tight ${f(tw)} -> ${f(tn)} rate ${rate(tw, tn, CAMPAIGN.markerRates).toFixed(2)}`);
++          say(`     pre-Tight repeat ${f(pre(was))} -> ${f(pre(now))} rate ${rate(pre(was), pre(now), CAMPAIGN.markerRates).toFixed(2)}`);
++          say(`     campaign dmg ${Math.round(was.totalDamage)} -> ${Math.round(now.totalDamage)} silver ${Math.round(was.silver)} -> ${Math.round(now.silver)} gold ${Math.round(was.gold)} -> ${Math.round(now.gold)} hired ${String(was.mercLost)} -> ${String(now.mercLost)} coins ${Math.round(was.dragonCoins)} -> ${Math.round(now.dragonCoins)} queue ${Math.round(was.seconds)} -> ${Math.round(now.seconds)}`);
++        }
++      }
++      return;
++    }
++    for (const [label, input0] of inputs) {
++      const input = { ...input0, descent: undefined } as CampaignInput;
++      let off;
++      try { off = planCampaign(input); } catch (e) { say(`${label} skipped ${String(e)}`); continue; }
++      for (const stop of off.alternatives) {
++        if (!STOPS.includes(stop.pick) || stop.sequence !== undefined || stop.pick === 'sweet-spot') continue;
++        const req = input.request;
++        if (run === 'parity') {
++          const a = tight(fullKernel, req, stop.counts).bill, b = tightBill(req, stop.counts);
++          const ap = tight(proxyKernel, req, stop.counts).bill, bp = tightBill(req, stop.counts, 0);
++          say(`${label} ${stop.pick} full ${f(a)} | ${f(b)} ${JSON.stringify(a) === JSON.stringify(b) ? 'SAME' : 'DIFF'}; proxy ${JSON.stringify(ap) === JSON.stringify(bp) ? 'SAME' : 'DIFF ' + f(ap) + ' | ' + f(bp)}`);
++        }
++        const t = performance.now();
++        const d = descend(req, stop.pick, stop.counts, CAMPAIGN.markerRates, { maxVisits: 60, topK: 6, minRating: -Infinity, damageFloor: 0.95, tierCandidate: true });
++        say(`${label} ${stop.pick} burn ${String(stop.repeat.mercLost)} descent rf ${d ? d.rating.toFixed(4) : '-'} ${d ? f(d.bill) : ''} ${Math.round(performance.now() - t)} ms`);
++      }
++    }
++  }, 86_400_000);
++});
+diff --git a/tools/theorycraft/361-descent-pool.test.ts b/tools/theorycraft/361-descent-pool.test.ts
+new file mode 100644
+index 0000000..1dd1b64
+--- /dev/null
++++ b/tools/theorycraft/361-descent-pool.test.ts
+@@ -0,0 +1,150 @@
++/**
++ * 361 — **the descent's cost on a live Generate + advisor pass** (352's workload and pool replay, one kernel: the
++ * tree's, with the exact Tight package). Arms `off` (`descent` taken out of the plan input) and `on` (the shipped
++ * `CAMPAIGN.planFixes.descent`), run off → on → off → on; min of two per arm. Node has no web workers, so the pool
++ * runs inline and every `pool.map` batch is replayed on `WORKERS` workers (352/263). Answers are not compared:
++ * the descent moves stops, so the advisor reads different marches.
++ *
++ * `THEORY=1 ACCT=<file> [WORKERS=15] OUTF=<file> pnpm vitest run tools/theorycraft/361-descent-pool.test.ts`
++ */
++/// <reference types="node" />
++import { readFileSync, writeFileSync } from 'node:fs';
++import { describe, expect, it } from 'vitest';
++
++import { planMarch, withMethod } from '../../src/engine';
++import { leadLineup } from '../../src/engine/captainUpgrades';
++import { setRaiseKernel, type RaiseKernel } from '../../src/engine/fast';
++import type { CampaignInput } from '../../src/engine/plan';
++import { genericProbes } from '../../src/engine/probes';
++import { loadKernelModule } from '../../tests/kernel/load';
++import { createRaiseKernel } from '../../src/kernel/raise';
++import { parseImport } from '../../src/share/exportImport';
++import { captainLineups } from '../../src/state/captainLineups';
++import { captainUpgradeCandidates } from '../../src/state/captainUpgrades';
++import { buildPlanRequest, buildStackRequest } from '../../src/state/derive';
++import type { Profile } from '../../src/state/schema';
++import { otherProbes } from '../../src/ui/sections/march/otherSearch';
++import { troopFloor } from '../../src/ui/sections/march/raise';
++import { openingPosition, pickOf } from '../../src/ui/sections/march/runStore';
++import { runAdvisor } from '../../src/worker/advisor';
++import { runCaptainAdvice } from '../../src/worker/captainAdvice';
++import { runCaptainUpgrades, type UpgradeAsk } from '../../src/worker/captainUpgrades';
++import { createInlineClient } from '../../src/worker/client';
++import { createCalcPool, type CalcPool, type PoolJob } from '../../src/worker/pool';
++
++const NO_CLOCK = 1_000_000_000;
++const WORKERS = Number(process.env.WORKERS ?? 15);
++const module = process.env.THEORY ? loadKernelModule() : null!;
++let descentOn = true;
++
++function makespan(durations: readonly number[], workers: number): number {
++  const free = Array.from({ length: Math.max(1, workers) }, () => 0);
++  for (const d of durations) {
++    let at = 0;
++    for (let i = 1; i < free.length; i += 1) if (free[i]! < free[at]!) at = i;
++    free[at]! += d;
++  }
++  return Math.max(0, ...free);
++}
++
++const answers: string[] = [];
++let tightMs = 0;
++function recording(inner: RaiseKernel): RaiseKernel {
++  return {
++    position(input) {
++      const t = performance.now();
++      const out = inner.position(input);
++      tightMs += performance.now() - t;
++      answers.push(JSON.stringify([out?.how ?? null, Object.entries(out?.counts ?? {}).filter(([, v]) => v !== 0).sort()]));
++      return out;
++    },
++  };
++}
++
++function timedPool(inner: CalcPool, batches: number[][]): CalcPool {
++  return {
++    get alive() { return inner.alive; },
++    get busy() { return inner.busy; },
++    dispose: () => inner.dispose(),
++    map: async (jobs, options) => {
++      const durations: number[] = [];
++      batches.push(durations);
++      const wrapped = jobs.map((job) => (async (client: Parameters<PoolJob<never>>[0], signal: Parameters<PoolJob<never>>[1]) => {
++        const at = performance.now();
++        try { return await (job as unknown as PoolJob<never>)(client, signal); } finally { durations.push(performance.now() - at); }
++      }) as PoolJob<never>);
++      return (await inner.map(wrapped as never, options as never)) as never;
++    },
++  };
++}
++
++async function runWorkload(profile: Profile, batches: number[][]): Promise<{ serial: number }> {
++  const setup = profile.setups.find((one) => one.id === profile.activeSetupId) ?? profile.setups[0]!;
++  const built: CampaignInput = buildPlanRequest(profile, setup);
++  const input: CampaignInput = { ...built, descent: descentOn ? built.descent : undefined };
++  const request = buildStackRequest(profile, setup);
++  const lane = () => ({ ...createInlineClient(), mode: 'worker' as const });
++  const client = lane();
++  const pool = timedPool(createCalcPool({ size: 1, createClient: lane }), batches);
++  let serial = 0;
++  try {
++    let t = performance.now();
++    const planned = await client.plan(input);
++    const chosen = pickOf(planned, openingPosition(planned, null));
++    const marchRequest = withMethod(request, 'elite');
++    if (troopFloor(planMarch(request, chosen.counts).result) !== null)
++      for (const row of planned.alternatives) await client.positions({ request: marchRequest, counts: row.counts });
++    serial += performance.now() - t;
++    const headline = chosen.pick;
++    await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
++    const { currentKey, lineups, size } = captainLineups(profile, setup);
++    const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, { budgetMs: NO_CLOCK });
++    const lead = leadLineup(advice.best, currentKey);
++    const leadCandidate = lineups.find((trio) => trio.key === lead);
++    const leadStops = advice.plans[lead];
++    if (leadCandidate !== undefined && leadStops !== undefined) {
++      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
++        id: candidate.spec.id,
++        label: `${candidate.name} ${candidate.change}`,
++        lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
++      }));
++      await runCaptainUpgrades(input, { key: lead, totals: leadCandidate.totals, stops: leadStops }, asks, pool, { budgetMs: NO_CLOCK });
++    }
++    t = performance.now();
++    const { probes } = otherProbes(input, planned.silver);
++    serial += performance.now() - t;
++    await runAdvisor(input, probes, pool, { headline, budgetMs: NO_CLOCK });
++  } finally {
++    pool.dispose();
++    client.dispose();
++  }
++  return { serial };
++}
++
++describe.skipIf(!process.env.THEORY)('361 — descent on the pool', () => {
++  it('A/B', async () => {
++    const parsed = parseImport(readFileSync(process.env.ACCT ?? '', 'utf8'));
++    expect(parsed.kind).toBe('profile');
++    if (parsed.kind !== 'profile') return;
++    const runs: { arm: string; one: number; many: number; generate: number; tight: number; answers: string[] }[] = [];
++    for (const arm of ['off', 'on', 'off', 'on'] as const) {
++      descentOn = arm === 'on';
++      setRaiseKernel(recording(createRaiseKernel(module)));
++      answers.length = 0;
++      tightMs = 0;
++      const batches: number[][] = [];
++      const t = performance.now();
++      const { serial } = await runWorkload(structuredClone(parsed.payload) as Profile, batches);
++      const one = performance.now() - t;
++      const batchTime = batches.reduce((s, b) => s + b.reduce((a, c) => a + c, 0), 0);
++      const many = one - batchTime + batches.reduce((s, b) => s + makespan(b, WORKERS), 0);
++      runs.push({ arm, one, many, generate: serial, tight: tightMs, answers: [...answers] });
++    }
++    const min = (arm: string, k: 'one' | 'many' | 'generate' | 'tight') => Math.min(...runs.filter((r) => r.arm === arm).map((r) => r[k]));
++    const out = [
++      ...runs.map((r) => `${r.arm}: one worker ${r.one.toFixed(0)} ms, replayed on ${String(WORKERS)} workers ${r.many.toFixed(0)} ms, generate steps ${r.generate.toFixed(0)} ms, Σ Tight ${r.tight.toFixed(0)} ms, position() ${String(r.answers.length)}`),
++      ...(['many', 'one', 'generate', 'tight'] as const).map((k) => `min ${k}: off ${min('off', k).toFixed(0)} → on ${min('on', k).toFixed(0)} ms (×${(min('on', k) / min('off', k)).toFixed(2)})`),
++    ];
++    writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
++  }, 7_200_000);
++});

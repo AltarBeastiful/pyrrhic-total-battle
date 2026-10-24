@@ -1,0 +1,9 @@
+acct ★0: plan 612 -> 3823 ms, stops 4 -> 4
+acct ★1: plan 431 -> 4181 ms, stops 4 -> 4
+  silver-saver MOVED  tight 20.507M s2.658M g5362 h15 c2920 q1037645 -> 22.176M s2.655M g5234 h15 c2920 q768865 rate 9.28
+     pre-Tight repeat 18.947M s2.650M g5131 h15 c2800 q1032605 -> 20.650M s2.647M g5131 h15 c2800 q763825 rate 9.66
+     campaign dmg 90774557 -> 95884079 silver 12010989 -> 12003474 gold 23676 -> 23676 hired 66 -> 66 coins 12400 -> 12400 queue 4263833 -> 3457493
+acct ★2: plan 360 -> 3402 ms, stops 5 -> 5
+  silver-saver MOVED  tight 21.717M s2.728M g6685 h16 c3360 q824306 -> 23.045M s2.545M g6225 h16 c3240 q743611 rate 9.52
+     pre-Tight repeat 18.638M s2.720M g5993 h16 c3240 q819266 -> 21.345M s2.545M g5993 h16 c3240 q743611 rate 16.04
+     campaign dmg 89007116 -> 97126544 silver 12265752 -> 11741727 gold 26753 -> 26753 hired 72 -> 72 coins 14400 -> 14400 queue 3665953 -> 3438988
