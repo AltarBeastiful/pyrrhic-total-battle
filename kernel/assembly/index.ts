@@ -2425,6 +2425,31 @@ let rAt: i32 = 0; // the memo index of the last point scored (read by `raiseProb
 let rPointAt: i32 = 0; // the memo index of `rPoint`, kept as its slots move (`raiseSet`)
 let rPointBurn: f64 = 0; // Σ chunks over `rPoint`'s authority slots, kept the same way
 let rForceWhole: bool = false; // test hook: every box takes the whole-roster point
+/**
+ * **The rating memo** (experiment 337): beside each damage the memo holds, the rating `Tight` read off it, `NaN`
+ * until it is read. A vector's rating is as pure a function of the vector as its damage (the as-is march it is
+ * rated against is the instance's own base), so a memo hit costs a load rather than a kill order and a bill.
+ */
+let rMemoRateMem: usize = 0; // the region reserved for the ratings, as large as the memo's
+let rMemoRate: usize = 0; // f64 × rMemoSize: each vector's rating, `NaN` where none was read; 0 when off
+
+/**
+ * **The wide memo** (experiments 271/337): a box wider than `MEMO_CAP` has no dense memo, and its search still
+ * scores the same vectors many times over (the pairwise grids of every restart). A direct-mapped table of
+ * `H_SIZE` entries keyed on the vector's mixed-radix index over the slots (`rPointKey`, exact while the box is
+ * under 2^53) keeps the last vector seen at each slot with its damage and rating. A collision overwrites, so it
+ * can only miss, never answer for another vector; the generation (`hCur`) clears it a `raise()`.
+ */
+const H_BITS: i32 = 16;
+const H_SIZE: i32 = 1 << H_BITS;
+let hKeys: usize = 0; // f64 × H_SIZE: the vector each entry holds
+let hVals: usize = 0; // f64 × H_SIZE: what it fought for
+let hRates: usize = 0; // f64 × H_SIZE: its rating, `NaN` where none was read
+let hGen: usize = 0; // i32 × H_SIZE: the `raise()` that wrote it
+let hCur: i32 = 0;
+let hOn: bool = false; // whether this box reads the wide memo
+let rKeyStride: usize = 0; // f64 × rN: each slot's weight in the wide key
+let rPointKey: f64 = 0; // the wide key of `rPoint`, kept as its slots move (`raiseSet`)
 
 /** Reserve the raise's scratch, once per instance. */
 function raiseAlloc(): void {
@@ -2463,6 +2488,7 @@ function raiseAlloc(): void {
   rSlotCost = heap.alloc(n << 3);
   rSlotPool = heap.alloc(n << 2);
   rSlotStride = heap.alloc(n << 2);
+  rKeyStride = heap.alloc(n << 3);
 }
 
 /**
@@ -2473,6 +2499,7 @@ function raiseAlloc(): void {
 function raiseMemo(): void {
   if (rSpace > MEMO_CAP) {
     rMemo = 0;
+    rMemoRate = 0;
     rMemoSize = 0;
     return;
   }
@@ -2487,11 +2514,16 @@ function raiseMemo(): void {
 
   if (rSpace > rMemoRoom) {
     rMemoMem = heap.alloc((<usize>rSpace) << 3);
+    rMemoRateMem = heap.alloc((<usize>rSpace) << 3);
     rMemoRoom = rSpace;
   }
   rMemo = rMemoMem;
+  rMemoRate = rMemoRateMem;
   const size = <i32>rSpace;
-  for (let i = 0; i < size; i += 1) store<f64>(rMemo + ((<usize>i) << 3), NaN);
+  for (let i = 0; i < size; i += 1) {
+    store<f64>(rMemo + ((<usize>i) << 3), NaN);
+    store<f64>(rMemoRate + ((<usize>i) << 3), NaN);
+  }
   rMemoSize = rSpace;
   rMemoN = rN;
   memory.copy(rMemoHeld, rHeld, (<usize>types) << 3);
@@ -2912,20 +2944,19 @@ function raisePointSlots(memo: usize): f64 {
   rAt = at;
   if (rHeldBurn + rPointBurn > rCap) return -Infinity;
   const slot = memo + ((<usize>at) << 3);
+  // Where this vector's rating is kept, on the dense memo or the wide one; 0 when neither holds it.
+  let rateSlot: usize = 0;
   if (memo != 0) {
+    rateSlot = rMemoRate + ((<usize>at) << 3);
     const known = load<f64>(slot);
-    if (known == known) {
-      // A known damage is a rated vector's damage too; only the bill of its counts is still to be read.
-      if (rRated && known > -Infinity) {
-        for (let s = 0; s < rN; s += 1) {
-          const t = i32At(rSlots, s);
-          store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
-        }
-        if (isDefined(CENSUS)) cRatingsOnHit += 1.0;
-        return raiseRating(known);
-      }
-      return known;
-    }
+    if (known == known) return raiseKnown(known, rateSlot);
+  }
+  let wide: i32 = -1;
+  if (memo == 0 && hOn) {
+    wide = <i32>((<u64>rPointKey * 0x9E3779B97F4A7C15) >> (64 - H_BITS));
+    rateSlot = hRates + ((<usize>wide) << 3);
+    if (load<i32>(hGen + ((<usize>wide) << 2)) == hCur && load<f64>(hKeys + ((<usize>wide) << 3)) == rPointKey)
+      return raiseKnown(load<f64>(hVals + ((<usize>wide) << 3)), rateSlot);
   }
   let used1: f64 = rHeldUsed1;
   let used2: f64 = rHeldUsed2;
@@ -2940,24 +2971,55 @@ function raisePointSlots(memo: usize): f64 {
   let value: f64 = -Infinity;
   if (!(used1 > header(H_HOUSING_AUTHORITY) || used2 > header(H_HOUSING_DOMINANCE))) value = raiseScore(rWork);
   if (memo != 0) store<f64>(slot, value);
-  return rRated && value > -Infinity ? raiseRating(value) : value;
+  if (wide >= 0) {
+    store<i32>(hGen + ((<usize>wide) << 2), hCur);
+    store<f64>(hKeys + ((<usize>wide) << 3), rPointKey);
+    store<f64>(hVals + ((<usize>wide) << 3), value);
+    store<f64>(rateSlot, NaN);
+  }
+  if (!(rRated && value > -Infinity)) return value;
+  const rating = raiseRating(value);
+  if (rateSlot != 0) store<f64>(rateSlot, rating);
+  return rating;
 }
 
 /**
- * **Move one slot** of the search's vector: slot `s` (type `t`) to `n`, the memo index and the burn moved
- * with it on the slots-only point. Both stay exact — the index is an i32 under `MEMO_CAP`, the burn a sum of
- * integers under 2^53 (`raisePrime`'s guard) — so a kept sum is the sum `raisePointWhole` would take.
+ * A memo hit on the slots-only point: the damage itself, or — on a rated position — the rating, read from the
+ * rating memo when it was read before (`rateSlot`), otherwise read off the counts' bill and kept there.
+ */
+function raiseKnown(known: f64, rateSlot: usize): f64 {
+  if (!(rRated && known > -Infinity)) return known;
+  if (rateSlot != 0) {
+    const rating = load<f64>(rateSlot);
+    if (rating == rating) return rating;
+  }
+  // A known damage is a rated vector's damage too; only the bill of its counts is still to be read.
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
+  }
+  if (isDefined(CENSUS)) cRatingsOnHit += 1.0;
+  const rating = raiseRating(known);
+  if (rateSlot != 0) store<f64>(rateSlot, rating);
+  return rating;
+}
+
+/**
+ * **Move one slot** of the search's vector: slot `s` (type `t`) to `n`, the memo index, the wide key and the
+ * burn moved with it on the slots-only point. All stay exact — the index is an i32 under `MEMO_CAP`, the key and
+ * the burn sums of integers under 2^53 (`raisePrime`'s guards) — so a kept sum is the sum taken from scratch.
  */
 @inline function raiseSet(s: i32, t: i32, n: f64): void {
   if (rFast) {
     const old = f64At(rPoint, t);
     rPointAt += <i32>(n - old) * i32At(rSlotStride, s);
     if (i32At(rSlotPool, s) == 1) rPointBurn += chunks(max(0.0, n)) - chunks(max(0.0, old));
+    rPointKey += (n - old) * f64At(rKeyStride, s);
   }
   store<f64>(rPoint + ((<usize>t) << 3), n);
 }
 
-/** The memo index and the burn of `rPoint` from scratch, after the search wrote it whole. */
+/** The memo index, the wide key and the burn of `rPoint` from scratch, after the search wrote it whole. */
 function raiseResync(): void {
   let at: i32 = 0;
   let burn: f64 = 0.0;
@@ -2969,6 +3031,17 @@ function raiseResync(): void {
   }
   rPointAt = at;
   rPointBurn = burn;
+  rPointKey = raiseWideKey();
+}
+
+/** The wide key of `rPoint` from scratch: its mixed-radix index over the slots (`rKeyStride`). */
+function raiseWideKey(): f64 {
+  let key: f64 = 0.0;
+  for (let s = 0; s < rN; s += 1) {
+    const t = i32At(rSlots, s);
+    key += (f64At(rPoint, t) - f64At(rSlotFrom, s)) * f64At(rKeyStride, s);
+  }
+  return key;
 }
 
 /** Whether `x` is an integer JavaScript would call one (`Number.isInteger`): finite, no fraction. */
@@ -3025,6 +3098,25 @@ function raisePrime(): void {
     } else rHeldUsed2 += count * cost;
   }
   rFast = whole && bound1 < MAX_SAFE && bound2 < MAX_SAFE && boundBurn < MAX_SAFE;
+  // The wide key's weights, the slots' own mixed radix with the last slot at 1: exact while the box is under
+  // 2^53, which is the only box the wide memo and the merged trajectories read it on.
+  let weight: f64 = 1.0;
+  for (let s = rN - 1; s >= 0; s -= 1) {
+    const t = i32At(rSlots, s);
+    store<f64>(rKeyStride + ((<usize>s) << 3), weight);
+    weight *= f64At(rTo, t) - f64At(rFrom, t) + 1.0;
+  }
+  hOn = rFast && rSpace > MEMO_CAP && rSpace < MAX_SAFE;
+  if (hOn) {
+    if (hKeys == 0) {
+      hKeys = heap.alloc((<usize>H_SIZE) << 3);
+      hVals = heap.alloc((<usize>H_SIZE) << 3);
+      hRates = heap.alloc((<usize>H_SIZE) << 3);
+      hGen = heap.alloc((<usize>H_SIZE) << 2);
+      for (let i = 0; i < H_SIZE; i += 1) store<i32>(hGen + ((<usize>i) << 2), 0);
+    }
+    hCur += 1;
+  }
 }
 
 /**
@@ -3174,20 +3266,107 @@ function raiseClimbSearch(): void {
   }
 }
 
+/** How a pairwise descent ended (`raisePairwise`). */
+const PAIRS_CONVERGED: i32 = 0; // a sweep improved nothing
+const PAIRS_CAPPED: i32 = 1; // `rSweeps` sweeps ran and the last one still improved
+const PAIRS_MERGED: i32 = 2; // a sweep began where an earlier start's did, so it ends where that one ended
+
+/**
+ * **Don't-look pairs** (experiment 337): `pdMoved[s]` is the tick slot `s` last moved at, `pdSeen[i·rN + j]`
+ * the tick pair (i, j) was last examined at (−2 never). A pair whose context — every slot outside it — has
+ * not moved since is skipped: its grid is the same pure scores, and the vector it stands on is that grid's
+ * first strict maximum, so examining it again would take nothing and change nothing.
+ */
+let pdMoved: usize = 0; // i32 × rN
+let pdSeen: usize = 0; // i32 × rN²
+let pdRoom: i32 = 0;
+
+/**
+ * **Merged trajectories** (experiment 337): a pairwise descent is a deterministic map from the vector a sweep
+ * starts on (and the sweeps left) to the vector it converges to. The vectors this search's sweeps started on
+ * are kept with how many sweeps each needed to converge (`mtNeed`), keyed on the wide key; a sweep that starts
+ * on one of them with at least as many sweeps left ends on a vector the search has already weighed, and the
+ * search takes strict improvements only — so that start stops there, climb included.
+ */
+const MT_BITS: i32 = 16;
+const MT_SIZE: i32 = 1 << MT_BITS;
+const MT_SWEEPS: i32 = 64; // the longest descent the trail records
+let mtKeys: usize = 0; // f64 × MT_SIZE: a sweep's starting vector
+let mtNeed: usize = 0; // i32 × MT_SIZE: the sweeps it needed to converge
+let mtGen: usize = 0; // i32 × MT_SIZE: the `raiseSearch` that wrote it
+let mtCur: i32 = 0;
+let mtTrail: usize = 0; // f64 × MT_SWEEPS: this descent's sweep starts, in order
+let mtOn: bool = false; // whether this search keeps the trail (box under 2^53, sweeps under MT_SWEEPS)
+
+/** The trail's slot for `key` — the entry holding it, or the free one an insert would take; −1 when full. */
+function mtSlot(key: f64): i32 {
+  let h = <i32>((<u64>key * 0x9E3779B97F4A7C15) >> (64 - MT_BITS));
+  for (let probe = 0; probe < MT_SIZE; probe += 1) {
+    if (load<i32>(mtGen + ((<usize>h) << 2)) != mtCur) return h;
+    if (load<f64>(mtKeys + ((<usize>h) << 3)) == key) return h;
+    h = (h + 1) & (MT_SIZE - 1);
+  }
+  return -1;
+}
+
+/** A new search's trail: empty, and kept only where the wide key is exact. */
+function mtBegin(): void {
+  if (mtKeys == 0) {
+    mtKeys = heap.alloc((<usize>MT_SIZE) << 3);
+    mtNeed = heap.alloc((<usize>MT_SIZE) << 2);
+    mtGen = heap.alloc((<usize>MT_SIZE) << 2);
+    mtTrail = heap.alloc((<usize>MT_SWEEPS) << 3);
+    for (let i = 0; i < MT_SIZE; i += 1) store<i32>(mtGen + ((<usize>i) << 2), 0);
+  }
+  mtOn = rSpace < MAX_SAFE && rSweeps <= MT_SWEEPS;
+  mtCur += 1;
+}
+
 /**
  * `exactSearch`'s `pairwise`: every pair of slots, exhaustively — the neighbourhood a climb cannot see. Its
- * best is its own, for `raiseClimbSearch`'s reason.
+ * best is its own, for `raiseClimbSearch`'s reason. It answers exactly what the sweep-by-sweep walk of every
+ * pair answers, with the pairs whose context has not moved skipped and a descent that joins an earlier one
+ * stopped (`PAIRS_MERGED`): neither changes the vector it ends on, only how many vectors are scored.
  */
-function raisePairwise(): void {
+function raisePairwise(): i32 {
+  if (rN * rN > pdRoom) {
+    pdRoom = rN * rN;
+    pdMoved = heap.alloc((<usize>rN) << 2);
+    pdSeen = heap.alloc((<usize>pdRoom) << 2);
+  }
+  for (let s = 0; s < rN; s += 1) store<i32>(pdMoved + ((<usize>s) << 2), -1);
+  for (let p = 0; p < rN * rN; p += 1) store<i32>(pdSeen + ((<usize>p) << 2), -2);
+  let starts = 0;
+  let tick: i32 = 0;
   let best = raisePointScore();
   for (let sweep = 0; sweep < rSweeps; sweep += 1) {
+    if (mtOn) {
+      const key = raiseWideKey();
+      const h = mtSlot(key);
+      if (h >= 0 && load<i32>(mtGen + ((<usize>h) << 2)) == mtCur && load<i32>(mtNeed + ((<usize>h) << 2)) <= rSweeps - sweep)
+        return PAIRS_MERGED;
+      store<f64>(mtTrail + ((<usize>sweep) << 3), key);
+      starts = sweep + 1;
+    }
     let improved = false;
     for (let i = 0; i < rN; i += 1) {
       for (let j = i + 1; j < rN; j += 1) {
+        const seenAt = pdSeen + ((<usize>(i * rN + j)) << 2);
+        const seen = load<i32>(seenAt);
+        if (seen >= -1) {
+          let moved = false;
+          for (let k = 0; k < rN && !moved; k += 1) {
+            if (k == i || k == j) continue;
+            if (load<i32>(pdMoved + ((<usize>k) << 2)) > seen) moved = true;
+          }
+          if (!moved) continue;
+        }
         const one = i32At(rSlots, i);
         const other = i32At(rSlots, j);
-        let winnerOne = f64At(rPoint, one);
-        let winnerOther = f64At(rPoint, other);
+        const startOne = f64At(rPoint, one);
+        const startOther = f64At(rPoint, other);
+        let winnerOne = startOne;
+        let winnerOther = startOther;
         let winnerScore = best;
         const oneTo = f64At(rTo, one);
         const otherTo = f64At(rTo, other);
@@ -3212,11 +3391,29 @@ function raisePairwise(): void {
         if (winnerScore > best) {
           best = winnerScore;
           improved = true;
+          tick += 1;
+          if (winnerOne != startOne) store<i32>(pdMoved + ((<usize>i) << 2), tick);
+          if (winnerOther != startOther) store<i32>(pdMoved + ((<usize>j) << 2), tick);
         }
+        store<i32>(seenAt, tick);
       }
     }
-    if (!improved) return;
+    if (!improved) {
+      // Converged on sweep `sweep`: the start recorded on sweep q needed sweep − q + 1 sweeps.
+      for (let q = 0; q < starts; q += 1) {
+        const key = load<f64>(mtTrail + ((<usize>q) << 3));
+        const h = mtSlot(key);
+        if (h < 0) continue;
+        const need = sweep - q + 1;
+        if (load<i32>(mtGen + ((<usize>h) << 2)) == mtCur && load<i32>(mtNeed + ((<usize>h) << 2)) <= need) continue;
+        store<f64>(mtKeys + ((<usize>h) << 3), key);
+        store<i32>(mtNeed + ((<usize>h) << 2), need);
+        store<i32>(mtGen + ((<usize>h) << 2), mtCur);
+      }
+      return PAIRS_CONVERGED;
+    }
   }
+  return PAIRS_CAPPED;
 }
 
 /**
@@ -3273,6 +3470,7 @@ function raiseSearch(): bool {
   }
 
   rHow = 2;
+  mtBegin();
   for (let attempt = 0; attempt <= rRestarts; attempt += 1) {
     if (attempt > 0) {
       for (let s = 0; s < rN; s += 1) {
@@ -3283,8 +3481,11 @@ function raiseSearch(): bool {
       }
       raiseResync();
     }
-    raisePairwise();
-    raiseClimbSearch();
+    const ended = raisePairwise();
+    if (ended == PAIRS_MERGED) continue;
+    // A converged pairwise has already looked at every one-slot move (each lies in some pair's grid), so the
+    // climb after it could take nothing; it runs where the sweeps were cut, or where there is no pair.
+    if (ended == PAIRS_CAPPED || rN < 2) raiseClimbSearch();
     const value = raisePointScore();
     if (value > rBest) {
       rBest = value;

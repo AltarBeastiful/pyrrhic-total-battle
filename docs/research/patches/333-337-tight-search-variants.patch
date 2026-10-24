@@ -1,0 +1,680 @@
+--- a/kernel/assembly/index.ts
++++ b/kernel/assembly/index.ts
+@@ -2425,6 +2425,31 @@
+ let rPointAt: i32 = 0; // the memo index of `rPoint`, kept as its slots move (`raiseSet`)
+ let rPointBurn: f64 = 0; // Σ chunks over `rPoint`'s authority slots, kept the same way
+ let rForceWhole: bool = false; // test hook: every box takes the whole-roster point
++// EXPERIMENT 337: the rating memo beside the damage memo (a rated vector's rating is as pure as its damage).
++let xRateMemo: bool = false;
++export function xSetRateMemo(on: i32): void { xRateMemo = on != 0; }
++let rRateMem: usize = 0;
++let rRateRoom: f64 = 0;
++let rRate: usize = 0;
++// EXPERIMENT 271: a hashed memo for boxes wider than MEMO_CAP (answer-preserving: a vector's score is pure).
++const H_BITS: i32 = 16;
++const H_SIZE: i32 = 1 << H_BITS;
++const H_MASK: i32 = H_SIZE - 1;
++const H_FILL: i32 = (H_SIZE >> 2) * 3;
++let hKeys: usize = 0;
++let hVals: usize = 0;
++let hRates: usize = 0;
++let hGen: usize = 0;
++let hCur: i32 = 0;
++let hOn: bool = false;
++let hCount: i32 = 0;
++let hHits: f64 = 0;
++let hMiss: f64 = 0;
++let rKeyStride: usize = 0; // f64 x rN
++let rPointKey: f64 = 0;
++export function hashStats(i: i32): f64 { return i == 0 ? hHits : i == 1 ? hMiss : <f64>hCount; }
++let hDisabled: bool = false;
++export function hashDisable(on: i32): void { hDisabled = on != 0; }
+ 
+ /** Reserve the raise's scratch, once per instance. */
+ function raiseAlloc(): void {
+@@ -2463,6 +2488,7 @@
+   rSlotCost = heap.alloc(n << 3);
+   rSlotPool = heap.alloc(n << 2);
+   rSlotStride = heap.alloc(n << 2);
++  rKeyStride = heap.alloc(n << 3);
+ }
+ 
+ /**
+@@ -2474,6 +2500,7 @@
+   if (rSpace > MEMO_CAP) {
+     rMemo = 0;
+     rMemoSize = 0;
++    rRate = 0;
+     return;
+   }
+   let same = rMemo != 0 && rMemoSize == rSpace && rMemoN == rN;
+@@ -2492,6 +2519,11 @@
+   rMemo = rMemoMem;
+   const size = <i32>rSpace;
+   for (let i = 0; i < size; i += 1) store<f64>(rMemo + ((<usize>i) << 3), NaN);
++  if (xRateMemo) {
++    if (rSpace > rRateRoom) { rRateMem = heap.alloc((<usize>rSpace) << 3); rRateRoom = rSpace; }
++    rRate = rRateMem;
++    for (let i = 0; i < size; i += 1) store<f64>(rRate + ((<usize>i) << 3), NaN);
++  }
+   rMemoSize = rSpace;
+   rMemoN = rN;
+   memory.copy(rMemoHeld, rHeld, (<usize>types) << 3);
+@@ -2549,6 +2581,7 @@
+  * `attackOrder` builds it, and the enemy-first journal's total.
+  */
+ function raiseScore(countsPtr: usize): f64 {
++  xBattles += 1.0;
+   if (isDefined(CENSUS)) {
+     cBattles += 1.0;
+     cKillOrdersScore += 1.0;
+@@ -2917,16 +2950,46 @@
+     if (known == known) {
+       // A known damage is a rated vector's damage too; only the bill of its counts is still to be read.
+       if (rRated && known > -Infinity) {
++        if (xRateMemo && rRate != 0) {
++          const r = load<f64>(rRate + ((<usize>at) << 3));
++          if (r == r) return r;
++        }
+         for (let s = 0; s < rN; s += 1) {
+           const t = i32At(rSlots, s);
+           store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
+         }
+         if (isDefined(CENSUS)) cRatingsOnHit += 1.0;
+-        return raiseRating(known);
++        const rr = raiseRating(known);
++        if (xRateMemo && rRate != 0) store<f64>(rRate + ((<usize>at) << 3), rr);
++        return rr;
+       }
+       return known;
+     }
+   }
++  let hAt: i32 = -1;
++  if (memo == 0 && hOn) {
++    let h = <i32>((<u64>rPointKey * 0x9E3779B97F4A7C15) >> (64 - H_BITS));
++    hAt = h;
++    if (load<i32>(hGen + ((<usize>h) << 2)) == hCur && load<f64>(hKeys + ((<usize>h) << 3)) == rPointKey) {
++      {
++        hHits += 1.0;
++        const known = load<f64>(hVals + ((<usize>h) << 3));
++        if (xRateMemo && rRated && known > -Infinity) {
++          const r = load<f64>(hRates + ((<usize>h) << 3));
++          if (r == r) return r;
++        }
++        if (rRated && known > -Infinity) {
++          for (let s = 0; s < rN; s += 1) {
++            const t = i32At(rSlots, s);
++            store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
++          }
++          return raiseRating(known);
++        }
++        return known;
++      }
++    }
++    hMiss += 1.0;
++  }
+   let used1: f64 = rHeldUsed1;
+   let used2: f64 = rHeldUsed2;
+   for (let s = 0; s < rN; s += 1) {
+@@ -2940,7 +3003,20 @@
+   let value: f64 = -Infinity;
+   if (!(used1 > header(H_HOUSING_AUTHORITY) || used2 > header(H_HOUSING_DOMINANCE))) value = raiseScore(rWork);
+   if (memo != 0) store<f64>(slot, value);
+-  return rRated && value > -Infinity ? raiseRating(value) : value;
++  if (hAt >= 0) {
++    store<i32>(hGen + ((<usize>hAt) << 2), hCur);
++    store<f64>(hKeys + ((<usize>hAt) << 3), rPointKey);
++    store<f64>(hVals + ((<usize>hAt) << 3), value);
++    store<f64>(hRates + ((<usize>hAt) << 3), NaN);
++    hCount += 1;
++  }
++  if (rRated && value > -Infinity) {
++    const rr = raiseRating(value);
++    if (xRateMemo && memo != 0 && rRate != 0) store<f64>(rRate + ((<usize>at) << 3), rr);
++    if (xRateMemo && hAt >= 0) store<f64>(hRates + ((<usize>hAt) << 3), rr);
++    return rr;
++  }
++  return value;
+ }
+ 
+ /**
+@@ -2953,6 +3029,7 @@
+     const old = f64At(rPoint, t);
+     rPointAt += <i32>(n - old) * i32At(rSlotStride, s);
+     if (i32At(rSlotPool, s) == 1) rPointBurn += chunks(max(0.0, n)) - chunks(max(0.0, old));
++    rPointKey += (n - old) * f64At(rKeyStride, s);
+   }
+   store<f64>(rPoint + ((<usize>t) << 3), n);
+ }
+@@ -2969,6 +3046,12 @@
+   }
+   rPointAt = at;
+   rPointBurn = burn;
++  let key: f64 = 0.0;
++  for (let s = 0; s < rN; s += 1) {
++    const t = i32At(rSlots, s);
++    key += (f64At(rPoint, t) - f64At(rSlotFrom, s)) * f64At(rKeyStride, s);
++  }
++  rPointKey = key;
+ }
+ 
+ /** Whether `x` is an integer JavaScript would call one (`Number.isInteger`): finite, no fraction. */
+@@ -3025,6 +3108,24 @@
+     } else rHeldUsed2 += count * cost;
+   }
+   rFast = whole && bound1 < MAX_SAFE && bound2 < MAX_SAFE && boundBurn < MAX_SAFE;
++  let ks: f64 = 1.0;
++  for (let s = rN - 1; s >= 0; s -= 1) {
++    const t = i32At(rSlots, s);
++    store<f64>(rKeyStride + ((<usize>s) << 3), ks);
++    ks *= f64At(rTo, t) - f64At(rFrom, t) + 1.0;
++  }
++  hOn = !hDisabled && rFast && rSpace > MEMO_CAP && rSpace < MAX_SAFE;
++  hHits = 0; hMiss = 0; hCount = 0;
++  if (hOn) {
++    if (hKeys == 0) {
++      hKeys = heap.alloc((<usize>H_SIZE) << 3);
++      hVals = heap.alloc((<usize>H_SIZE) << 3);
++      hRates = heap.alloc((<usize>H_SIZE) << 3);
++      hGen = heap.alloc((<usize>H_SIZE) << 2);
++      for (let i = 0; i < H_SIZE; i += 1) store<i32>(hGen + ((<usize>i) << 2), 0);
++    }
++    hCur += 1;
++  }
+ }
+ 
+ /**
+@@ -3129,6 +3230,40 @@
+   rForceWhole = on != 0;
+ }
+ 
++
++// ==== EXPERIMENT 33x hooks (scratch kernel only) ====
++let xAlgo: i32 = 0;
++let xP1: f64 = 0;
++let xP2: f64 = 0;
++let xBattles: f64 = 0;
++let xScoredPair: f64 = 0;
++let xLastImprove: i32 = 0;
++let xAttempts: i32 = 0;
++export function xSetAlgo(a: i32, p1: f64, p2: f64): void { xAlgo = a; xP1 = p1; xP2 = p2; }
++export function xStat(i: i32): f64 {
++  if (i == 0) return xBattles;
++  if (i == 1) return rBest;
++  if (i == 2) return rScored;
++  if (i == 3) return xScoredPair;
++  if (i == 4) return <f64>xLastImprove;
++  if (i == 5) return <f64>xAttempts;
++  if (i == 6) return <f64>rN;
++  if (i == 7) return rSpace;
++  return 0;
++}
++export function xN(): i32 { return rN; }
++export function xSlotT(s: i32): i32 { return i32At(rSlots, s); }
++export function xFrom(s: i32): f64 { return f64At(rFrom, i32At(rSlots, s)); }
++export function xTo(s: i32): f64 { return f64At(rTo, i32At(rSlots, s)); }
++export function xCost(s: i32): f64 { return costPer(i32At(rSlots, s)); }
++export function xPool(s: i32): i32 { return poolPer(i32At(rSlots, s)); }
++export function xGet(s: i32): f64 { return f64At(rPoint, i32At(rSlots, s)); }
++export function xSet(s: i32, n: f64): void { raiseSet(s, i32At(rSlots, s), n); }
++export function xScore(): f64 { return raisePointScore(); }
++export function xSpare(pool: i32): f64 { return housingOf(pool) - raiseUsed(rBase, pool); }
++export function xResync(): void { raiseResync(); }
++export function xFound(s: i32): f64 { return f64At(rFound, i32At(rSlots, s)); }
++
+ /** One vector, taken as the best when it **strictly** improves (`exactSearch` takes improvements only). */
+ function raiseTake(): void {
+   const value = raisePointScore();
+@@ -3265,6 +3400,9 @@
+   raiseResync();
+   rBest = raisePointScore();
+   memory.copy(rFound, rPoint, (<usize>types) << 3);
++  xLastImprove = -1;
++  xAttempts = 0;
++  if (xAlgo == 99) { rHow = 3; return false; }
+ 
+   if (rSpace <= rWalkCap) {
+     rHow = 1;
+@@ -3273,7 +3411,9 @@
+   }
+ 
+   rHow = 2;
++  if (xAlgo >= 10) return xSearch();
+   for (let attempt = 0; attempt <= rRestarts; attempt += 1) {
++    xAttempts += 1;
+     if (attempt > 0) {
+       for (let s = 0; s < rN; s += 1) {
+         const t = i32At(rSlots, s);
+@@ -3289,11 +3429,16 @@
+     if (value > rBest) {
+       rBest = value;
+       memory.copy(rFound, rPoint, (<usize>types) << 3);
++      xLastImprove = attempt;
+     }
++    // EXPERIMENT: adaptive stop (algo 1): P1 consecutive attempts that do not improve the best.
++    if (xAlgo == 1 && attempt - max(xLastImprove, 0) >= <i32>xP1) break;
+   }
+   return rBest > -Infinity;
+ }
+ 
++function xSearch(): bool { return xSearchImpl(); }
++
+ /**
+  * **The counts a position stands every hired stack at** (S-147), over both pools at once, written to `outPtr`
+  * as a count per type (`f64 × types`): the plan's own counts, raised by `raisedCounts` where a pool stands on
+@@ -3328,6 +3473,8 @@
+   rDom = domMode;
+   rScored = 0.0;
+   rkK = -1;
++  xBattles = 0.0;
++  xScoredPair = 0.0;
+   if (isDefined(CENSUS)) {
+     cBattles = 0.0;
+     cRatings = 0.0;
+@@ -3502,3 +3649,406 @@
+ }
+ 
+ 
++
++// ==== EXPERIMENT 33x search variants ====
++
++/** One pair (i, j) on a grid: a over [aLo, aHi] by aStep (aHi always tried), b likewise; best strictly above `best`. */
++let xPA: f64 = 0;
++let xPB: f64 = 0;
++function xPairGrid(i: i32, j: i32, aLo: f64, aHi: f64, aStep: f64, bLo: f64, bHi: f64, bStep: f64, best: f64): f64 {
++  const one = i32At(rSlots, i);
++  const other = i32At(rSlots, j);
++  let winnerScore = best;
++  let a = aLo;
++  while (true) {
++    let b = bLo;
++    while (true) {
++      raiseSet(i, one, a);
++      raiseSet(j, other, b);
++      const value = raisePointScore();
++      if (value > winnerScore) { xPA = a; xPB = b; winnerScore = value; }
++      if (b >= bHi) break;
++      b = min(bHi, b + bStep);
++    }
++    if (a >= aHi) break;
++    a = min(aHi, a + aStep);
++  }
++  return winnerScore;
++}
++
++/** Pairwise with a coarse grid of about G points an axis, then step 1 within ±step of the coarse winner. */
++function xPairwiseCoarse(G: f64): void {
++  let best = raisePointScore();
++  for (let sweep = 0; sweep < rSweeps; sweep += 1) {
++    let improved = false;
++    for (let i = 0; i < rN; i += 1) {
++      for (let j = i + 1; j < rN; j += 1) {
++        const one = i32At(rSlots, i);
++        const other = i32At(rSlots, j);
++        const aF = f64At(rFrom, one), aT = f64At(rTo, one), bF = f64At(rFrom, other), bT = f64At(rTo, other);
++        xPA = f64At(rPoint, one);
++        xPB = f64At(rPoint, other);
++        const sa = max(1.0, Math.ceil((aT - aF) / G));
++        const sb = max(1.0, Math.ceil((bT - bF) / G));
++        let w = xPairGrid(i, j, aF, aT, sa, bF, bT, sb, best);
++        if (sa > 1.0 || sb > 1.0) {
++          const ca = xPA, cb = xPB;
++          w = xPairGrid(i, j, max(aF, ca - sa + 1.0), min(aT, ca + sa - 1.0), 1.0, max(bF, cb - sb + 1.0), min(bT, cb + sb - 1.0), 1.0, w);
++        }
++        raiseSet(i, one, xPA);
++        raiseSet(j, other, xPB);
++        if (w > best) { best = w; improved = true; }
++      }
++    }
++    if (!improved) return;
++  }
++}
++
++/** Hooke-Jeeves pattern search over the slots: steps start at a quarter of each range, halve to 1. */
++function xPattern(): void {
++  let best = raisePointScore();
++  let h = 0.0;
++  for (let s = 0; s < rN; s += 1) { const t = i32At(rSlots, s); h = max(h, Math.ceil((f64At(rTo, t) - f64At(rFrom, t)) / 4.0)); }
++  while (h >= 1.0) {
++    let improved = true;
++    let guard = 0;
++    while (improved && guard < 1000) {
++      improved = false;
++      guard += 1;
++      for (let s = 0; s < rN; s += 1) {
++        const t = i32At(rSlots, s);
++        const cur = f64At(rPoint, t);
++        const lo = f64At(rFrom, t), hi = f64At(rTo, t);
++        let moved = false;
++        if (cur + h <= hi) {
++          raiseSet(s, t, cur + h);
++          const v = raisePointScore();
++          if (v > best) { best = v; improved = true; moved = true; }
++          else raiseSet(s, t, cur);
++        }
++        if (!moved && cur - h >= lo) {
++          raiseSet(s, t, cur - h);
++          const v = raisePointScore();
++          if (v > best) { best = v; improved = true; moved = true; }
++          else raiseSet(s, t, cur);
++        }
++      }
++    }
++    h = h == 1.0 ? 0.0 : Math.ceil(h / 2.0);
++  }
++}
++
++function xKeep(): void {
++  const value = raisePointScore();
++  if (value > rBest) {
++    rBest = value;
++    memory.copy(rFound, rPoint, (<usize>types) << 3);
++  }
++}
++
++let xStructured: i32 = 0;
++export function xSetStructured(n: i32): void { xStructured = n; }
++/** Structured start k (1-based): 1 every slot at its ceiling; 2 authority at ceiling, dominance at floor; 3 the reverse. */
++function xStructuredStart(k: i32): void {
++  for (let s = 0; s < rN; s += 1) {
++    const t = i32At(rSlots, s);
++    const pool = poolPer(t);
++    const top = k == 1 || (k == 2 && pool == 1) || (k == 3 && pool == 2);
++    store<f64>(rPoint + ((<usize>t) << 3), top ? f64At(rTo, t) : f64At(rFrom, t));
++  }
++  raiseResync();
++}
++function xStart(attempt: i32): void {
++  if (attempt > 0 && attempt <= xStructured) { xStructuredStart(attempt); return; }
++  if (attempt > 0) {
++    for (let s = 0; s < rN; s += 1) {
++      const t = i32At(rSlots, s);
++      const from = f64At(rFrom, t);
++      const span = f64At(rTo, t) - from;
++      store<f64>(rPoint + ((<usize>t) << 3), from + Math.floor(raiseRandom() * (span + 1.0)));
++    }
++    raiseResync();
++  }
++}
++
++/**
++ * algo 10: climb -> pairwise -> climb a start.  11: coarse pairwise (G = P1) -> climb.  12: pattern -> pairwise -> climb.
++ * 13: pattern -> coarse pairwise (G = P1) -> climb.  14: climb -> coarse pairwise -> climb.
++ * P2 > 0: stop after P2 consecutive attempts that improve nothing (adaptive restarts); P2 < 0: restarts = -P2.
++ */
++function xSearchImpl(): bool {
++  const restarts = (xP2 < 0 ? <i32>(-xP2) : rRestarts) + xStructured + (xAlgo == 23 ? <i32>xP1 : 0);
++  for (let attempt = 0; attempt <= restarts; attempt += 1) {
++    xAttempts += 1;
++    xStart(attempt);
++    const before = rBest;
++    if (xAlgo == 10) { raiseClimbSearch(); raisePairwise(); raiseClimbSearch(); }
++    else if (xAlgo == 11) { xPairwiseCoarse(xP1); raiseClimbSearch(); }
++    else if (xAlgo == 12) { xPattern(); raisePairwise(); raiseClimbSearch(); }
++    else if (xAlgo == 13) { xPattern(); xPairwiseCoarse(xP1); raiseClimbSearch(); }
++    else if (xAlgo == 14) { raiseClimbSearch(); xPairwiseCoarse(xP1); raiseClimbSearch(); }
++    else if (xAlgo == 15) { xPattern(); raiseClimbSearch(); }
++    else if (xAlgo == 16) { raisePairwise(); raiseClimbSearch(); }
++    else if (xAlgo == 20) { if (!xPairwiseDL() || rN < 2) raiseClimbSearch(); }
++    else if (xAlgo == 21) { xPairwiseDL(); raiseClimbSearch(); }
++    else if (xAlgo == 23 && attempt > rRestarts) { xPattern(); raiseClimbSearch(); }
++    else if (xAlgo == 22 || xAlgo == 23) {
++      if (attempt == 0) mtBegin();
++      const r = xPairwiseMT();
++      if (r == 2) continue;
++      if (r == 1 || rN < 2) raiseClimbSearch();
++    }
++    else if (xAlgo == 17) { if (attempt == 0) { raisePairwise(); raiseClimbSearch(); } else { xPattern(); raiseClimbSearch(); } }
++    else if (xAlgo == 18) { if (attempt == 0) { raisePairwise(); raiseClimbSearch(); } else { xPattern(); raiseClimbSearch(); xPairwiseCoarse(4.0); raiseClimbSearch(); } }
++    xKeep();
++    if (rBest > before) xLastImprove = attempt;
++    if (xP2 > 0 && attempt - max(xLastImprove, 0) >= <i32>xP2) break;
++  }
++  return rBest > -Infinity;
++}
++
++/**
++ * EXPERIMENT 336: the slack of the simplest valid strike bound at one point. Every stack at kill index p strikes
++ * floor(p / E) or floor(p / E) + 1 times (one strike a round it survives, plus one in its death round if it acts
++ * before its kill), so Σ damage × (floor(p/E) + 1) bounds the journal from above even with the order known.
++ * Answers that bound's excess over the journal at the current point, in rating units (100 × gap / as-is damage).
++ */
++export function xGapAt(): f64 {
++  memory.copy(rWork, rHeld, (<usize>types) << 3);
++  for (let s = 0; s < rN; s += 1) {
++    const t = i32At(rSlots, s);
++    store<f64>(rWork + ((<usize>t) << 3), f64At(rPoint, t));
++  }
++  const d = raiseScore(rWork);
++  const k = rkK >= 0 ? rkK : killOrderBy(types, rRows, rWork, T_ORDER);
++  let ub: f64 = 0.0;
++  const e = <f64>max(1, enemySquads);
++  for (let s = 0; s < k; s += 1) ub += f64At(stackDamage, s) * (Math.floor(<f64>s / e) + 1.0);
++  return rAsDamage > 0 ? (100.0 * (ub - d)) / rAsDamage : 0.0;
++}
++export function xEnemySquads(): i32 { return enemySquads; }
++
++/**
++ * EXPERIMENT 337 (algo 20): `raisePairwise` with don't-look pairs — a pair whose context (every slot outside it)
++ * has not moved since the pair was last examined answers exactly what it answered then (its grid is the same
++ * pure scores, its current point the grid's first strict maximum), so it is skipped. Answers whether the sweeps
++ * converged (a sweep that improved nothing), in which case the climb after it cannot improve either (every
++ * one-slot move lies in some pair's grid) and is skipped too.
++ */
++let dlChange: usize = 0; // i32 x rN: the tick each slot last moved
++let dlExam: usize = 0; // i32 x rN*rN: the tick a pair was last examined at, -1 never
++let dlRoom: i32 = 0;
++function xPairwiseDL(): bool {
++  if (rN * rN > dlRoom) {
++    dlRoom = rN * rN;
++    dlChange = heap.alloc((<usize>rN) << 2);
++    dlExam = heap.alloc((<usize>dlRoom) << 2);
++  }
++  for (let s = 0; s < rN; s += 1) store<i32>(dlChange + ((<usize>s) << 2), -1);
++  for (let p = 0; p < rN * rN; p += 1) store<i32>(dlExam + ((<usize>p) << 2), -2);
++  let tick: i32 = 0;
++  let best = raisePointScore();
++  for (let sweep = 0; sweep < rSweeps; sweep += 1) {
++    let improved = false;
++    for (let i = 0; i < rN; i += 1) {
++      for (let j = i + 1; j < rN; j += 1) {
++        const pAt = dlExam + ((<usize>(i * rN + j)) << 2);
++        const seen = load<i32>(pAt);
++        if (seen >= -1) {
++          let moved = false;
++          for (let k = 0; k < rN && !moved; k += 1) {
++            if (k == i || k == j) continue;
++            if (load<i32>(dlChange + ((<usize>k) << 2)) > seen) moved = true;
++          }
++          if (!moved) continue;
++        }
++        const one = i32At(rSlots, i);
++        const other = i32At(rSlots, j);
++        let winnerOne = f64At(rPoint, one);
++        let winnerOther = f64At(rPoint, other);
++        const startOne = winnerOne;
++        const startOther = winnerOther;
++        let winnerScore = best;
++        const oneTo = f64At(rTo, one);
++        const otherTo = f64At(rTo, other);
++        let a = f64At(rFrom, one);
++        while (a <= oneTo) {
++          let b = f64At(rFrom, other);
++          while (b <= otherTo) {
++            raiseSet(i, one, a);
++            raiseSet(j, other, b);
++            const value = raisePointScore();
++            if (value > winnerScore) {
++              winnerOne = a;
++              winnerOther = b;
++              winnerScore = value;
++            }
++            b += 1.0;
++          }
++          a += 1.0;
++        }
++        raiseSet(i, one, winnerOne);
++        raiseSet(j, other, winnerOther);
++        if (winnerScore > best) {
++          best = winnerScore;
++          improved = true;
++          tick += 1;
++          if (winnerOne != startOne) store<i32>(dlChange + ((<usize>i) << 2), tick);
++          if (winnerOther != startOther) store<i32>(dlChange + ((<usize>j) << 2), tick);
++        }
++        store<i32>(pAt, tick);
++      }
++    }
++    if (!improved) return true;
++  }
++  return false;
++}
++
++/**
++ * EXPERIMENT 337 (algo 22): algo 20 plus **merged trajectories**. The pairwise descent is a deterministic map
++ * from the point a sweep starts at (with the sweeps left) to the point it converges to, so a sweep that starts
++ * where an earlier attempt's sweep started — and that earlier descent converged within as many sweeps as this
++ * one has left — ends where that one ended, which the search has already weighed (`rBest` takes strict
++ * improvements only). The attempt is abandoned there, climb included.
++ */
++const MT_BITS: i32 = 16;
++const MT_SIZE: i32 = 1 << MT_BITS;
++let mtKeys: usize = 0; // f64 x MT_SIZE
++let mtNeed: usize = 0; // i32 x MT_SIZE: sweeps that start needed to converge
++let mtGen: usize = 0; // i32 x MT_SIZE
++let mtCur: i32 = 0;
++let mtPend: usize = 0; // f64 x 64: this attempt's sweep-start keys
++let mtPendN: i32 = 0;
++let mtOn: bool = false;
++let xMerged: f64 = 0;
++export function xMergedCount(): f64 { return xMerged; }
++let mtStride: usize = 0;
++let mtStrideRoom: i32 = 0;
++function mtKey(): f64 {
++  let key: f64 = 0.0;
++  for (let s = 0; s < rN; s += 1) {
++    const t = i32At(rSlots, s);
++    key += (f64At(rPoint, t) - f64At(rFrom, t)) * f64At(mtStride, s);
++  }
++  return key;
++}
++function mtSlot(key: f64): i32 {
++  let h = <i32>((<u64>key * 0x9E3779B97F4A7C15) >> (64 - MT_BITS));
++  for (let probe = 0; probe < MT_SIZE; probe += 1) {
++    if (load<i32>(mtGen + ((<usize>h) << 2)) != mtCur) return h;
++    if (load<f64>(mtKeys + ((<usize>h) << 3)) == key) return h;
++    h = (h + 1) & (MT_SIZE - 1);
++  }
++  return -1;
++}
++function mtBegin(): void {
++  if (mtKeys == 0) {
++    mtKeys = heap.alloc((<usize>MT_SIZE) << 3);
++    mtNeed = heap.alloc((<usize>MT_SIZE) << 2);
++    mtGen = heap.alloc((<usize>MT_SIZE) << 2);
++    mtPend = heap.alloc(64 << 3);
++    for (let i = 0; i < MT_SIZE; i += 1) store<i32>(mtGen + ((<usize>i) << 2), 0);
++  }
++  if (rN > mtStrideRoom) { mtStride = heap.alloc((<usize>rN) << 3); mtStrideRoom = rN; }
++  let ks: f64 = 1.0;
++  for (let s = rN - 1; s >= 0; s -= 1) {
++    const t = i32At(rSlots, s);
++    store<f64>(mtStride + ((<usize>s) << 3), ks);
++    ks *= f64At(rTo, t) - f64At(rFrom, t) + 1.0;
++  }
++  mtOn = ks < 9007199254740992.0 && rSweeps <= 64;
++  mtCur += 1;
++  xMerged = 0;
++}
++/** 0 converged, 1 hit the sweep cap, 2 merged into an earlier attempt's descent. */
++function xPairwiseMT(): i32 {
++  if (rN * rN > dlRoom) {
++    dlRoom = rN * rN;
++    dlChange = heap.alloc((<usize>rN) << 2);
++    dlExam = heap.alloc((<usize>dlRoom) << 2);
++  }
++  for (let s = 0; s < rN; s += 1) store<i32>(dlChange + ((<usize>s) << 2), -1);
++  for (let p = 0; p < rN * rN; p += 1) store<i32>(dlExam + ((<usize>p) << 2), -2);
++  mtPendN = 0;
++  let tick: i32 = 0;
++  let best = raisePointScore();
++  for (let sweep = 0; sweep < rSweeps; sweep += 1) {
++    if (mtOn) {
++      const key = mtKey();
++      const h = mtSlot(key);
++      if (h >= 0 && load<i32>(mtGen + ((<usize>h) << 2)) == mtCur && load<i32>(mtNeed + ((<usize>h) << 2)) <= rSweeps - sweep) {
++        xMerged += 1.0;
++        return 2;
++      }
++      store<f64>(mtPend + ((<usize>sweep) << 3), key);
++      mtPendN = sweep + 1;
++    }
++    let improved = false;
++    for (let i = 0; i < rN; i += 1) {
++      for (let j = i + 1; j < rN; j += 1) {
++        const pAt = dlExam + ((<usize>(i * rN + j)) << 2);
++        const seen = load<i32>(pAt);
++        if (seen >= -1) {
++          let moved = false;
++          for (let k = 0; k < rN && !moved; k += 1) {
++            if (k == i || k == j) continue;
++            if (load<i32>(dlChange + ((<usize>k) << 2)) > seen) moved = true;
++          }
++          if (!moved) continue;
++        }
++        const one = i32At(rSlots, i);
++        const other = i32At(rSlots, j);
++        let winnerOne = f64At(rPoint, one);
++        let winnerOther = f64At(rPoint, other);
++        const startOne = winnerOne;
++        const startOther = winnerOther;
++        let winnerScore = best;
++        const oneTo = f64At(rTo, one);
++        const otherTo = f64At(rTo, other);
++        let a = f64At(rFrom, one);
++        while (a <= oneTo) {
++          let b = f64At(rFrom, other);
++          while (b <= otherTo) {
++            raiseSet(i, one, a);
++            raiseSet(j, other, b);
++            const value = raisePointScore();
++            if (value > winnerScore) {
++              winnerOne = a;
++              winnerOther = b;
++              winnerScore = value;
++            }
++            b += 1.0;
++          }
++          a += 1.0;
++        }
++        raiseSet(i, one, winnerOne);
++        raiseSet(j, other, winnerOther);
++        if (winnerScore > best) {
++          best = winnerScore;
++          improved = true;
++          tick += 1;
++          if (winnerOne != startOne) store<i32>(dlChange + ((<usize>i) << 2), tick);
++          if (winnerOther != startOther) store<i32>(dlChange + ((<usize>j) << 2), tick);
++        }
++        store<i32>(pAt, tick);
++      }
++    }
++    if (!improved) {
++      // Converged at sweep `sweep`: a start recorded at sweep q needed sweep - q + 1 sweeps.
++      if (mtOn) {
++        for (let q = 0; q < mtPendN; q += 1) {
++          const key = load<f64>(mtPend + ((<usize>q) << 3));
++          const h = mtSlot(key);
++          if (h < 0) continue;
++          const need = sweep - q + 1;
++          if (load<i32>(mtGen + ((<usize>h) << 2)) == mtCur && load<i32>(mtNeed + ((<usize>h) << 2)) <= need) continue;
++          store<f64>(mtKeys + ((<usize>h) << 3), key);
++          store<i32>(mtNeed + ((<usize>h) << 2), need);
++          store<i32>(mtGen + ((<usize>h) << 2), mtCur);
++        }
++      }
++      return 0;
++    }
++  }
++  return 1;
++}
