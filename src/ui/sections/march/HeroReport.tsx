@@ -28,7 +28,7 @@ function upWords(up: RoleUp | undefined, star: number): string {
     .filter((action): action is HeroAction => action !== undefined)
     .map((action) =>
       action.kind === 'star'
-        ? `+${String(action.size)} stars (★${String(star)} → ★${String(star + action.size)}) ${signed(action.gain)}`
+        ? `+${String(action.size)} stars (★${String(star + 1)} → ★${String(star + 1 + action.size)}) ${signed(action.gain)}`
         : `+${String(action.size)} levels ${signed(action.gain)}`,
     )
     .join(' · ');

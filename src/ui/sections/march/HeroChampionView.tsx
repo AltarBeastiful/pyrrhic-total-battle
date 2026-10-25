@@ -10,40 +10,132 @@ import type { ChampionTile, GridRating, HeroChampion, Tier, Valley } from '@/eng
 import { Disclosure } from '@/ui/kit';
 
 const signed = (value: number): string => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}`;
+/** The game counts stars from ★1 (the default); the tables store them from 0. Everything the report writes goes through this. */
+const starName = (star: number): string => `★${String(star + 1)}`;
 const at = (point: { star: number; level: number }): string =>
-  `★${String(point.star)} · L${String(point.level)}`;
+  `${starName(point.star)} · L${String(point.level)}`;
 
 /** The words of a valley: the package with its catch-up, or the rung to stop at. */
 function valleyWords(valley: Valley): string {
   const loss = valley.loss.toFixed(1);
-  return valley.kind === 'package'
-    ? `★${String(valley.dip)} loses ${loss}, ★${String(valley.to)} recovers it and gains ${signed(valley.gain)} over ★${String(valley.from)}`
-    : `★${String(valley.dip)} loses ${loss}: don't star past ★${String(valley.from)}`;
+  return valley.kind === 'package' && valley.to !== undefined
+    ? `${starName(valley.dip)} loses ${loss}, ${starName(valley.to)} recovers it and gains ${signed(valley.gain)} over ${starName(valley.from)}`
+    : `${starName(valley.dip)} loses ${loss}: don't star past ${starName(valley.from)}`;
 }
 
-const W = 96;
-const H = 32;
+const W = 160;
+const H = 44;
 
-/** The star road from where the hero stands, a dot where it is now. */
-function Curve({ tile }: { tile: ChampionTile }) {
-  const points: GridRating[] = tile.starPath;
+/** Which points of the road earn a visible marker, and why: where it starts, its peak, where it dips. */
+function markerKinds(values: number[]): Map<number, string> {
+  const kinds = new Map<number, string>();
+  const last = values.length - 1;
+  kinds.set(0, 'Now');
+  kinds.set(last, 'Top of the road');
+  const peak = values.indexOf(Math.max(...values));
+  if (peak !== 0) kinds.set(peak, peak === last ? 'Peak (the top)' : 'Peak');
+  for (let index = 1; index < last; index += 1) {
+    if (values[index]! < values[index - 1]!) kinds.set(index, 'Dip');
+  }
+  return kinds;
+}
+
+/**
+ * One road from where the hero stands (the stars, or the levels): a dot where it is now, markers at the peak and the
+ * dips, every point hoverable. `range` is shared by the tile's two roads so their heights compare.
+ */
+function Curve({
+  tile,
+  points,
+  road,
+  colour: lineColour,
+  range,
+}: {
+  tile: ChampionTile;
+  points: GridRating[];
+  road: 'star' | 'level';
+  colour: string;
+  range: { low: number; high: number };
+}) {
   if (points.length < 2) return null;
   const values = points.map((point) => point.rating);
-  const low = Math.min(...values);
-  const span = Math.max(1e-9, Math.max(...values) - low);
-  const x = (index: number): number => 4 + (index * (W - 8)) / (points.length - 1);
-  const y = (value: number): number => H - 4 - ((value - low) * (H - 8)) / span;
+  const low = range.low;
+  const span = Math.max(1e-9, range.high - low);
+  const x = (index: number): number => 5 + (index * (W - 10)) / (points.length - 1);
+  const y = (value: number): number => H - 5 - ((value - low) * (H - 10)) / span;
   const line = points.map((point, index) => `${x(index).toFixed(1)},${y(point.rating).toFixed(1)}`).join(' ');
+  const kinds = markerKinds(values);
   return (
     <svg
-      width={W}
-      height={H}
+      viewBox={`0 0 ${String(W)} ${String(H)}`}
+      width="100%"
+      style={{ maxWidth: W * 1.25, display: 'block' }}
       role="img"
-      aria-label={`Rating from ${at(points[0]!)} to ${at(points.at(-1)!)}`}
+      aria-label={`${road === 'star' ? 'Star' : 'Level'} road, rating from ${at(points[0]!)} to ${at(points.at(-1)!)}`}
     >
-      <polyline points={line} fill="none" stroke="var(--mantine-color-blue-6)" strokeWidth={2} />
-      <circle cx={x(0)} cy={y(values[0]!)} r={3.5} fill="var(--mantine-color-orange-6)" />
+      <polyline points={line} fill="none" stroke={lineColour} strokeWidth={2} />
+      {points.map((point, index) => {
+        const kind = kinds.get(index);
+        const colour =
+          kind === 'Now'
+            ? 'var(--mantine-color-orange-6)'
+            : kind === 'Dip'
+              ? 'var(--mantine-color-red-6)'
+              : kind === undefined
+                ? lineColour
+                : 'var(--mantine-color-green-6)';
+        const previous = points[index - 1];
+        const step = previous === undefined ? null : point.rating - previous.rating;
+        return (
+          <Tooltip
+            key={`${road}-${String(point.star)}-${String(point.level)}`}
+            label={`${kind === undefined ? '' : `${kind} · `}${at(point)} · rating ${point.rating.toFixed(1)}${step === null ? '' : ` (${signed(step)} from the step before)`}`}
+          >
+            <circle
+              cx={x(index)}
+              cy={y(point.rating)}
+              r={kind === undefined ? 2 : 4}
+              fill={colour}
+              stroke="var(--mantine-color-body)"
+              strokeWidth={1}
+              data-testid={`champion-${road}-point-${tile.captainId}-${String(index)}`}
+              style={{ cursor: 'pointer' }}
+            />
+          </Tooltip>
+        );
+      })}
     </svg>
+  );
+}
+
+/** The star road (blue) and the level road (teal) of a tile, on one height scale, each named. */
+function Roads({ tile }: { tile: ChampionTile }) {
+  const all = [...tile.starPath, ...tile.levelPath].map((point) => point.rating);
+  if (all.length === 0) return null;
+  const range = { low: Math.min(...all), high: Math.max(...all) };
+  return (
+    <Stack gap={0}>
+      <Text size="xs" c="dimmed" lh={1.2}>
+        Stars
+      </Text>
+      <Curve
+        tile={tile}
+        points={tile.starPath}
+        road="star"
+        colour="var(--mantine-color-blue-6)"
+        range={range}
+      />
+      <Text size="xs" c="dimmed" lh={1.2} mt={2}>
+        Levels
+      </Text>
+      <Curve
+        tile={tile}
+        points={tile.levelPath}
+        road="level"
+        colour="var(--mantine-color-teal-6)"
+        range={range}
+      />
+    </Stack>
   );
 }
 
@@ -84,13 +176,9 @@ function Tile({ tile, champion }: { tile: ChampionTile; champion: boolean }) {
         </Tooltip>
       </Group>
       <Text size="sm" c="dimmed">
-        L{tile.level} · ★{tile.star}
+        L{tile.level} · {starName(tile.star)}
       </Text>
-      <Tooltip label="You are here (dot) → the best star at your level">
-        <div>
-          <Curve tile={tile} />
-        </div>
-      </Tooltip>
+      <Roads tile={tile} />
       <Text size="sm" data-testid={`champion-roads-${tile.captainId}`}>
         {tile.today === null ? '' : `${tile.today.toFixed(1)} → ${tile.potential.toFixed(1)}`}
       </Text>
@@ -225,7 +313,9 @@ function Trios({ champion, nameOf }: { champion: HeroChampion; nameOf: (id: stri
           {advised.ceiling.toFixed(1)}:{' '}
           {advised.order
             .filter((member) => member.gain > 0)
-            .map((member) => `${nameOf(member.captainId)} ★${String(member.bestStar)} ${signed(member.gain)}`)
+            .map(
+              (member) => `${nameOf(member.captainId)} ${starName(member.bestStar)} ${signed(member.gain)}`,
+            )
             .join(' · ')}
         </Text>
       )}

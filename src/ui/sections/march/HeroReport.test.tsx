@@ -115,7 +115,7 @@ test('draws the champion, the podium, the tiers and the Replaced row, the situat
   expect(within(screen.getByTestId('champion-tier-S')).getByTestId('champion-tile-a')).toBeTruthy();
   await userEvent.click(screen.getByText('Replaced'));
   expect(within(screen.getByTestId('champion-replaced')).getByText(/e — beaten everywhere by/)).toBeTruthy();
-  expect(screen.getByTestId('champion-valleys').textContent).toContain('★2 loses 2.0');
+  expect(screen.getByTestId('champion-valleys').textContent).toContain('★3 loses 2.0');
   expect(screen.getByText(/pending validation/)).toBeTruthy();
   expect(screen.getByTestId('hero-matrix')).toBeTruthy();
   expect(screen.getByText(/Zed — the best of the easiest heroes/)).toBeTruthy();
