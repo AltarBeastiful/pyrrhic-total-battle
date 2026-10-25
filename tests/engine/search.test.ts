@@ -81,8 +81,18 @@ describe('damage per silver', () => {
    */
   const PER_SILVER_OPTIMUM_PER_UNIT = 0.8150548;
   const TWELVE_TYPES = [
-    'archer-1', 'spearman-2', 'archer-2', 'rider-1', 'spearman-3', 'archer-3', 'rider-2', 'rider-3',
-    'water-elemental', 'battle-boar', 'emerald-dragon', 'stone-gargoyle',
+    'archer-1',
+    'spearman-2',
+    'archer-2',
+    'rider-1',
+    'spearman-3',
+    'archer-3',
+    'rider-2',
+    'rider-3',
+    'water-elemental',
+    'battle-boar',
+    'emerald-dragon',
+    'stone-gargoyle',
   ];
 
   it('keeps the four monsters and drops only the tier-1 specialists, now that monsters are paid per unit', () => {

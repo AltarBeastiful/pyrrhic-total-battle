@@ -274,13 +274,10 @@ export async function computeCaptainWorth(
     exact: candidate.spec.exact === true,
     lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
   }));
-  return runUpgradeWorth(
-    input,
-    { key: lead, totals: leadCandidate.totals, stops: leadStops },
-    asks,
-    pool,
-    { signal, budgetMs: left },
-  );
+  return runUpgradeWorth(input, { key: lead, totals: leadCandidate.totals, stops: leadStops }, asks, pool, {
+    signal,
+    budgetMs: left,
+  });
 }
 
 /** What the card draws from. */

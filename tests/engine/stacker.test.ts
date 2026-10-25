@@ -337,7 +337,9 @@ describe('relaxed preservation (investigation 0003, D-04)', () => {
     expect(relaxed.recovery.dragonCoins - plain.recovery.dragonCoins).toBe(
       (priced('BB').dragonCoins ?? 0) + (priced('ED').dragonCoins ?? 0),
     );
-    expect(relaxed.recovery.seconds - plain.recovery.seconds).toBe(priced('BB').seconds + priced('ED').seconds);
+    expect(relaxed.recovery.seconds - plain.recovery.seconds).toBe(
+      priced('BB').seconds + priced('ED').seconds,
+    );
     const reviveGold = (result: StackResult): number =>
       recoveryCosts(result.stacks, units, {
         templeLevel: 0,

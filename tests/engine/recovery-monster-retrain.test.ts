@@ -11,7 +11,12 @@ import { monsterSet, troopSet } from '../helpers/units';
 
 const UNITS = [...troopSet('ARC1', 'SP1'), ...monsterSet('WE', 'BB')];
 const unit = (label: string) => UNITS.find((u) => u.label === label)!;
-const settings = { templeLevel: 0, trainingCostReduction: {}, trainingSpeed: {}, plan: { mode: 'retrain' } } as const;
+const settings = {
+  templeLevel: 0,
+  trainingCostReduction: {},
+  trainingSpeed: {},
+  plan: { mode: 'retrain' },
+} as const;
 
 describe('retraining a monster', () => {
   test.each([18, 40, 7])('%i monsters cost n × silver, n × dragon coins and n × queue, and no gold', (n) => {

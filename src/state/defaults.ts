@@ -111,10 +111,11 @@ function buildSetup(id: string, deviceId: string, name: string, now: number): Ba
      * **Revive the top monster, retrain the rest** (owner, 2026-09-21). It was "retrain everything",
      * which is the cheapest plan in silver and the one nobody plays: a monster stack is the slowest
      * thing in the queue and the Temple is what a player opens after an epic march. Only the monsters
-     * are ticked, because reviving a top troop type is a choice a player makes, and this is the plan
+     * are ticked, at every tier (owner, 2026-10-25: a camp's lower monster tiers would otherwise be
+     * trained again at full price), because reviving a top troop type is a choice a player makes, and this is the plan
      * they start from (`ui/sections/battle/BattleSection.tsx`).
      */
-    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'] },
+    recoveryPlan: { mode: 'selective', reviveFamilies: ['monsters'], reviveAllTiers: ['monsters'] },
   };
 }
 

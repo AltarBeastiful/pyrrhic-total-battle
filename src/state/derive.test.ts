@@ -580,7 +580,7 @@ describe('buildStackRequest', () => {
       templeLevel: 0,
       trainingCostReduction: {},
       trainingSpeed: {},
-      plan: { mode: 'selective', reviveFamilies: ['monsters'] },
+      plan: { mode: 'selective', reviveFamilies: ['monsters'], reviveAllTiers: ['monsters'] },
     });
   });
 

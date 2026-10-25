@@ -260,7 +260,11 @@ test('the selective recovery plan asks which families come back, the monsters to
   expect(within(plans).getAllByRole('radio')).toHaveLength(3);
 
   // A new setup opens on this plan, with the monsters alone (`state/defaults.ts`).
-  expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', reviveFamilies: ['monsters'] });
+  expect(setup()?.recoveryPlan).toEqual({
+    mode: 'selective',
+    reviveFamilies: ['monsters'],
+    reviveAllTiers: ['monsters'],
+  });
   const depthOf = (family: string): string =>
     (
       within(screen.getByRole('radiogroup', { name: `Revive ${family}` })).getByRole('radio', {
@@ -273,29 +277,25 @@ test('the selective recovery plan asks which families come back, the monsters to
   expect(['guardsmen', 'specialists', 'monsters', 'engineers'].map(depthOf)).toEqual([
     'none',
     'none',
-    'top',
+    'all',
     'none',
   ]);
   // Each row says which tier it means, in the account's own shorthand.
   expect(screen.getByText('G3')).toBeTruthy();
   expect(screen.getByText('S1')).toBeTruthy();
 
-  // Top tier on guardsmen lands in the card's own order, not the order of the taps.
+  // Top tier on guardsmen lands in the card's own order, not the order of the taps; the monsters keep
+  // every tier.
   const guardsmen = screen.getByRole('radiogroup', { name: 'Revive guardsmen' });
   await user.click(within(guardsmen).getByText('Top tier'));
   expect(setup()?.recoveryPlan).toEqual({
     mode: 'selective',
     reviveFamilies: ['guardsmen', 'monsters'],
-  });
-
-  // Every tier of the monsters is a third choice, and the family stays on the first list as well.
-  const monsters = screen.getByRole('radiogroup', { name: 'Revive monsters' });
-  await user.click(within(monsters).getByText('All tiers'));
-  expect(setup()?.recoveryPlan).toEqual({
-    mode: 'selective',
-    reviveFamilies: ['guardsmen', 'monsters'],
     reviveAllTiers: ['monsters'],
   });
+
+  // Top tier alone is the second choice for the monsters, and the family stays on the first list.
+  const monsters = screen.getByRole('radiogroup', { name: 'Revive monsters' });
   await user.click(within(monsters).getByText('Top tier'));
   expect(setup()?.recoveryPlan).toEqual({
     mode: 'selective',

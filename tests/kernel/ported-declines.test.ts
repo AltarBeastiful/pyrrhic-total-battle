@@ -134,7 +134,9 @@ function referenceMarch(
   for (const stack of ts.stacks) {
     const unit = unitOf.get(stack.unitId) as UnitDef;
     const revived = unit.pool === 'dominance' && (plan.mode === 'revive' || selective.has(unit.id));
-    const one = revived ? { ...reviveOne(unit, stack.count, recovery), gold: 0 } : retrainOne(unit, stack.count, recovery);
+    const one = revived
+      ? { ...reviveOne(unit, stack.count, recovery), gold: 0 }
+      : retrainOne(unit, stack.count, recovery);
     silver += one.silver;
     if (unit.pool !== 'leadership') gold += one.gold;
   }
