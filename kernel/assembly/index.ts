@@ -286,8 +286,9 @@ function recoveryOf(k: i32): void {
     let revive = mode == 1;
     if (mode == 2) {
       revive =
-        cell(type, T_FAMILY_REVIVED) != 0 &&
-        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+        cell(type, T_FAMILY_REVIVED) == 2 ||
+        (cell(type, T_FAMILY_REVIVED) != 0 &&
+        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER));
     }
     if (revive) {
       // `reviveOne`
@@ -497,8 +498,9 @@ export function march(n: i32, rowsPtr: usize, countsPtr: usize, enemy: i32, sear
       revived = mode == 1;
       if (mode == 2) {
         revived =
-          cell(type, T_FAMILY_REVIVED) != 0 &&
-          load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+          cell(type, T_FAMILY_REVIVED) == 2 ||
+          (cell(type, T_FAMILY_REVIVED) != 0 &&
+          load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER));
       }
     }
     // `cost.silver = billed × training.silver × reduction`, the reduction `1 − percent / 100` of the search's
@@ -612,8 +614,9 @@ function recoveryBill(k: i32, outPtr: usize): void {
     let revive = mode == 1;
     if (mode == 2) {
       revive =
-        cell(type, T_FAMILY_REVIVED) != 0 &&
-        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER);
+        cell(type, T_FAMILY_REVIVED) == 2 ||
+        (cell(type, T_FAMILY_REVIVED) != 0 &&
+        load<f64>(topTier + ((<usize>(<i32>cell(type, T_FAMILY))) << 3)) == cell(type, T_TIER));
     }
     if (revive) {
       const c = chunks(count);

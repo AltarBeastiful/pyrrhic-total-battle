@@ -17,17 +17,7 @@
  * Everything written here belongs to the *march*, not to the account: it all goes to the active
  * battle setup.
  */
-import {
-  Alert,
-  Box,
-  Checkbox,
-  Group,
-  NumberInput,
-  SegmentedControl,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { Alert, Box, Group, NumberInput, SegmentedControl, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useId, useState } from 'react';
 
 import { CATEGORIES } from '@/data/types';
@@ -87,6 +77,16 @@ const FAMILY_PREFIX: Record<(typeof REVIVABLE)[number], string> = {
   engineers: 'E',
 };
 
+type ReviveDepth = 'none' | 'top' | 'all';
+const REVIVE_DEPTHS: { value: ReviveDepth; label: string }[] = [
+  { value: 'none', label: 'Retrain' },
+  { value: 'top', label: 'Top tier' },
+  { value: 'all', label: 'All tiers' },
+];
+function isReviveDepth(value: string): value is ReviveDepth {
+  return REVIVE_DEPTHS.some((depth) => depth.value === value);
+}
+
 export function BattleSection() {
   // Only the four fields this card reads (`useActiveSetupSlice`): the housing is typed in the bar
   // under this card, and every keystroke there used to re-render the method cards and the enemy
@@ -119,6 +119,22 @@ export function BattleSection() {
   // alone, which is the plan the owner plays (`state/defaults.ts`).
   const reviveFamilies: readonly UnitFamily[] = recoveryPlan.reviveFamilies ?? REVIVABLE;
   const rules = optionsFor(options.method);
+  const allTiers: readonly UnitFamily[] = recoveryPlan.reviveAllTiers ?? [];
+  const reviveDepth = (family: UnitFamily): ReviveDepth =>
+    allTiers.includes(family) ? 'all' : reviveFamilies.includes(family) ? 'top' : 'none';
+  // The two lists are written together, each in the card's own order: a family revived at every tier is
+  // also on the first list, so a reader of either one sees the same plan.
+  const setReviveDepth = (family: UnitFamily, depth: ReviveDepth): void => {
+    const top = REVIVABLE.filter((f) => (f === family ? depth !== 'none' : reviveFamilies.includes(f)));
+    const all = REVIVABLE.filter((f) => (f === family ? depth === 'all' : allTiers.includes(f)));
+    updateActiveSetup({
+      recoveryPlan: {
+        mode: 'selective',
+        reviveFamilies: top,
+        ...(all.length > 0 ? { reviveAllTiers: all } : {}),
+      },
+    });
+  };
 
   const writeFormation = (next: Formation): void => {
     updateActiveSetup({ enemy: next });
@@ -279,7 +295,7 @@ export function BattleSection() {
                 // The families are written under every plan, not only the one that reads them: a
                 // player who looks at "Retrain everything" and comes back finds their own ticks where
                 // they left them, instead of all four back on.
-                recoveryPlan: { mode: value, reviveFamilies: [...reviveFamilies] },
+                recoveryPlan: { ...recoveryPlan, mode: value, reviveFamilies: [...reviveFamilies] },
               });
             }}
           />
@@ -299,50 +315,51 @@ export function BattleSection() {
            * everywhere else in the app (rule 21).
            */}
           {recoveryPlan.mode === 'selective' && (
-            <Checkbox.Group
-              label="Which troop types to revive"
-              description="Select which troop types to revive using gold. When selecting a troop type, the best troops only will be revived."
-              value={[...reviveFamilies]}
-              onChange={(chosen) => {
-                updateActiveSetup({
-                  recoveryPlan: {
-                    mode: 'selective',
-                    // Filtered out of the card's own list, never stored in the order they were ticked.
-                    reviveFamilies: REVIVABLE.filter((family) => chosen.includes(family)),
-                  },
-                });
-              }}
-            >
-              {/* Two across, as the four enemy fields above are: a family is two words. */}
-              <SimpleGrid cols={2} spacing={8} mt={8} maw={520}>
-                {REVIVABLE.map((family) => (
-                  <Checkbox
-                    key={family}
-                    value={family}
-                    size="xs"
-                    label={
-                      <Group gap={6} wrap="nowrap">
-                        <Glyph kind={family} />
-                        <Text span size="xs">
-                          {`Top ${GROUP_LABEL[family].toLowerCase()}`}
+            <Stack gap={8}>
+              <Box>
+                <Text size="xs" fw={500}>
+                  Which troop types to revive
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Revived troops are paid in gold at the Temple. Anything left out is trained again in silver,
+                  and monsters in dragon coins as well.
+                </Text>
+              </Box>
+              {/* One row per family, three depths each: nothing, the best tier only, or every tier
+                (owner, 2026-10-25: a camp that fields M3–M7 retrains M3–M6 at full price when only
+                the top is revived, so "all" has to be a choice). */}
+              {REVIVABLE.map((family) => {
+                const depth = reviveDepth(family);
+                const label = GROUP_LABEL[family];
+                return (
+                  <Group key={family} justify="space-between" gap={8} maw={520} wrap="wrap">
+                    <Group gap={6} wrap="nowrap">
+                      <Glyph kind={family} />
+                      <Text span size="xs">
+                        {label}
+                      </Text>
+                      {/* A real space, as the rows of the Mercenaries picker carry: the accessible name
+                          needs one between the label and the tier. */}{' '}
+                      {troops?.[family] != null && (
+                        <Text span size="xs" c="dimmed">
+                          {`${FAMILY_PREFIX[family]}${String(troops[family].max)}`}
                         </Text>
-                        {/* A real space, not the row's gap: the accessible-name algorithm only puts one
-                            between *block* boxes, so without it the box is announced "Top guardsmenG3"
-                            (the same trap `MercenariesSection`'s picker rows carry a note about). CSS
-                            gaps are not text. */}{' '}
-                        {/* The tier itself, muted, where the account fields one: "Top monsters M3" reads
-                            as the rule *and* as the units it will hand the Temple. */}
-                        {troops?.[family] != null && (
-                          <Text span size="xs" c="dimmed">
-                            {`${FAMILY_PREFIX[family]}${String(troops[family].max)}`}
-                          </Text>
-                        )}
-                      </Group>
-                    }
-                  />
-                ))}
-              </SimpleGrid>
-            </Checkbox.Group>
+                      )}
+                    </Group>
+                    <SegmentedControl
+                      size="xs"
+                      aria-label={`Revive ${label.toLowerCase()}`}
+                      value={depth}
+                      data={REVIVE_DEPTHS}
+                      onChange={(value) => {
+                        if (!isReviveDepth(value)) return;
+                        setReviveDepth(family, value);
+                      }}
+                    />
+                  </Group>
+                );
+              })}
+            </Stack>
           )}
         </Stack>
 

@@ -269,6 +269,7 @@ export function recoveryCosts(
   // again, so the Temple returns them under every plan and `retrainOne` charges exactly that for
   // them. Listing them here or not changes no figure; the default does, for the sentence it writes.
   const families = new Set<UnitFamily>(settings.plan.reviveFamilies ?? UNIT_FAMILIES);
+  const allTiers = new Set<UnitFamily>(settings.plan.reviveAllTiers ?? []);
   const topTier = new Map<UnitFamily, number>();
   for (const { unit } of resolved) {
     const family = unitFamily(unit);
@@ -279,7 +280,7 @@ export function recoveryCosts(
   const revivedIds = [
     ...new Set(
       resolved
-        .filter(({ unit }) => topTier.get(unitFamily(unit)) === unit.tier)
+        .filter(({ unit }) => allTiers.has(unitFamily(unit)) || topTier.get(unitFamily(unit)) === unit.tier)
         .sort((a, b) => b.unit.tier - a.unit.tier || a.unit.id.localeCompare(b.unit.id))
         .map(({ unit }) => unit.id),
     ),

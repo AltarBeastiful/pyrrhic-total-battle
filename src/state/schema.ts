@@ -235,6 +235,8 @@ export const OBJECTIVES = [
 export const recoveryPlanSchema = z.object({
   mode: z.enum(RECOVERY_MODES),
   reviveFamilies: z.array(z.enum(UNIT_FAMILIES)).optional(),
+  /** Families revived at every tier, not the top one alone (2026-10-25). */
+  reviveAllTiers: z.array(z.enum(UNIT_FAMILIES)).optional(),
 });
 export type RecoveryPlan = z.infer<typeof recoveryPlanSchema>;
 

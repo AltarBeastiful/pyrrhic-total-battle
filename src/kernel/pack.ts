@@ -61,6 +61,7 @@ export function packRequest(
   out[H.rateDragonCoins] = rates.dragonCoins;
   out[H.rateSeconds] = rates.seconds;
   const revived = new Set(settings.plan.reviveFamilies ?? UNIT_FAMILIES);
+  const allTiers = new Set(settings.plan.reviveAllTiers ?? []);
   // `eliteOrder` ranks by unit, its last key the unit's index, so a subset of `request.units` taken in order
   // ranks in this same relative order (`sizeStacks` over a filtered request, step 3).
   const eliteRank = new Map(eliteOrder(request.units).map((unit, index) => [unit, index]));
@@ -89,7 +90,7 @@ export function packRequest(
     out[row + T.revivalGold] = unit.revival.gold;
     out[row + T.family] = UNIT_FAMILIES.indexOf(family);
     out[row + T.tier] = unit.tier;
-    out[row + T.familyRevived] = revived.has(family) ? 1 : 0;
+    out[row + T.familyRevived] = allTiers.has(family) ? 2 : revived.has(family) ? 1 : 0;
     out[row + T.eliteRank] = eliteRank.get(unit) ?? 0;
     out[row + T.order] = order === undefined ? -1 : (order[index] ?? -1);
   });

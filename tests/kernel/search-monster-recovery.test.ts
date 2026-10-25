@@ -15,7 +15,12 @@ import { commonScenarios } from '../engine/plan-scenarios';
 
 import { loadKernelModule } from './load';
 
-const SEARCH: RecoverySettings = { templeLevel: 0, trainingCostReduction: {}, trainingSpeed: {}, plan: { mode: 'retrain' } };
+const SEARCH: RecoverySettings = {
+  templeLevel: 0,
+  trainingCostReduction: {},
+  trainingSpeed: {},
+  plan: { mode: 'retrain' },
+};
 const camp = commonScenarios().find((s) => s.request.units.some((u) => u.pool === 'dominance'))!;
 
 function priced(plan: RecoveryPlan, count: number) {
@@ -38,15 +43,54 @@ describe('the search prices a monster by the setup’s recovery plan', () => {
   it.each([
     ['revive', { mode: 'revive' }],
     ['selective, monsters ticked', { mode: 'selective', reviveFamilies: ['monsters'] }],
-  ] as const)('%s: 40 monsters pay the tenth in silver; the Temple’s gold is printed, not ranked', (_label, plan) => {
-    const { got, training } = priced(plan, 40);
-    expect(got.silver).toBe(chunks(40) * training.silver);
-    expect(got.gold).toBe(0);
-  });
+  ] as const)(
+    '%s: 40 monsters pay the tenth in silver; the Temple’s gold is printed, not ranked',
+    (_label, plan) => {
+      const { got, training } = priced(plan, 40);
+      expect(got.silver).toBe(chunks(40) * training.silver);
+      expect(got.gold).toBe(0);
+    },
+  );
 
   it('selective with monsters not ticked retrains them', () => {
     const { got, training } = priced({ mode: 'selective', reviveFamilies: ['guardsmen'] }, 40);
     expect(got.silver).toBe(40 * training.silver);
     expect(got.gold).toBe(0);
+  });
+});
+
+describe('top tier or every tier (owner, 2026-10-25)', () => {
+  /** The camp's lowest and highest monster tier, 40 of each, priced on the kernel and by `marchOfTs`. */
+  function twoTiers(plan: RecoveryPlan) {
+    const request: StackRequest = { ...camp.request, recovery: { ...camp.request.recovery, plan } };
+    const table = effectiveTable(request);
+    const monsters = table.filter((e) => e.pool === 'dominance').sort((a, b) => a.unit.tier - b.unit.tier);
+    const low = monsters[0]!;
+    const high = monsters[monsters.length - 1]!;
+    const kernel = createPlanKernel(loadKernelModule());
+    kernel.bindTable(request, table);
+    const got = kernel.march(
+      [
+        { entry: low, count: 40 },
+        { entry: high, count: 40 },
+      ],
+      1,
+      SEARCH,
+    )!;
+    return { got, low: low.unit.training!, high: high.unit.training! };
+  }
+
+  it('top tier revives the highest monster and retrains the one below it', () => {
+    const { got, low, high } = twoTiers({ mode: 'selective', reviveFamilies: ['monsters'] });
+    expect(got.silver).toBe(40 * low.silver + chunks(40) * high.silver);
+  });
+
+  it('every tier revives both', () => {
+    const { got, low, high } = twoTiers({
+      mode: 'selective',
+      reviveFamilies: ['monsters'],
+      reviveAllTiers: ['monsters'],
+    });
+    expect(got.silver).toBe(chunks(40) * (low.silver + high.silver));
   });
 });

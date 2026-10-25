@@ -365,3 +365,24 @@ describe('recovery plans', () => {
     expect(templeDivisor(45)).toBe(5.91);
   });
 });
+
+describe('every tier of a family (owner, 2026-10-25)', () => {
+  it('revives a family’s lower tiers as well as its top one', () => {
+    const top = recoveryCosts(
+      EP8,
+      UNITS,
+      settings({ plan: { mode: 'selective', reviveFamilies: ['guardsmen'] } }),
+    );
+    const every = recoveryCosts(
+      EP8,
+      UNITS,
+      settings({ plan: { mode: 'selective', reviveFamilies: ['guardsmen'], reviveAllTiers: ['guardsmen'] } }),
+    );
+    expect(every.selectiveRevived.length).toBeGreaterThan(top.selectiveRevived.length);
+    for (const id of top.selectiveRevived) expect(every.selectiveRevived).toContain(id);
+    for (const id of every.selectiveRevived) {
+      expect(unitFamily(UNITS.find((unit) => unit.id === id)!)).toBe('guardsmen');
+    }
+    expect(every.selective.gold).toBeGreaterThan(top.selective.gold);
+  });
+});

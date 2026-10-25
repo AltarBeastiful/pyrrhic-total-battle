@@ -70,7 +70,7 @@ export const T = {
   /** Index in `UNIT_FAMILIES`. */
   family: 14,
   tier: 15,
-  /** 1 when the selective plan revives this type's family. */
+  /** 1 when the selective plan revives this type's family at its top tier, 2 at every tier. */
   familyRevived: 16,
   /**
    * The type's place in the **Elite-Preservation** order of `request.units` (`eliteOrder`, `killOrder.ts`) — the

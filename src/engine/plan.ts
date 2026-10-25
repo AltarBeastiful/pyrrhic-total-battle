@@ -1375,18 +1375,24 @@ function marchOfTs(stacks: { entry: Effective; count: number }[], enemyStacks: n
   let mercLost = 0;
   // The search's yardstick is the bare game under the table's own recovery plan, for a dominance monster only.
   const plan = stacks[0]?.entry.plan ?? SEARCH_RECOVERY.plan;
-  const recovery: RecoverySettings = plan === SEARCH_RECOVERY.plan ? SEARCH_RECOVERY : { ...SEARCH_RECOVERY, plan };
+  const recovery: RecoverySettings =
+    plan === SEARCH_RECOVERY.plan ? SEARCH_RECOVERY : { ...SEARCH_RECOVERY, plan };
   const selective =
     plan.mode === 'selective'
       ? new Set(
-          recoveryCosts(built, stacks.map((stack) => stack.entry.unit), recovery).selectiveRevived,
+          recoveryCosts(
+            built,
+            stacks.map((stack) => stack.entry.unit),
+            recovery,
+          ).selectiveRevived,
         )
       : new Set<string>();
   for (const stack of built) {
     const entry = byId.get(stack.unitId);
     if (!entry) continue;
     const revived =
-      entry.pool === 'dominance' && (plan.mode === 'revive' || (plan.mode === 'selective' && selective.has(entry.id)));
+      entry.pool === 'dominance' &&
+      (plan.mode === 'revive' || (plan.mode === 'selective' && selective.has(entry.id)));
     /**
      * **The bill is read off the pool, and every pool but `leadership` is hired stock** (S-96, 2026-09-19;
      * the owner: *"fix why the monsters are not shielded in the generated stack"*).

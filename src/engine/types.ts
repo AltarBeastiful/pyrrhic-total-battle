@@ -103,7 +103,15 @@ export interface RecoverySettings {
    * guardsmen"): the top three types of an army with four monster tiers are three monsters, and his
    * guardsmen were retrained without his ever having said so.
    */
-  plan: { mode: RecoveryMode; reviveFamilies?: readonly UnitFamily[] };
+  plan: {
+    mode: RecoveryMode;
+    reviveFamilies?: readonly UnitFamily[];
+    /**
+     * Families the Temple brings back at **every tier**, not only the top one (owner, 2026-10-25). A family
+     * listed here is revived whole whether or not `reviveFamilies` names it; absent means none.
+     */
+    reviveAllTiers?: readonly UnitFamily[];
+  };
 }
 
 export interface StackRequest {

@@ -261,19 +261,42 @@ test('the selective recovery plan asks which families come back, the monsters to
 
   // A new setup opens on this plan, with the monsters alone (`state/defaults.ts`).
   expect(setup()?.recoveryPlan).toEqual({ mode: 'selective', reviveFamilies: ['monsters'] });
-  const boxes = screen.getAllByRole('checkbox');
-  expect(boxes.map((box) => (box as HTMLInputElement).checked)).toEqual([false, false, true, false]);
-  // Four families, in the order the two columns read down: guardsmen over monsters, specialists over
-  // engineers. No mercenaries: the Temple returns them whatever this says.
-  expect(screen.queryByRole('checkbox', { name: /mercenaries/i })).toBeNull();
-  // **Each box says which tier it means** (owner, 2026-09-21: *"maybe we should also precise this next
-  // to top monsters / top guardsmen"*), in the account's own shorthand — the same G3/S1/M3 the Troops
-  // card's head writes. The default profile fields guardsmen G1–G3 and specialists S1.
-  expect(screen.getByRole('checkbox', { name: /Top guardsmen G3/ })).toBeTruthy();
-  expect(screen.getByRole('checkbox', { name: /Top specialists S1/ })).toBeTruthy();
+  const depthOf = (family: string): string =>
+    (
+      within(screen.getByRole('radiogroup', { name: `Revive ${family}` })).getByRole('radio', {
+        checked: true,
+      }) as HTMLInputElement
+    ).value;
+  // Four families, in the order the two columns read down. No mercenaries: the Temple returns them
+  // whatever this says.
+  expect(screen.queryByRole('radiogroup', { name: /mercenaries/i })).toBeNull();
+  expect(['guardsmen', 'specialists', 'monsters', 'engineers'].map(depthOf)).toEqual([
+    'none',
+    'none',
+    'top',
+    'none',
+  ]);
+  // Each row says which tier it means, in the account's own shorthand.
+  expect(screen.getByText('G3')).toBeTruthy();
+  expect(screen.getByText('S1')).toBeTruthy();
 
-  // Tick one and it lands in the card's own order, not the order of the taps.
-  await user.click(screen.getByRole('checkbox', { name: /Top guardsmen/ }));
+  // Top tier on guardsmen lands in the card's own order, not the order of the taps.
+  const guardsmen = screen.getByRole('radiogroup', { name: 'Revive guardsmen' });
+  await user.click(within(guardsmen).getByText('Top tier'));
+  expect(setup()?.recoveryPlan).toEqual({
+    mode: 'selective',
+    reviveFamilies: ['guardsmen', 'monsters'],
+  });
+
+  // Every tier of the monsters is a third choice, and the family stays on the first list as well.
+  const monsters = screen.getByRole('radiogroup', { name: 'Revive monsters' });
+  await user.click(within(monsters).getByText('All tiers'));
+  expect(setup()?.recoveryPlan).toEqual({
+    mode: 'selective',
+    reviveFamilies: ['guardsmen', 'monsters'],
+    reviveAllTiers: ['monsters'],
+  });
+  await user.click(within(monsters).getByText('Top tier'));
   expect(setup()?.recoveryPlan).toEqual({
     mode: 'selective',
     reviveFamilies: ['guardsmen', 'monsters'],
@@ -281,7 +304,7 @@ test('the selective recovery plan asks which families come back, the monsters to
 
   // Another plan takes the boxes away; coming back keeps what was ticked.
   await user.click(within(plans).getByText(/^Silver, dragon coins and training time/));
-  expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+  expect(screen.queryAllByRole('radiogroup', { name: /^Revive / })).toHaveLength(0);
   await user.click(within(plans).getByText(/^Revive Mercenaries and elite troops/));
   expect(setup()?.recoveryPlan).toEqual({
     mode: 'selective',

@@ -629,6 +629,7 @@ function recoverySettings(profile: Profile, setup: BattleSetup): RecoverySetting
       // No list is *"every family"*, and the engine reads it that way (`RecoverySettings.plan`); an
       // empty one is the player having ticked nothing, which is a retrain, so it is passed as it is.
       ...(plan.reviveFamilies === undefined ? {} : { reviveFamilies: [...plan.reviveFamilies] }),
+      ...(plan.reviveAllTiers === undefined ? {} : { reviveAllTiers: [...plan.reviveAllTiers] }),
     },
   };
 }
