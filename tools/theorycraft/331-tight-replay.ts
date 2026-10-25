@@ -13,7 +13,8 @@ import type { StackRequest, StackResult } from '../../src/engine/types';
 import { packRequest } from '../../src/kernel/pack';
 import { EXACT_DEFAULTS } from '../../src/kernel/raise';
 
-export const SCRATCH = '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/ddd23d57-5930-4d86-868e-64846315b06c/scratchpad/tx';
+export const SCRATCH =
+  '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/ddd23d57-5930-4d86-868e-64846315b06c/scratchpad/tx';
 
 export interface Call {
   src: string;
@@ -39,7 +40,19 @@ export interface X {
   memory: WebAssembly.Memory;
   alloc(bytes: number): number;
   setTable(ptr: number): void;
-  raise(a: number, d: number, base: number, caps: number, out: number, stats: number, walkCap: number, restarts: number, sweeps: number, seed: number, burnCap: number): number;
+  raise(
+    a: number,
+    d: number,
+    base: number,
+    caps: number,
+    out: number,
+    stats: number,
+    walkCap: number,
+    restarts: number,
+    sweeps: number,
+    seed: number,
+    burnCap: number,
+  ): number;
   xSetAlgo?(a: number, p1: number, p2: number): void;
   xStat?(i: number): number;
   xN?(): number;
@@ -77,9 +90,18 @@ export class Bound {
   capsPtr: number;
   outPtr: number;
   statsPtr: number;
-  constructor(module: WebAssembly.Module, readonly request: StackRequest, readonly base: StackResult) {
+  readonly request: StackRequest;
+  readonly base: StackResult;
+  constructor(module: WebAssembly.Module, request: StackRequest, base: StackResult) {
+    this.request = request;
+    this.base = base;
     const order = new Map(base.stacks.map((stack, index) => [stack.unitId, index]));
-    const packed = packRequest(request, CAMPAIGN.markerRates, undefined, Int32Array.from(request.units, (u) => order.get(u.id) ?? -1));
+    const packed = packRequest(
+      request,
+      CAMPAIGN.markerRates,
+      undefined,
+      Int32Array.from(request.units, (u) => order.get(u.id) ?? -1),
+    );
     this.raw = new WebAssembly.Instance(module, {}).exports as unknown as X;
     this.ids = packed.ids;
     this.types = packed.ids.length;
@@ -92,7 +114,13 @@ export class Bound {
     this.outPtr = this.raw.alloc(8 * n);
     this.statsPtr = this.raw.alloc(32);
   }
-  run(input: Omit<RaiseInput, 'request'>, algo = 0, p1 = 0, p2 = 0, search: { walkCap: number; restarts: number; maxSweeps: number; seed: number } = EXACT_DEFAULTS): Answer {
+  run(
+    input: Omit<RaiseInput, 'request'>,
+    algo = 0,
+    p1 = 0,
+    p2 = 0,
+    search: { walkCap: number; restarts: number; maxSweeps: number; seed: number } = EXACT_DEFAULTS,
+  ): Answer {
     const own = new Map(this.base.stacks.map((s) => [s.unitId, s.count]));
     let view = new Float64Array(this.raw.memory.buffer);
     for (let row = 0; row < this.types; row += 1) {
@@ -103,7 +131,19 @@ export class Bound {
     }
     this.raw.xSetAlgo?.(algo, p1, p2);
     const t = performance.now();
-    this.raw.raise(input.modes.authority, input.modes.dominance, this.basePtr, this.capsPtr, this.outPtr, this.statsPtr, search.walkCap, search.restarts, search.maxSweeps, search.seed, input.burnCap ?? Number.POSITIVE_INFINITY);
+    this.raw.raise(
+      input.modes.authority,
+      input.modes.dominance,
+      this.basePtr,
+      this.capsPtr,
+      this.outPtr,
+      this.statsPtr,
+      search.walkCap,
+      search.restarts,
+      search.maxSweeps,
+      search.seed,
+      input.burnCap ?? Number.POSITIVE_INFINITY,
+    );
     const ms = performance.now() - t;
     view = new Float64Array(this.raw.memory.buffer);
     const x = this.raw.xStat;
@@ -121,4 +161,5 @@ export class Bound {
   }
 }
 
-export const sameCounts = (a: Float64Array, b: Float64Array): boolean => a.length === b.length && a.every((v, i) => v === b[i]);
+export const sameCounts = (a: Float64Array, b: Float64Array): boolean =>
+  a.length === b.length && a.every((v, i) => v === b[i]);

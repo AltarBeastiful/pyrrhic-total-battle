@@ -8,7 +8,9 @@ import { describe, expect, it } from 'vitest';
 
 import { effectiveTable } from '@/engine/plan';
 import { chunks } from '@/engine/recovery';
-import type { RecoverySettings, RecoveryPlan, StackRequest } from '@/engine/types';
+import type { RecoverySettings, StackRequest } from '@/engine/types';
+
+type RecoveryPlan = RecoverySettings['plan'];
 import { createPlanKernel } from '@/kernel/plan';
 
 import { commonScenarios } from '../engine/plan-scenarios';

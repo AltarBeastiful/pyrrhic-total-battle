@@ -24,32 +24,70 @@ function flatAll(request: StackRequest, hired: Record<string, number>): Record<s
   const build = (H: number): { c: Record<string, number>; lead: number } => {
     const c: Record<string, number> = { ...hired };
     let lead = 0;
-    t.forEach((e, j) => { const n = Math.ceil((H * (1 - 0.0019 * j)) / e.hp); c[e.id] = n; lead += n * e.cost; });
+    t.forEach((e, j) => {
+      const n = Math.ceil((H * (1 - 0.0019 * j)) / e.hp);
+      c[e.id] = n;
+      lead += n * e.cost;
+    });
     return { c, lead };
   };
-  let lo = 0, hi = 1e9;
-  for (let i = 0; i < 70; i += 1) { const mid = (lo + hi) / 2; if (build(mid).lead <= L) lo = mid; else hi = mid; }
+  let lo = 0,
+    hi = 1e9;
+  for (let i = 0; i < 70; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (build(mid).lead <= L) lo = mid;
+    else hi = mid;
+  }
   return build(lo).c;
 }
 
 describe.skipIf(!process.env.THEORY)('301 — the stack number', () => {
   it('tabulates', () => {
-    const rows = process.env.IN!.split(',').flatMap((f) => readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as Record<string, any>)).filter((r) => r.pick !== undefined);
+    const rows = process.env
+      .IN!.split(',')
+      .flatMap((f) =>
+        readFileSync(f, 'utf8')
+          .split('\n')
+          .filter(Boolean)
+          .map((l) => JSON.parse(l) as Record<string, any>),
+      )
+      .filter((r) => r.pick !== undefined);
     const scen = criteriaScenarios();
     const out: string[] = [];
     const plans = new Map<string, ReturnType<typeof planCampaign>>();
     for (const r of rows) {
       const isAcct = r.star !== undefined;
-      const request: StackRequest = isAcct ? accountInput(r.star).request : scen[r.idx].request;
+      const request: StackRequest = isAcct ? accountInput(r.star).request : scen[r.idx]!.request;
       const pk = isAcct ? `a${String(r.star)}` : `b${String(r.idx)}`;
-      if (!plans.has(pk)) plans.set(pk, planCampaign(isAcct ? accountInput(r.star) : { request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack }));
+      if (!plans.has(pk))
+        plans.set(
+          pk,
+          planCampaign(
+            isAcct
+              ? accountInput(r.star)
+              : { request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack },
+          ),
+        );
       const stop = plans.get(pk)!.alternatives.find((s) => s.pick === r.pick && s.sequence === undefined)!;
-      const D = r.descent, F = r.frontier;
-      let win = 'S', counts: Record<string, number> = stop.counts, rf = 0;
-      if (D.rf > EPS && D.counts) { win = 'D'; counts = D.counts; rf = D.rf; }
-      if (F && F.rf > rf + EPS && F.counts) { win = 'F'; counts = F.counts; rf = F.rf; }
+      const D = r.descent,
+        F = r.frontier;
+      let win = 'S',
+        counts: Record<string, number> = stop.counts,
+        rf = 0;
+      if (D.rf > EPS && D.counts) {
+        win = 'D';
+        counts = D.counts;
+        rf = D.rf;
+      }
+      if (F && F.rf > rf + EPS && F.counts) {
+        win = 'F';
+        counts = F.counts;
+        rf = F.rf;
+      }
       const res = planMarch(request, counts).result;
-      const troop = res.stacks.filter((s) => s.pool === 'leadership' && s.count > 0).sort((a, b) => b.totalHp - a.totalHp);
+      const troop = res.stacks
+        .filter((s) => s.pool === 'leadership' && s.count > 0)
+        .sort((a, b) => b.totalHp - a.totalHp);
       const hiredSt = res.stacks.filter((s) => s.pool !== 'leadership' && s.count > 0);
       const ship = planMarch(request, stop.counts).result;
       const shipHired: Record<string, number> = {};
@@ -58,17 +96,38 @@ describe.skipIf(!process.env.THEORY)('301 — the stack number', () => {
       const sb = marchBill(request, stop.counts);
       const t = effectiveTable(request).filter((e) => e.pool === 'leadership');
       const tMax = troop[0]?.totalHp ?? 0;
-      out.push(JSON.stringify({
-        case: isAcct ? `acct★${String(r.star)}` : `b${String(r.idx)}`, label: r.label, pick: r.pick, burn: stop.repeat.mercLost, win, rf,
-        m: t.length, L: request.housing.leadership, A: request.housing.authority, Dm: request.housing.dominance,
-        kShip: ship.stacks.filter((s) => s.pool === 'leadership' && s.count > 0).length, kWin: troop.length,
-        typesOut: t.filter((e) => !troop.some((s) => s.unitId === e.id)).map((e) => `${e.id}(t${String(e.unit.tier)})`),
-        slotMax: Math.round(tMax), slotMin: Math.round(troop[troop.length - 1]?.totalHp ?? 0),
-        hiredStacks: hiredSt.length, hiredAboveSlot: hiredSt.filter((s) => s.totalHp > tMax).length,
-        hiredHpShare: hiredSt.reduce((a, s) => a + s.totalHp, 0) / Math.max(1, res.stacks.reduce((a, s) => a + s.totalHp, 0)),
-        leadUsed: res.pools.leadership.used / res.pools.leadership.capacity,
-        flatSilverOverStop: (fl.silver ?? 0) / Math.max(1, sb.silver ?? 0), flatQueueOverStop: (fl.seconds ?? 0) / Math.max(1, sb.seconds ?? 0),
-      }));
+      out.push(
+        JSON.stringify({
+          case: isAcct ? `acct★${String(r.star)}` : `b${String(r.idx)}`,
+          label: r.label,
+          pick: r.pick,
+          burn: stop.repeat.mercLost,
+          win,
+          rf,
+          m: t.length,
+          L: request.housing.leadership,
+          A: request.housing.authority,
+          Dm: request.housing.dominance,
+          kShip: ship.stacks.filter((s) => s.pool === 'leadership' && s.count > 0).length,
+          kWin: troop.length,
+          typesOut: t
+            .filter((e) => !troop.some((s) => s.unitId === e.id))
+            .map((e) => `${e.id}(t${String(e.unit.tier)})`),
+          slotMax: Math.round(tMax),
+          slotMin: Math.round(troop[troop.length - 1]?.totalHp ?? 0),
+          hiredStacks: hiredSt.length,
+          hiredAboveSlot: hiredSt.filter((s) => s.totalHp > tMax).length,
+          hiredHpShare:
+            hiredSt.reduce((a, s) => a + s.totalHp, 0) /
+            Math.max(
+              1,
+              res.stacks.reduce((a, s) => a + s.totalHp, 0),
+            ),
+          leadUsed: res.pools.leadership.used / res.pools.leadership.capacity,
+          flatSilverOverStop: (fl.silver ?? 0) / Math.max(1, sb.silver ?? 0),
+          flatQueueOverStop: (fl.seconds ?? 0) / Math.max(1, sb.seconds ?? 0),
+        }),
+      );
       writeFileSync(process.env.OUTF!, out.join('\n') + '\n');
     }
   }, 86_400_000);
