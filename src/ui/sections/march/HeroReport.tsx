@@ -87,16 +87,20 @@ function Matrix({ report }: { report: HeroReport }) {
       <Table
         withTableBorder
         withColumnBorders
-        verticalSpacing={4}
-        horizontalSpacing="xs"
+        verticalSpacing={2}
+        horizontalSpacing={8}
         fz="sm"
+        w="fit-content"
+        maw="100%"
         data-testid="hero-matrix"
       >
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Solo score</Table.Th>
             {report.situations.map((row) => (
-              <Table.Th key={row.id}>{SITUATION_WORD[row.id]}</Table.Th>
+              <Table.Th key={row.id} ta="right">
+                {SITUATION_WORD[row.id]}
+              </Table.Th>
             ))}
           </Table.Tr>
         </Table.Thead>
@@ -105,7 +109,7 @@ function Matrix({ report }: { report: HeroReport }) {
             <Table.Tr key={tile.captainId}>
               <Table.Td>{tile.name}</Table.Td>
               {report.situations.map((row) => (
-                <Table.Td key={row.id} fw={row.bestSolo === tile.captainId ? 700 : 400}>
+                <Table.Td key={row.id} ta="right" fw={row.bestSolo === tile.captainId ? 700 : 400}>
                   {(row.solo[tile.captainId] ?? 0).toFixed(1)}
                   {row.bestSolo === tile.captainId ? ' 👑' : ''}
                 </Table.Td>
@@ -115,7 +119,9 @@ function Matrix({ report }: { report: HeroReport }) {
           <Table.Tr>
             <Table.Td fw={600}>Best trio</Table.Td>
             {report.situations.map((row) => (
-              <Table.Td key={row.id}>{row.bestTrio?.map(name).join(', ') ?? '—'}</Table.Td>
+              <Table.Td key={row.id} ta="left">
+                {row.bestTrio?.map(name).join(', ') ?? '—'}
+              </Table.Td>
             ))}
           </Table.Tr>
         </Table.Tbody>
