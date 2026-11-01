@@ -545,7 +545,8 @@ export const WHERE: Record<EditorTarget['kind'], string> = {
 export const PERMANENT_WHERE: Record<string, string> = {
   heroTalents: 'Hero → Talents: add up the health and strength lines of the talents you unlocked.',
   hallOfFame: 'City → Hall of Fame: the army bonuses the building lists on its info panel.',
-  customization: 'Profile → Customization: frames, portraits and city looks that carry an army bonus.',
+  customization:
+    'Profile → Customization: frames, portraits and city looks that carry an army bonus. A negative figure is allowed here, to correct a total the game screens do not explain.',
   armyModernization: 'Academy → Research → the Army Modernization branch totals.',
   monstersBoost: 'Academy → Research → the Monsters branch, one line per race.',
   clanTechnologies: 'Clan → Technologies: the army lines your clan has already researched.',

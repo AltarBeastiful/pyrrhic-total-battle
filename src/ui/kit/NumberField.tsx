@@ -27,6 +27,8 @@ export interface NumberFieldProps {
   allowEmpty?: boolean;
   /** Counts are whole; only a field that really measures a fraction turns this on. */
   allowDecimal?: boolean;
+  /** A field that can hold a correction below zero; `min` then no longer clamps at 0. */
+  allowNegative?: boolean;
   /** A glyph inside the field, at the start: the pool's mark, a currency. */
   leftSection?: ReactNode;
   description?: ReactNode;
@@ -52,6 +54,7 @@ export function NumberField({
   max,
   allowEmpty = false,
   allowDecimal = false,
+  allowNegative = false,
   leftSection,
   description,
   error,
@@ -64,11 +67,11 @@ export function NumberField({
     <NumberInput
       label={label}
       value={value ?? ''}
-      min={min}
+      {...(allowNegative ? {} : { min })}
       // Off by default, and not only because counts are whole: react-number-format accepts a comma
       // as a decimal separator, so "84,300" would otherwise reach the caller as 84.3.
       allowDecimal={allowDecimal}
-      allowNegative={false}
+      allowNegative={allowNegative}
       disabled={disabled}
       leftSection={leftSection}
       description={description}

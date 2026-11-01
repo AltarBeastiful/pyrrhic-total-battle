@@ -42,6 +42,8 @@ export interface BonusKeyGridProps {
   value: BonusValues;
   onChange: (next: BonusValues) => void;
   scope?: BonusKeyScope;
+  /** Health and strength fields accept a negative figure: a correction for a total the game screens do not explain. */
+  allowNegative?: boolean;
 }
 
 /** Sets or clears one key; an empty field removes the key instead of storing a 0. */
@@ -56,7 +58,7 @@ function setKey<K extends string>(
   return next;
 }
 
-export function BonusKeyGrid({ value, onChange, scope }: BonusKeyGridProps) {
+export function BonusKeyGrid({ value, onChange, scope, allowNegative = false }: BonusKeyGridProps) {
   const shown = <K extends string>(
     all: readonly K[],
     allowed: readonly K[] | undefined,
@@ -70,6 +72,7 @@ export function BonusKeyGrid({ value, onChange, scope }: BonusKeyGridProps) {
       leftSection={<Glyph kind={BONUS_KEY_GLYPHS[key]} />}
       allowEmpty
       allowDecimal
+      allowNegative={allowNegative}
       value={value[bucket][key] ?? null}
       onChange={(next) => {
         onChange({ ...value, [bucket]: setKey(value[bucket], key, next) });

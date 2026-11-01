@@ -39,6 +39,8 @@ export function PermanentSheet({ profile, entryId, summary, onClose }: FreeFormP
     }));
   };
 
+  const scope = entry.builtin === undefined ? undefined : PERMANENT_SCOPE[entry.builtin];
+
   return (
     <SourceSheet
       size="lg"
@@ -71,9 +73,8 @@ export function PermanentSheet({ profile, entryId, summary, onClose }: FreeFormP
         )}
         <BonusKeyGrid
           value={readBonusValues(entry)}
-          {...(entry.builtin !== undefined && PERMANENT_SCOPE[entry.builtin] !== undefined
-            ? { scope: PERMANENT_SCOPE[entry.builtin] }
-            : {})}
+          {...(scope === undefined ? {} : { scope })}
+          allowNegative={entry.builtin === 'customization'}
           onChange={(next) => {
             patch((current) => applyBonusValues(current, next));
           }}

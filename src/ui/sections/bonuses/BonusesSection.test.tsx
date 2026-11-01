@@ -457,6 +457,20 @@ test('a permanent source is on while something is recorded in it, and its gear o
   expect((chip as HTMLInputElement).checked).toBe(true);
 });
 
+test('Customization takes a negative figure, to correct a total the game screens do not explain', () => {
+  renderWithTheme(<BonusesSection />);
+  openGroup('Permanent');
+
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Customization' }));
+  const sheet = screen.getByRole('dialog');
+  typeNumber(sheet, 'Flying health', '-1');
+  typeNumber(sheet, 'Mounted health', '5');
+  done(sheet);
+
+  const custom = profile()?.sources.permanent.find((entry) => entry.builtin === 'customization');
+  expect(custom?.health).toEqual({ flying: -1, mounted: 5 });
+});
+
 test('a hover over a source chip raises every line it is worth', async () => {
   renderWithTheme(<BonusesSection />);
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Army Modernization' }));
