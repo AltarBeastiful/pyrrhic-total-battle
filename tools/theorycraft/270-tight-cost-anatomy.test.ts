@@ -21,7 +21,12 @@ import { applyCounts } from '../../src/ui/sections/march/manual';
 import { positionTrades } from '../../src/ui/sections/march/positions';
 import { countsOf } from '../../src/ui/sections/march/raise';
 
-const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
 describe.skipIf(!process.env.THEORY)('270 — tight cost anatomy', () => {
   it('times each part', () => {
@@ -38,16 +43,25 @@ describe.skipIf(!process.env.THEORY)('270 — tight cost anatomy', () => {
       t = performance.now();
       const plan = planCampaign({ ...input, withFrontier: true });
       const planFrontierMs = performance.now() - t;
-      out.push(`== ★${String(star)} planCampaign ${planMs.toFixed(0)} ms, withFrontier ${planFrontierMs.toFixed(0)} ms, stops ${String(plan0.alternatives.length)}`);
+      out.push(
+        `== ★${String(star)} planCampaign ${planMs.toFixed(0)} ms, withFrontier ${planFrontierMs.toFixed(0)} ms, stops ${String(plan0.alternatives.length)}`,
+      );
       for (const stop of plan.alternatives) {
-        if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)) continue;
+        if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick))
+          continue;
         const shapes = new Map<string, Record<string, number>>();
-        for (const r of plan.frontier ?? []) if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
-        let tRetype = 0, tPlan = 0, tTight = 0, tRead = 0;
+        for (const r of plan.frontier ?? [])
+          if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
+        let tRetype = 0,
+          tPlan = 0,
+          tTight = 0,
+          tRead = 0;
         const retyped = new Set<string>();
         const answers = new Set<string>();
         const hist: Record<string, number> = {};
-        let maxSpace = 0, sumScored = 0, maxTightMs = 0;
+        let maxSpace = 0,
+          sumScored = 0,
+          maxTightMs = 0;
         for (const counts of shapes.values()) {
           let a = performance.now();
           const found = retypeMarch(input.request, counts, CAMPAIGN.putBack.rates, { tierCandidate: true });

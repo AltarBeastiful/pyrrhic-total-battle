@@ -37,7 +37,8 @@ import { createCalcPool, type CalcPool, type PoolJob } from '../../src/worker/po
 
 const NO_CLOCK = 1_000_000_000;
 const WORKERS = Number(process.env.WORKERS ?? 15);
-const kernelOf = (path: string | undefined) => (process.env.THEORY ? compileKernel(readFileSync(path ?? '')) : null!);
+const kernelOf = (path: string | undefined) =>
+  process.env.THEORY ? compileKernel(readFileSync(path ?? '')) : null!;
 const repo = kernelOf(process.env.REPO);
 const pkg = kernelOf(process.env.PKG);
 
@@ -59,7 +60,14 @@ function recording(inner: RaiseKernel): RaiseKernel {
       const t = performance.now();
       const out = inner.position(input);
       tightMs += performance.now() - t;
-      answers.push(JSON.stringify([out?.how ?? null, Object.entries(out?.counts ?? {}).filter(([, v]) => v !== 0).sort()]));
+      answers.push(
+        JSON.stringify([
+          out?.how ?? null,
+          Object.entries(out?.counts ?? {})
+            .filter(([, v]) => v !== 0)
+            .sort(),
+        ]),
+      );
       return out;
     },
   };
@@ -67,16 +75,27 @@ function recording(inner: RaiseKernel): RaiseKernel {
 
 function timedPool(inner: CalcPool, batches: number[][]): CalcPool {
   return {
-    get alive() { return inner.alive; },
-    get busy() { return inner.busy; },
+    get alive() {
+      return inner.alive;
+    },
+    get busy() {
+      return inner.busy;
+    },
     dispose: () => inner.dispose(),
     map: async (jobs, options) => {
       const durations: number[] = [];
       batches.push(durations);
-      const wrapped = jobs.map((job) => (async (client: Parameters<PoolJob<never>>[0], signal: Parameters<PoolJob<never>>[1]) => {
-        const at = performance.now();
-        try { return await (job as unknown as PoolJob<never>)(client, signal); } finally { durations.push(performance.now() - at); }
-      }) as PoolJob<never>);
+      const wrapped = jobs.map(
+        (job) =>
+          (async (client: Parameters<PoolJob<never>>[0], signal: Parameters<PoolJob<never>>[1]) => {
+            const at = performance.now();
+            try {
+              return await (job as unknown as PoolJob<never>)(client, signal);
+            } finally {
+              durations.push(performance.now() - at);
+            }
+          }) as PoolJob<never>,
+      );
       return (await inner.map(wrapped as never, options as never)) as never;
     },
   };
@@ -96,22 +115,37 @@ async function runWorkload(profile: Profile, batches: number[][]): Promise<{ ser
     const chosen = pickOf(planned, openingPosition(planned, null));
     const marchRequest = withMethod(request, 'elite');
     if (troopFloor(planMarch(request, chosen.counts).result) !== null)
-      for (const row of planned.alternatives) await client.positions({ request: marchRequest, counts: row.counts });
+      for (const row of planned.alternatives)
+        await client.positions({ request: marchRequest, counts: row.counts });
     serial += performance.now() - t;
     const headline = chosen.pick;
     await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
     const { currentKey, lineups, size } = captainLineups(profile, setup);
-    const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, { budgetMs: NO_CLOCK });
+    const advice = await runCaptainAdvice(
+      input,
+      lineups.map(({ key, totals }) => ({ key, totals })),
+      currentKey,
+      pool,
+      { budgetMs: NO_CLOCK },
+    );
     const lead = leadLineup(advice.best, currentKey);
     const leadCandidate = lineups.find((trio) => trio.key === lead);
     const leadStops = advice.plans[lead];
     if (leadCandidate !== undefined && leadStops !== undefined) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
-      }));
-      await runCaptainUpgrades(input, { key: lead, totals: leadCandidate.totals, stops: leadStops }, asks, pool, { budgetMs: NO_CLOCK });
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
+      await runCaptainUpgrades(
+        input,
+        { key: lead, totals: leadCandidate.totals, stops: leadStops },
+        asks,
+        pool,
+        { budgetMs: NO_CLOCK },
+      );
     }
     t = performance.now();
     const { probes } = otherProbes(input, planned.silver);
@@ -129,7 +163,14 @@ describe.skipIf(!process.env.THEORY)('352 — package on the pool', () => {
     const parsed = parseImport(readFileSync(process.env.ACCT ?? '', 'utf8'));
     expect(parsed.kind).toBe('profile');
     if (parsed.kind !== 'profile') return;
-    const runs: { arm: string; one: number; many: number; generate: number; tight: number; answers: string[] }[] = [];
+    const runs: {
+      arm: string;
+      one: number;
+      many: number;
+      generate: number;
+      tight: number;
+      answers: string[];
+    }[] = [];
     for (const arm of ['repo', 'pkg', 'repo', 'pkg'] as const) {
       setRaiseKernel(recording(createRaiseKernel(arm === 'repo' ? repo : pkg)));
       answers.length = 0;
@@ -142,13 +183,18 @@ describe.skipIf(!process.env.THEORY)('352 — package on the pool', () => {
       const many = one - batchTime + batches.reduce((s, b) => s + makespan(b, WORKERS), 0);
       runs.push({ arm, one, many, generate: serial, tight: tightMs, answers: [...answers] });
     }
-    const a = runs[0]!.answers, b = runs[1]!.answers;
+    const a = runs[0]!.answers,
+      b = runs[1]!.answers;
     let differ = 0;
     for (let i = 0; i < Math.min(a.length, b.length); i += 1) if (a[i] !== b[i]) differ += 1;
-    const min = (arm: string, k: 'one' | 'many' | 'generate' | 'tight') => Math.min(...runs.filter((r) => r.arm === arm).map((r) => r[k]));
+    const min = (arm: string, k: 'one' | 'many' | 'generate' | 'tight') =>
+      Math.min(...runs.filter((r) => r.arm === arm).map((r) => r[k]));
     const out = [
       `position() calls repo ${a.length}, pkg ${b.length}; answers (how + counts) differ on ${differ}`,
-      ...runs.map((r) => `${r.arm}: one worker ${r.one.toFixed(0)} ms, replayed on ${WORKERS} workers ${r.many.toFixed(0)} ms, generate steps ${r.generate.toFixed(0)} ms, Σ Tight ${r.tight.toFixed(0)} ms`),
+      ...runs.map(
+        (r) =>
+          `${r.arm}: one worker ${r.one.toFixed(0)} ms, replayed on ${WORKERS} workers ${r.many.toFixed(0)} ms, generate steps ${r.generate.toFixed(0)} ms, Σ Tight ${r.tight.toFixed(0)} ms`,
+      ),
       `min replayed wall on ${WORKERS} workers: repo ${min('repo', 'many').toFixed(0)} → pkg ${min('pkg', 'many').toFixed(0)} ms (×${(min('repo', 'many') / min('pkg', 'many')).toFixed(2)}, saved ${(min('repo', 'many') - min('pkg', 'many')).toFixed(0)} ms)`,
       `min one-worker wall: repo ${min('repo', 'one').toFixed(0)} → pkg ${min('pkg', 'one').toFixed(0)} ms (×${(min('repo', 'one') / min('pkg', 'one')).toFixed(2)})`,
       `min generate steps (plan + positions, serial): repo ${min('repo', 'generate').toFixed(0)} → pkg ${min('pkg', 'generate').toFixed(0)} ms`,

@@ -25,7 +25,16 @@ describe.skipIf(!process.env.THEORY)('253 — merc saver tie-break', () => {
     const parsed = parseImport(readFileSync(FILE, 'utf8'));
     if (parsed.kind !== 'profile') throw new Error('profile');
     const out: string[] = ['level star | rule: asIs / tight / silver / burn'];
-    for (const [level, star] of [[45, 0], [45, 1], [45, 2], [46, 0], [48, 0], [50, 0], [50, 1], [52, 0]] as const) {
+    for (const [level, star] of [
+      [45, 0],
+      [45, 1],
+      [45, 2],
+      [46, 0],
+      [48, 0],
+      [50, 0],
+      [50, 1],
+      [52, 0],
+    ] as const) {
       const profile = structuredClone(parsed.payload) as Profile;
       const entry = profile.sources.captains.find((c) => c.captainId === 'leonidas')!;
       entry.level = level;
@@ -43,7 +52,9 @@ describe.skipIf(!process.env.THEORY)('253 — merc saver tie-break', () => {
         const own = countsOf(base);
         const tight = positionTrades(input.request, base, ['tight']).rows[0];
         const t = tight ? applyCounts(input.request, base, { ...own, ...tight.counts }).summary.minDamage : 0;
-        cells.push(`${rule}: ${String(stop.repeat.damage)} / ${String(t)} / ${String(Math.round(stop.repeat.silver))} / ${String(stop.repeat.mercLost)}`);
+        cells.push(
+          `${rule}: ${String(stop.repeat.damage)} / ${String(t)} / ${String(Math.round(stop.repeat.silver))} / ${String(stop.repeat.mercLost)}`,
+        );
       }
       out.push(`${String(level)} ★${String(star)} | ${cells.join(' | ')}`);
     }

@@ -17,24 +17,40 @@ import { compileKernel } from '../../src/kernel';
 import { Bound, loadCorpus, SCRATCH } from './331-tight-replay';
 
 const kx = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx3.wasm`));
-const q = (xs: number[], p: number) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] ?? NaN;
+const q = (xs: number[], p: number) =>
+  [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] ?? NaN;
 
 describe.skipIf(!process.env.THEORY)('336 — bound slack', () => {
   it('measures', () => {
     const corpus = loadCorpus();
-    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { i: number; src: string; how: number });
+    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { i: number; src: string; how: number });
     const srcs = (process.env.SRC ?? 'live').split(',');
-    const gaps: number[] = [], bests: number[] = [], spreads: number[] = [], squads: number[] = [];
+    const gaps: number[] = [],
+      bests: number[] = [],
+      spreads: number[] = [],
+      squads: number[] = [];
     let state = 99;
     const rnd = () => ((state = (state * 1664525 + 1013904223) % 4294967296), state / 4294967296);
-    let cuttable = 0, boxes = 0;
+    let cuttable = 0,
+      boxes = 0;
     for (const r of base.filter((x) => x.how === 2 && srcs.includes(x.src))) {
       const call = corpus.calls[r.i]!;
       const b = new Bound(kx, corpus.requests[call.req]!, call.input.base);
       const shipped = b.run(call.input, 0);
       const found = Array.from({ length: b.raw.xN!() }, (_, s) => b.raw.xFound!(s));
       b.run(call.input, 99);
-      const x = b.raw as unknown as { xSet(s: number, n: number): void; xGapAt(): number; xScore(): number; xN(): number; xFrom(s: number): number; xTo(s: number): number; xEnemySquads(): number };
+      const x = b.raw as unknown as {
+        xSet(s: number, n: number): void;
+        xGapAt(): number;
+        xScore(): number;
+        xN(): number;
+        xFrom(s: number): number;
+        xTo(s: number): number;
+        xEnemySquads(): number;
+      };
       const n = x.xN();
       found.forEach((c, s) => x.xSet(s, c));
       const gap = x.xGapAt();
@@ -45,7 +61,8 @@ describe.skipIf(!process.env.THEORY)('336 — bound slack', () => {
       // even by a bound exact up to its leaf slack).
       const ys: number[] = [];
       for (let k = 0; k < 200; k += 1) {
-        for (let s = 0; s < n; s += 1) x.xSet(s, x.xFrom(s) + Math.floor(rnd() * (x.xTo(s) - x.xFrom(s) + 1)));
+        for (let s = 0; s < n; s += 1)
+          x.xSet(s, x.xFrom(s) + Math.floor(rnd() * (x.xTo(s) - x.xFrom(s) + 1)));
         ys.push(x.xScore());
       }
       spreads.push(shipped.best - q(ys, 0.5));

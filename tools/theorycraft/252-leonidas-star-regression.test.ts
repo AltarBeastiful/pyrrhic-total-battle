@@ -24,7 +24,10 @@ describe.skipIf(!process.env.THEORY)('252 — star regression', () => {
     const parsed = parseImport(readFileSync(FILE, 'utf8'));
     if (parsed.kind !== 'profile') throw new Error('profile');
     const out: string[] = [];
-    const plans = new Map<number, { input: ReturnType<typeof buildPlanRequest>; plan: ReturnType<typeof planCampaign> }>();
+    const plans = new Map<
+      number,
+      { input: ReturnType<typeof buildPlanRequest>; plan: ReturnType<typeof planCampaign> }
+    >();
     for (const star of [0, 1]) {
       const profile = structuredClone(parsed.payload) as Profile;
       const entry = profile.sources.captains.find((c) => c.captainId === 'leonidas');
@@ -41,7 +44,9 @@ describe.skipIf(!process.env.THEORY)('252 — star regression', () => {
         const own = countsOf(base);
         const asIs = applyCounts(input.request, base, own).summary.minDamage;
         const tight = positionTrades(input.request, base, ['tight']).rows[0];
-        const tightDmg = tight ? applyCounts(input.request, base, { ...own, ...tight.counts }).summary.minDamage : 0;
+        const tightDmg = tight
+          ? applyCounts(input.request, base, { ...own, ...tight.counts }).summary.minDamage
+          : 0;
         out.push(`   -> asIs ${String(asIs)} tight ${String(tightDmg)}`);
         out.push(
           `${s.pick.padEnd(12)} dmg ${String(s.repeat.damage).padStart(9)} silver ${String(s.repeat.silver).padStart(9)} burn ${String(s.repeat.mercLost)} total ${String(s.totalDamage)} marches ${String(s.marches)} tail ${String(s.tail?.marches)} fin ${String(Object.keys(s.finaleCounts ?? {}).length)}`,
@@ -49,7 +54,10 @@ describe.skipIf(!process.env.THEORY)('252 — star regression', () => {
       }
     }
     // Cross-evaluation: each star's stop counts, played under the other star's request.
-    for (const [from, to] of [[0, 1], [1, 0]] as const) {
+    for (const [from, to] of [
+      [0, 1],
+      [1, 0],
+    ] as const) {
       const a = plans.get(from)!;
       const b = plans.get(to)!;
       out.push(`== counts of star ${String(from)} played under star ${String(to)}`);
@@ -58,7 +66,9 @@ describe.skipIf(!process.env.THEORY)('252 — star regression', () => {
         const own = countsOf(base);
         const asIs = applyCounts(b.input.request, base, own).summary.minDamage;
         const tight = positionTrades(b.input.request, base, ['tight']).rows[0];
-        const tightDmg = tight ? applyCounts(b.input.request, base, { ...own, ...tight.counts }).summary.minDamage : 0;
+        const tightDmg = tight
+          ? applyCounts(b.input.request, base, { ...own, ...tight.counts }).summary.minDamage
+          : 0;
         out.push(`${s.pick.padEnd(12)} asIs ${String(asIs)} tight ${String(tightDmg)}`);
       }
     }
@@ -67,17 +77,27 @@ describe.skipIf(!process.env.THEORY)('252 — star regression', () => {
       const { input } = plans.get(star)!;
       const withTrade = planCampaign({ ...input, withTrade: true });
       const rows = (withTrade.trade ?? []).filter((r) => r.repeat.mercLost === 9);
-      out.push(`== star ${String(star)}: ${String(withTrade.trade?.length)} trade rows, ${String(rows.length)} at burn 9`);
+      out.push(
+        `== star ${String(star)}: ${String(withTrade.trade?.length)} trade rows, ${String(rows.length)} at burn 9`,
+      );
       for (const r of rows.sort((a, b) => b.repeat.damage - a.repeat.damage).slice(0, 12))
-        out.push(`  burn 9 dmg ${String(r.repeat.damage)} silver ${String(r.repeat.silver)} ${r.shape ?? ''}`);
+        out.push(
+          `  burn 9 dmg ${String(r.repeat.damage)} silver ${String(r.repeat.silver)} ${r.shape ?? ''}`,
+        );
       const other = plans.get(1 - star)!.plan.alternatives.find((a) => a.pick === 'burn-saver')!;
       const base = planMarch(input.request, other.counts).result;
       const own = countsOf(base);
       const r = applyCounts(input.request, base, own);
-      out.push(`  other star's saver here: dmg ${String(r.summary.minDamage)} silver ${String(r.summary.recovery.silver)} burn ${String(hiredLost(r.result.stacks))}`);
+      out.push(
+        `  other star's saver here: dmg ${String(r.summary.minDamage)} silver ${String(r.summary.recovery.silver)} burn ${String(hiredLost(r.result.stacks))}`,
+      );
       for (const rule of ['damage', 'silver'] as const) {
-        const alt = planCampaign({ ...input, burnSaver: rule }).alternatives.find((a) => a.pick === 'burn-saver');
-        out.push(`  burnSaver=${rule}: dmg ${String(alt?.repeat.damage)} silver ${String(alt?.repeat.silver)} burn ${String(alt?.repeat.mercLost)}`);
+        const alt = planCampaign({ ...input, burnSaver: rule }).alternatives.find(
+          (a) => a.pick === 'burn-saver',
+        );
+        out.push(
+          `  burnSaver=${rule}: dmg ${String(alt?.repeat.damage)} silver ${String(alt?.repeat.silver)} burn ${String(alt?.repeat.mercLost)}`,
+        );
       }
     }
     writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');

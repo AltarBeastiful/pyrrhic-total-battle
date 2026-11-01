@@ -37,7 +37,10 @@ describe.skipIf(!process.env.THEORY)('261 — the trio ladders', () => {
     if (parsed.kind !== 'profile') throw new Error('profile');
     const profile = structuredClone(parsed.payload) as Profile;
     const setup = profile.setups[0]!;
-    const pool = createCalcPool({ size: 1, createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }) });
+    const pool = createCalcPool({
+      size: 1,
+      createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }),
+    });
     const lines = ['# 261 — the trio ladders', '', `Account ${FILE}.`, ''];
     try {
       const input = buildPlanRequest(profile, setup);
@@ -48,7 +51,10 @@ describe.skipIf(!process.env.THEORY)('261 — the trio ladders', () => {
       const name = (id: string): string => record(id)?.name ?? id;
       const general = distinctCaptains(profile.sources.captains).filter((e) => {
         const r = record(e.captainId);
-        return r?.onlyOn === undefined && (r?.health !== undefined || r?.strength !== undefined || r?.special !== undefined);
+        return (
+          r?.onlyOn === undefined &&
+          (r?.health !== undefined || r?.strength !== undefined || r?.special !== undefined)
+        );
       });
       type Entry = (typeof general)[number];
       const raisedProfile = (changes: Record<string, { level: number; star: number }>): Profile => ({
@@ -59,26 +65,48 @@ describe.skipIf(!process.env.THEORY)('261 — the trio ladders', () => {
         },
       });
       const totalsOf = (trio: Entry[], changes: Record<string, { level: number; star: number }> = {}) =>
-        lineupTotals(raisedProfile(changes), setup, trio.map((e) => e.id));
-      const planOf = (totals: ReturnType<typeof totalsOf>) => ({ ...settings, request: { ...settings.request, totals } });
-      const mean = (xs: readonly number[]): number => (xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length);
+        lineupTotals(
+          raisedProfile(changes),
+          setup,
+          trio.map((e) => e.id),
+        );
+      const planOf = (totals: ReturnType<typeof totalsOf>) => ({
+        ...settings,
+        request: { ...settings.request, totals },
+      });
+      const mean = (xs: readonly number[]): number =>
+        xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
 
-      const noneOut = await pool.map([(c, s) => c.probe({ plan: planOf(lineupTotals(profile, setup, [])) }, s)], { budgetMs: NO_CLOCK });
+      const noneOut = await pool.map(
+        [(c, s) => c.probe({ plan: planOf(lineupTotals(profile, setup, [])) }, s)],
+        { budgetMs: NO_CLOCK },
+      );
       if (noneOut[0]?.kind !== 'done') throw new Error('baseline');
       const baseline = (noneOut[0].value as ProbeAnswer).stops.filter((row) => row.pick !== 'all-in');
-      const rateAll = async (items: { key: string; totals: ReturnType<typeof totalsOf> }[]): Promise<number[]> => {
+      const rateAll = async (
+        items: { key: string; totals: ReturnType<typeof totalsOf> }[],
+      ): Promise<number[]> => {
         const outs = await pool.map(
           items.map(
             (item): PoolJob<ProbeAnswer> =>
               (c, s) =>
                 c.probe(
-                  { plan: planOf(item.totals), against: { probe: probeInfo({ id: item.key, family: 'captains', label: item.key }), baseline, rates: CAMPAIGN.markerRates } },
+                  {
+                    plan: planOf(item.totals),
+                    against: {
+                      probe: probeInfo({ id: item.key, family: 'captains', label: item.key }),
+                      baseline,
+                      rates: CAMPAIGN.markerRates,
+                    },
+                  },
                   s,
                 ),
           ),
           { budgetMs: NO_CLOCK },
         );
-        return outs.map((r) => (r?.kind === 'done' && r.value.row ? mean(r.value.row.stops.map((x) => x.gain)) : Number.NaN));
+        return outs.map((r) =>
+          r?.kind === 'done' && r.value.row ? mean(r.value.row.stops.map((x) => x.gain)) : Number.NaN,
+        );
       };
 
       // 1. Every trio as it stands.
@@ -87,10 +115,23 @@ describe.skipIf(!process.env.THEORY)('261 — the trio ladders', () => {
         for (let j = i + 1; j < general.length; j += 1)
           for (let k = j + 1; k < general.length; k += 1) trios.push([general[i]!, general[j]!, general[k]!]);
       const t0 = performance.now();
-      const now = await rateAll(trios.map((t) => ({ key: t.map((e) => e.captainId).join('+'), totals: totalsOf(t) })));
+      const now = await rateAll(
+        trios.map((t) => ({ key: t.map((e) => e.captainId).join('+'), totals: totalsOf(t) })),
+      );
       const ranked = trios.map((t, i) => ({ t, v: now[i]! })).sort((a, b) => b.v - a.v);
-      lines.push(`${String(trios.length)} trios planned in ${f((performance.now() - t0) / 1000, 0)} s.`, '', '## Trios as they stand', '', '| # | trio | rating |', '|---|---|---|');
-      ranked.slice(0, 12).forEach((r, i) => lines.push(`| ${String(i + 1)} | ${r.t.map((e) => name(e.captainId)).join(' + ')} | ${f(r.v)} |`));
+      lines.push(
+        `${String(trios.length)} trios planned in ${f((performance.now() - t0) / 1000, 0)} s.`,
+        '',
+        '## Trios as they stand',
+        '',
+        '| # | trio | rating |',
+        '|---|---|---|',
+      );
+      ranked
+        .slice(0, 12)
+        .forEach((r, i) =>
+          lines.push(`| ${String(i + 1)} | ${r.t.map((e) => name(e.captainId)).join(' + ')} | ${f(r.v)} |`),
+        );
       lines.push('');
       const march = (ids: string[]) => ids.map(name).join(' + ');
       writeFileSync(OUT, lines.join('\n') + '\n');
@@ -99,11 +140,21 @@ describe.skipIf(!process.env.THEORY)('261 — the trio ladders', () => {
       for (const { t, v } of ranked.slice(0, TOP)) {
         lines.push(`## ${march(t.map((e) => e.captainId))} — ${f(v)} now`, '');
         for (const e of t) {
-          const stars = await rateAll(STARS.map((star) => ({ key: `${e.captainId}★${String(star)}`, totals: totalsOf(t, { [e.id]: { level: e.level, star } }) })));
+          const stars = await rateAll(
+            STARS.map((star) => ({
+              key: `${e.captainId}★${String(star)}`,
+              totals: totalsOf(t, { [e.id]: { level: e.level, star } }),
+            })),
+          );
           const levels: number[] = [];
           for (let l = Math.ceil((e.level + 1) / 10) * 10; l < 100; l += 10) levels.push(l);
           if (e.level < 100) levels.push(100);
-          const lv = await rateAll(levels.map((level) => ({ key: `${e.captainId}L${String(level)}`, totals: totalsOf(t, { [e.id]: { level, star: e.star } }) })));
+          const lv = await rateAll(
+            levels.map((level) => ({
+              key: `${e.captainId}L${String(level)}`,
+              totals: totalsOf(t, { [e.id]: { level, star: e.star } }),
+            })),
+          );
           lines.push(
             `### ${name(e.captainId)} (L${String(e.level)} ★${String(e.star)})`,
             '',

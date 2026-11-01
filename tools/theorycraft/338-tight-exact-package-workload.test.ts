@@ -60,7 +60,9 @@ function wrapper(module: WebAssembly.Module, algo: number): RaiseKernel {
       const how = a.how === 1 ? 'walked' : a.how === 2 ? 'searched' : null;
       log.push({ ms: a.ms, counts: Array.from(a.counts).join(','), how });
       const counts: Record<string, number> = {};
-      b.ids.forEach((id, row) => { counts[id] = a.counts[row] as number; });
+      b.ids.forEach((id, row) => {
+        counts[id] = a.counts[row] as number;
+      });
       return { counts, how, space: a.how === 0 ? 0 : a.space, scored: a.how === 0 ? 0 : a.scored };
     },
   };
@@ -78,21 +80,36 @@ async function runWorkload(profile: Profile): Promise<void> {
     const chosen = pickOf(planned, openingPosition(planned, null));
     const marchRequest = withMethod(request, 'elite');
     if (troopFloor(planMarch(request, chosen.counts).result) !== null)
-      for (const row of planned.alternatives) await client.positions({ request: marchRequest, counts: row.counts });
+      for (const row of planned.alternatives)
+        await client.positions({ request: marchRequest, counts: row.counts });
     const headline = chosen.pick;
     await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
     const { currentKey, lineups, size } = captainLineups(profile, setup);
-    const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, { budgetMs: NO_CLOCK });
+    const advice = await runCaptainAdvice(
+      input,
+      lineups.map(({ key, totals }) => ({ key, totals })),
+      currentKey,
+      pool,
+      { budgetMs: NO_CLOCK },
+    );
     const lead = leadLineup(advice.best, currentKey);
     const leadCandidate = lineups.find((trio) => trio.key === lead);
     const leadStops = advice.plans[lead];
     if (leadCandidate !== undefined && leadStops !== undefined) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
-      }));
-      await runCaptainUpgrades(input, { key: lead, totals: leadCandidate.totals, stops: leadStops }, asks, pool, { budgetMs: NO_CLOCK });
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
+      await runCaptainUpgrades(
+        input,
+        { key: lead, totals: leadCandidate.totals, stops: leadStops },
+        asks,
+        pool,
+        { budgetMs: NO_CLOCK },
+      );
     }
     const { probes } = otherProbes(input, planned.silver);
     await runAdvisor(input, probes, pool, { headline, budgetMs: NO_CLOCK });
@@ -116,10 +133,12 @@ describe.skipIf(!process.env.THEORY)('338 — exact package on the workload', ()
       const pass = performance.now() - t;
       runs.push({ arm, pass, tight: log.reduce((s, c) => s + c.ms, 0), calls: [...log] });
     }
-    const a = runs[0]!.calls, b = runs[1]!.calls;
+    const a = runs[0]!.calls,
+      b = runs[1]!.calls;
     let differ = 0;
     for (let i = 0; i < Math.min(a.length, b.length); i += 1) if (a[i]!.counts !== b[i]!.counts) differ += 1;
-    const min = (arm: string, k: 'pass' | 'tight') => Math.min(...runs.filter((r) => r.arm === arm).map((r) => r[k]));
+    const min = (arm: string, k: 'pass' | 'tight') =>
+      Math.min(...runs.filter((r) => r.arm === arm).map((r) => r[k]));
     const out = [
       `calls repo ${a.length}, cand ${b.length}; counts differ on ${differ}`,
       ...runs.map((r) => `${r.arm}: pass ${r.pass.toFixed(0)} ms, Σ Tight ${r.tight.toFixed(0)} ms`),

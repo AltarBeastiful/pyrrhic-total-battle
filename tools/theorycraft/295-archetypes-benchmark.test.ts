@@ -12,7 +12,19 @@ import { appendFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
 import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
-import { CAMPAIGN, STOPS, admissible, archetypes2, frontierCands, fullKernel, planCampaign, proxyKernel, rate, tight, useFull } from './290-common';
+import {
+  CAMPAIGN,
+  STOPS,
+  admissible,
+  archetypes2,
+  frontierCands,
+  fullKernel,
+  planCampaign,
+  proxyKernel,
+  rate,
+  tight,
+  useFull,
+} from './290-common';
 import type { Cand } from './290-common';
 import type { Bill } from '../../src/engine/rating';
 
@@ -22,12 +34,19 @@ describe.skipIf(!process.env.THEORY)('295 — archetypes, benchmark', () => {
   it('reads every stop', () => {
     useFull();
     writeFileSync(process.env.OUTF!, '');
-    const from = Number(process.env.FROM ?? 0), to = Number(process.env.TO ?? 999);
+    const from = Number(process.env.FROM ?? 0),
+      to = Number(process.env.TO ?? 999);
     for (const [i, sc] of criteriaScenarios().entries()) {
       if (i < from || i > to) continue;
       let plan;
       try {
-        plan = planCampaign({ request: sc.request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack, withFrontier: true });
+        plan = planCampaign({
+          request: sc.request,
+          marchTarget: HORIZON,
+          ...CAMPAIGN.planFixes,
+          putBack: CAMPAIGN.putBack,
+          withFrontier: true,
+        });
       } catch (e) {
         appendFileSync(process.env.OUTF!, JSON.stringify({ label: sc.label, skipped: String(e) }) + '\n');
         continue;
@@ -36,10 +55,17 @@ describe.skipIf(!process.env.THEORY)('295 — archetypes, benchmark', () => {
       for (const stop of plan.alternatives) {
         if (!STOPS.includes(stop.pick) || stop.sequence !== undefined) continue;
         const shipped = tight(fullKernel, sc.request, stop.counts);
-        const read = (cands: { counts: Record<string, number> }[]): { rf: number; bill: Bill; n: number; admissible: number; ms: number } => {
+        const read = (
+          cands: { counts: Record<string, number> }[],
+        ): { rf: number; bill: Bill; n: number; admissible: number; ms: number } => {
           const t0 = performance.now();
-          const rows = cands.map((c) => { const p = tight(proxyKernel, sc.request, c.counts); return { c, p, r0: rate(shipped.bill, p.bill, CAMPAIGN.markerRates) }; })
-            .filter((r) => admissible(stop.pick, shipped.bill, r.p.bill)).sort((a, b) => b.r0 - a.r0);
+          const rows = cands
+            .map((c) => {
+              const p = tight(proxyKernel, sc.request, c.counts);
+              return { c, p, r0: rate(shipped.bill, p.bill, CAMPAIGN.markerRates) };
+            })
+            .filter((r) => admissible(stop.pick, shipped.bill, r.p.bill))
+            .sort((a, b) => b.r0 - a.r0);
           let best = { rf: 0, bill: shipped.bill };
           for (const r of rows.slice(0, TOPK)) {
             const f = tight(fullKernel, sc.request, r.c.counts);
@@ -54,14 +80,34 @@ describe.skipIf(!process.env.THEORY)('295 — archetypes, benchmark', () => {
         const frontierGenMs = performance.now() - tf;
         const F = read(fr.cands as Cand[]);
         const ta = performance.now();
-        const arch = archetypes2(sc.request, stop.counts, { ball: process.env.BALL === "1" });
+        const arch = archetypes2(sc.request, stop.counts, { ball: process.env.BALL === '1' });
         const archGenMs = performance.now() - ta;
         const A = read(arch);
-        appendFileSync(process.env.OUTF!, JSON.stringify({
-          label: sc.label, pick: stop.pick, burn: stop.repeat.mercLost, shipped: shipped.bill,
-          frontier: { rf: F.rf, bill: F.bill, n: F.n, adm: F.admissible, genMs: Math.round(frontierGenMs), ms: Math.round(F.ms) },
-          arch: { rf: A.rf, bill: A.bill, n: A.n, adm: A.admissible, genMs: Math.round(archGenMs), ms: Math.round(A.ms) },
-        }) + '\n');
+        appendFileSync(
+          process.env.OUTF!,
+          JSON.stringify({
+            label: sc.label,
+            pick: stop.pick,
+            burn: stop.repeat.mercLost,
+            shipped: shipped.bill,
+            frontier: {
+              rf: F.rf,
+              bill: F.bill,
+              n: F.n,
+              adm: F.admissible,
+              genMs: Math.round(frontierGenMs),
+              ms: Math.round(F.ms),
+            },
+            arch: {
+              rf: A.rf,
+              bill: A.bill,
+              n: A.n,
+              adm: A.admissible,
+              genMs: Math.round(archGenMs),
+              ms: Math.round(A.ms),
+            },
+          }) + '\n',
+        );
       }
     }
   }, 86_400_000);

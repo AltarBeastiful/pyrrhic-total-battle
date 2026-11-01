@@ -32,14 +32,25 @@ function tightBill(request: StackRequest, counts: Record<string, number>): Bill 
   const own = countsOf(base);
   const tight = positionTrades(request, base, ['tight']).rows[0];
   const { result, summary } = applyCounts(request, base, { ...own, ...(tight?.counts ?? {}) });
-  return { damage: summary.minDamage, silver: summary.recovery.silver, gold: summary.recovery.gold, hired: hiredLost(result.stacks) };
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired: hiredLost(result.stacks),
+  };
 }
-const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
 function study(label: string, input: CampaignInput, out: string[]): void {
   const plan = planCampaign({ ...input, withFrontier: true });
   for (const stop of plan.alternatives) {
-    if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)) continue;
+    if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick))
+      continue;
     const t0 = performance.now();
     const shipped = tightBill(input.request, stop.counts);
     const shapes = new Map<string, Record<string, number>>();
@@ -81,7 +92,11 @@ describe.skipIf(!process.env.THEORY)('259 — rank on tight', () => {
     if (process.env.BENCH !== undefined)
       for (const sc of criteriaScenarios()) {
         try {
-          study(sc.label, { request: sc.request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack }, out);
+          study(
+            sc.label,
+            { request: sc.request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack },
+            out,
+          );
         } catch (e) {
           out.push(`${sc.label} | skipped: ${String(e)}`);
         }

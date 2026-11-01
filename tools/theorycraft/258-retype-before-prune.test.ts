@@ -29,9 +29,15 @@ function tightBill(request: StackRequest, counts: Record<string, number>): Bill 
   const own = countsOf(base);
   const tight = positionTrades(request, base, ['tight']).rows[0];
   const { result, summary } = applyCounts(request, base, { ...own, ...(tight?.counts ?? {}) });
-  return { damage: summary.minDamage, silver: summary.recovery.silver, gold: summary.recovery.gold, hired: hiredLost(result.stacks) };
+  return {
+    damage: summary.minDamage,
+    silver: summary.recovery.silver,
+    gold: summary.recovery.gold,
+    hired: hiredLost(result.stacks),
+  };
 }
-const show = (b: Bill): string => `dmg ${String(b.damage)} silver ${String(Math.round(b.silver ?? 0))} gold ${String(b.gold)}`;
+const show = (b: Bill): string =>
+  `dmg ${String(b.damage)} silver ${String(Math.round(b.silver ?? 0))} gold ${String(b.gold)}`;
 
 describe.skipIf(!process.env.THEORY)('258 — retype before prune', () => {
   it('retypes every shape at the merc saver burn', () => {
@@ -47,10 +53,20 @@ describe.skipIf(!process.env.THEORY)('258 — retype before prune', () => {
       const burn = shipped.repeat.mercLost;
       const shapes = new Map<string, Record<string, number>>();
       for (const r of plan.frontier ?? [])
-        if (r.repeat.mercLost === burn) shapes.set(JSON.stringify(Object.entries(r.counts).filter(([, v]) => v > 0).sort()), r.counts);
+        if (r.repeat.mercLost === burn)
+          shapes.set(
+            JSON.stringify(
+              Object.entries(r.counts)
+                .filter(([, v]) => v > 0)
+                .sort(),
+            ),
+            r.counts,
+          );
       const shippedBase = marchBill(input.request, shipped.counts);
       const shippedTight = tightBill(input.request, shipped.counts);
-      out.push(`== ★${String(star)}: ${String(shapes.size)} shapes at burn ${String(burn)}; shipped ${show(shippedBase)} -> tight ${show(shippedTight)}`);
+      out.push(
+        `== ★${String(star)}: ${String(shapes.size)} shapes at burn ${String(burn)}; shipped ${show(shippedBase)} -> tight ${show(shippedTight)}`,
+      );
       const rows: { retyped: Record<string, number>; bill: Bill; rating: number }[] = [];
       for (const counts of shapes.values()) {
         const found = retypeMarch(input.request, counts, CAMPAIGN.putBack.rates, { tierCandidate: true });
@@ -65,9 +81,13 @@ describe.skipIf(!process.env.THEORY)('258 — retype before prune', () => {
       out.push(`  least silver after retype: ${show(cheapest.bill)} (rating ${cheapest.rating.toFixed(2)})`);
       const best = rows[0]!;
       const bestTight = tightBill(input.request, best.retyped);
-      out.push(`  best-rated -> tight ${show(bestTight)}; rating of that vs shipped tight ${rate(shippedTight, bestTight, CAMPAIGN.markerRates).toFixed(2)}`);
+      out.push(
+        `  best-rated -> tight ${show(bestTight)}; rating of that vs shipped tight ${rate(shippedTight, bestTight, CAMPAIGN.markerRates).toFixed(2)}`,
+      );
       const cheapTight = tightBill(input.request, cheapest.retyped);
-      out.push(`  least-silver -> tight ${show(cheapTight)}; rating vs shipped tight ${rate(shippedTight, cheapTight, CAMPAIGN.markerRates).toFixed(2)}`);
+      out.push(
+        `  least-silver -> tight ${show(cheapTight)}; rating vs shipped tight ${rate(shippedTight, cheapTight, CAMPAIGN.markerRates).toFixed(2)}`,
+      );
     }
     writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
   }, 1_800_000);

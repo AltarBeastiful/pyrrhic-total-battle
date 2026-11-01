@@ -26,7 +26,16 @@ describe.skipIf(!process.env.THEORY)('256 — merc saver passes', () => {
       ['no tierCandidate', { tierCandidate: false }],
       ['no fifthStop', { fifthStop: undefined }],
       ['no dropTypes', { dropTypes: undefined }],
-      ['bare (no retype/putBack/fold/fifth/drop)', { retype: undefined, putBack: undefined, foldTo: undefined, fifthStop: undefined, dropTypes: undefined }],
+      [
+        'bare (no retype/putBack/fold/fifth/drop)',
+        {
+          retype: undefined,
+          putBack: undefined,
+          foldTo: undefined,
+          fifthStop: undefined,
+          dropTypes: undefined,
+        },
+      ],
     ];
     for (const star of [0, 1]) {
       const profile = structuredClone(parsed.payload) as Profile;

@@ -35,7 +35,10 @@ describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objecti
     if (part === 'base') {
       const jsonl = `${SCRATCH}/332-base.jsonl`;
       writeFileSync(jsonl, '');
-      let faithful = 0, unfaithful = 0, hookSame = 0, hookDiff = 0;
+      let faithful = 0,
+        unfaithful = 0,
+        hookSame = 0,
+        hookDiff = 0;
       corpus.calls.forEach((call, i) => {
         const request = corpus.requests[call.req]!;
         const a = new Bound(repo, request, call.input.base);
@@ -48,18 +51,56 @@ describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objecti
         else unfaithful += 1;
         if (sameCounts(ra.counts, rb.counts) && ra.scored === rb.scored) hookSame += 1;
         else hookDiff += 1;
-        appendFileSync(jsonl, JSON.stringify({ i, src: call.src, label: call.label, how: ra.how, space: ra.space, scored: ra.scored, msRepo: ra.ms, msKx: rb.ms, battles: rb.battles, best: rb.best, attempts: rb.attempts, lastImprove: rb.lastImprove, n: b.raw.xStat!(6) }) + '\n');
+        appendFileSync(
+          jsonl,
+          JSON.stringify({
+            i,
+            src: call.src,
+            label: call.label,
+            how: ra.how,
+            space: ra.space,
+            scored: ra.scored,
+            msRepo: ra.ms,
+            msKx: rb.ms,
+            battles: rb.battles,
+            best: rb.best,
+            attempts: rb.attempts,
+            lastImprove: rb.lastImprove,
+            n: b.raw.xStat!(6),
+          }) + '\n',
+        );
       });
-      out.push(`calls ${corpus.calls.length}: faithful ${faithful}, unfaithful ${unfaithful}; hooks identical ${hookSame}, differ ${hookDiff}`);
+      out.push(
+        `calls ${corpus.calls.length}: faithful ${faithful}, unfaithful ${unfaithful}; hooks identical ${hookSame}, differ ${hookDiff}`,
+      );
       flush();
       return;
     }
     // ---- Part B: the objective's shape --------------------------------------------------------------------
-    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { i: number; how: number; space: number; src: string });
+    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { i: number; how: number; space: number; src: string });
     const LINES = Number(process.env.LINES ?? 4);
     let state = 12345;
     const rnd = () => ((state = (state * 1664525 + 1013904223) % 4294967296), state / 4294967296);
-    const tally = { lines: 0, flat: 0, nondec: 0, unimodal: 0, multi: 0, bestAtTop: 0, optLines: 0, optNondec: 0, optUni: 0, optMulti: 0, optAtTop: 0, boxes: 0, maximal: 0, notMaximal: 0, multiDrop: 0 };
+    const tally = {
+      lines: 0,
+      flat: 0,
+      nondec: 0,
+      unimodal: 0,
+      multi: 0,
+      bestAtTop: 0,
+      optLines: 0,
+      optNondec: 0,
+      optUni: 0,
+      optMulti: 0,
+      optAtTop: 0,
+      boxes: 0,
+      maximal: 0,
+      notMaximal: 0,
+      multiDrop: 0,
+    };
     const seen = new Set<string>();
     const walkedSample = base.filter((r) => r.how === 1);
     const pick = [...base.filter((r) => r.how === 2), ...walkedSample.filter((_, k) => k % 5 === 0)];
@@ -79,7 +120,9 @@ describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objecti
       tally.boxes += 1;
       const from = Array.from({ length: n }, (_, s) => x.xFrom!(s));
       const to = Array.from({ length: n }, (_, s) => x.xTo!(s));
-      const setAll = (v: number[]) => { v.forEach((c, s) => x.xSet!(s, c)); };
+      const setAll = (v: number[]) => {
+        v.forEach((c, s) => x.xSet!(s, c));
+      };
       // Maximal? one more unit of any slot below its ceiling is infeasible.
       setAll(opt);
       const optScore = x.xScore!();
@@ -90,10 +133,12 @@ describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objecti
         if (x.xScore!() > -Infinity) maximal = false;
         x.xSet!(s, opt[s]!);
       }
-      if (maximal) tally.maximal += 1; else tally.notMaximal += 1;
+      if (maximal) tally.maximal += 1;
+      else tally.notMaximal += 1;
       void optScore;
       const points: { p: number[]; opt: boolean }[] = [{ p: opt, opt: true }];
-      for (let l = 0; l < LINES; l += 1) points.push({ p: from.map((f, s) => f + Math.floor(rnd() * (to[s]! - f + 1))), opt: false });
+      for (let l = 0; l < LINES; l += 1)
+        points.push({ p: from.map((f, s) => f + Math.floor(rnd() * (to[s]! - f + 1))), opt: false });
       for (const { p, opt: isOpt } of points) {
         for (let s = 0; s < n; s += 1) {
           setAll(p);
@@ -107,20 +152,33 @@ describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objecti
           }
           if (ys.length < 2) continue;
           // Classify: count strict direction changes up→down→up.
-          let peaks = 0, goingDown = false, flat = true, nondec = true;
+          let peaks = 0,
+            goingDown = false,
+            flat = true,
+            nondec = true;
           let maxDrop = 0;
           for (let k = 1; k < ys.length; k += 1) {
             const d = ys[k]! - ys[k - 1]!;
             if (d !== 0) flat = false;
-            if (d < 0) { nondec = false; goingDown = true; maxDrop = Math.max(maxDrop, -d); }
-            if (d > 0 && goingDown) { peaks += 1; goingDown = false; }
+            if (d < 0) {
+              nondec = false;
+              goingDown = true;
+              maxDrop = Math.max(maxDrop, -d);
+            }
+            if (d > 0 && goingDown) {
+              peaks += 1;
+              goingDown = false;
+            }
           }
           const bestAtTop = Math.max(...ys) === ys[ys.length - 1];
           tally.lines += 1;
           if (flat) tally.flat += 1;
           else if (nondec) tally.nondec += 1;
           else if (peaks === 0) tally.unimodal += 1;
-          else { tally.multi += 1; tally.multiDrop = Math.max(tally.multiDrop, maxDrop); }
+          else {
+            tally.multi += 1;
+            tally.multiDrop = Math.max(tally.multiDrop, maxDrop);
+          }
           if (bestAtTop) tally.bestAtTop += 1;
           if (isOpt) {
             tally.optLines += 1;

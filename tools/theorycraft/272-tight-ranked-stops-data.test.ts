@@ -44,10 +44,19 @@ const proxy4 = createRaiseKernel(module, { ...EXACT_DEFAULTS, restarts: 4 });
 const MODES = { authority: RAISE_TIGHT, dominance: RAISE_TIGHT };
 const BUDGET = Number(process.env.STOP_BUDGET_MS ?? 900_000);
 
-const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
 /** The Tight-raised bill under one kernel — `liftedCounts` without a burn cap, read as 259's `tightBill`. */
-function tightBill(kernel: RaiseKernel, request: StackRequest, base: StackResult): { bill: Bill; ms: number; how: string | null; space: number } {
+function tightBill(
+  kernel: RaiseKernel,
+  request: StackRequest,
+  base: StackResult,
+): { bill: Bill; ms: number; how: string | null; space: number } {
   const t = performance.now();
   const own = countsOf(base);
   const fast = kernel.position({ request, base, modes: MODES });
@@ -61,13 +70,23 @@ function tightBill(kernel: RaiseKernel, request: StackRequest, base: StackResult
   const ms = performance.now() - t;
   const { result, summary } = applyCounts(request, base, { ...own, ...counts });
   return {
-    bill: { damage: summary.minDamage, silver: summary.recovery.silver, gold: summary.recovery.gold, hired: hiredLost(result.stacks) },
+    bill: {
+      damage: summary.minDamage,
+      silver: summary.recovery.silver,
+      gold: summary.recovery.gold,
+      hired: hiredLost(result.stacks),
+    },
     ms,
     how: fast?.how ?? null,
     space: fast?.space ?? 0,
   };
 }
-const slim = (b: Bill) => ({ d: b.damage, s: Math.round(b.silver ?? 0), g: Math.round(b.gold ?? 0), h: b.hired ?? 0 });
+const slim = (b: Bill) => ({
+  d: b.damage,
+  s: Math.round(b.silver ?? 0),
+  g: Math.round(b.gold ?? 0),
+  h: b.hired ?? 0,
+});
 
 function study(label: string, input: CampaignInput): void {
   const t0 = performance.now();
@@ -79,7 +98,11 @@ function study(label: string, input: CampaignInput): void {
     return;
   }
   const planMs = performance.now() - t0;
-  const bar = plan.alternatives.map((s) => ({ pick: s.pick, burn: s.repeat.mercLost, seq: s.sequence !== undefined }));
+  const bar = plan.alternatives.map((s) => ({
+    pick: s.pick,
+    burn: s.repeat.mercLost,
+    seq: s.sequence !== undefined,
+  }));
   for (const [index, stop] of plan.alternatives.entries()) {
     if (stop.sequence !== undefined) continue;
     const started = performance.now();
@@ -87,9 +110,11 @@ function study(label: string, input: CampaignInput): void {
     const shippedPre = marchBill(input.request, stop.counts);
     const shipped = tightBill(full, input.request, shippedBase);
     const shapes = new Map<string, Record<string, number>>();
-    for (const r of plan.frontier ?? []) if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
+    for (const r of plan.frontier ?? [])
+      if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
     const rows: unknown[] = [];
-    let retypeMs = 0, buildMs = 0;
+    let retypeMs = 0,
+      buildMs = 0;
     const cands: { counts: Record<string, number>; pre: number }[] = [];
     const seen = new Set<string>([key(stop.counts)]);
     for (const counts of shapes.values()) {
@@ -172,7 +197,12 @@ describe.skipIf(!process.env.THEORY)('272 — tight-ranked stops, data', () => {
         // `FROM`: start at this scenario index (a second process can take the tail while a heavy camp runs).
         if (i < Number(process.env.FROM ?? 0)) continue;
         if (process.env.SKIP !== undefined && new RegExp(process.env.SKIP).test(sc.label)) continue;
-        study(sc.label, { request: sc.request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack });
+        study(sc.label, {
+          request: sc.request,
+          marchTarget: HORIZON,
+          ...CAMPAIGN.planFixes,
+          putBack: CAMPAIGN.putBack,
+        });
       }
   }, 86_400_000);
 });

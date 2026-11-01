@@ -18,14 +18,40 @@ describe.skipIf(!process.env.THEORY)('251 budget probe', () => {
     if (parsed.kind !== 'profile') throw new Error('profile');
     const profile = structuredClone(parsed.payload) as Profile;
     const setup = profile.setups[0]!;
-    const pool = createCalcPool({ size: 1, createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }) });
+    const pool = createCalcPool({
+      size: 1,
+      createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }),
+    });
     const input = buildPlanRequest(profile, setup);
     const { currentKey, lineups } = captainLineups(profile, setup);
-    const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, {});
+    const advice = await runCaptainAdvice(
+      input,
+      lineups.map(({ key, totals }) => ({ key, totals })),
+      currentKey,
+      pool,
+      {},
+    );
     const lead = leadLineup(advice.best, currentKey);
     const cand = lineups.find((l) => l.key === lead)!;
     const began = performance.now();
-    const report = await runHeroReport(input, { key: lead, totals: cand.totals, stops: advice.plans[lead]! }, heroRoster(profile, setup), pool, {});
-    console.log('SECONDS', (performance.now() - began) / 1000, 'rows', report.worth.solo.length, report.worth.trio.length, 'plan', report.plan.solo.length, report.plan.trio.length, 'skipped', JSON.stringify(report.skipped));
+    const report = await runHeroReport(
+      input,
+      { key: lead, totals: cand.totals, stops: advice.plans[lead]! },
+      heroRoster(profile, setup),
+      pool,
+      {},
+    );
+    console.log(
+      'SECONDS',
+      (performance.now() - began) / 1000,
+      'rows',
+      report.worth.solo.length,
+      report.worth.trio.length,
+      'plan',
+      report.plan.solo.length,
+      report.plan.trio.length,
+      'skipped',
+      JSON.stringify(report.skipped),
+    );
   }, 300_000);
 });

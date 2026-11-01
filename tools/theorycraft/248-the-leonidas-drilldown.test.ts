@@ -120,7 +120,8 @@ describe.skipIf(!process.env.THEORY)('248 — Leonidas drilled down', () => {
           '| Leonidas row | worth | rank |',
           '|---|---|---|',
         );
-        for (const row of mine) lines.push(`| ${row.label} | ${row.worth.toFixed(2)} | ${String(ranked.indexOf(row) + 1)} |`);
+        for (const row of mine)
+          lines.push(`| ${row.label} | ${row.worth.toFixed(2)} | ${String(ranked.indexOf(row) + 1)} |`);
         const report = await runHeroReport(input, leadOf, heroRoster(one.profile, one.setup), pool, {
           budgetMs: NO_CLOCK,
         });

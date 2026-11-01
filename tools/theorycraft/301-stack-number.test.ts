@@ -41,6 +41,20 @@ function flatAll(request: StackRequest, hired: Record<string, number>): Record<s
   return build(lo).c;
 }
 
+/** One line of a replay file: a scenario or an account star, the pick, and what the descent and the frontier found. */
+interface Row {
+  star?: number;
+  idx: number;
+  pick?: string;
+  label?: string;
+  descent: Found;
+  frontier?: Found;
+}
+interface Found {
+  rf: number;
+  counts?: Record<string, number>;
+}
+
 describe.skipIf(!process.env.THEORY)('301 — the stack number', () => {
   it('tabulates', () => {
     const rows = process.env
@@ -49,7 +63,7 @@ describe.skipIf(!process.env.THEORY)('301 — the stack number', () => {
         readFileSync(f, 'utf8')
           .split('\n')
           .filter(Boolean)
-          .map((l) => JSON.parse(l) as Record<string, any>),
+          .map((l) => JSON.parse(l) as Row),
       )
       .filter((r) => r.pick !== undefined);
     const scen = criteriaScenarios();
@@ -57,14 +71,14 @@ describe.skipIf(!process.env.THEORY)('301 — the stack number', () => {
     const plans = new Map<string, ReturnType<typeof planCampaign>>();
     for (const r of rows) {
       const isAcct = r.star !== undefined;
-      const request: StackRequest = isAcct ? accountInput(r.star).request : scen[r.idx]!.request;
+      const request: StackRequest = isAcct ? accountInput(r.star!).request : scen[r.idx]!.request;
       const pk = isAcct ? `a${String(r.star)}` : `b${String(r.idx)}`;
       if (!plans.has(pk))
         plans.set(
           pk,
           planCampaign(
             isAcct
-              ? accountInput(r.star)
+              ? accountInput(r.star!)
               : { request, marchTarget: HORIZON, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack },
           ),
         );

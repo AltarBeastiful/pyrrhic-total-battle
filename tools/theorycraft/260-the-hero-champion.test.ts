@@ -58,20 +58,36 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
     if (parsed.kind !== 'profile') throw new Error('profile');
     const profile = structuredClone(parsed.payload) as Profile;
     const setup = profile.setups[0]!;
-    const pool = createCalcPool({ size: 1, createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }) });
-    const lines = ['# 260 — the hero champion', '', `Account ${FILE}, setup ${setup.name}, each hero from its own level to ${String(MAX_LEVEL)} every ${String(STEP)}.`, ''];
+    const pool = createCalcPool({
+      size: 1,
+      createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }),
+    });
+    const lines = [
+      '# 260 — the hero champion',
+      '',
+      `Account ${FILE}, setup ${setup.name}, each hero from its own level to ${String(MAX_LEVEL)} every ${String(STEP)}.`,
+      '',
+    ];
     try {
       const input = buildPlanRequest(profile, setup);
       const { currentKey, lineups } = captainLineups(profile, setup);
-      const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, {
-        budgetMs: NO_CLOCK,
-      });
+      const advice = await runCaptainAdvice(
+        input,
+        lineups.map(({ key, totals }) => ({ key, totals })),
+        currentKey,
+        pool,
+        {
+          budgetMs: NO_CLOCK,
+        },
+      );
       const lead = leadLineup(advice.best, currentKey);
       const allStops = advice.plans[lead]!;
       // Trimmed bar (owner, 2026-10-23): the silver saver, the sweet spot and the stop below the all-in.
       const allInAt = allStops.findIndex((row) => row.pick === 'all-in');
       const below = allStops[(allInAt === -1 ? allStops.length : allInAt) - 1];
-      const stops = allStops.filter((row) => row.pick === 'silver-saver' || row.pick === 'sweet-spot' || row === below);
+      const stops = allStops.filter(
+        (row) => row.pick === 'silver-saver' || row.pick === 'sweet-spot' || row === below,
+      );
       const settings = { ...input };
       delete settings.budgetMs;
       delete settings.shouldStop;
@@ -82,14 +98,17 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
         return r?.health !== undefined || r?.strength !== undefined || r?.special !== undefined;
       });
       const levelsOf = (e: (typeof owned)[number]): number[] => levelsFrom(Math.max(1, e.level));
-      const pointsOf = (e: (typeof owned)[number]): Point[] => STARS.flatMap((star) => levelsOf(e).map((level) => ({ star, level })));
+      const pointsOf = (e: (typeof owned)[number]): Point[] =>
+        STARS.flatMap((star) => levelsOf(e).map((level) => ({ star, level })));
       const key = (id: string, p: Point): string => `${id}@${at(p)}`;
       const lineupOf = (entry: (typeof owned)[number], p: Point) => {
         const raised: Profile = {
           ...profile,
           sources: {
             ...profile.sources,
-            captains: profile.sources.captains.map((c) => (c.id === entry.id ? { ...c, level: p.level, star: p.star } : c)),
+            captains: profile.sources.captains.map((c) =>
+              c.id === entry.id ? { ...c, level: p.level, star: p.star } : c,
+            ),
           },
         };
         return { key: key(entry.captainId, p), totals: lineupTotals(raised, setup, [entry.id]) };
@@ -118,10 +137,12 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
       const screenSeconds = (performance.now() - began) / 1000;
       const answer = outcome[0];
       if (answer?.kind !== 'done') throw new Error('screen failed');
-      const mean = (xs: readonly number[]): number => (xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length);
+      const mean = (xs: readonly number[]): number =>
+        xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
       const rating = new Map(answer.value.screens.map((s) => [s.key, mean(s.repriced)]));
       lines.push(
-        `Bar of the lead march: ${allStops.map((r) => r.pick).join(' · ')}; kept ${stops.map((r) => r.pick).join(' · ')}.`, `${String(owned.length)} heroes, ${String(owned.flatMap(pointsOf).length)} lineups, ${String(stops.length)} stops: screen ${f(screenSeconds, 1)} s.`,
+        `Bar of the lead march: ${allStops.map((r) => r.pick).join(' · ')}; kept ${stops.map((r) => r.pick).join(' · ')}.`,
+        `${String(owned.length)} heroes, ${String(owned.flatMap(pointsOf).length)} lineups, ${String(stops.length)} stops: screen ${f(screenSeconds, 1)} s.`,
         '',
       );
 
@@ -133,13 +154,25 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
       const mine = (id: string): Point[] => pointsOf(entryOf(id));
       // A hero that counts on one kind of march only (Amanitore: group; Hercules: epic) is no solo-march champion:
       // it is listed apart, as the report rates it on its own.
-      const situational = owned.filter((e) => captainTable.find((c) => c.id === e.captainId)?.onlyOn !== undefined).map((e) => e.captainId);
+      const situational = owned
+        .filter((e) => captainTable.find((c) => c.id === e.captainId)?.onlyOn !== undefined)
+        .map((e) => e.captainId);
       const ids = owned.map((e) => e.captainId).filter((id) => !situational.includes(id));
 
       const present = (title: string): void => {
-        lines.push(`# ${title}`, '', situational.length === 0 ? '' : `Left out of the race (they count on one kind of march only): ${situational.map(name).join(', ')}.`, '');
+        lines.push(
+          `# ${title}`,
+          '',
+          situational.length === 0
+            ? ''
+            : `Left out of the race (they count on one kind of march only): ${situational.map(name).join(', ')}.`,
+          '',
+        );
         // 2. Champion: average lead over the best other hero, every point weighted equally.
-        const lead1 = (id: string, rate1: (id: string, p: Point) => number): { avg: number; wins: number; n: number } => {
+        const lead1 = (
+          id: string,
+          rate1: (id: string, p: Point) => number,
+        ): { avg: number; wins: number; n: number } => {
           let sum = 0;
           let wins = 0;
           let n = 0;
@@ -156,26 +189,50 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
         const board = ids
           .map((id) => ({ id, ...lead1(id, rate), top: rate(id, { star: 6, level: MAX_LEVEL }) }))
           .sort((a, b) => b.avg - a.avg);
-        lines.push('## Champion (average lead over the best other hero)', '', '| # | hero | avg lead | leads at | rating ★6 top level | now |', '|---|---|---|---|---|---|');
+        lines.push(
+          '## Champion (average lead over the best other hero)',
+          '',
+          '| # | hero | avg lead | leads at | rating ★6 top level | now |',
+          '|---|---|---|---|---|---|',
+        );
         board.forEach((b, i) => {
           const e = owned.find((o) => o.captainId === b.id)!;
-          lines.push(`| ${String(i + 1)} | ${name(b.id)} | ${f(b.avg)} | ${String(b.wins)}/${String(b.n)} | ${f(b.top)} | L${String(e.level)} ★${String(e.star)} |`);
+          lines.push(
+            `| ${String(i + 1)} | ${name(b.id)} | ${f(b.avg)} | ${String(b.wins)}/${String(b.n)} | ${f(b.top)} | L${String(e.level)} ★${String(e.star)} |`,
+          );
         });
         const champion = board[0]!;
         const challenger = board[1];
-        lines.push('', `Champion **${name(champion.id)}**, challenger **${challenger ? name(challenger.id) : '—'}**.`);
+        lines.push(
+          '',
+          `Champion **${name(champion.id)}**, challenger **${challenger ? name(challenger.id) : '—'}**.`,
+        );
         if (challenger) {
           const shared = mine(champion.id).filter((p) => reaches(challenger.id, p));
           const flips = shared.filter((p) => rate(challenger.id, p) > rate(champion.id, p));
-          lines.push(`Challenger overtakes at ${String(flips.length)}/${String(shared.length)} shared points: ${flips.map(at).join(' ') || '—'} (star/level). Margin ${f(champion.avg - challenger.avg)} → ${Math.abs(champion.avg - challenger.avg) < 0.5 ? 'NO CLEAR MARGIN' : 'clear'}.`);
+          lines.push(
+            `Challenger overtakes at ${String(flips.length)}/${String(shared.length)} shared points: ${flips.map(at).join(' ') || '—'} (star/level). Margin ${f(champion.avg - challenger.avg)} → ${Math.abs(champion.avg - challenger.avg) < 0.5 ? 'NO CLEAR MARGIN' : 'clear'}.`,
+          );
         }
 
         // 3. Disagreement with the rating at the highest star (top level).
         const topAt = { star: 6, level: MAX_LEVEL };
         const byTop = [...ids].sort((a, b) => rate(b, topAt) - rate(a, topAt));
-        lines.push('', '## Score against "rating at the highest star"', '', `By top rating: ${byTop.map((id, i) => `${String(i + 1)}. ${name(id)} ${f(rate(id, topAt))}`).join(' · ')}`);
-        const disagree = board.map((b, i) => ({ id: b.id, avg: i + 1, top: byTop.indexOf(b.id) + 1 })).filter((d) => d.avg !== d.top);
-        lines.push('', disagree.length === 0 ? 'The two rankings agree.' : `Rank by avg lead → by top rating: ${disagree.map((d) => `${name(d.id)} ${String(d.avg)}→${String(d.top)}`).join(', ')}.`);
+        lines.push(
+          '',
+          '## Score against "rating at the highest star"',
+          '',
+          `By top rating: ${byTop.map((id, i) => `${String(i + 1)}. ${name(id)} ${f(rate(id, topAt))}`).join(' · ')}`,
+        );
+        const disagree = board
+          .map((b, i) => ({ id: b.id, avg: i + 1, top: byTop.indexOf(b.id) + 1 }))
+          .filter((d) => d.avg !== d.top);
+        lines.push(
+          '',
+          disagree.length === 0
+            ? 'The two rankings agree.'
+            : `Rank by avg lead → by top rating: ${disagree.map((d) => `${name(d.id)} ${String(d.avg)}→${String(d.top)}`).join(', ')}.`,
+        );
 
         // 4. Curves (star curve at each level), valleys and packages.
         lines.push('', '## Curves, valleys, packages (tier 1)', '');
@@ -195,9 +252,19 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
         };
         for (const id of ids) {
           const e = owned.find((o) => o.captainId === id)!;
-          lines.push(`### ${name(id)} (now L${String(e.level)} ★${String(e.star)})`, '', `| level | ${STARS.map((s) => `★${String(s)}`).join(' | ')} |`, `|---|${STARS.map(() => '---').join('|')}|`);
-          for (const level of levelsOf(e)) lines.push(`| ${String(level)} | ${STARS.map((star) => f(rate(id, { star, level }))).join(' | ')} |`);
-          const v = levelsOf(e).flatMap((level) => valleys(STARS.map((star) => rate(id, { star, level }))).map((t) => `L${String(level)}: ${t}`));
+          lines.push(
+            `### ${name(id)} (now L${String(e.level)} ★${String(e.star)})`,
+            '',
+            `| level | ${STARS.map((s) => `★${String(s)}`).join(' | ')} |`,
+            `|---|${STARS.map(() => '---').join('|')}|`,
+          );
+          for (const level of levelsOf(e))
+            lines.push(
+              `| ${String(level)} | ${STARS.map((star) => f(rate(id, { star, level }))).join(' | ')} |`,
+            );
+          const v = levelsOf(e).flatMap((level) =>
+            valleys(STARS.map((star) => rate(id, { star, level }))).map((t) => `L${String(level)}: ${t}`),
+          );
           lines.push('', v.length === 0 ? 'No valley.' : v.join('\n\n'), '');
         }
 
@@ -207,21 +274,38 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
           return shared.length > 0 && shared.every((p) => rate(o, p) > rate(id, p));
         };
         const replaced = ids.filter((id) => ids.some((o) => o !== id && beats(o, id)));
-        lines.push('## Replaced (beaten by one hero at every point both reach)', '', replaced.length === 0 ? 'None.' : replaced.map((id) => `${name(id)} (by ${name(ids.find((o) => o !== id && beats(o, id))!)})`).join(', '), '');
+        lines.push(
+          '## Replaced (beaten by one hero at every point both reach)',
+          '',
+          replaced.length === 0
+            ? 'None.'
+            : replaced
+                .map((id) => `${name(id)} (by ${name(ids.find((o) => o !== id && beats(o, id))!)})`)
+                .join(', '),
+          '',
+        );
       };
 
       present('Tier 1 (the lead stops re-priced)');
 
       // 6. Every grid point planned in full, timed; the same views again on those readings.
       if (process.env.FULL) {
-        const planOf = (totals: typeof none.totals) => ({ ...settings, request: { ...settings.request, totals } });
+        const planOf = (totals: typeof none.totals) => ({
+          ...settings,
+          request: { ...settings.request, totals },
+        });
         const t0 = performance.now();
-        const noneOut = await pool.map([(c, s) => c.probe({ plan: planOf(none.totals) }, s)], { budgetMs: NO_CLOCK });
+        const noneOut = await pool.map([(c, s) => c.probe({ plan: planOf(none.totals) }, s)], {
+          budgetMs: NO_CLOCK,
+        });
         if (noneOut[0]?.kind !== 'done') throw new Error('baseline');
         const whole = (noneOut[0].value as ProbeAnswer).stops;
         // The march with no hero has its own bar (it lacks the silver saver and the steady max): the all-in goes, the rest is read.
         const baseline = whole.filter((row) => row.pick !== 'all-in');
-        lines.push(`Baseline bar (no hero): ${whole.map((r) => r.pick).join(' · ')}; read ${baseline.map((r) => r.pick).join(' · ')}.`, '');
+        lines.push(
+          `Baseline bar (no hero): ${whole.map((r) => r.pick).join(' · ')}; read ${baseline.map((r) => r.pick).join(' · ')}.`,
+          '',
+        );
         const planned = new Map<string, number>();
         const jobs = owned.flatMap((e) => pointsOf(e).map((p) => lineupOf(e, p)));
         const outs = await pool.map(
@@ -229,7 +313,14 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
             (l): PoolJob<ProbeAnswer> =>
               (c, s) =>
                 c.probe(
-                  { plan: planOf(l.totals), against: { probe: probeInfo({ id: l.key, family: 'captains', label: l.key }), baseline, rates: CAMPAIGN.markerRates } },
+                  {
+                    plan: planOf(l.totals),
+                    against: {
+                      probe: probeInfo({ id: l.key, family: 'captains', label: l.key }),
+                      baseline,
+                      rates: CAMPAIGN.markerRates,
+                    },
+                  },
                   s,
                 ),
           ),
@@ -237,18 +328,26 @@ describe.skipIf(!process.env.THEORY)('260 — the hero champion', () => {
         );
         jobs.forEach((l, i) => {
           const r = outs[i];
-          planned.set(l.key, r?.kind === 'done' && r.value.row ? mean(r.value.row.stops.map((x) => x.gain)) : Number.NaN);
+          planned.set(
+            l.key,
+            r?.kind === 'done' && r.value.row ? mean(r.value.row.stops.map((x) => x.gain)) : Number.NaN,
+          );
         });
         const secs = (performance.now() - t0) / 1000;
-        lines.push(`## Full plans\n\n${String(jobs.length)} plans (+ baseline) in ${f(secs, 0)} s on one worker (${f(secs / jobs.length, 2)} s each); ${String(baseline.length)} stops each.`, '');
+        lines.push(
+          `## Full plans\n\n${String(jobs.length)} plans (+ baseline) in ${f(secs, 0)} s on one worker (${f(secs / jobs.length, 2)} s each); ${String(baseline.length)} stops each.`,
+          '',
+        );
         const tier1 = rating;
         source = planned;
         present('Full plans');
         // Where tier 1 and the full plan name a different champion curve.
         const agree = [...planned].filter(([k, v]) => Math.abs(v - (tier1.get(k) ?? 0)) > 2).length;
-        lines.push(`Tier 1 and full differ by more than 2 points on ${String(agree)} of ${String(jobs.length)} grid readings.`, '');
+        lines.push(
+          `Tier 1 and full differ by more than 2 points on ${String(agree)} of ${String(jobs.length)} grid readings.`,
+          '',
+        );
       }
-
     } finally {
       pool.dispose();
     }

@@ -20,19 +20,54 @@ import { loadCorpus, SCRATCH } from './331-tight-replay';
 describe.skipIf(!process.env.THEORY)('335 — Tight repeat census', () => {
   it('counts', () => {
     const corpus = loadCorpus();
-    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { i: number; src: string; how: number; msRepo: number });
-    const bySrc = new Map<string, { calls: number; keys: Set<string>; ms: number; msSaved: number; searched: number; searchedRepeat: number; label: Map<string, number> }>();
+    const base = readFileSync(`${SCRATCH}/332-base.jsonl`, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { i: number; src: string; how: number; msRepo: number });
+    const bySrc = new Map<
+      string,
+      {
+        calls: number;
+        keys: Set<string>;
+        ms: number;
+        msSaved: number;
+        searched: number;
+        searchedRepeat: number;
+        label: Map<string, number>;
+      }
+    >();
     for (const r of base) {
       const call = corpus.calls[r.i]!;
       const request = corpus.requests[call.req]!;
       const order = new Map(call.input.base.stacks.map((s, k) => [s.unitId, k]));
-      const packed = packRequest(request, CAMPAIGN.markerRates, undefined, Int32Array.from(request.units, (u) => order.get(u.id) ?? -1));
+      const packed = packRequest(
+        request,
+        CAMPAIGN.markerRates,
+        undefined,
+        Int32Array.from(request.units, (u) => order.get(u.id) ?? -1),
+      );
       const own = new Map(call.input.base.stacks.map((s) => [s.unitId, s.count]));
       const h = createHash('sha1');
       h.update(Buffer.from(packed.table.buffer, packed.table.byteOffset, packed.table.byteLength));
-      h.update(JSON.stringify([packed.ids, packed.ids.map((id) => own.get(id) ?? 0), packed.ids.map((id) => request.caps[id] ?? -1), call.input.modes, call.input.burnCap ?? null]));
+      h.update(
+        JSON.stringify([
+          packed.ids,
+          packed.ids.map((id) => own.get(id) ?? 0),
+          packed.ids.map((id) => request.caps[id] ?? -1),
+          call.input.modes,
+          call.input.burnCap ?? null,
+        ]),
+      );
       const key = h.digest('hex');
-      const g = bySrc.get(r.src) ?? { calls: 0, keys: new Set<string>(), ms: 0, msSaved: 0, searched: 0, searchedRepeat: 0, label: new Map<string, number>() };
+      const g = bySrc.get(r.src) ?? {
+        calls: 0,
+        keys: new Set<string>(),
+        ms: 0,
+        msSaved: 0,
+        searched: 0,
+        searchedRepeat: 0,
+        label: new Map<string, number>(),
+      };
       bySrc.set(r.src, g);
       g.calls += 1;
       g.ms += r.msRepo;
@@ -45,9 +80,14 @@ describe.skipIf(!process.env.THEORY)('335 — Tight repeat census', () => {
       }
       g.keys.add(key);
     }
-    const out: string[] = ['| src | calls | distinct | repeats | searched | searched repeats | Tight ms | ms a memo saves | repeats by job |', '|---|---:|---:|---:|---:|---:|---:|---:|---|'];
+    const out: string[] = [
+      '| src | calls | distinct | repeats | searched | searched repeats | Tight ms | ms a memo saves | repeats by job |',
+      '|---|---:|---:|---:|---:|---:|---:|---:|---|',
+    ];
     for (const [src, g] of bySrc)
-      out.push(`| ${src} | ${g.calls} | ${g.keys.size} | ${g.calls - g.keys.size} | ${g.searched} | ${g.searchedRepeat} | ${g.ms.toFixed(0)} | ${g.msSaved.toFixed(0)} (${((g.msSaved / g.ms) * 100).toFixed(1)} %) | ${JSON.stringify([...g.label])} |`);
+      out.push(
+        `| ${src} | ${g.calls} | ${g.keys.size} | ${g.calls - g.keys.size} | ${g.searched} | ${g.searchedRepeat} | ${g.ms.toFixed(0)} | ${g.msSaved.toFixed(0)} (${((g.msSaved / g.ms) * 100).toFixed(1)} %) | ${JSON.stringify([...g.label])} |`,
+      );
     writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
   }, 3_600_000);
 });

@@ -36,6 +36,7 @@ import { createInlineClient } from '../../src/worker/client';
 import { createCalcPool } from '../../src/worker/pool';
 import { commonScenarios, ownerProfile, ownerScenarios } from '../../tests/engine/plan-scenarios';
 import { loadLiveAccount } from './harness';
+import type * as Derive from '../../src/state/derive';
 
 /**
  * Experiment C reads the benchmark's scenarios, which hold a built request rather than a profile and a setup.
@@ -43,7 +44,7 @@ import { loadLiveAccount } from './harness';
  */
 const BUILT = vi.hoisted(() => new WeakMap<object, { profile: unknown; setup: unknown }>());
 vi.mock('../../src/state/derive', async (original) => {
-  const real = await original<typeof import('../../src/state/derive')>();
+  const real = await original<typeof Derive>();
   return {
     ...real,
     buildStackRequest: (...args: Parameters<typeof real.buildStackRequest>) => {

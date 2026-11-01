@@ -36,7 +36,12 @@ import { marchesOf, roomyBase } from '../../tests/kernel/seeded-marches';
 
 const repo = loadKernelModule();
 const patched = process.env.KWASM ? compileKernel(readFileSync(process.env.KWASM)) : repo;
-const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
 // raise-kernel.json, as tests/kernel/raise-kernel.test.ts builds it.
 function moved(request: StackRequest, here: Record<string, number>, counts: Record<string, number>) {
@@ -50,7 +55,15 @@ function moved(request: StackRequest, here: Record<string, number>, counts: Reco
 }
 function answer(army: string, march: string, request: StackRequest, base: StackResult, position: RaiseMode) {
   const lifted = liftedCounts(request, base, { authority: position, dominance: position });
-  return { army, march, position, moved: moved(request, countsOf(base), lifted?.counts ?? {}), how: lifted?.how ?? null, space: lifted?.space ?? 0, scored: lifted?.scored ?? 0 };
+  return {
+    army,
+    march,
+    position,
+    moved: moved(request, countsOf(base), lifted?.counts ?? {}),
+    how: lifted?.how ?? null,
+    space: lifted?.space ?? 0,
+    scored: lifted?.scored ?? 0,
+  };
 }
 function raiseKernelCorpus() {
   const out: ReturnType<typeof answer>[] = [];
@@ -61,7 +74,10 @@ function raiseKernelCorpus() {
   if (first !== undefined) {
     const sized = roomyBase(first.request);
     const reversed: StackResult = { ...sized, stacks: [...sized.stacks].reverse() as Stack[] };
-    for (const position of POSITIONS) out.push(answer(first.label, 'the sizer’s march, stack order reversed', first.request, reversed, position));
+    for (const position of POSITIONS)
+      out.push(
+        answer(first.label, 'the sizer’s march, stack order reversed', first.request, reversed, position),
+      );
   }
   return out;
 }
@@ -71,7 +87,13 @@ function raiseCorpus() {
   for (const scenario of criteriaScenarios()) {
     let campaign;
     try {
-      campaign = planCampaign({ request: scenario.request, marchTarget: HORIZON, budgetMs: CAMPAIGN.budgets.plan, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack });
+      campaign = planCampaign({
+        request: scenario.request,
+        marchTarget: HORIZON,
+        budgetMs: CAMPAIGN.budgets.plan,
+        ...CAMPAIGN.planFixes,
+        putBack: CAMPAIGN.putBack,
+      });
     } catch (error) {
       if (!(error instanceof Error) || !error.message.startsWith('planCampaign:')) throw error;
       continue;
@@ -85,7 +107,9 @@ function raiseCorpus() {
         stop: stop.pick,
         rows: trades.rows.map((row) => ({
           mode: row.mode,
-          counts: Object.fromEntries(scenario.request.units.map((u) => [u.id, { ...own, ...row.counts }[u.id] ?? 0])),
+          counts: Object.fromEntries(
+            scenario.request.units.map((u) => [u.id, { ...own, ...row.counts }[u.id] ?? 0]),
+          ),
           how: row.how,
           space: row.space,
           scored: row.scored,
@@ -103,7 +127,10 @@ describe.skipIf(!process.env.THEORY)('271 — hashed wide memo', () => {
     const flush = () => writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
     setKernel(createPlanKernel(repo));
     if (part !== 'account') {
-      for (const [label, mod] of [['repo', repo], ['patched', patched]] as const) {
+      for (const [label, mod] of [
+        ['repo', repo],
+        ['patched', patched],
+      ] as const) {
         setRaiseKernel(createRaiseKernel(mod));
         let t = performance.now();
         const a = raiseKernelCorpus();
@@ -116,7 +143,9 @@ describe.skipIf(!process.env.THEORY)('271 — hashed wide memo', () => {
         const gb = JSON.parse(readFileSync('tests/golden/raise.json', 'utf8')) as unknown[];
         const okB = isDeepStrictEqual(JSON.parse(JSON.stringify(b)), gb);
         const wide = (a as { space: number }[]).filter((x) => x.space > 4194304).length;
-        out.push(`${label}: raise-kernel.json ${okA ? 'IDENTICAL' : 'DIFFERS'} (${String(a.length)} answers, ${String(wide)} boxes > MEMO_CAP, ${ta.toFixed(0)} ms); raise.json ${okB ? 'IDENTICAL' : 'DIFFERS'} (${String(b.length)} stops, ${tb.toFixed(0)} ms)`);
+        out.push(
+          `${label}: raise-kernel.json ${okA ? 'IDENTICAL' : 'DIFFERS'} (${String(a.length)} answers, ${String(wide)} boxes > MEMO_CAP, ${ta.toFixed(0)} ms); raise.json ${okB ? 'IDENTICAL' : 'DIFFERS'} (${String(b.length)} stops, ${tb.toFixed(0)} ms)`,
+        );
         flush();
       }
     }
@@ -133,10 +162,20 @@ describe.skipIf(!process.env.THEORY)('271 — hashed wide memo', () => {
         const input = buildPlanRequest(profile, profile.setups[0]!);
         const plan = planCampaign({ ...input, withFrontier: true });
         for (const stop of plan.alternatives) {
-          if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)) continue;
+          if (
+            stop.sequence !== undefined ||
+            !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)
+          )
+            continue;
           const shapes = new Map<string, Record<string, number>>();
-          for (const r of plan.frontier ?? []) if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
-          let msA = 0, msB = 0, same = 0, diff = 0, hits = 0, miss = 0;
+          for (const r of plan.frontier ?? [])
+            if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
+          let msA = 0,
+            msB = 0,
+            same = 0,
+            diff = 0,
+            hits = 0,
+            miss = 0;
           for (const counts of shapes.values()) {
             const found = retypeMarch(input.request, counts, CAMPAIGN.putBack.rates, { tierCandidate: true });
             const base = planMarch(input.request, found?.counts ?? counts).result;
@@ -144,17 +183,30 @@ describe.skipIf(!process.env.THEORY)('271 — hashed wide memo', () => {
             const first = (same + diff) % 2 === 0;
             let a, b;
             if (first) {
-              let t = performance.now(); a = kA.position({ request: input.request, base, modes }); msA += performance.now() - t;
-              t = performance.now(); b = kB.position({ request: input.request, base, modes }); msB += performance.now() - t;
+              let t = performance.now();
+              a = kA.position({ request: input.request, base, modes });
+              msA += performance.now() - t;
+              t = performance.now();
+              b = kB.position({ request: input.request, base, modes });
+              msB += performance.now() - t;
             } else {
-              let t = performance.now(); b = kB.position({ request: input.request, base, modes }); msB += performance.now() - t;
-              t = performance.now(); a = kA.position({ request: input.request, base, modes }); msA += performance.now() - t;
+              let t = performance.now();
+              b = kB.position({ request: input.request, base, modes });
+              msB += performance.now() - t;
+              t = performance.now();
+              a = kA.position({ request: input.request, base, modes });
+              msA += performance.now() - t;
             }
-            if (process.env.DIAG) { hits += b?.scored ?? 0; miss += b?.space ?? 0; }
+            if (process.env.DIAG) {
+              hits += b?.scored ?? 0;
+              miss += b?.space ?? 0;
+            }
             if (JSON.stringify(a) === JSON.stringify(b)) same += 1;
             else diff += 1;
           }
-          out.push(`acct ★${String(star)} ${stop.pick}: ${String(shapes.size)} shapes, identical ${String(same)}, differ ${String(diff)} | repo ${msA.toFixed(0)} ms, patched ${msB.toFixed(0)} ms (×${(msA / Math.max(1, msB)).toFixed(2)})${process.env.DIAG ? ` | wide-box hits ${String(hits)} misses ${String(miss)}` : ''}`);
+          out.push(
+            `acct ★${String(star)} ${stop.pick}: ${String(shapes.size)} shapes, identical ${String(same)}, differ ${String(diff)} | repo ${msA.toFixed(0)} ms, patched ${msB.toFixed(0)} ms (×${(msA / Math.max(1, msB)).toFixed(2)})${process.env.DIAG ? ` | wide-box hits ${String(hits)} misses ${String(miss)}` : ''}`,
+          );
           flush();
         }
       }

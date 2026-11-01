@@ -46,7 +46,8 @@ import { HORIZON, criteriaScenarios } from '../../tests/engine/plan-scenarios';
 import { loadKernelModule } from '../../tests/kernel/load';
 
 const NO_CLOCK = 1_000_000_000;
-const SCRATCH = '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/ddd23d57-5930-4d86-868e-64846315b06c/scratchpad/tx';
+const SCRATCH =
+  '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/ddd23d57-5930-4d86-868e-64846315b06c/scratchpad/tx';
 
 interface Call {
   src: string;
@@ -78,7 +79,17 @@ function recorder(inner: RaiseKernel): RaiseKernel {
         reqIndex.set(input.request, req);
       }
       const { request: _r, ...rest } = input;
-      calls.push({ src: tag.src, label: tag.label, req, input: structuredClone(rest), ms, how: out?.how ?? null, space: out?.space ?? 0, scored: out?.scored ?? 0, counts: out?.counts ?? null });
+      calls.push({
+        src: tag.src,
+        label: tag.label,
+        req,
+        input: structuredClone(rest),
+        ms,
+        how: out?.how ?? null,
+        space: out?.space ?? 0,
+        scored: out?.scored ?? 0,
+        counts: out?.counts ?? null,
+      });
       return out;
     },
   };
@@ -88,10 +99,22 @@ function lane(): CalcClient {
   const inner: CalcClient = { ...createInlineClient(), mode: 'worker' as const };
   return {
     ...inner,
-    async plan(request, signal) { tag.label = 'plan'; return inner.plan(request, signal); },
-    async positions(request, signal) { tag.label = 'positions'; return inner.positions(request, signal); },
-    async probe(request, signal) { tag.label = `probe ${request.against?.probe.id ?? (request.shown === undefined ? 'baseline' : 'shown')}`; return inner.probe(request, signal); },
-    async captains(request, signal) { tag.label = 'captains'; return inner.captains(request, signal); },
+    async plan(request, signal) {
+      tag.label = 'plan';
+      return inner.plan(request, signal);
+    },
+    async positions(request, signal) {
+      tag.label = 'positions';
+      return inner.positions(request, signal);
+    },
+    async probe(request, signal) {
+      tag.label = `probe ${request.against?.probe.id ?? (request.shown === undefined ? 'baseline' : 'shown')}`;
+      return inner.probe(request, signal);
+    },
+    async captains(request, signal) {
+      tag.label = 'captains';
+      return inner.captains(request, signal);
+    },
   };
 }
 
@@ -107,21 +130,36 @@ async function runWorkload(profile: Profile): Promise<void> {
     const chosen = pickOf(planned, openingPosition(planned, null));
     const marchRequest = withMethod(request, 'elite');
     if (troopFloor(planMarch(request, chosen.counts).result) !== null)
-      for (const row of planned.alternatives) await client.positions({ request: marchRequest, counts: row.counts });
+      for (const row of planned.alternatives)
+        await client.positions({ request: marchRequest, counts: row.counts });
     const headline = chosen.pick;
     await runAdvisor(input, genericProbes(), pool, { headline, budgetMs: NO_CLOCK });
     const { currentKey, lineups, size } = captainLineups(profile, setup);
-    const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, { budgetMs: NO_CLOCK });
+    const advice = await runCaptainAdvice(
+      input,
+      lineups.map(({ key, totals }) => ({ key, totals })),
+      currentKey,
+      pool,
+      { budgetMs: NO_CLOCK },
+    );
     const lead = leadLineup(advice.best, currentKey);
     const leadCandidate = lineups.find((trio) => trio.key === lead);
     const leadStops = advice.plans[lead];
     if (leadCandidate !== undefined && leadStops !== undefined) {
-      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map((candidate) => ({
-        id: candidate.spec.id,
-        label: `${candidate.name} ${candidate.change}`,
-        lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
-      }));
-      await runCaptainUpgrades(input, { key: lead, totals: leadCandidate.totals, stops: leadStops }, asks, pool, { budgetMs: NO_CLOCK });
+      const asks: UpgradeAsk[] = captainUpgradeCandidates(profile, setup, leadCandidate, size).map(
+        (candidate) => ({
+          id: candidate.spec.id,
+          label: `${candidate.name} ${candidate.change}`,
+          lineups: candidate.lineups.map(({ key, totals }) => ({ key, totals })),
+        }),
+      );
+      await runCaptainUpgrades(
+        input,
+        { key: lead, totals: leadCandidate.totals, stops: leadStops },
+        asks,
+        pool,
+        { budgetMs: NO_CLOCK },
+      );
     }
     const { probes } = otherProbes(input, planned.silver);
     await runAdvisor(input, probes, pool, { headline, budgetMs: NO_CLOCK });
@@ -131,7 +169,12 @@ async function runWorkload(profile: Profile): Promise<void> {
   }
 }
 
-const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
 describe.skipIf(!process.env.THEORY)('330 — tight corpus', () => {
   it('captures', async () => {
@@ -145,7 +188,9 @@ describe.skipIf(!process.env.THEORY)('330 — tight corpus', () => {
     let t = performance.now();
     if (parts.includes('live')) {
       await runWorkload(structuredClone(parsed.payload) as Profile);
-      out.push(`live: ${calls.filter((c) => c.src === 'live').length} calls, ${(performance.now() - t).toFixed(0)} ms wall`);
+      out.push(
+        `live: ${calls.filter((c) => c.src === 'live').length} calls, ${(performance.now() - t).toFixed(0)} ms wall`,
+      );
       flush();
     }
     for (const star of [0, 1, 2]) {
@@ -167,9 +212,14 @@ describe.skipIf(!process.env.THEORY)('330 — tight corpus', () => {
       if (parts.includes('shape')) {
         const plan = planCampaign({ ...input, withFrontier: true });
         for (const stop of plan.alternatives) {
-          if (stop.sequence !== undefined || !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)) continue;
+          if (
+            stop.sequence !== undefined ||
+            !['burn-saver', 'silver-saver', 'sweet-spot'].includes(stop.pick)
+          )
+            continue;
           const shapes = new Map<string, Record<string, number>>();
-          for (const r of plan.frontier ?? []) if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
+          for (const r of plan.frontier ?? [])
+            if (r.repeat.mercLost === stop.repeat.mercLost) shapes.set(key(r.counts), r.counts);
           for (const counts of shapes.values()) {
             const found = retypeMarch(input.request, counts, CAMPAIGN.putBack.rates, { tierCandidate: true });
             const base = planMarch(input.request, found?.counts ?? counts).result;
@@ -187,7 +237,13 @@ describe.skipIf(!process.env.THEORY)('330 — tight corpus', () => {
       for (const scenario of criteriaScenarios()) {
         let campaign;
         try {
-          campaign = planCampaign({ request: scenario.request, marchTarget: HORIZON, budgetMs: CAMPAIGN.budgets.plan, ...CAMPAIGN.planFixes, putBack: CAMPAIGN.putBack });
+          campaign = planCampaign({
+            request: scenario.request,
+            marchTarget: HORIZON,
+            budgetMs: CAMPAIGN.budgets.plan,
+            ...CAMPAIGN.planFixes,
+            putBack: CAMPAIGN.putBack,
+          });
         } catch (error) {
           if (!(error instanceof Error) || !error.message.startsWith('planCampaign:')) throw error;
           continue;
@@ -199,16 +255,28 @@ describe.skipIf(!process.env.THEORY)('330 — tight corpus', () => {
           positionTrades(scenario.request, base, ['tight']);
         }
       }
-      out.push(`bench done, ${calls.filter((c) => c.src === 'bench').length} calls, ${(performance.now() - t).toFixed(0)} ms`);
+      out.push(
+        `bench done, ${calls.filter((c) => c.src === 'bench').length} calls, ${(performance.now() - t).toFixed(0)} ms`,
+      );
     }
-    const bySrc: Record<string, { n: number; ms: number; walked: number; searched: number; msSearched: number }> = {};
+    const bySrc: Record<
+      string,
+      { n: number; ms: number; walked: number; searched: number; msSearched: number }
+    > = {};
     for (const c of calls) {
       const b = (bySrc[c.src] ??= { n: 0, ms: 0, walked: 0, searched: 0, msSearched: 0 });
-      b.n += 1; b.ms += c.ms;
+      b.n += 1;
+      b.ms += c.ms;
       if (c.how === 'walked') b.walked += 1;
-      if (c.how === 'searched') { b.searched += 1; b.msSearched += c.ms; }
+      if (c.how === 'searched') {
+        b.searched += 1;
+        b.msSearched += c.ms;
+      }
     }
-    for (const [src, b] of Object.entries(bySrc)) out.push(`${src}: ${b.n} calls, ${b.ms.toFixed(0)} ms, walked ${b.walked}, searched ${b.searched} (${b.msSearched.toFixed(0)} ms)`);
+    for (const [src, b] of Object.entries(bySrc))
+      out.push(
+        `${src}: ${b.n} calls, ${b.ms.toFixed(0)} ms, walked ${b.walked}, searched ${b.searched} (${b.msSearched.toFixed(0)} ms)`,
+      );
     writeFileSync(process.env.CORPUS ?? `${SCRATCH}/corpus.json`, JSON.stringify({ requests, calls }));
     flush();
   }, 7_200_000);

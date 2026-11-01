@@ -34,7 +34,9 @@ describe.skipIf(!process.env.THEORY)('254 — burn-nine under Tight', () => {
       for (const r of plan.trade ?? [])
         if (r.repeat.mercLost === burn) seen.set(`${r.repeat.damage}|${Math.round(r.repeat.silver)}`, r);
       const points = [...seen.values()].sort((a, b) => a.repeat.silver - b.repeat.silver);
-      out.push(`== ★${String(star)}: ${String(points.length)} distinct candidates at burn ${String(burn)}; shipped ${String(shipped.repeat.damage)} / ${String(Math.round(shipped.repeat.silver))}`);
+      out.push(
+        `== ★${String(star)}: ${String(points.length)} distinct candidates at burn ${String(burn)}; shipped ${String(shipped.repeat.damage)} / ${String(Math.round(shipped.repeat.silver))}`,
+      );
       const rows: { d: number; s: number; td: number; ts: number; tg: number; tag: string }[] = [];
       for (const r of points) {
         const base = planMarch(input.request, r.counts).result;
@@ -42,15 +44,23 @@ describe.skipIf(!process.env.THEORY)('254 — burn-nine under Tight', () => {
         const tight = positionTrades(input.request, base, ['tight']).rows[0];
         const res = applyCounts(input.request, base, tight ? { ...own, ...tight.counts } : own);
         rows.push({
-          d: r.repeat.damage, s: Math.round(r.repeat.silver),
-          td: res.summary.minDamage, ts: Math.round(res.summary.recovery.silver), tg: res.summary.recovery.gold,
+          d: r.repeat.damage,
+          s: Math.round(r.repeat.silver),
+          td: res.summary.minDamage,
+          ts: Math.round(res.summary.recovery.silver),
+          tg: res.summary.recovery.gold,
           tag: r.counts === shipped.counts ? 'SHIPPED' : '',
         });
       }
       for (const r of rows.sort((a, b) => b.td - a.td).slice(0, 14))
-        out.push(`  as-is ${String(r.d)} / ${String(r.s)}  ->  tight ${String(r.td)} / silver ${String(r.ts)} / gold ${String(r.tg)} ${r.tag}`);
+        out.push(
+          `  as-is ${String(r.d)} / ${String(r.s)}  ->  tight ${String(r.td)} / silver ${String(r.ts)} / gold ${String(r.tg)} ${r.tag}`,
+        );
       const sh = rows.find((r) => r.tag === 'SHIPPED');
-      if (sh) out.push(`  shipped: as-is ${String(sh.d)} / ${String(sh.s)} -> tight ${String(sh.td)} / silver ${String(sh.ts)} / gold ${String(sh.tg)}; rank by tight damage ${String(rows.indexOf(sh) + 1)} of ${String(rows.length)}`);
+      if (sh)
+        out.push(
+          `  shipped: as-is ${String(sh.d)} / ${String(sh.s)} -> tight ${String(sh.td)} / silver ${String(sh.ts)} / gold ${String(sh.tg)}; rank by tight damage ${String(rows.indexOf(sh) + 1)} of ${String(rows.length)}`,
+        );
     }
     writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
   }, 1_800_000);

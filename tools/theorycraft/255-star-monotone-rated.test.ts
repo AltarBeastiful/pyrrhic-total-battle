@@ -23,15 +23,27 @@ import { applyCounts } from '../../src/ui/sections/march/manual';
 import { positionTrades } from '../../src/ui/sections/march/positions';
 import { countsOf } from '../../src/ui/sections/march/raise';
 
-function tightOf(request: StackRequest, stopCounts: Record<string, number>): { counts: Record<string, number>; bill: Bill } {
+function tightOf(
+  request: StackRequest,
+  stopCounts: Record<string, number>,
+): { counts: Record<string, number>; bill: Bill } {
   const base: StackResult = planMarch(request, stopCounts).result;
   const own = countsOf(base);
   const tight = positionTrades(request, base, ['tight']).rows[0];
   const counts = { ...own, ...(tight?.counts ?? {}) };
   const { result, summary } = applyCounts(request, base, counts);
-  return { counts, bill: { damage: summary.minDamage, silver: summary.recovery.silver, gold: summary.recovery.gold, hired: hiredLost(result.stacks) } };
+  return {
+    counts,
+    bill: {
+      damage: summary.minDamage,
+      silver: summary.recovery.silver,
+      gold: summary.recovery.gold,
+      hired: hiredLost(result.stacks),
+    },
+  };
 }
-const show = (b: Bill): string => `dmg ${String(b.damage)} silver ${String(Math.round(b.silver ?? 0))} gold ${String(b.gold)} burn ${String(b.hired)}`;
+const show = (b: Bill): string =>
+  `dmg ${String(b.damage)} silver ${String(Math.round(b.silver ?? 0))} gold ${String(b.gold)} burn ${String(b.hired)}`;
 
 describe.skipIf(!process.env.THEORY)('255 — star monotone, rated', () => {
   it('rates the ★0 merc saver under ★1', () => {
@@ -54,7 +66,9 @@ describe.skipIf(!process.env.THEORY)('255 — star monotone, rated', () => {
       const own0 = tightOf(z.input.request, zs.counts);
       out.push(`[${pick}] ★0 own: ${show(own0.bill)}`);
       out.push(`[${pick}] ★1 own: ${show(own1.bill)}`);
-      out.push(`[${pick}] ★0's stop under ★1: ${show(old1.bill)}  rating vs ★1 own: ${rate(own1.bill, old1.bill, CAMPAIGN.markerRates).toFixed(2)}`);
+      out.push(
+        `[${pick}] ★0's stop under ★1: ${show(old1.bill)}  rating vs ★1 own: ${rate(own1.bill, old1.bill, CAMPAIGN.markerRates).toFixed(2)}`,
+      );
     }
     writeFileSync(process.env.OUTF ?? '/dev/stdout', out.join('\n') + '\n');
   }, 1_800_000);

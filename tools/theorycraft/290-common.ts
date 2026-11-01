@@ -31,9 +31,18 @@ export const proxyKernel: RaiseKernel = createRaiseKernel(module, { ...EXACT_DEF
 const MODES = { authority: RAISE_TIGHT, dominance: RAISE_TIGHT };
 export const useFull = (): void => setRaiseKernel(fullKernel);
 
-export const key = (c: Record<string, number>): string => JSON.stringify(Object.entries(c).filter(([, v]) => v > 0).sort());
+export const key = (c: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .sort(),
+  );
 
-export interface TB { bill: Bill; ms: number; counts: Record<string, number> }
+export interface TB {
+  bill: Bill;
+  ms: number;
+  counts: Record<string, number>;
+}
 /** The Tight-raised bill of a count vector under one kernel. */
 export function tight(kernel: RaiseKernel, request: StackRequest, counts: Record<string, number>): TB {
   const t = performance.now();
@@ -44,7 +53,14 @@ export function tight(kernel: RaiseKernel, request: StackRequest, counts: Record
   const ms = performance.now() - t;
   const { result, summary } = applyCounts(request, base, { ...own, ...raised });
   return {
-    bill: { damage: summary.minDamage, silver: summary.recovery.silver, gold: summary.recovery.gold, hired: hiredLost(result.stacks), dragonCoins: summary.recovery.dragonCoins, seconds: summary.recovery.seconds },
+    bill: {
+      damage: summary.minDamage,
+      silver: summary.recovery.silver,
+      gold: summary.recovery.gold,
+      hired: hiredLost(result.stacks),
+      dragonCoins: summary.recovery.dragonCoins,
+      seconds: summary.recovery.seconds,
+    },
     ms,
     counts: { ...own, ...raised },
   };
@@ -60,9 +76,17 @@ export function accountInput(star: number): CampaignInput {
 
 export const STOPS = ['burn-saver', 'silver-saver', 'sweet-spot'];
 
-export interface Cand { counts: Record<string, number>; pre: number }
+export interface Cand {
+  counts: Record<string, number>;
+  pre: number;
+}
 /** Frontier shapes at the stop's burn, re-typed (tierCandidate), distinct, with their pre-Tight rating vs the shipped stop. */
-export function frontierCands(input: CampaignInput, frontier: { counts: Record<string, number>; repeat: { mercLost: number } }[], stopCounts: Record<string, number>, burn: number): { cands: Cand[]; shapes: number; ms: number } {
+export function frontierCands(
+  input: CampaignInput,
+  frontier: { counts: Record<string, number>; repeat: { mercLost: number } }[],
+  stopCounts: Record<string, number>,
+  burn: number,
+): { cands: Cand[]; shapes: number; ms: number } {
   const t = performance.now();
   const shippedPre = marchBill(input.request, stopCounts);
   const shapes = new Map<string, Record<string, number>>();
@@ -90,10 +114,28 @@ export function structOf(request: StackRequest, counts: Record<string, number>):
   const t = result.stacks.filter((s) => s.pool === 'leadership').sort((a, b) => b.totalHp - a.totalHp);
   const hired: Record<string, number> = {};
   for (const s of result.stacks) if (s.pool !== 'leadership') hired[s.unitId] = s.count;
-  return { troops: t.map((s) => s.unitId), hp: t.map((s) => Math.round(s.totalHp)), hired, burn: hiredLost(result.stacks) };
+  return {
+    troops: t.map((s) => s.unitId),
+    hp: t.map((s) => Math.round(s.totalHp)),
+    hired,
+    burn: hiredLost(result.stacks),
+  };
 }
-export const typeTable = (request: StackRequest): Map<string, { tier: number; cat: string; group: string; hp: number; dpu: number }> =>
-  new Map(effectiveTable(request).map((e) => [e.id, { tier: e.unit.tier, cat: String(e.unit.category), group: String(e.unit.group), hp: e.hp, dpu: e.damagePerUnit }]));
+export const typeTable = (
+  request: StackRequest,
+): Map<string, { tier: number; cat: string; group: string; hp: number; dpu: number }> =>
+  new Map(
+    effectiveTable(request).map((e) => [
+      e.id,
+      {
+        tier: e.unit.tier,
+        cat: String(e.unit.category),
+        group: String(e.unit.group),
+        hp: e.hp,
+        dpu: e.damagePerUnit,
+      },
+    ]),
+  );
 export { planCampaign, planMarch, rate, marchBill, retypeMarch, CAMPAIGN };
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -102,7 +144,11 @@ export { planCampaign, planMarch, rate, marchBill, retypeMarch, CAMPAIGN };
 import { buildKillOrder } from '../../src/engine/killOrder';
 import { rankTroops } from '../../src/engine/plan';
 
-export interface Archetype { counts: Record<string, number>; seed: string; perm: string[] }
+export interface Archetype {
+  counts: Record<string, number>;
+  seed: string;
+  perm: string[];
+}
 
 /**
  * Archetypes of a stop: the stop's own structure (its hired stacks of every pool but leadership, its troop slots and
@@ -111,7 +157,11 @@ export interface Archetype { counts: Record<string, number>; seed: string; perm:
  * each seed, every single swap of two slots, plus the adjacent double swaps of the ranking seed.
  * Each type is sized to at least its slot's HP (retype's `build`), the leadership must fit.
  */
-export function archetypes(request: StackRequest, stopCounts: Record<string, number>, opts: { cap?: number } = {}): Archetype[] {
+export function archetypes(
+  request: StackRequest,
+  stopCounts: Record<string, number>,
+  opts: { cap?: number } = {},
+): Archetype[] {
   const table = effectiveTable(request).filter((e) => e.pool === 'leadership');
   const { result } = planMarch(request, stopCounts);
   const troop = result.stacks.filter((s) => s.pool === 'leadership');
@@ -129,7 +179,11 @@ export function archetypes(request: StackRequest, stopCounts: Record<string, num
   };
   const rankMap = new Map(rankTroops(effectiveTable(request)).map((e, i) => [e.id, i]));
   const tierMap = new Map(buildKillOrder(request.units, request.options).map((id, i) => [id, i]));
-  const seeds: [string, string[]][] = [['rank', lay(rankMap)], ['tier', lay(tierMap)], ['asis', asIs]];
+  const seeds: [string, string[]][] = [
+    ['rank', lay(rankMap)],
+    ['tier', lay(tierMap)],
+    ['asis', asIs],
+  ];
   const byId = new Map(table.map((e) => [e.id, e]));
   const seen = new Set<string>();
   const out: Archetype[] = [];
@@ -147,24 +201,37 @@ export function archetypes(request: StackRequest, stopCounts: Record<string, num
     });
     if (lead <= request.housing.leadership) out.push({ counts: next, seed, perm });
   };
-  const swapped = (p: string[], a: number, b: number): string[] => { const q = [...p]; [q[a], q[b]] = [q[b]!, q[a]!]; return q; };
+  const swapped = (p: string[], a: number, b: number): string[] => {
+    const q = [...p];
+    [q[a], q[b]] = [q[b]!, q[a]!];
+    return q;
+  };
   for (const [name, p] of seeds) {
     add(name, p);
     // Swaps are by position in HP order (biggest slot first), so a swap moves a type one rank up or down.
     const ord = bySlot;
-    for (let a = 0; a < k; a += 1) for (let b = a + 1; b < k; b += 1) add(`${name}~swap`, swapped(p, ord[a]!, ord[b]!));
+    for (let a = 0; a < k; a += 1)
+      for (let b = a + 1; b < k; b += 1) add(`${name}~swap`, swapped(p, ord[a]!, ord[b]!));
   }
   const rp = seeds[0]![1];
-  for (let a = 0; a + 1 < k; a += 1) for (let b = a + 2; b + 1 < k; b += 1)
-    add('rank~adj2', swapped(swapped(rp, bySlot[a]!, bySlot[a + 1]!), bySlot[b]!, bySlot[b + 1]!));
+  for (let a = 0; a + 1 < k; a += 1)
+    for (let b = a + 2; b + 1 < k; b += 1)
+      add('rank~adj2', swapped(swapped(rp, bySlot[a]!, bySlot[a + 1]!), bySlot[b]!, bySlot[b + 1]!));
   return opts.cap ? out.slice(0, opts.cap) : out;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // Generator 2 (292): type sets x slot shapes, each laid in ranking order then re-typed by the production climb.
 // ---------------------------------------------------------------------------------------------------------------
-export interface Arch2 { counts: Record<string, number>; label: string }
-export function archetypes2(request: StackRequest, stopCounts: Record<string, number>, opts: { retype?: boolean; maxDrop?: number; ball?: boolean } = {}): Arch2[] {
+export interface Arch2 {
+  counts: Record<string, number>;
+  label: string;
+}
+export function archetypes2(
+  request: StackRequest,
+  stopCounts: Record<string, number>,
+  opts: { retype?: boolean; maxDrop?: number; ball?: boolean } = {},
+): Arch2[] {
   const table = effectiveTable(request).filter((e) => e.pool === 'leadership');
   const { result } = planMarch(request, stopCounts);
   const troop = result.stacks.filter((s) => s.pool === 'leadership').sort((a, b) => b.totalHp - a.totalHp);
@@ -185,11 +252,15 @@ export function archetypes2(request: StackRequest, stopCounts: Record<string, nu
     ['tier', [...table].sort((a, b) => a.unit.tier - b.unit.tier || a.rank - b.rank)],
   ];
   const sets = new Map<string, { ids: string[]; tag: string }>();
-  for (const [tag, ord] of orders) for (let t = 0; t <= maxDrop; t += 1) {
-    const drop = new Set(ord.slice(0, t).map((e) => e.id));
-    const ids = table.filter((e) => !drop.has(e.id)).map((e) => e.id).sort();
-    if (!sets.has(ids.join(','))) sets.set(ids.join(','), { ids, tag: `${tag}-${String(t)}` });
-  }
+  for (const [tag, ord] of orders)
+    for (let t = 0; t <= maxDrop; t += 1) {
+      const drop = new Set(ord.slice(0, t).map((e) => e.id));
+      const ids = table
+        .filter((e) => !drop.has(e.id))
+        .map((e) => e.id)
+        .sort();
+      if (!sets.has(ids.join(','))) sets.set(ids.join(','), { ids, tag: `${tag}-${String(t)}` });
+    }
   // the stop's own type set too
   const own = troop.map((s) => s.unitId).sort();
   if (!sets.has(own.join(','))) sets.set(own.join(','), { ids: own, tag: 'own' });
@@ -198,8 +269,9 @@ export function archetypes2(request: StackRequest, stopCounts: Record<string, nu
     const mean = v.reduce((a, b) => a + b, 0) / v.length;
     return Array.from({ length: k2 }, (_, j) => {
       const x = k2 === 1 ? 0 : (j * (v.length - 1)) / (k2 - 1);
-      const lo = Math.floor(x), hi = Math.min(v.length - 1, lo + 1);
-      return ((v[lo]! * (1 - (x - lo)) + v[hi]! * (x - lo)) / mean);
+      const lo = Math.floor(x),
+        hi = Math.min(v.length - 1, lo + 1);
+      return (v[lo]! * (1 - (x - lo)) + v[hi]! * (x - lo)) / mean;
     });
   };
   const flat = (k2: number): number[] => Array.from({ length: k2 }, (_, j) => 1 - RANK_SPREAD_ * j);
@@ -209,20 +281,40 @@ export function archetypes2(request: StackRequest, stopCounts: Record<string, nu
   const byId = new Map(table.map((e) => [e.id, e]));
   const legalPools = (counts: Record<string, number>): boolean => {
     const p = planMarch(request, counts).result.pools;
-    return p.leadership.used <= p.leadership.capacity && p.authority.used <= p.authority.capacity && p.dominance.used <= p.dominance.capacity;
+    return (
+      p.leadership.used <= p.leadership.capacity &&
+      p.authority.used <= p.authority.capacity &&
+      p.dominance.used <= p.dominance.capacity
+    );
   };
-  for (const { ids, tag, hired, hTag } of [...sets.values()].flatMap((x) => [{ ...x, hired: hired0, hTag: 'H0' }, { ...x, hired: hiredFloor, hTag: 'Hf' }])) {
+  for (const { ids, tag, hired, hTag } of [...sets.values()].flatMap((x) => [
+    { ...x, hired: hired0, hTag: 'H0' },
+    { ...x, hired: hiredFloor, hTag: 'Hf' },
+  ])) {
     const perm = [...ids].sort((a, b) => (rankMap.get(a) ?? 99) - (rankMap.get(b) ?? 99));
-    for (const [shapeTag, shape] of [['own', resample(ids.length)], ['flat', flat(ids.length)]] as const) {
+    for (const [shapeTag, shape] of [
+      ['own', resample(ids.length)],
+      ['flat', flat(ids.length)],
+    ] as const) {
       // largest H such that the ranking-order lay fits the leadership
       const build = (H: number): { counts: Record<string, number>; lead: number } => {
         const counts: Record<string, number> = { ...hired };
         let lead = 0;
-        perm.forEach((id, slot) => { const t = byId.get(id)!; const c = Math.ceil((H * shape[slot]!) / t.hp); counts[id] = c; lead += c * t.cost; });
+        perm.forEach((id, slot) => {
+          const t = byId.get(id)!;
+          const c = Math.ceil((H * shape[slot]!) / t.hp);
+          counts[id] = c;
+          lead += c * t.cost;
+        });
         return { counts, lead };
       };
-      let lo = 0, hi = 1e7;
-      for (let i = 0; i < 60; i += 1) { const mid = (lo + hi) / 2; if (build(mid).lead <= L) lo = mid; else hi = mid; }
+      let lo = 0,
+        hi = 1e7;
+      for (let i = 0; i < 60; i += 1) {
+        const mid = (lo + hi) / 2;
+        if (build(mid).lead <= L) lo = mid;
+        else hi = mid;
+      }
       const b = build(lo);
       const sig = key(b.counts);
       if (seen.has(sig)) continue;
@@ -230,7 +322,10 @@ export function archetypes2(request: StackRequest, stopCounts: Record<string, nu
       if (legalPools(b.counts)) out.push({ counts: b.counts, label: `${tag}/${shapeTag}/${hTag}` });
       if (opts.retype !== false) {
         const found = retypeMarch(request, b.counts, CAMPAIGN.putBack.rates, { tierCandidate: true });
-        if (found && !seen.has(key(found.counts)) && legalPools(found.counts)) { seen.add(key(found.counts)); out.push({ counts: found.counts, label: `${tag}/${shapeTag}/${hTag}+retype` }); }
+        if (found && !seen.has(key(found.counts)) && legalPools(found.counts)) {
+          seen.add(key(found.counts));
+          out.push({ counts: found.counts, label: `${tag}/${shapeTag}/${hTag}+retype` });
+        }
       }
       if (opts.ball === true && hTag === 'Hf' && (tag === 'dpl-0' || tag === 'own')) {
         // The ball: the same slots with the types laid in S-22's kill order and in the ranking's order, and every single swap of two slots.
@@ -238,14 +333,27 @@ export function archetypes2(request: StackRequest, stopCounts: Record<string, nu
         const hp = (id: string): number => byId.get(id)!.hp;
         void hp;
         const killRank = new Map(buildKillOrder(request.units, request.options).map((id, i) => [id, i]));
-        const lays: [string, string[]][] = [['tier', [...ids].sort((a, c) => (killRank.get(a) ?? 99) - (killRank.get(c) ?? 99))], ['rank', perm]];
+        const lays: [string, string[]][] = [
+          ['tier', [...ids].sort((a, c) => (killRank.get(a) ?? 99) - (killRank.get(c) ?? 99))],
+          ['rank', perm],
+        ];
         for (const [lt, base] of lays) {
           const candidates: string[][] = [base];
-          for (let a = 0; a < base.length; a += 1) for (let c = a + 1; c < base.length; c += 1) { const q = [...base]; [q[a], q[c]] = [q[c]!, q[a]!]; candidates.push(q); }
+          for (let a = 0; a < base.length; a += 1)
+            for (let c = a + 1; c < base.length; c += 1) {
+              const q = [...base];
+              [q[a], q[c]] = [q[c]!, q[a]!];
+              candidates.push(q);
+            }
           for (const q of candidates) {
             const counts: Record<string, number> = { ...hired };
             let lead = 0;
-            q.forEach((id, slot) => { const t = byId.get(id)!; const c = Math.ceil((lo * shape[slot]!) / t.hp); counts[id] = c; lead += c * t.cost; });
+            q.forEach((id, slot) => {
+              const t = byId.get(id)!;
+              const c = Math.ceil((lo * shape[slot]!) / t.hp);
+              counts[id] = c;
+              lead += c * t.cost;
+            });
             void slotOrder;
             const sg = key(counts);
             if (lead > L || seen.has(sg) || !legalPools(counts)) continue;

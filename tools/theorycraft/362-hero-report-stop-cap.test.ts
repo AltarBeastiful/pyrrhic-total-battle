@@ -41,7 +41,10 @@ const SUBSETS: { label: string; picks: PlanPick[][] }[] = [
   // Each entry is a list of alternatives: the first pick present in the bar is used.
   { label: 'sweet only', picks: [['sweet-spot']] },
   { label: 'ends (saver + all-in)', picks: [['silver-saver', 'burn-saver'], ['all-in']] },
-  { label: 'three (saver · sweet · all-in)', picks: [['silver-saver', 'burn-saver'], ['sweet-spot'], ['all-in']] },
+  {
+    label: 'three (saver · sweet · all-in)',
+    picks: [['silver-saver', 'burn-saver'], ['sweet-spot'], ['all-in']],
+  },
   { label: 'sweet + steady max', picks: [['sweet-spot'], ['steady-max']] },
 ];
 
@@ -55,31 +58,48 @@ function load(file: string): { profile: Profile; setup: BattleSetup } | null {
 }
 
 const topSolo = (report: HeroReport, n: number): string[] =>
-  [...report.tiles].sort((a, b) => b.solo - a.solo).slice(0, n).map((tile) => tile.captainId);
-const trioKey = (ids: readonly string[] | null | undefined): string => (ids === null || ids === undefined ? '—' : [...ids].sort().join('+'));
+  [...report.tiles]
+    .sort((a, b) => b.solo - a.solo)
+    .slice(0, n)
+    .map((tile) => tile.captainId);
+const trioKey = (ids: readonly string[] | null | undefined): string =>
+  ids === null || ids === undefined ? '—' : [...ids].sort().join('+');
 const f = (value: number, digits = 2): string => value.toFixed(digits);
 
 describe.skipIf(!process.env.THEORY)('362 — hero report stop cap', () => {
   it('subsets against the full bar on the owner accounts', async () => {
     const lines: string[] = ['# 362 — the hero report on fewer stops', ''];
-    const total: Record<string, { n: number; trio: number; top10: number; top1: number; seconds: number }> = {};
+    const total: Record<string, { n: number; trio: number; top10: number; top1: number; seconds: number }> =
+      {};
     for (const file of FILES) {
       const one = load(file);
       if (one === null) {
         lines.push(`## ${file}`, '', 'not found.', '');
         continue;
       }
-      const pool = createCalcPool({ size: 1, createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }) });
+      const pool = createCalcPool({
+        size: 1,
+        createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }),
+      });
       try {
         const input = buildPlanRequest(one.profile, one.setup);
         const { currentKey, lineups } = captainLineups(one.profile, one.setup);
-        const advice = await runCaptainAdvice(input, lineups.map(({ key, totals }) => ({ key, totals })), currentKey, pool, { budgetMs: NO_CLOCK });
+        const advice = await runCaptainAdvice(
+          input,
+          lineups.map(({ key, totals }) => ({ key, totals })),
+          currentKey,
+          pool,
+          { budgetMs: NO_CLOCK },
+        );
         const lead = leadLineup(advice.best, currentKey);
         const candidate = lineups.find((trio) => trio.key === lead);
         const bar = advice.plans[lead];
         if (candidate === undefined || bar === undefined) throw new Error('no lead lineup');
         lines.push(`## ${file}`, '', `Bar: ${bar.map((stop) => stop.pick).join(' · ')}.`, '');
-        lines.push('| subset | stops | seconds | best trio same | top-10 same | top-1 same | trio gain (full → subset) |', '|---|---|---|---|---|---|---|');
+        lines.push(
+          '| subset | stops | seconds | best trio same | top-10 same | top-1 same | trio gain (full → subset) |',
+          '|---|---|---|---|---|---|---|',
+        );
         let reference: HeroReport | null = null;
         for (const subset of SUBSETS) {
           const stops =
@@ -90,13 +110,22 @@ describe.skipIf(!process.env.THEORY)('362 — hero report stop cap', () => {
                   return hit === undefined ? [] : [hit];
                 });
           const began = performance.now();
-          const report = await runHeroReport(input, { key: lead, totals: candidate.totals, stops }, heroRoster(one.profile, one.setup), pool, { budgetMs: NO_CLOCK });
+          const report = await runHeroReport(
+            input,
+            { key: lead, totals: candidate.totals, stops },
+            heroRoster(one.profile, one.setup),
+            pool,
+            { budgetMs: NO_CLOCK },
+          );
           const seconds = (performance.now() - began) / 1000;
           if (reference === null) reference = report;
           const rows = reference.situations.map((ref) => {
             const sit = report.situations.find((s) => s.id === ref.id);
             const top = (row: typeof ref | undefined): string[] =>
-              Object.entries(row?.solo ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id]) => id);
+              Object.entries(row?.solo ?? {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([id]) => id);
             const a = top(ref);
             const b = top(sit);
             return {
@@ -134,9 +163,16 @@ describe.skipIf(!process.env.THEORY)('362 — hero report stop cap', () => {
         pool.dispose();
       }
     }
-    lines.push('## Totals over all accounts and situations', '', '| subset | situations | best trio | top-10 | top-1 | seconds |', '|---|---|---|---|---|---|');
+    lines.push(
+      '## Totals over all accounts and situations',
+      '',
+      '| subset | situations | best trio | top-10 | top-1 | seconds |',
+      '|---|---|---|---|---|---|',
+    );
     for (const [label, acc] of Object.entries(total))
-      lines.push(`| ${label} | ${String(acc.n)} | ${f((100 * acc.trio) / acc.n, 0)} % | ${f((100 * acc.top10) / acc.n, 0)} % | ${f((100 * acc.top1) / acc.n, 0)} % | ${f(acc.seconds, 1)} |`);
+      lines.push(
+        `| ${label} | ${String(acc.n)} | ${f((100 * acc.trio) / acc.n, 0)} % | ${f((100 * acc.top10) / acc.n, 0)} % | ${f((100 * acc.top1) / acc.n, 0)} % | ${f(acc.seconds, 1)} |`,
+      );
     writeFileSync(OUT, lines.join('\n'));
     console.log(lines.join('\n'));
     expect(Object.keys(total).length).toBeGreaterThan(0);
