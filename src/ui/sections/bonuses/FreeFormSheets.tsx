@@ -11,6 +11,7 @@ import { removePermanentSource, removeSourceEntry, updateSources } from '@/state
 import type { Profile, ProfileSources } from '@/state/schema';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
+import { PERMANENT_SCOPE } from './scopes';
 import { PERMANENT_WHERE, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { SourceSheet } from './SourceSheet';
@@ -70,6 +71,9 @@ export function PermanentSheet({ profile, entryId, summary, onClose }: FreeFormP
         )}
         <BonusKeyGrid
           value={readBonusValues(entry)}
+          {...(entry.builtin !== undefined && PERMANENT_SCOPE[entry.builtin] !== undefined
+            ? { scope: PERMANENT_SCOPE[entry.builtin] }
+            : {})}
           onChange={(next) => {
             patch((current) => applyBonusValues(current, next));
           }}

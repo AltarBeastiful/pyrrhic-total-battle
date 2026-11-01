@@ -28,9 +28,20 @@ export interface BonusValues {
   special?: SpecialMap;
 }
 
+/**
+ * The keys a source can really carry. Omitted = all of them. A key that already holds a value is
+ * shown whatever this says, so narrowing the grid never hides a number that still counts.
+ */
+export interface BonusKeyScope {
+  health: readonly BonusKey[];
+  strength: readonly BonusKey[];
+  special: readonly SpecialKey[];
+}
+
 export interface BonusKeyGridProps {
   value: BonusValues;
   onChange: (next: BonusValues) => void;
+  scope?: BonusKeyScope;
 }
 
 /** Sets or clears one key; an empty field removes the key instead of storing a 0. */
@@ -45,7 +56,13 @@ function setKey<K extends string>(
   return next;
 }
 
-export function BonusKeyGrid({ value, onChange }: BonusKeyGridProps) {
+export function BonusKeyGrid({ value, onChange, scope }: BonusKeyGridProps) {
+  const shown = <K extends string>(
+    all: readonly K[],
+    allowed: readonly K[] | undefined,
+    held: Partial<Record<K, number>> | undefined,
+  ) => all.filter((key) => allowed === undefined || allowed.includes(key) || held?.[key] !== undefined);
+
   const bonusField = (bucket: 'health' | 'strength', key: BonusKey) => (
     <NumberField
       key={`${bucket}-${key}`}
@@ -60,34 +77,38 @@ export function BonusKeyGrid({ value, onChange }: BonusKeyGridProps) {
     />
   );
 
+  const specialKeys = shown(SPECIAL_KEYS, scope?.special, value.special);
+
   return (
     <Stack gap="lg">
       <FieldGroup label="Health, in percent">
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
-          {BONUS_KEYS.map((key) => bonusField('health', key))}
+          {shown(BONUS_KEYS, scope?.health, value.health).map((key) => bonusField('health', key))}
         </SimpleGrid>
       </FieldGroup>
       <FieldGroup label="Strength, in percent">
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
-          {BONUS_KEYS.map((key) => bonusField('strength', key))}
+          {shown(BONUS_KEYS, scope?.strength, value.strength).map((key) => bonusField('strength', key))}
         </SimpleGrid>
       </FieldGroup>
-      <Disclosure title="Special strength" summary="Double damage and second strikes">
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
-          {SPECIAL_KEYS.map((key: SpecialKey) => (
-            <NumberField
-              key={key}
-              label={SPECIAL_LABELS[key]}
-              allowEmpty
-              allowDecimal
-              value={value.special?.[key] ?? null}
-              onChange={(next) => {
-                onChange({ ...value, special: setKey(value.special ?? {}, key, next) });
-              }}
-            />
-          ))}
-        </SimpleGrid>
-      </Disclosure>
+      {specialKeys.length > 0 && (
+        <Disclosure title="Special strength" summary="Double damage and second strikes">
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+            {specialKeys.map((key: SpecialKey) => (
+              <NumberField
+                key={key}
+                label={SPECIAL_LABELS[key]}
+                allowEmpty
+                allowDecimal
+                value={value.special?.[key] ?? null}
+                onChange={(next) => {
+                  onChange({ ...value, special: setKey(value.special ?? {}, key, next) });
+                }}
+              />
+            ))}
+          </SimpleGrid>
+        </Disclosure>
+      )}
     </Stack>
   );
 }
