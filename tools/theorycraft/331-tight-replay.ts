@@ -5,16 +5,28 @@
  * the build has them.
  */
 /// <reference types="node" />
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 import { CAMPAIGN } from '../../src/config';
 import type { RaiseInput } from '../../src/engine/fast';
 import type { StackRequest, StackResult } from '../../src/engine/types';
+import { compileKernel } from '../../src/kernel';
 import { packRequest } from '../../src/kernel/pack';
 import { EXACT_DEFAULTS } from '../../src/kernel/raise';
 
 export const SCRATCH =
   '/tmp/claude-1000/-home-remi-projects-pyrrhic-totalbattle/ddd23d57-5930-4d86-868e-64846315b06c/scratchpad/tx';
+
+/**
+ * A scratch kernel build (`KX`, else `${SCRATCH}/<name>`), compiled only under `THEORY` so that a plain collection
+ * never needs the machine-local file; a missing build then fails with a message instead of an ENOENT at import.
+ */
+export function scratchKernel(name: string): WebAssembly.Module {
+  if (!process.env.THEORY) return null as unknown as WebAssembly.Module;
+  const path = process.env.KX ?? `${SCRATCH}/${name}`;
+  if (!existsSync(path)) throw new Error(`scratch kernel ${path} not found: build it and set KX=<wasm>`);
+  return compileKernel(readFileSync(path));
+}
 
 export interface Call {
   src: string;

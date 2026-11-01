@@ -12,11 +12,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
-import { compileKernel } from '../../src/kernel';
+import { Bound, loadCorpus, SCRATCH, scratchKernel } from './331-tight-replay';
 
-import { Bound, loadCorpus, SCRATCH } from './331-tight-replay';
-
-const kx = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx3.wasm`));
+const kx = scratchKernel('kx3.wasm');
 const q = (xs: number[], p: number) =>
   [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] ?? NaN;
 

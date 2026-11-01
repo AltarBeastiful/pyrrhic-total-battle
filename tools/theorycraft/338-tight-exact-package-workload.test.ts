@@ -18,7 +18,6 @@ import { setRaiseKernel, type RaiseKernel } from '../../src/engine/fast';
 import type { CampaignInput } from '../../src/engine/plan';
 import { genericProbes } from '../../src/engine/probes';
 import type { StackResult } from '../../src/engine/types';
-import { compileKernel } from '../../src/kernel';
 import { parseImport } from '../../src/share/exportImport';
 import { captainLineups } from '../../src/state/captainLineups';
 import { captainUpgradeCandidates } from '../../src/state/captainUpgrades';
@@ -35,11 +34,11 @@ import { createCalcPool } from '../../src/worker/pool';
 
 import { loadKernelModule } from '../../tests/kernel/load';
 
-import { Bound, SCRATCH } from './331-tight-replay';
+import { Bound, scratchKernel } from './331-tight-replay';
 
 const NO_CLOCK = 1_000_000_000;
 const repo = loadKernelModule();
-const cand = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx8h.wasm`));
+const cand = scratchKernel('kx8h.wasm');
 const ALGO = Number(process.env.ALGO ?? 22);
 const RM = Number(process.env.RM ?? 1);
 

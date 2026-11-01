@@ -14,12 +14,11 @@
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
-import { compileKernel } from '../../src/kernel';
 import { loadKernelModule } from '../../tests/kernel/load';
 
-import { Bound, loadCorpus, sameCounts, SCRATCH } from './331-tight-replay';
+import { Bound, loadCorpus, sameCounts, SCRATCH, scratchKernel } from './331-tight-replay';
 
-const kx = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx1.wasm`));
+const kx = scratchKernel('kx1.wasm');
 /** `REFKX=repo`: the shipped reference runs on the repo's own release kernel instead of the scratch build at algo 0. */
 const refMod = process.env.REFKX === 'repo' ? loadKernelModule() : kx;
 

@@ -18,13 +18,12 @@
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
-import { compileKernel } from '../../src/kernel';
 import { loadKernelModule } from '../../tests/kernel/load';
 
-import { Bound, loadCorpus, sameCounts, SCRATCH } from './331-tight-replay';
+import { Bound, loadCorpus, sameCounts, SCRATCH, scratchKernel } from './331-tight-replay';
 
 const repo = loadKernelModule();
-const kx = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx0.wasm`));
+const kx = scratchKernel('kx0.wasm');
 
 describe.skipIf(!process.env.THEORY)('332 — shipped Tight baseline and objective shape', () => {
   it('measures', () => {

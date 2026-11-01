@@ -9,11 +9,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
 
-import { compileKernel } from '../../src/kernel';
+import { Bound, loadCorpus, SCRATCH, scratchKernel } from './331-tight-replay';
 
-import { Bound, loadCorpus, SCRATCH } from './331-tight-replay';
-
-const kx = compileKernel(readFileSync(process.env.KX ?? `${SCRATCH}/kx1.wasm`));
+const kx = scratchKernel('kx1.wasm');
 
 describe.skipIf(!process.env.THEORY)('334 — Tight box census', () => {
   it('counts', () => {
