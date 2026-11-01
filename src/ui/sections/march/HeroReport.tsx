@@ -83,8 +83,15 @@ function Matrix({ report }: { report: HeroReport }) {
   const name = (id: string | null): string => report.tiles.find((tile) => tile.captainId === id)?.name ?? '—';
   const shown = report.tiles.filter((tile) => tile.matters);
   return (
-    <Table.ScrollContainer minWidth={420}>
-      <Table withTableBorder withColumnBorders data-testid="hero-matrix">
+    <Table.ScrollContainer minWidth={360}>
+      <Table
+        withTableBorder
+        withColumnBorders
+        verticalSpacing={4}
+        horizontalSpacing="xs"
+        fz="sm"
+        data-testid="hero-matrix"
+      >
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Solo score</Table.Th>
@@ -273,7 +280,7 @@ export function HeroReportDialog({ view }: { view: HeroView }) {
         view.setOpen(false);
       }}
       title="Heroes report"
-      size="full"
+      size="xl"
     >
       <Stack gap="md" data-testid="hero-report">
         {entry !== null && <Status entry={entry} onCancel={view.cancel} />}

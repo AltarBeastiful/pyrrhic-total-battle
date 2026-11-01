@@ -26,12 +26,12 @@ export interface DialogProps {
   children?: ReactNode;
   /** The row of buttons at the foot: the confirmation and the way out. */
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** `alertdialog` is the variant that interrupts: no overlay dismissal, no Escape. */
   role?: 'dialog' | 'alertdialog';
 }
 
-const SIZE = { sm: '22rem', md: '30rem', lg: '40rem', full: '100%' } as const;
+const SIZE = { sm: '22rem', md: '30rem', lg: '40rem', xl: '64rem', full: '100%' } as const;
 
 /**
  * One step above a `Sheet` (`LAYERS.sheet`): a dialog is the one thing allowed to interrupt one —

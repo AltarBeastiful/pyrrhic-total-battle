@@ -5,6 +5,7 @@
  * is never the only signal).
  */
 import { Badge, Group, Paper, SimpleGrid, Stack, Text, Tooltip } from '@mantine/core';
+import { useElementSize } from '@mantine/hooks';
 
 import type { ChampionTile, GridRating, HeroChampion, Tier, Valley } from '@/engine/heroChampion';
 import { Disclosure } from '@/ui/kit';
@@ -23,8 +24,9 @@ function valleyWords(valley: Valley): string {
     : `${starName(valley.dip)} loses ${loss}: don't star past ${starName(valley.from)}`;
 }
 
-const W = 160;
-const H = 44;
+/** The width a chart is drawn at before its box has been measured (and under jsdom, which never measures). */
+const FALLBACK_W = 160;
+const H = 40;
 
 /** Which points of the road earn a visible marker, and why: where it starts, its peak, where it dips. */
 function markerKinds(values: number[]): Map<number, string> {
@@ -50,26 +52,29 @@ function Curve({
   road,
   colour: lineColour,
   range,
+  width: W,
 }: {
   tile: ChampionTile;
   points: GridRating[];
   road: 'star' | 'level';
   colour: string;
   range: { low: number; high: number };
+  width: number;
 }) {
   if (points.length < 2) return null;
   const values = points.map((point) => point.rating);
   const low = range.low;
   const span = Math.max(1e-9, range.high - low);
-  const x = (index: number): number => 5 + (index * (W - 10)) / (points.length - 1);
-  const y = (value: number): number => H - 5 - ((value - low) * (H - 10)) / span;
+  const x = (index: number): number => 8 + (index * (W - 16)) / (points.length - 1);
+  const y = (value: number): number => H - 8 - ((value - low) * (H - 16)) / span;
   const line = points.map((point, index) => `${x(index).toFixed(1)},${y(point.rating).toFixed(1)}`).join(' ');
   const kinds = markerKinds(values);
   return (
     <svg
       viewBox={`0 0 ${String(W)} ${String(H)}`}
-      width="100%"
-      style={{ maxWidth: W * 1.25, display: 'block' }}
+      width={W}
+      height={H}
+      style={{ display: 'block' }}
       role="img"
       aria-label={`${road === 'star' ? 'Star' : 'Level'} road, rating from ${at(points[0]!)} to ${at(points.at(-1)!)}`}
     >
@@ -91,16 +96,19 @@ function Curve({
             key={`${road}-${String(point.star)}-${String(point.level)}`}
             label={`${kind === undefined ? '' : `${kind} · `}${at(point)} · rating ${point.rating.toFixed(1)}${step === null ? '' : ` (${signed(step)} from the step before)`}`}
           >
-            <circle
-              cx={x(index)}
-              cy={y(point.rating)}
-              r={kind === undefined ? 2 : 4}
-              fill={colour}
-              stroke="var(--mantine-color-body)"
-              strokeWidth={1}
-              data-testid={`champion-${road}-point-${tile.captainId}-${String(index)}`}
-              style={{ cursor: 'pointer' }}
-            />
+            <g style={{ cursor: 'pointer' }}>
+              {/* A wider invisible disc around the dot, so a fingertip or a mouse finds it. */}
+              <circle cx={x(index)} cy={y(point.rating)} r={9} fill="transparent" />
+              <circle
+                cx={x(index)}
+                cy={y(point.rating)}
+                r={kind === undefined ? 3.5 : 5.5}
+                fill={colour}
+                stroke="var(--mantine-color-body)"
+                strokeWidth={1}
+                data-testid={`champion-${road}-point-${tile.captainId}-${String(index)}`}
+              />
+            </g>
           </Tooltip>
         );
       })}
@@ -110,11 +118,14 @@ function Curve({
 
 /** The star road (blue) and the level road (teal) of a tile, on one height scale, each named. */
 function Roads({ tile }: { tile: ChampionTile }) {
+  // The charts are drawn at the box's own width, so the tile has no empty strip on its right.
+  const { ref, width } = useElementSize();
+  const drawn = width > 0 ? Math.floor(width) : FALLBACK_W;
   const all = [...tile.starPath, ...tile.levelPath].map((point) => point.rating);
   if (all.length === 0) return null;
   const range = { low: Math.min(...all), high: Math.max(...all) };
   return (
-    <Stack gap={0}>
+    <Stack gap={0} ref={ref}>
       <Text size="xs" c="dimmed" lh={1.2}>
         Stars
       </Text>
@@ -124,8 +135,9 @@ function Roads({ tile }: { tile: ChampionTile }) {
         road="star"
         colour="var(--mantine-color-blue-6)"
         range={range}
+        width={drawn}
       />
-      <Text size="xs" c="dimmed" lh={1.2} mt={2}>
+      <Text size="xs" c="dimmed" lh={1.2}>
         Levels
       </Text>
       <Curve
@@ -134,6 +146,7 @@ function Roads({ tile }: { tile: ChampionTile }) {
         road="level"
         colour="var(--mantine-color-teal-6)"
         range={range}
+        width={drawn}
       />
     </Stack>
   );
