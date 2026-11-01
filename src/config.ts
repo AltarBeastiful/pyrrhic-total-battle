@@ -334,6 +334,13 @@ export const CAMPAIGN = {
     silverShare: 0.1,
   },
   /**
+   * **Pushing a default upgrade harder** (owner, 2026-11-01): after the default pass, the `top` upgrades that gain
+   * most are read again at each of `steps` — points on a health or strength line, percent of a housing pool.
+   * 20 is the most the owner counts as a serious commitment at any one time. Work counts, never durations: the
+   * follow-up is one pass of `top × steps.length` probes and one baseline.
+   */
+  advisorPush: { top: 5, steps: [5, 10, 20] as readonly number[] },
+  /**
    * **The advisor's screen** (owner, 2026-10-11, `docs/plans/screen-then-tight.md`, experiment 202): every probe
    * is first read As is, and only the probes that gain the most are read again by Tight. A probe goes on when it
    * is among the `top` best by its best stop or gains at least `share` of the best probe's gain, and never when

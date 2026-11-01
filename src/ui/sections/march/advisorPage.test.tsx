@@ -211,6 +211,44 @@ test('Compute shows the rows, ranked on the stop the bar shows, and Generate nev
   expect(screen.queryByText(/cut stopped/u)).toBeNull();
 }, 30_000);
 
+test('the best default upgrades are read again at larger steps, up to 20, and the ladder is printed', async () => {
+  renderWithTheme(<MarchSection />);
+  await generate();
+  await computeAndAnswer(answer);
+  // The follow-up asks the two upgrades that gained, each at every step, in one more pass.
+  expect(passes).toHaveLength(2);
+  expect(passes[1]?.probes.map((probe) => probe.id)).toEqual([
+    'strength:guardsmen@5',
+    'strength:guardsmen@10',
+    'strength:guardsmen@20',
+    'health:ranged@5',
+    'health:ranged@10',
+    'health:ranged@20',
+  ]);
+  const picks = (useRunStore.getState().plan?.alternatives ?? []).map((row) => row.pick);
+  const pushed = (probe: ProbeInfo, gain: number): AdvisorRow => ({
+    ...probe,
+    stops: picks.map((pick) => stop(pick, gain)),
+  });
+  await act(async () => {
+    passes[1]?.resolve({
+      ...answer(),
+      rows: [
+        pushed({ ...STRENGTH, id: 'strength:guardsmen@5' }, 12),
+        pushed({ ...STRENGTH, id: 'strength:guardsmen@10' }, 20),
+        pushed({ ...STRENGTH, id: 'strength:guardsmen@20' }, 30),
+      ],
+    });
+    await Promise.resolve();
+  });
+  expect((await within(card()).findAllByTestId('advisor-push'))[0]?.textContent).toBe(
+    'Pushed harder: +5 pts +12% · +10 pts +20% · +20 pts +30%',
+  );
+  expect((await within(card()).findAllByTestId('advisor-push-note'))[0]?.textContent).toBe(
+    'Averages +2% per pt over these steps',
+  );
+}, 30_000);
+
 test('Cancel stops the pass through its signal and says where it stopped', async () => {
   renderWithTheme(<MarchSection />);
   await generate();
@@ -237,8 +275,8 @@ test('a new Generate forgets the rows, and the card waits on its button again', 
   await generate();
   expect(within(card()).queryAllByTestId('advisor-row')).toHaveLength(0);
   expect(within(card()).getByRole('button', { name: 'Compute default upgrades' })).toBeTruthy();
-  // The second Generate started no pass of its own either.
-  expect(passes).toHaveLength(1);
+  // The second Generate started no pass of its own either: the two are the answer's and its larger steps.
+  expect(passes).toHaveLength(2);
   expect(useAdvisorStore.getState().entries.default).toBeNull();
 }, 60_000);
 

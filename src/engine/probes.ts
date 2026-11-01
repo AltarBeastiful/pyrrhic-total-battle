@@ -83,6 +83,20 @@ export function genericProbes(): Probe[] {
 }
 
 /**
+ * The default probe with id `id` at `step`: points on a bonus line, percent of a housing pool. Its id is
+ * `<id>@<step>`, so the card can tell a push from the default probe it comes from. `undefined` for any other id.
+ */
+export function pushedProbe(id: string, step: number): Probe | undefined {
+  const [family, key] = id.split(':');
+  let base: Probe | undefined;
+  if ((family === 'health' || family === 'strength') && BONUS_KEYS.includes(key as BonusKey))
+    base = bonusProbe(family, key as BonusKey, step);
+  else if (family === 'housing' && HOUSING_KEYS.includes(key as (typeof HOUSING_KEYS)[number]))
+    base = housingProbe(key as keyof Housing, step);
+  return base === undefined ? undefined : { ...base, id: `${id}@${String(step)}` };
+}
+
+/**
  * What one typed upgrade changes (W17 C2): points on bonus lines, as entered, and housing **slots** (not a
  * percent). Structurally the stored `UserUpgrade` of `src/state/schema.ts`, whose schema refuses an entry that
  * changes nothing; the engine does not import the state layer.

@@ -27,9 +27,10 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 
-import { rankAdvice, type AdvisorRow } from '@/engine/advisor';
+import { headlineOf, rankAdvice, type AdvisorRow } from '@/engine/advisor';
+import { CAMPAIGN } from '@/config';
 import type { CampaignInput, CampaignPlan, PlanPick } from '@/engine/plan';
-import { genericProbes, userProbe, type Probe, type UserUpgradeEntry } from '@/engine/probes';
+import { genericProbes, pushedProbe, userProbe, type Probe, type UserUpgradeEntry } from '@/engine/probes';
 import { buildPlanRequest } from '@/state/derive';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { runAdvisor, type AdvisorResult } from '@/worker/advisor';
@@ -58,6 +59,13 @@ export interface AdvisorEntry {
   result: AdvisorResult | null;
   /** Why the pass failed, in one line, when it did. */
   error: string | null;
+  /**
+   * `default` only: the best upgrades read again at larger steps (`CAMPAIGN.advisorPush`), one pass after the
+   * main one; `null` until it settles, and when nothing gained.
+   */
+  push: AdvisorResult | null;
+  /** The larger-step pass is out. */
+  pushing: boolean;
 }
 
 export interface AdvisorState {
@@ -68,6 +76,8 @@ export interface AdvisorState {
   /** `cut` when the clock stopped a probe (or the baseline), `done` otherwise. */
   settle: (kind: AdvisorKind, key: string, result: AdvisorResult) => void;
   fail: (kind: AdvisorKind, key: string, message: string) => void;
+  /** The larger-step pass of `default` starts, or settles with its answer (`null`: cut short or nothing to push). */
+  pushing: (key: string, on: boolean, result?: AdvisorResult | null) => void;
   /** The Cancel button: abort that pass and say so; the progress stays, the rows were never read. */
   cancel: (kind: AdvisorKind) => void;
   /** Abort and forget: a new plan, another account. Both passes when no kind is given. */
@@ -142,7 +152,16 @@ export const useAdvisorStore = create<AdvisorState>()((set, get) => {
   return {
     entries: { mine: null, default: null },
     begin: (kind, key, total) => {
-      write(kind, { key, status: 'running', done: 0, total, result: null, error: null });
+      write(kind, {
+        key,
+        status: 'running',
+        done: 0,
+        total,
+        result: null,
+        error: null,
+        push: null,
+        pushing: false,
+      });
     },
     progress: (kind, key, done, total) => {
       const entry = running(kind, key);
@@ -157,6 +176,11 @@ export const useAdvisorStore = create<AdvisorState>()((set, get) => {
     fail: (kind, key, message) => {
       const entry = running(kind, key);
       if (entry !== null) write(kind, { ...entry, status: 'failed', error: message });
+    },
+    pushing: (key, on, result) => {
+      const entry = get().entries.default;
+      if (entry === null || entry.key !== key) return;
+      write('default', { ...entry, pushing: on, push: result === undefined ? entry.push : result });
     },
     cancel: (kind) => {
       // The count reached is the one Cancel reports.
@@ -211,6 +235,7 @@ export async function computeAdvice(
     });
     tick.flush();
     useAdvisorStore.getState().settle(kind, key, result);
+    if (kind === 'default') await pushRows(key, input, result, headline, own.signal);
   } catch (error) {
     // A cancel or a stop has already said what happened to this pass.
     if (isAbortError(error)) return;
@@ -223,6 +248,34 @@ export async function computeAdvice(
   }
 }
 
+/**
+ * **The larger steps** (owner, 2026-11-01): the default pass answers at +1; this one reads the `top` upgrades that
+ * gained at every step of `CAMPAIGN.advisorPush`, in one pass (one baseline, `top × steps` probes), so the card
+ * can say what pushing a line harder brings. Nothing gained, nothing asked. A failure only drops the ladder.
+ */
+async function pushRows(
+  key: string,
+  input: CampaignInput,
+  main: AdvisorResult,
+  headline: PlanPick | undefined,
+  signal: AbortSignal,
+): Promise<void> {
+  const { top, steps } = CAMPAIGN.advisorPush;
+  const best = rankAdvice(main.rows, headline)
+    .filter((row) => (headlineOf(row, headline)?.gain ?? 0) > 0)
+    .slice(0, top);
+  const probes = best.flatMap((row) => steps.flatMap((step) => pushedProbe(row.id, step) ?? []));
+  if (probes.length === 0) return;
+  const store = useAdvisorStore.getState();
+  store.pushing(key, true);
+  try {
+    const result = await runAdvisor(input, probes, advisorPool(), { signal, headline });
+    useAdvisorStore.getState().pushing(key, false, result);
+  } catch {
+    useAdvisorStore.getState().pushing(key, false, null);
+  }
+}
+
 /** What the card draws from, for one kind of pass. */
 export interface AdvisorKindView {
   status: AdvisorStatus;
@@ -232,6 +285,9 @@ export interface AdvisorKindView {
   rows: AdvisorRow[];
   result: AdvisorResult | null;
   error: string | null;
+  /** The larger-step rows of `default` (`pushRows`), unranked: `<id>@<step>`. */
+  push?: readonly AdvisorRow[];
+  pushing?: boolean;
   compute: () => void;
   cancel: () => void;
 }
@@ -276,6 +332,8 @@ function useKindView(
     rows,
     result: answer,
     error: entry?.error ?? null,
+    push: entry?.push?.rows ?? [],
+    pushing: entry?.pushing ?? false,
     compute,
     cancel,
   };

@@ -56,7 +56,7 @@ import { BONUS_KEY_GLYPHS, Glyph, isBonusKey, type GlyphKind } from '@/ui/domain
 import { Disclosure } from '@/ui/kit';
 import type { LineupStopAdvice } from '@/worker/captainAdvice';
 
-import { curveOfRows, type SweepCurve } from '@/engine/advisor-sweeps';
+import { curveOfRows, sweepCurve, type SweepCurve } from '@/engine/advisor-sweeps';
 
 import { canAdvise, useAdvisor, type AdvisorKindView, type AdvisorView } from './advisorSearch';
 import { useCaptainAdvice, type CaptainView } from './captainSearch';
@@ -74,6 +74,9 @@ export type AdvisorCardProps = Pick<AdvisorView, 'headline' | 'typed' | 'mine' |
   /** The other questions section (`otherSearch.ts`): sweeps, next tier, merc stock, horizon, silver. */
   other?: OtherView;
 };
+
+/** The default step, in points and in percent of a pool alike. */
+const PROBE_STEP = PROBE_BONUS_DELTA;
 
 const SECONDS = Math.round(CAMPAIGN.budgets.extra / 1000);
 
@@ -201,6 +204,61 @@ const MarchCost = memo(function MarchCost({ stop }: { stop: StopAdvice }) {
 });
 
 /**
+ * **The row pushed harder** (`CAMPAIGN.advisorPush`): the worth at each step, then one plain line of what the
+ * ladder says — the average worth per point or percent over the steps, and where it stops paying (the first
+ * step whose extra gain is under `flattenBelow` per unit, as the sweeps read a curve). Nothing is said of a
+ * ladder that never flattens beyond its average.
+ */
+function LadderLines({
+  row,
+  stop,
+  ladder,
+}: {
+  row: AdvisorRow;
+  stop: StopAdvice;
+  ladder: readonly AdvisorRow[];
+}) {
+  const unit = row.family === 'housing' ? '%' : ' pts';
+  const steps = ladder.map((one) => ({
+    size: Number(one.id.slice(one.id.lastIndexOf('@') + 1)),
+    gain: headlineOf(one, stop.pick)?.gain ?? 0,
+  }));
+  const average = steps.reduce((sum, one) => sum + one.gain / one.size, 0) / steps.length;
+  const curve = sweepCurve(
+    [PROBE_STEP, ...steps.map((one) => one.size)],
+    [stop.gain, ...steps.map((one) => one.gain)],
+  );
+  const last = steps[steps.length - 1];
+  const flat =
+    curve.peakPercent !== null && last !== undefined && curve.peakPercent < last.size
+      ? curve.peakPercent
+      : null;
+  const said =
+    average > 0
+      ? `Averages ${gainWords(average)} per ${unit.trim() === '%' ? '%' : 'pt'} over these steps`
+      : null;
+  const note =
+    flat === null
+      ? said
+      : `${said === null ? '' : `${said}. `}${flat <= PROBE_STEP ? 'No gain beyond the default step' : `No further gain after +${String(flat)}${unit}`}`;
+  return (
+    <>
+      <Text className={classes.meta} c="dimmed" data-testid="advisor-push">
+        Pushed harder:{' '}
+        {steps
+          .map((one) => `+${String(one.size)}${unit} ${one.gain > 0 ? gainWords(one.gain) : 'no gain'}`)
+          .join(' · ')}
+      </Text>
+      {note !== null && (
+        <Text className={classes.meta} c="dimmed" data-testid="advisor-push-note">
+          {note}
+        </Text>
+      )}
+    </>
+  );
+}
+
+/**
  * **One upgrade, read on one stop.** Two lines: the upgrade and what it is worth on the owner's rating (the
  * yardstick the bar and Tight use), then the damage it would bring, and under it what it costs the march when
  * that moves (`MarchCost`). A clamped or zero reading is "no gain" — kept on the list, never a minus
@@ -211,7 +269,16 @@ const MarchCost = memo(function MarchCost({ stop }: { stop: StopAdvice }) {
  * **Memoised on row identity** (W18 P4, experiment 200): a pass's answer is kept whole, so a row and its stops
  * keep their identity while another pass's progress re-renders the card; only a new answer draws it again.
  */
-const AdvisorRowLine = memo(function AdvisorRowLine({ row, stop }: { row: AdvisorRow; stop: StopAdvice }) {
+const AdvisorRowLine = memo(function AdvisorRowLine({
+  row,
+  stop,
+  ladder,
+}: {
+  row: AdvisorRow;
+  stop: StopAdvice;
+  /** The same upgrade pushed harder (`<id>@<step>` rows, in step order), when the pass read it. */
+  ladder?: readonly AdvisorRow[] | undefined;
+}) {
   const glyph = glyphOf(row);
   const gains = stop.gain > 0;
   const reached = reachedDamage(stop);
@@ -238,6 +305,7 @@ const AdvisorRowLine = memo(function AdvisorRowLine({ row, stop }: { row: Adviso
         </Text>
       )}
       <MarchCost stop={stop} />
+      {ladder !== undefined && ladder.length > 0 && <LadderLines row={row} stop={stop} ladder={ladder} />}
       {row.cost !== undefined && (
         <Text className={classes.meta} c="dimmed" data-testid="advisor-per-cost">
           {gains ? `${gainWords(gainPerCost(row, stop.pick) ?? 0)} per ${row.cost.unit}, ` : ''}costs{' '}
@@ -252,15 +320,19 @@ const AdvisorRowLine = memo(function AdvisorRowLine({ row, stop }: { row: Adviso
 const StopList = memo(function StopList({
   rows,
   pick,
+  push,
 }: {
   rows: readonly AdvisorRow[];
   pick: PlanPick | null;
+  push?: readonly AdvisorRow[] | undefined;
 }) {
   return (
     <Stack gap="xs">
       {rows.map((row) => {
         const stop = headlineOf(row, pick ?? undefined);
-        return stop === undefined ? null : <AdvisorRowLine key={row.id} row={row} stop={stop} />;
+        if (stop === undefined) return null;
+        const ladder = push?.filter((one) => one.id.startsWith(`${row.id}@`));
+        return <AdvisorRowLine key={row.id} row={row} stop={stop} ladder={ladder} />;
       })}
     </Stack>
   );
@@ -313,6 +385,7 @@ interface PassSectionProps {
 /** One pass: its button, progress, Cancel, notes and the list it ranked, with its heading once there is one. */
 function PassSection({ compute, noun, heading, view, headline, blocked, note, ordering }: PassSectionProps) {
   const { status, done, total, rows, result, error } = view;
+  const push = view.push;
   const running = status === 'running';
   const words = statusWords(status, done, total);
   const orderingLine = ordering === true ? orderingWords(rows) : null;
@@ -379,7 +452,12 @@ function PassSection({ compute, noun, heading, view, headline, blocked, note, or
               {orderingLine}
             </Text>
           )}
-          <StopList rows={rows} pick={headline} />
+          <StopList rows={rows} pick={headline} push={push} />
+          {view.pushing === true && (
+            <Text className={classes.meta} c="dimmed">
+              Reading the best at larger steps…
+            </Text>
+          )}
           {others.length > 0 && (
             <Disclosure
               title="Other stops"
@@ -391,7 +469,7 @@ function PassSection({ compute, noun, heading, view, headline, blocked, note, or
                     <Text size="sm" fw={500}>
                       {planWords({ pick })}
                     </Text>
-                    <StopList rows={rankAdvice(result.rows, pick)} pick={pick} />
+                    <StopList rows={rankAdvice(result.rows, pick)} pick={pick} push={push} />
                   </Stack>
                 ))}
               </Stack>
