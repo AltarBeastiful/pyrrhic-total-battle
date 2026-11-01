@@ -23,7 +23,7 @@ import { useId, useState } from 'react';
 import { CATEGORIES } from '@/data/types';
 import type { UnitFamily } from '@/engine/types';
 import { eventEnemyFormation } from '@/state/derive';
-import type { SetupMethod } from '@/state/schema';
+import type { SetupMethod, TierRange } from '@/state/schema';
 import { useActiveProfileSlice, useActiveSetupSlice, useStore } from '@/state/store';
 import { Glyph, GROUP_LABEL } from '@/ui/domain';
 import { ChoiceList, Panel, Sections, SwitchRow } from '@/ui/kit';
@@ -78,6 +78,17 @@ const FAMILY_PREFIX: Record<(typeof REVIVABLE)[number], string> = {
 };
 
 type ReviveDepth = 'none' | 'top' | 'all';
+
+/**
+ * The tiers a family's choice reaches, in the Troops card's own shorthand (`rangeSummary`): the top tier
+ * alone for "Retrain" and "Top tier", the whole fielded range for "All tiers" — M3–M5 on an account that
+ * unlocked M3 to M5 (owner, 2026-11-01). A single-tier range reads as that tier.
+ */
+function tierHint(family: (typeof REVIVABLE)[number], range: TierRange, depth: ReviveDepth): string {
+  const prefix = FAMILY_PREFIX[family];
+  const top = `${prefix}${String(range.max)}`;
+  return depth === 'all' && range.min < range.max ? `${prefix}${String(range.min)}–${top}` : top;
+}
 const REVIVE_DEPTHS: { value: ReviveDepth; label: string }[] = [
   { value: 'none', label: 'Retrain' },
   { value: 'top', label: 'Top tier' },
@@ -342,7 +353,7 @@ export function BattleSection() {
                           needs one between the label and the tier. */}{' '}
                       {troops?.[family] != null && (
                         <Text span size="xs" c="dimmed">
-                          {`${FAMILY_PREFIX[family]}${String(troops[family].max)}`}
+                          {tierHint(family, troops[family], depth)}
                         </Text>
                       )}
                     </Group>

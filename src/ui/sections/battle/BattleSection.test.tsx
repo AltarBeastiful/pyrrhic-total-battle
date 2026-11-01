@@ -294,6 +294,14 @@ test('the selective recovery plan asks which families come back, the monsters to
     reviveAllTiers: ['monsters'],
   });
 
+  // The hint follows the choice: the top tier alone until "All tiers" is picked, then the whole range.
+  expect(screen.getByText('G3')).toBeTruthy();
+  await user.click(within(guardsmen).getByText('All tiers'));
+  expect(screen.getByText('G1–G3')).toBeTruthy();
+  expect(screen.queryByText('G3')).toBeNull();
+  await user.click(within(guardsmen).getByText('Top tier'));
+  expect(screen.getByText('G3')).toBeTruthy();
+
   // Top tier alone is the second choice for the monsters, and the family stays on the first list.
   const monsters = screen.getByRole('radiogroup', { name: 'Revive monsters' });
   await user.click(within(monsters).getByText('Top tier'));
