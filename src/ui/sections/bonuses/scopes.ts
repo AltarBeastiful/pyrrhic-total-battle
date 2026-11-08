@@ -15,6 +15,9 @@
  */
 import type { BonusKeyScope } from './BonusKeyGrid';
 
+/** The Dragon screen grants Army health and Army strength only; the runes add to those same two lines. */
+export const DRAGON_SCOPE: BonusKeyScope = { health: ['army'], strength: ['army'], special: [] };
+
 const ARMY_MODERNIZATION_KEYS = ['army', 'melee', 'ranged', 'mounted', 'flying', 'engineers'] as const;
 const RACE_KEYS = ['beast', 'giant', 'elemental', 'dragon'] as const;
 

@@ -11,7 +11,7 @@ import { removePermanentSource, removeSourceEntry, updateSources } from '@/state
 import type { Profile, ProfileSources } from '@/state/schema';
 
 import { BonusKeyGrid } from './BonusKeyGrid';
-import { PERMANENT_SCOPE } from './scopes';
+import { DRAGON_SCOPE, PERMANENT_SCOPE } from './scopes';
 import { PERMANENT_WHERE, WHERE } from './rows';
 import type { TotalsSummary } from './rows';
 import { SourceSheet } from './SourceSheet';
@@ -134,6 +134,7 @@ export function DragonSheet({ profile, summary, onClose }: FreeFormProps) {
     <SourceSheet size="lg" title="Dragon" where={WHERE.dragon} summary={summary} onClose={onClose}>
       <BonusKeyGrid
         value={readBonusValues(profile.sources.dragon)}
+        scope={DRAGON_SCOPE}
         onChange={(next) => {
           updateSources(profile.id, (current) => ({
             ...current,
