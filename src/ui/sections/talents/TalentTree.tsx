@@ -197,7 +197,7 @@ export function TalentTree({
                       <span className={classes.marks}>
                         {bought > 0 && (
                           <span>
-                            {full ? `${String(bought)}/${String(n.maxRank)} max` : `rank ${String(bought)}`}
+                            {full ? 'max' : `rank ${String(bought)}`}
                           </span>
                         )}
                         {plus > 0 && <span>+{plus}</span>}
