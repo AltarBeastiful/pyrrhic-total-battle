@@ -13,7 +13,12 @@ import type { SharePayload } from '@/share/codec';
 import type { StorageAdapter } from '@/state/storage';
 import { useStore, type StoreState } from '@/state/store';
 
+/** The page the shell shows: the calculator (the sections and the March) or the hero talent planner (B-21). */
+export type Page = 'calculator' | 'talents';
+
 export interface UiState {
+  page: Page;
+  setPage: (page: Page) => void;
   /** Decoded share link waiting for the user's decision; nothing is applied until they choose. */
   pendingShare: SharePayload | null;
   /** Why a share link could not be read (shown in the same dialog). */
@@ -28,6 +33,10 @@ export interface UiState {
 }
 
 export const useUiStore = create<UiState>()((set) => ({
+  page: 'calculator',
+  setPage: (page) => {
+    set({ page });
+  },
   pendingShare: null,
   shareError: null,
   dirty: false,

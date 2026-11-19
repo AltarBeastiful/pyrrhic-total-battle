@@ -51,6 +51,11 @@ import classes from './shell.module.css';
 import { useGenerateShortcut } from './useGenerateRun';
 import { TWO_PANES, useMediaQuery } from './useMediaQuery';
 
+// The talent planner is a page of its own, opened from the menu: its table and view are a chunk of their own.
+const TalentsPage = lazy(() =>
+  import('../sections/talents/TalentsPage').then((module) => ({ default: module.TalentsPage })),
+);
+
 // Most sessions are not opened on a share link, and the ones that are can wait a frame for the
 // prompt: the decoder and the dialog are a chunk of their own (ui-foundation plan §6).
 const LoadSharedDialog = lazy(() =>
@@ -70,6 +75,7 @@ export function Shell() {
   // four wells in a row, and the phone bar's chips would be 341 px each (the review of 2026-09-13).
   const barWide = useMediaQuery(DESKTOP_BAR);
   const [recapOpen, setRecapOpen] = useState(false);
+  const page = useUiStore((state) => state.page);
   const pendingShare = useUiStore((state) => state.pendingShare);
   const shareError = useUiStore((state) => state.shareError);
 
@@ -154,7 +160,11 @@ export function Shell() {
       <AppBar />
 
       <Container id="main" component="main" size={CONTENT_WIDTH} py="xl" className={classes.main}>
-        {wide ? (
+        {page === 'talents' ? (
+          <LazySurface isOpen reserve="panel">
+            <TalentsPage />
+          </LazySurface>
+        ) : wide ? (
           <Grid gap="xl">
             <Grid.Col span="auto" miw={0}>
               {setup}
@@ -180,7 +190,7 @@ export function Shell() {
           a sticky element travels only inside its own containing block — and it carries the ground
           from edge to edge, with a `Container` inside it so the content starts and ends on the same
           lines as the panels above it. */}
-      {barWide ? (
+      {page === 'talents' ? null : barWide ? (
         <div className={classes.commandDock}>
           <Container component="div" size={CONTENT_WIDTH}>
             {/* Between 1024 and 1199 px the March has no pane, so the bar carries the answer and
@@ -192,7 +202,7 @@ export function Shell() {
         <BottomBar pulse={run.index} onOpenRecap={openRecap} />
       )}
 
-      {!wide && (
+      {!wide && page === 'calculator' && (
         <>
           {/* The answer changed while the sheet was shut: the summary pulses once for the eye and
               this sentence says the same thing for everyone else (design rule 24 — colour and

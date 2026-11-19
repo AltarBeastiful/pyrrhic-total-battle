@@ -7,7 +7,7 @@
  * a segmented row or a section heading, and each kind has one appearance.
  */
 import { ActionIcon, useMantineColorScheme } from '@mantine/core';
-import { Download, Info, Menu, RefreshCw } from 'lucide-react';
+import { Download, Info, Menu, RefreshCw, Sparkles, Swords } from 'lucide-react';
 import { lazy, useState, useSyncExternalStore } from 'react';
 
 import { isInstallAvailable, promptInstall, subscribeToInstall } from '@/pwa/install';
@@ -15,6 +15,7 @@ import { applyUpdate, isUpdateReady, subscribeToUpdate } from '@/pwa/register';
 import { POOL_LINE_DEFAULTS, THEMES, type PoolLineDefault, type Theme } from '@/state/schema';
 import { selectActiveProfile, selectTheme, useStore } from '@/state/store';
 
+import { useUiStore } from '../uiStore';
 import { AppMenu, type AppMenuEntry, type AppMenuSection } from '../kit';
 import { LazySurface } from '../lazy';
 
@@ -63,6 +64,9 @@ export function MainMenu() {
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
   const updateReady = useSyncExternalStore(subscribeToUpdate, isUpdateReady, () => false);
 
+  const page = useUiStore((state) => state.page);
+  const setPage = useUiStore((state) => state.setPage);
+
   const [dialog, setDialog] = useState<DialogKind | null>(null);
 
   if (profile === undefined) return null;
@@ -109,6 +113,29 @@ export function MainMenu() {
   // The order of design plan §5.2: who you are and whether it is saved, who else you are, what you
   // can do to this profile, the file actions, the link, the theme, and About at the bottom.
   const sections: AppMenuSection[] = [
+    {
+      id: 'pages',
+      entries: [
+        page === 'talents'
+          ? {
+              id: 'calculator',
+              label: 'March calculator',
+              icon: <Swords size={ICON} aria-hidden />,
+              onSelect: () => {
+                setPage('calculator');
+              },
+            }
+          : {
+              id: 'talents',
+              label: 'Hero talents',
+              description: 'Where the next talent points go',
+              icon: <Sparkles size={ICON} aria-hidden />,
+              onSelect: () => {
+                setPage('talents');
+              },
+            },
+      ],
+    },
     {
       id: 'theme',
       entries: [
