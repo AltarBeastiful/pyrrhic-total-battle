@@ -12,5 +12,12 @@
   // `scripts/plan-baseline-review.ts` is listed the way `tsconfig.node.json` lists
   // `tests/engine/plan-baseline.ts`, and for the mirror reason: the review report's own test renders it, so
   // the file has to be in this project's file list as well as in the node one that owns `scripts`.
-  "include": ["src", "tests", "tools/theorycraft", "scripts/plan-baseline-review.ts"]
+  "include": [
+    "src",
+    "tests",
+    "tools/theorycraft",
+    "scripts/plan-baseline-review.ts",
+    "scripts/talents-convert.ts",
+    "scripts/data-tables.ts"
+  ]
 }

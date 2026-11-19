@@ -225,6 +225,36 @@ export interface TempleTable {
   multiplier: Record<string, number>;
 }
 
+/** The four hero-ability trees (the game's branches 18 to 21). */
+export const TALENT_TREES = ['battle', 'expert', 'economy', 'archeology'] as const;
+export type TalentTree = (typeof TALENT_TREES)[number];
+
+/**
+ * One node of a hero talent tree (B-21). Ranks are 1-based; `values[r - 1]` and `costs[r - 1]` belong
+ * to rank `r`.
+ */
+export interface TalentRecord {
+  /** The game's own tech id (25001 ...). Saved ranks are keyed by it, so it never changes. */
+  id: number;
+  name: string;
+  tree: TalentTree;
+  maxRank: number;
+  /** Where the node sits on the game's grid, and how the game draws the link to its parent (null for the few nodes the game draws no link to). */
+  layout: { x: number; y: number; link: string | null; place: string | null; flipped: boolean };
+  /** Nodes that must each hold one rank before this node's first rank can be bought. Empty for a root. */
+  parents: number[];
+  /** Hero level needed for the first rank, when the game gates it. */
+  levelGate?: number;
+  /** The game's stat kinds the node affects (`UNIT_POWER`, `MARCH_SPEED` ...), usually one. */
+  stats: string[];
+  /** The game's unit (or building) ids the bonus applies to. Empty when it applies to nothing in particular. */
+  unitIds: number[];
+  /** Total bonus in percent at each rank, the game's own table (not a straight line). Negative for a price cut. */
+  values: number[];
+  /** Talent points each rank costs. */
+  costs: number[];
+}
+
 export interface DataVersion {
   dataVersion: number;
   verifiedOn: string; // ISO date

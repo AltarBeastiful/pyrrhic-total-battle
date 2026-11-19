@@ -37,6 +37,7 @@ import {
   monsters,
   orders,
   otherPills,
+  talents,
   temple,
   titles,
   troops,
@@ -59,6 +60,7 @@ const TABLES: Record<TableFile, unknown> = {
   'monsters.json': monsters,
   'orders.json': orders,
   'otherPills.json': otherPills,
+  'talents.json': talents,
   'temple.json': temple,
   'titles.json': titles,
   'troops.json': troops,
@@ -160,6 +162,81 @@ describe('integrity', () => {
     expect(vip).toHaveLength(26);
     expect([at(0), at(1), at(8), at(9), at(24), at(25)]).toEqual([0, 0.5, 4, 5, 20, 25]);
     for (const row of vip) expect(row.bonus.strength?.army).toBe(row.bonus.health?.army);
+  });
+
+  describe('talents (B-21)', () => {
+    const inTree = (tree: string) => talents.filter((node) => node.tree === tree);
+    const sum = (rows: number[]) => rows.reduce((a, b) => a + b, 0);
+
+    it('holds only the four hero trees, with the nodes the game draws', () => {
+      expect([...new Set(talents.map((node) => node.tree))].sort()).toEqual([
+        'archeology',
+        'battle',
+        'economy',
+        'expert',
+      ]);
+      // 63 / 71 / 59 / 60 in the game; 10 Economy and 6 Archeology nodes have no place in the tree and no effect.
+      expect(['battle', 'expert', 'economy', 'archeology'].map((tree) => inTree(tree).length)).toEqual([
+        63, 71, 49, 54,
+      ]);
+      expect(
+        ['battle', 'expert', 'economy', 'archeology'].map((tree) => sum(inTree(tree).map((n) => n.maxRank))),
+      ).toEqual([1032, 1550, 980, 757]);
+    });
+
+    it('has one value and one cost per rank, ids unique, parents inside the table', () => {
+      const ids = new Set(talents.map((node) => node.id));
+      expect(ids.size).toBe(talents.length);
+      for (const node of talents) {
+        expect(node.values).toHaveLength(node.maxRank);
+        expect(node.costs).toHaveLength(node.maxRank);
+        for (const parent of node.parents) expect(ids.has(parent)).toBe(true);
+        expect(node.parents).not.toContain(node.id);
+      }
+    });
+
+    it('has exactly one root per tree and the hero-level gates the game shows', () => {
+      for (const tree of ['battle', 'expert', 'economy', 'archeology']) {
+        expect(inTree(tree).filter((node) => node.parents.length === 0)).toHaveLength(1);
+      }
+      const gates = new Set(
+        talents.flatMap((node) => (node.levelGate === undefined ? [] : [node.levelGate])),
+      );
+      expect([...gates].sort((a, b) => a - b)).toEqual([25, 65, 105, 145, 350]);
+    });
+
+    it('keeps the game tables: Army strength is 150 ranks of 10 points for +1 % each', () => {
+      const node = talents.find((n) => n.id === 26071);
+      expect(node?.maxRank).toBe(150);
+      expect(node?.costs.every((cost) => cost === 10)).toBe(true);
+      expect(node?.values.slice(0, 3)).toEqual([1, 2, 3]);
+      expect(node?.values[149]).toBe(150);
+      expect(node?.levelGate).toBe(350);
+      expect(node?.parents).toEqual([26068]);
+      expect(node?.stats).toEqual(['UNIT_POWER']);
+    });
+
+    it('keeps a rising non-linear table and a negative price cut', () => {
+      const first = talents.find((n) => n.id === 25001);
+      expect(first?.values.slice(0, 4)).toEqual([0.2, 0.4, 0.6, 0.8]);
+      expect(first?.values[19]).toBe(10);
+      expect(first?.costs.every((cost) => cost === 1)).toBe(true);
+      expect(talents.find((n) => n.id === 29007)?.values[0]).toBe(-2);
+      expect(talents.find((n) => n.id === 28003)?.stats).toEqual([
+        'CARAVAN_CAPACITY',
+        'CLAN_CARAVAN_CAPACITY',
+      ]);
+    });
+
+    it('never drops a rank: values move in one direction and every cost is a positive whole number', () => {
+      for (const node of talents) {
+        const direction = Math.sign(node.values[0] ?? 0);
+        for (let i = 1; i < node.values.length; i += 1) {
+          expect(Math.sign((node.values[i] ?? 0) - (node.values[i - 1] ?? 0))).toBe(direction);
+        }
+        for (const cost of node.costs) expect(Number.isInteger(cost) && cost > 0).toBe(true);
+      }
+    });
   });
 
   it('lists every troop exactly once in the default kill order', () => {

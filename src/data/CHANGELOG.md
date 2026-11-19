@@ -6,6 +6,16 @@ a renamed or removed `id` must be called out explicitly.
 
 How to read a line: **what changed** — how it was verified.
 
+## v1, amended 2026-11-19 (no bump)
+
+- **Hero talents** — new table `talents.json` (B-21): 237 nodes of the four hero-ability trees (63 Battle
+  tactics, 71 Expert battle tactics, 49 Economy, 54 Archeology), with the game's own per-rank bonus table,
+  point cost per rank, hero-level gates and parent prerequisites. Rebuilt by `pnpm data:talents` from the
+  owner's recon dump `/home/remi/projects/tb-analyze/recon/work/talents/talents.json` (`tb-analyze/tools/talents.py`);
+  the game lists 59 and 60 nodes for Economy and Archeology, but ten and six of them have no place on the
+  tree and no effect, so they are left out. No existing value or id changed, so `dataVersion` stays 1.
+  Verified by `data.test.ts` and `tests/data/talentsConvert.test.ts` (rebuilds the table from the dump).
+
 ## v1, amended 2026-10-10 (no bump)
 
 - **VIP** — `vip.json` now runs from level 0 to 25 with real values, the same for army health and army

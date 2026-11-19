@@ -15,6 +15,7 @@ import mercenariesJson from './tables/mercenaries.json';
 import monstersJson from './tables/monsters.json';
 import ordersJson from './tables/orders.json';
 import otherPillsJson from './tables/otherPills.json';
+import talentsJson from './tables/talents.json';
 import templeJson from './tables/temple.json';
 import titlesJson from './tables/titles.json';
 import troopsJson from './tables/troops.json';
@@ -39,6 +40,7 @@ import type {
   Pool,
   Race,
   StrengthAgainstMap,
+  TalentRecord,
   TempleTable,
   TitleRecord,
   TroopRecord,
@@ -66,6 +68,7 @@ export const heroes = table<HeroRecord[]>(heroesJson);
 export const otherPills = table<OtherPillRecord[]>(otherPillsJson);
 export const events = table<EventRecord[]>(eventsJson);
 export const vip = table<VipRecord[]>(vipJson);
+export const talents = table<TalentRecord[]>(talentsJson);
 export const temple = table<TempleTable>(templeJson);
 export const orders = table<OrderTables>(ordersJson);
 export const battleSelection = table<BattleSelectionOrder>(battleSelectionJson);

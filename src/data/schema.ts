@@ -20,6 +20,7 @@ import {
   RACES,
   SPECIAL_KEYS,
   STRENGTH_AGAINST_KEYS,
+  TALENT_TREES,
 } from './types.ts';
 import type {
   ArtifactRecord,
@@ -41,6 +42,7 @@ import type {
   RevivalCost,
   SpecialMap,
   StrengthAgainstMap,
+  TalentRecord,
   TempleTable,
   TitleRecord,
   Training,
@@ -259,6 +261,27 @@ export const battleSelectionSchema = z.strictObject({
   monsters: z.array(id),
 }) satisfies z.ZodType<Loose<BattleSelectionOrder>>;
 
+const gameId = z.int().positive();
+export const talentSchema = z.strictObject({
+  id: gameId,
+  name,
+  tree: z.enum(TALENT_TREES),
+  maxRank: z.int().min(1),
+  layout: z.strictObject({
+    x: z.int().nonnegative(),
+    y: z.int().nonnegative(),
+    link: z.string().min(1).nullable(),
+    place: z.string().min(1).nullable(),
+    flipped: z.boolean(),
+  }),
+  parents: z.array(gameId),
+  levelGate: z.int().positive().optional(),
+  stats: z.array(z.string().regex(/^[A-Z0-9_]+$/, 'must be a game stat kind, e.g. "UNIT_POWER"')).min(1),
+  unitIds: z.array(gameId),
+  values: z.array(z.number()).min(1),
+  costs: z.array(z.int().positive()).min(1),
+}) satisfies z.ZodType<Loose<TalentRecord>>;
+
 export const versionSchema = z.strictObject({
   dataVersion: z.int().positive(),
   verifiedOn: z.iso.date(),
@@ -276,6 +299,7 @@ export const titlesTableSchema = z.array(titleSchema);
 export const heroesTableSchema = z.array(heroSchema);
 export const otherPillsTableSchema = z.array(otherPillSchema);
 export const eventsTableSchema = z.array(eventSchema);
+export const talentsTableSchema = z.array(talentSchema);
 export const vipTableSchema = z.array(vipSchema);
 
 /**
@@ -294,6 +318,7 @@ export const TABLE_SCHEMAS = {
   'monsters.json': monstersTableSchema,
   'orders.json': ordersSchema,
   'otherPills.json': otherPillsTableSchema,
+  'talents.json': talentsTableSchema,
   'temple.json': templeSchema,
   'titles.json': titlesTableSchema,
   'troops.json': troopsTableSchema,
