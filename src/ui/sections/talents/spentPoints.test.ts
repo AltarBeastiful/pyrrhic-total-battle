@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
 
-import { spentPoints, treePoints } from './spentPoints';
+import { spentPoints, stepsUpToNode, treePoints } from './spentPoints';
 
 const nodes = [
   { id: 1, tree: 'battle', costs: [1, 2, 3] },
@@ -44,4 +44,21 @@ test('planned steps only: spent is 0 and the plan counts, fillers included, in i
 
 test('both: held ranks and the plan are counted apart', () => {
   expect(treePoints(nodes, 'battle', { '1': 2 }, steps)).toEqual({ spent: 3, planned: 23 });
+});
+
+const grid = [
+  { id: 1, tree: 'economy' as const, layout: { y: 0 } },
+  { id: 2, tree: 'economy' as const, layout: { y: 1 } },
+  { id: 3, tree: 'economy' as const, layout: { y: 1 } },
+  { id: 4, tree: 'economy' as const, layout: { y: 2 } },
+  { id: 9, tree: 'battle' as const, layout: { y: 0 } },
+];
+const stepList = [1, 9, 2, 4, 3].map((nodeId) => ({ nodeId }));
+test('takes the tree up to the last step on the selected level, neighbours included', () => {
+  expect(stepsUpToNode(grid, stepList, 2).map((s) => s.nodeId)).toEqual([1, 2, 4, 3]);
+  expect(stepsUpToNode(grid, stepList, 1).map((s) => s.nodeId)).toEqual([1]);
+});
+test('a node outside the plan, or unknown, takes nothing', () => {
+  expect(stepsUpToNode(grid, [{ nodeId: 1 }], 4)).toEqual([]);
+  expect(stepsUpToNode(grid, stepList, 99)).toEqual([]);
 });

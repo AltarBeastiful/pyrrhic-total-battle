@@ -173,28 +173,46 @@
   font-weight: 700;
 }
 
-.takeBack {
+.pad {
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  left: 50%;
+  bottom: 0;
+  z-index: 3;
+  transform: translate(-50%, 50%);
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.padButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 28px;
   padding: 0;
-  border: 1px solid var(--mantine-color-default-border);
-  border-radius: 50%;
-  background: var(--mantine-color-body);
+  border: 0;
+  border-radius: var(--mantine-radius-sm);
+  background: transparent;
   color: var(--mantine-color-text);
   cursor: pointer;
 }
 
-.takeBack:hover {
+.padButton:hover:not(:disabled) {
   background: var(--mantine-color-default-hover);
 }
 
-.takeBack:focus-visible {
+.padButton:disabled {
+  color: var(--mantine-color-dimmed);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.padButton:focus-visible {
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 1px;
 }
@@ -293,4 +311,46 @@
 /* The Next point card stands out from Then (story 24): a heavier border in the accent colour. */
 .stepCard[data-next='true'] {
   border: 2px solid var(--mantine-primary-color-filled);
+}
+
+/* The top of the page: the form, with the Totals panel beside it on a wide screen. */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (min-width: 62em) {
+  .top[data-totals='true'] {
+    grid-template-columns: minmax(0, 40rem) minmax(0, 1fr);
+  }
+}
+
+/* Weights: ticked stats in a wrapping grid, the weight field small beside its tick. */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 6px 16px;
+}
+
+.statCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.statCell > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.statWeight :global(.mantine-InputWrapper-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

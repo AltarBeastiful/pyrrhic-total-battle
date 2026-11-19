@@ -38,7 +38,7 @@ import {
   Text,
   VisuallyHidden,
 } from '@mantine/core';
-import { ArrowDown, ArrowUp, CircleHelp } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleHelp, RotateCcw } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
 import { talents as TALENTS } from '@/data';
@@ -76,7 +76,7 @@ import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
-import { spentPoints, treePoints } from './spentPoints';
+import { spentPoints, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
 import { TalentTree } from './TalentTree';
 
@@ -249,9 +249,8 @@ export function TalentsPage() {
     });
   };
 
-  /** Spend the plan from its first step to step `index`, inclusive: every node on the way reaches its planned rank. */
-  const spendPlanTo = (index: number): void => {
-    const steps = result.steps.slice(0, index + 1);
+  /** Take these plan steps: every node on the way reaches its planned rank. */
+  const spendSteps = (steps: readonly TalentPriorityStep[]): void => {
     if (steps.length === 0) return;
     updateProfile(profile.id, (current) => {
       const ranks = { ...current.talents.ranks };
@@ -260,7 +259,28 @@ export function TalentsPage() {
       return { talents: { ...current.talents, ranks } };
     });
     const cost = steps.reduce((sum, step) => sum + step.cost, 0);
-    setMessage(`Spent ${plural(cost, 'point')} on the first ${plural(steps.length, 'step')} of the plan.`);
+    setMessage(`Spent ${plural(cost, 'point')} on ${plural(steps.length, 'step')} of the plan.`);
+  };
+
+  /** Spend the plan from its first step to step `index`, inclusive, in every tree (the second card). */
+  const spendPlanTo = (index: number): void => {
+    spendSteps(result.steps.slice(0, index + 1));
+  };
+
+  /** Spend the open tree's steps up to a node and its neighbours on the same level. */
+  const spendPlanToNode = (nodeId: number): void => {
+    spendSteps(stepsUpToNode(TALENTS, result.steps, nodeId));
+  };
+
+  /** Give back every rank held in one tree. */
+  const resetTree = (id: TreeId): void => {
+    const inTree = new Set(TALENTS.filter((t) => t.tree === id).map((t) => String(t.id)));
+    updateProfile(profile.id, (current) => {
+      const ranks = Object.fromEntries(Object.entries(current.talents.ranks).filter(([k]) => !inTree.has(k)));
+      return { talents: { ...current.talents, ranks } };
+    });
+    setSelected(null);
+    setMessage(`${TREE_LABELS[id]} reset: its points are back in your stock.`);
   };
 
   /** A click on a tile: one rank, as in the game, if the node is open, not full and the stock pays for it. */
@@ -299,398 +319,422 @@ export function TalentsPage() {
 
   return (
     <Stack gap="lg">
-      <Panel
-        component="section"
-        title="Hero talents"
-        meta={`${GOAL_LABELS[first]} first, level ${String(talentsState.heroLevel)}`}
-      >
-        <Stack gap="md">
-          <Group gap="md" align="flex-start" grow>
-            <NumberField
-              label="Hero level"
-              value={talentsState.heroLevel}
-              min={1}
-              max={1000}
-              onChange={(v) => {
-                edit({ heroLevel: Math.min(1000, Math.max(1, v ?? 1)) });
-              }}
-            />
-            <NumberField
-              label="Talent points (your whole stock)"
-              value={stock}
-              allowEmpty
-              min={0}
-              onChange={(v) => {
-                edit({ pointsOverride: v });
-              }}
-            />
-          </Group>
+      <div className={classes.top} data-totals={shownStats.length > 0}>
+        <Panel
+          component="section"
+          title="Hero talents"
+          meta={`${GOAL_LABELS[first]} first, level ${String(talentsState.heroLevel)}`}
+        >
+          <Stack gap="md">
+            <Group gap="md" align="flex-start">
+              <NumberField
+                w={120}
+                label="Hero level"
+                value={talentsState.heroLevel}
+                min={1}
+                max={1000}
+                onChange={(v) => {
+                  edit({ heroLevel: Math.min(1000, Math.max(1, v ?? 1)) });
+                }}
+              />
+              <NumberField
+                w={240}
+                label="Talent points (your whole stock)"
+                value={stock}
+                allowEmpty
+                min={0}
+                onChange={(v) => {
+                  edit({ pointsOverride: v });
+                }}
+              />
+            </Group>
 
-          <Stack gap={6}>
-            <Text fw={600} size="sm">
-              Goals, most wanted first
-            </Text>
-            <Stack
-              component="ul"
-              gap={4}
-              aria-label="Goals, most wanted first"
-              style={{ listStyle: 'none', margin: 0, padding: 0 }}
-            >
-              {order.map((goal, index) => {
-                const off = ignored.has(goal);
-                const rank = rankOf.get(goal) ?? null;
-                const isFirst = rank === 1;
-                const name = GOAL_LABELS[goal];
-                return (
-                  <Paper
-                    key={goal}
-                    component="li"
-                    withBorder
-                    p={6}
-                    radius="sm"
-                    className={classes.goalRow}
-                    data-off={off}
-                  >
-                    <Text fw={700} ta="center" className={classes.goalRank} aria-hidden={off}>
-                      {rank ?? ''}
-                    </Text>
-                    <div className={classes.goalName}>
-                      <Text fw={600} size="sm" {...(off ? { c: 'dimmed' } : {})}>
-                        {name}
+            <Stack gap={6}>
+              <Text fw={600} size="sm">
+                Goals, most wanted first
+              </Text>
+              <Stack
+                component="ul"
+                gap={4}
+                aria-label="Goals, most wanted first"
+                style={{ listStyle: 'none', margin: 0, padding: 0 }}
+              >
+                {order.map((goal, index) => {
+                  const off = ignored.has(goal);
+                  const rank = rankOf.get(goal) ?? null;
+                  const isFirst = rank === 1;
+                  const name = GOAL_LABELS[goal];
+                  return (
+                    <Paper
+                      key={goal}
+                      component="li"
+                      withBorder
+                      p={6}
+                      radius="sm"
+                      className={classes.goalRow}
+                      data-off={off}
+                    >
+                      <Text fw={700} ta="center" className={classes.goalRank} aria-hidden={off}>
+                        {rank ?? ''}
                       </Text>
-                      <Text size="xs" c="dimmed">
-                        {off ? 'Ignored' : weightWords(goalWeights[goal])}
-                      </Text>
-                    </div>
-                    {isFirst && (
-                      <Group gap={4} wrap="nowrap" className={classes.goalStrength}>
-                        <SegmentedControl
-                          size="xs"
-                          aria-label="Strength of rank 1"
-                          value={talentsState.strength}
-                          data={TALENT_STRENGTHS.map((s) => ({ value: s, label: STRENGTH_LABELS[s] }))}
-                          onChange={(v) => {
-                            const next = TALENT_STRENGTHS.find((s) => s === v);
-                            if (next !== undefined) edit({ strength: next });
-                          }}
-                        />
+                      <div className={classes.goalName}>
+                        <Text fw={600} size="sm" {...(off ? { c: 'dimmed' } : {})}>
+                          {name}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {off ? 'Ignored' : weightWords(goalWeights[goal])}
+                        </Text>
+                      </div>
+                      {isFirst && (
+                        <Group gap={4} wrap="nowrap" className={classes.goalStrength}>
+                          <SegmentedControl
+                            size="xs"
+                            aria-label="Strength of rank 1"
+                            value={talentsState.strength}
+                            data={TALENT_STRENGTHS.map((s) => ({ value: s, label: STRENGTH_LABELS[s] }))}
+                            onChange={(v) => {
+                              const next = TALENT_STRENGTHS.find((s) => s === v);
+                              if (next !== undefined) edit({ strength: next });
+                            }}
+                          />
+                          <ActionIcon
+                            variant="subtle"
+                            color="slate"
+                            size="md"
+                            aria-label="What Focus, Lean and Even mean"
+                            aria-expanded={helpOpen}
+                            aria-controls={helpId}
+                            onClick={() => {
+                              setHelpOpen((open) => !open);
+                            }}
+                          >
+                            <CircleHelp size={16} aria-hidden />
+                          </ActionIcon>
+                        </Group>
+                      )}
+                      <Group gap={2} wrap="nowrap" className={classes.goalMoves}>
                         <ActionIcon
                           variant="subtle"
                           color="slate"
                           size="md"
-                          aria-label="What Focus, Lean and Even mean"
-                          aria-expanded={helpOpen}
-                          aria-controls={helpId}
+                          aria-label={`Move ${name} up`}
+                          disabled={index === 0}
                           onClick={() => {
-                            setHelpOpen((open) => !open);
+                            move(goal, -1);
                           }}
                         >
-                          <CircleHelp size={16} aria-hidden />
+                          <ArrowUp size={14} aria-hidden />
                         </ActionIcon>
+                        <ActionIcon
+                          variant="subtle"
+                          color="slate"
+                          size="md"
+                          aria-label={`Move ${name} down`}
+                          disabled={index === order.length - 1}
+                          onClick={() => {
+                            move(goal, 1);
+                          }}
+                        >
+                          <ArrowDown size={14} aria-hidden />
+                        </ActionIcon>
+                        <Button
+                          size="compact-sm"
+                          variant={off ? 'filled' : 'default'}
+                          aria-label={`Ignore ${name}`}
+                          aria-pressed={off}
+                          disabled={!off && active.length <= 1}
+                          onClick={() => {
+                            toggleIgnore(goal);
+                          }}
+                        >
+                          {off ? 'Ignored' : 'Ignore'}
+                        </Button>
                       </Group>
-                    )}
-                    <Group gap={2} wrap="nowrap" className={classes.goalMoves}>
-                      <ActionIcon
-                        variant="subtle"
-                        color="slate"
-                        size="md"
-                        aria-label={`Move ${name} up`}
-                        disabled={index === 0}
-                        onClick={() => {
-                          move(goal, -1);
-                        }}
-                      >
-                        <ArrowUp size={14} aria-hidden />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="subtle"
-                        color="slate"
-                        size="md"
-                        aria-label={`Move ${name} down`}
-                        disabled={index === order.length - 1}
-                        onClick={() => {
-                          move(goal, 1);
-                        }}
-                      >
-                        <ArrowDown size={14} aria-hidden />
-                      </ActionIcon>
-                      <Button
-                        size="compact-sm"
-                        variant={off ? 'filled' : 'default'}
-                        aria-label={`Ignore ${name}`}
-                        aria-pressed={off}
-                        disabled={!off && active.length <= 1}
-                        onClick={() => {
-                          toggleIgnore(goal);
-                        }}
-                      >
-                        {off ? 'Ignored' : 'Ignore'}
-                      </Button>
-                    </Group>
-                  </Paper>
-                );
-              })}
+                    </Paper>
+                  );
+                })}
+              </Stack>
+              <VisuallyHidden role="status">{message}</VisuallyHidden>
+              <div id={helpId} hidden={!helpOpen}>
+                {helpOpen && (
+                  <Stack gap={4}>
+                    {TALENT_STRENGTHS.map((s) => (
+                      <Text key={s} size="sm">
+                        <Text span fw={600}>{`${STRENGTH_LABELS[s]}. `}</Text>
+                        {STRENGTH_HELP[s]}
+                      </Text>
+                    ))}
+                  </Stack>
+                )}
+              </div>
             </Stack>
-            <VisuallyHidden role="status">{message}</VisuallyHidden>
-            <div id={helpId} hidden={!helpOpen}>
-              {helpOpen && (
-                <Stack gap={4}>
-                  {TALENT_STRENGTHS.map((s) => (
-                    <Text key={s} size="sm">
-                      <Text span fw={600}>{`${STRENGTH_LABELS[s]}. `}</Text>
-                      {STRENGTH_HELP[s]}
-                    </Text>
-                  ))}
-                </Stack>
-              )}
-            </div>
-          </Stack>
 
-          <Stack gap={4}>
-            <Text fw={600} size="sm">
-              How points are spread
-            </Text>
-            <SegmentedControl
-              aria-label="How points are spread"
-              value={talentsState.mode}
-              data={TALENT_MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
-              onChange={(v) => {
-                const next = TALENT_MODES.find((m) => m === v);
-                if (next !== undefined) edit({ mode: next });
-              }}
-              style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
-            />
-            <Text size="sm" c="dimmed">
-              {MODE_HELP[talentsState.mode]}
-            </Text>
-          </Stack>
+            <Stack gap={4}>
+              <Text fw={600} size="sm">
+                How points are spread
+              </Text>
+              <SegmentedControl
+                aria-label="How points are spread"
+                value={talentsState.mode}
+                data={TALENT_MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
+                onChange={(v) => {
+                  const next = TALENT_MODES.find((m) => m === v);
+                  if (next !== undefined) edit({ mode: next });
+                }}
+                style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+              />
+              <Text size="sm" c="dimmed">
+                {MODE_HELP[talentsState.mode]}
+              </Text>
+            </Stack>
 
-          <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
-            <Stack gap="md">
-              {active.map((goal) => (
-                <Stack key={goal} gap="xs">
-                  <Text fw={600} size="sm">
-                    {GOAL_LABELS[goal]}
-                  </Text>
-                  {goal === 'battle' && (
-                    <Text size="xs" c="dimmed">
-                      {SHARES_NOTE}
+            <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
+              <Stack gap="md">
+                {active.map((goal) => (
+                  <Stack key={goal} gap="xs">
+                    <Text fw={600} size="sm">
+                      {GOAL_LABELS[goal]}
                     </Text>
-                  )}
-                  {GOAL_STATS[goal].map((stat) => {
-                    const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
-                    const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
-                    // A tick sets the weight to 1 and an untick to 0; going back to the default drops the override.
-                    const setWeight = (v: number | null): void => {
-                      const rest = { ...talentsState.weights[goal] };
-                      if (v === null || v === (offByDefault ? 0 : 1)) delete rest[stat];
-                      else rest[stat] = v;
-                      edit({ weights: { ...talentsState.weights, [goal]: rest } });
-                    };
+                    {goal === 'battle' && (
+                      <Text size="xs" c="dimmed">
+                        {SHARES_NOTE}
+                      </Text>
+                    )}
+                    <div className={classes.statGrid}>
+                      {GOAL_STATS[goal].map((stat) => {
+                        const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
+                        const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
+                        // A tick sets the weight to 1 and an untick to 0; going back to the default drops the override.
+                        const setWeight = (v: number | null): void => {
+                          const rest = { ...talentsState.weights[goal] };
+                          if (v === null || v === (offByDefault ? 0 : 1)) delete rest[stat];
+                          else rest[stat] = v;
+                          edit({ weights: { ...talentsState.weights, [goal]: rest } });
+                        };
+                        return (
+                          <div key={stat} className={classes.statCell}>
+                            <Checkbox
+                              label={statLabel(stat)}
+                              checked={weight > 0}
+                              onChange={(event) => setWeight(event.currentTarget.checked ? 1 : 0)}
+                            />
+                            <div className={classes.statWeight}>
+                              <NumberField
+                                label="Weight"
+                                accessibleName={`Weight of ${statLabel(stat)}`}
+                                value={weight}
+                                allowDecimal
+                                allowEmpty
+                                min={0}
+                                w={64}
+                                onChange={setWeight}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Stack>
+                ))}
+              </Stack>
+            </Disclosure>
+            {goalHasUnitStats('battle') && active.includes('battle') && (
+              <Disclosure
+                title="Troop groups"
+                summary={
+                  TALENT_TROOP_GROUPS.filter((g) => groups.has(g))
+                    .map((g) => GROUP_LABELS[g])
+                    .join(', ') || 'None'
+                }
+              >
+                <Stack gap="xs">
+                  {TALENT_TROOP_GROUPS.map((group) => {
+                    const inArmy = fieldedGroupSet.has(group);
                     return (
-                      <Group key={stat} gap="sm" align="flex-end" wrap="wrap">
-                        <Checkbox
-                          label={statLabel(stat)}
-                          checked={weight > 0}
-                          onChange={(event) => setWeight(event.currentTarget.checked ? 1 : 0)}
-                          style={{ flex: '1 1 12rem' }}
-                        />
-                        <NumberField
-                          label="Weight"
-                          accessibleName={`Weight of ${statLabel(stat)}`}
-                          value={weight}
-                          allowDecimal
-                          allowEmpty
-                          min={0}
-                          w={90}
-                          onChange={setWeight}
-                        />
-                      </Group>
+                      <Checkbox
+                        key={group}
+                        label={GROUP_LABELS[group]}
+                        description={inArmy ? 'In your army' : undefined}
+                        checked={groups.has(group)}
+                        onChange={(event) => {
+                          const on = event.currentTarget.checked;
+                          const rest = { ...talentsState.groupOverrides };
+                          // Back to what the account says is no override at all.
+                          if (on === inArmy) delete rest[group];
+                          else rest[group] = on;
+                          edit({ groupOverrides: rest });
+                        }}
+                      />
                     );
                   })}
-                </Stack>
-              ))}
-            </Stack>
-          </Disclosure>
-          {goalHasUnitStats('battle') && active.includes('battle') && (
-            <Disclosure
-              title="Troop groups"
-              summary={
-                TALENT_TROOP_GROUPS.filter((g) => groups.has(g))
-                  .map((g) => GROUP_LABELS[g])
-                  .join(', ') || 'None'
-              }
-            >
-              <Stack gap="xs">
-                {TALENT_TROOP_GROUPS.map((group) => {
-                  const inArmy = fieldedGroupSet.has(group);
-                  return (
-                    <Checkbox
-                      key={group}
-                      label={GROUP_LABELS[group]}
-                      description={inArmy ? 'In your army' : undefined}
-                      checked={groups.has(group)}
-                      onChange={(event) => {
-                        const on = event.currentTarget.checked;
-                        const rest = { ...talentsState.groupOverrides };
-                        // Back to what the account says is no override at all.
-                        if (on === inArmy) delete rest[group];
-                        else rest[group] = on;
-                        edit({ groupOverrides: rest });
-                      }}
-                    />
-                  );
-                })}
-                <Text size="sm" c="dimmed">
-                  A group you do not use gets no points, beyond the one rank that opens a stronger talent.
-                </Text>
-              </Stack>
-            </Disclosure>
-          )}
-          {active.includes('archeology') && (
-            <Disclosure
-              title="Crypts that count"
-              summary={
-                talentsState.crypts.length === 0
-                  ? 'None'
-                  : TALENT_CRYPT_TYPES.filter((c) => talentsState.crypts.includes(c))
-                      .map((c) => CRYPT_LABELS[c])
-                      .join(', ')
-              }
-            >
-              <Stack gap="xs">
-                {TALENT_CRYPT_TYPES.map((type) => (
-                  <Checkbox
-                    key={type}
-                    label={`${CRYPT_LABELS[type]} crypts`}
-                    checked={talentsState.crypts.includes(type)}
-                    onChange={(event) => {
-                      const rest = talentsState.crypts.filter((c) => c !== type);
-                      edit({
-                        crypts: event.currentTarget.checked
-                          ? TALENT_CRYPT_TYPES.filter((c) => c === type || rest.includes(c))
-                          : rest,
-                      });
-                    }}
-                  />
-                ))}
-              </Stack>
-            </Disclosure>
-          )}
-          {unitStats && (
-            <Disclosure
-              title="Units that count"
-              summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
-            >
-              <Stack gap="xs">
-                {TALENT_UNIT_KINDS.filter((kind) => kind !== 'monsters').map((kind) => {
-                  const inArmy = fielded.has(kind);
-                  return (
-                    <Checkbox
-                      key={kind}
-                      label={KIND_LABELS[kind]}
-                      description={inArmy ? 'In your army' : undefined}
-                      checked={inArmy || talentsState.forcedUnitKinds.includes(kind)}
-                      disabled={inArmy}
-                      onChange={(event) => {
-                        const on = event.currentTarget.checked;
-                        const rest = talentsState.forcedUnitKinds.filter((k) => k !== kind);
-                        edit({ forcedUnitKinds: on ? [...rest, kind as TalentUnitKind] : rest });
-                      }}
-                    />
-                  );
-                })}
-                {fielded.has('engineers') && (
                   <Text size="sm" c="dimmed">
-                    Engineers count too: your army uses them.
+                    A group you do not use gets no points, beyond the one rank that opens a stronger talent.
                   </Text>
-                )}
-              </Stack>
-            </Disclosure>
-          )}
-        </Stack>
-      </Panel>
-
-      <Panel
-        component="section"
-        title="Spend your next points"
-        meta={stock === null || left === null ? undefined : `${String(left)} of ${String(stock)} points left`}
-      >
-        <Stack gap="md">
-          {stock === null ? (
-            <Text>
-              Type your whole stock of talent points. The game&apos;s points per hero level are only known
-              from level 86 (10 each), so the page cannot work out your total from the level alone. The ranks
-              you hold, or click on the tree, spend it, and the plan works on what is left.
-            </Text>
-          ) : result.steps.length === 0 ? (
-            <Text>
-              {over > 0
-                ? `The ranks you hold cost ${plural(over, 'point')} more than your stock. Raise the stock, or take a rank back.`
-                : left === 0
-                  ? 'No points left to spend, so there is nothing to plan.'
-                  : kinds.size === 0 && unitStats
-                    ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
-                    : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
-            </Text>
-          ) : (
-            <>
-              <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
-                {result.steps.slice(0, 2).map((step, i) => (
-                  <StepCard
-                    key={`${String(step.nodeId)}-${String(step.rank)}`}
-                    step={step}
-                    next={i === 0}
-                    onSpend={i === 0 ? spend : undefined}
-                    onSpendUpToHere={
-                      i > 0
-                        ? () => {
-                            spendPlanTo(i);
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-              </SimpleGrid>
-              <Text size="sm">
-                Plan spends {String(result.pointsSpent)} of {String(left ?? 0)} points
-                {result.pointsLeft > 0 ? `, ${String(result.pointsLeft)} left.` : '.'} The tree below shows
-                every step in order.
-              </Text>
-              {result.pointsLeft > 0 && (
-                <Text size="sm" c="dimmed">
-                  {plural(result.pointsLeft, 'point')} left over: less than the cheapest rank still open
-                  {ignored.size > 0 ? ', or only in a goal you ignore' : ''}.
-                </Text>
-              )}
-            </>
-          )}
-          {gate !== null && gate !== undefined && result.nextGate !== null && (
-            <Text size="sm">
-              At level {String(result.nextGate.level)}, {gate.name} opens, worth{' '}
-              {percent(result.nextGate.value)} for {plural(result.nextGate.points, 'point')}.
-            </Text>
-          )}
-        </Stack>
-      </Panel>
-
-      {shownStats.length > 0 && (
-        <Panel component="section" title="Totals" meta="Before, then after">
-          <Stack gap={4}>
-            {shownStats.map((stat) => (
-              <Group key={stat} justify="space-between" wrap="nowrap">
-                <Text size="sm">{statLabel(stat)}</Text>
-                <Text size="sm">
-                  {percent(result.before[stat] ?? 0)} to {percent(result.after[stat] ?? 0)}
-                </Text>
-              </Group>
-            ))}
+                </Stack>
+              </Disclosure>
+            )}
+            {active.includes('archeology') && (
+              <Disclosure
+                title="Crypts that count"
+                summary={
+                  talentsState.crypts.length === 0
+                    ? 'None'
+                    : TALENT_CRYPT_TYPES.filter((c) => talentsState.crypts.includes(c))
+                        .map((c) => CRYPT_LABELS[c])
+                        .join(', ')
+                }
+              >
+                <Stack gap="xs">
+                  {TALENT_CRYPT_TYPES.map((type) => (
+                    <Checkbox
+                      key={type}
+                      label={`${CRYPT_LABELS[type]} crypts`}
+                      checked={talentsState.crypts.includes(type)}
+                      onChange={(event) => {
+                        const rest = talentsState.crypts.filter((c) => c !== type);
+                        edit({
+                          crypts: event.currentTarget.checked
+                            ? TALENT_CRYPT_TYPES.filter((c) => c === type || rest.includes(c))
+                            : rest,
+                        });
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </Disclosure>
+            )}
+            {unitStats && (
+              <Disclosure
+                title="Units that count"
+                summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
+              >
+                <Stack gap="xs">
+                  {TALENT_UNIT_KINDS.filter((kind) => kind !== 'monsters').map((kind) => {
+                    const inArmy = fielded.has(kind);
+                    return (
+                      <Checkbox
+                        key={kind}
+                        label={KIND_LABELS[kind]}
+                        description={inArmy ? 'In your army' : undefined}
+                        checked={inArmy || talentsState.forcedUnitKinds.includes(kind)}
+                        disabled={inArmy}
+                        onChange={(event) => {
+                          const on = event.currentTarget.checked;
+                          const rest = talentsState.forcedUnitKinds.filter((k) => k !== kind);
+                          edit({ forcedUnitKinds: on ? [...rest, kind as TalentUnitKind] : rest });
+                        }}
+                      />
+                    );
+                  })}
+                  {fielded.has('engineers') && (
+                    <Text size="sm" c="dimmed">
+                      Engineers count too: your army uses them.
+                    </Text>
+                  )}
+                </Stack>
+              </Disclosure>
+            )}
           </Stack>
         </Panel>
-      )}
+        {shownStats.length > 0 && (
+          <Panel component="section" title="Totals" meta="Before, then after">
+            <Stack gap={4}>
+              {shownStats.map((stat) => (
+                <Group key={stat} justify="space-between" wrap="nowrap">
+                  <Text size="sm">{statLabel(stat)}</Text>
+                  <Text size="sm">
+                    {percent(result.before[stat] ?? 0)} to {percent(result.after[stat] ?? 0)}
+                  </Text>
+                </Group>
+              ))}
+            </Stack>
+          </Panel>
+        )}
+      </div>
+
+      <Panel component="section" aria-label="Spend your next points">
+        <Disclosure
+          title="Spend your next points"
+          summary={
+            stock === null || left === null
+              ? 'Type your points first'
+              : `${String(left)} of ${String(stock)} points left`
+          }
+        >
+          <Stack gap="md">
+            {stock === null ? (
+              <Text>
+                Type your whole stock of talent points. The game&apos;s points per hero level are only known
+                from level 86 (10 each), so the page cannot work out your total from the level alone. The
+                ranks you hold, or click on the tree, spend it, and the plan works on what is left.
+              </Text>
+            ) : result.steps.length === 0 ? (
+              <Text>
+                {over > 0
+                  ? `The ranks you hold cost ${plural(over, 'point')} more than your stock. Raise the stock, or take a rank back.`
+                  : left === 0
+                    ? 'No points left to spend, so there is nothing to plan.'
+                    : kinds.size === 0 && unitStats
+                      ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
+                      : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
+              </Text>
+            ) : (
+              <>
+                <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
+                  {result.steps.slice(0, 2).map((step, i) => (
+                    <StepCard
+                      key={`${String(step.nodeId)}-${String(step.rank)}`}
+                      step={step}
+                      next={i === 0}
+                      onSpend={i === 0 ? spend : undefined}
+                      onSpendUpToHere={
+                        i > 0
+                          ? () => {
+                              spendPlanTo(i);
+                            }
+                          : undefined
+                      }
+                    />
+                  ))}
+                </SimpleGrid>
+                <Text size="sm">
+                  Plan spends {String(result.pointsSpent)} of {String(left ?? 0)} points
+                  {result.pointsLeft > 0 ? `, ${String(result.pointsLeft)} left.` : '.'} The tree below shows
+                  every step in order.
+                </Text>
+                {result.pointsLeft > 0 && (
+                  <Text size="sm" c="dimmed">
+                    {plural(result.pointsLeft, 'point')} left over: less than the cheapest rank still open
+                    {ignored.size > 0 ? ', or only in a goal you ignore' : ''}.
+                  </Text>
+                )}
+              </>
+            )}
+            {gate !== null && gate !== undefined && result.nextGate !== null && (
+              <Text size="sm">
+                At level {String(result.nextGate.level)}, {gate.name} opens, worth{' '}
+                {percent(result.nextGate.value)} for {plural(result.nextGate.points, 'point')}.
+              </Text>
+            )}
+          </Stack>
+        </Disclosure>
+      </Panel>
 
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
+          <Group justify="flex-end">
+            <Button
+              size="compact-sm"
+              variant="default"
+              leftSection={<RotateCcw size={14} aria-hidden />}
+              disabled={spentPoints(TALENTS, viewTree, talentsState.ranks) === 0}
+              onClick={() => {
+                resetTree(viewTree);
+              }}
+            >
+              {`Reset points spent in ${TREE_LABELS[viewTree]}`}
+            </Button>
+          </Group>
           <SegmentedControl
             fullWidth
             styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 4, minWidth: 0 } }}
@@ -725,7 +769,7 @@ export function TalentsPage() {
             onSelect={setSelected}
             onRank={setRank}
             onSpend={spend}
-            onSpendPlan={spendPlanTo}
+            onSpendPlan={spendPlanToNode}
           />
         </Stack>
       </Panel>

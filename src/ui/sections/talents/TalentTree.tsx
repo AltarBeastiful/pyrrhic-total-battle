@@ -13,7 +13,7 @@ import { Glyph } from '@/ui/domain/Glyph';
 import { NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
-import { pointsWords, treePoints } from './spentPoints';
+import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
 import { talentFamily, talentIcons } from './talentFamily';
 
@@ -28,10 +28,10 @@ export interface TalentTreeProps {
   selected: number | null;
   onSelect: (id: number) => void;
   onRank: (id: number, rank: number) => void;
-  /** A click on a tile spends one rank on it, as in the game; the page checks the lock and the stock. */
+  /** The + on the selected tile spends one rank on it, as in the game; the page checks the lock and the stock. */
   onSpend: (id: number) => void;
-  /** Spend the plan from its first step to the step at this index, inclusive. */
-  onSpendPlan: (index: number) => void;
+  /** Spend this tree's plan steps up to the node and its neighbours on the same level. */
+  onSpendPlan: (nodeId: number) => void;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -164,7 +164,6 @@ export function TalentTree({
                     aria-label={spoken}
                     onClick={() => {
                       onSelect(n.id);
-                      onSpend(n.id);
                     }}
                   >
                     <span className={classes.head}>
@@ -211,18 +210,30 @@ export function TalentTree({
                       </span>
                     )}
                   </button>
-                  {bought > 0 && (
-                    <button
-                      type="button"
-                      className={classes.takeBack}
-                      aria-label={`Take one rank back from ${n.name}`}
-                      onClick={() => {
-                        onSelect(n.id);
-                        onRank(n.id, bought - 1);
-                      }}
-                    >
-                      <Minus size={14} aria-hidden />
-                    </button>
+                  {selected === n.id && (
+                    <div className={classes.pad} role="group" aria-label={`Ranks of ${n.name}`}>
+                      <button
+                        type="button"
+                        className={classes.padButton}
+                        aria-label={`Take one rank back from ${n.name}`}
+                        disabled={bought <= 0}
+                        onClick={() => {
+                          onRank(n.id, bought - 1);
+                        }}
+                      >
+                        <Minus size={16} aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        className={classes.padButton}
+                        aria-label={`Add one rank to ${n.name}`}
+                        onClick={() => {
+                          onSpend(n.id);
+                        }}
+                      >
+                        <Plus size={16} aria-hidden />
+                      </button>
+                    </div>
                   )}
                 </div>
               );
@@ -240,6 +251,7 @@ export function TalentTree({
         {node !== null ? (
           <NodeEditor
             node={node}
+            nodes={nodes}
             bought={ranks[String(node.id)] ?? 0}
             plan={plan}
             onRank={onRank}
@@ -247,7 +259,7 @@ export function TalentTree({
           />
         ) : (
           <Text size="sm" c="dimmed">
-            Tap a node to see what it adds and to set its rank.
+            Tap a node to see what it adds; its + and - buttons then appear under it.
           </Text>
         )}
       </aside>
@@ -257,20 +269,22 @@ export function TalentTree({
 
 function NodeEditor({
   node,
+  nodes,
   bought,
   plan,
   onRank,
   onSpendPlan,
 }: {
   node: TalentRecord;
+  nodes: readonly TalentRecord[];
   bought: number;
   plan: TalentPlan;
   onRank: (id: number, rank: number) => void;
-  onSpendPlan: (index: number) => void;
+  onSpendPlan: (nodeId: number) => void;
 }) {
-  // The plan's last step on this node: spending up to it takes every step before it too.
-  const lastStep = plan.steps.map((s) => s.nodeId).lastIndexOf(node.id);
-  const toHere = lastStep < 0 ? 0 : plan.steps.slice(0, lastStep + 1).reduce((sum, s) => sum + s.cost, 0);
+  // Spending up to here takes this tree's steps up to the node and its neighbours on the same level.
+  const upTo = stepsUpToNode(nodes, plan.steps, node.id);
+  const toHere = upTo.reduce((sum, s) => sum + s.cost, 0);
   const fam = talentFamily(node.name);
   const icons = talentIcons(node.name, node.stats);
   const lock = plan.locked[node.id];
@@ -302,13 +316,13 @@ function NodeEditor({
             : 'Locked until a node above it holds a rank.'}
         </Text>
       )}
-      {lastStep >= 0 && (
+      {upTo.length > 0 && (
         <Button
           size="xs"
           variant="light"
           style={{ alignSelf: 'flex-start' }}
           onClick={() => {
-            onSpendPlan(lastStep);
+            onSpendPlan(node.id);
           }}
         >
           {`Spend the plan up to here (${String(toHere)} ${toHere === 1 ? 'point' : 'points'})`}

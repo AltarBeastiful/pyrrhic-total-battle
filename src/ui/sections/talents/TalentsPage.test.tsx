@@ -41,8 +41,9 @@ function type(label: string | RegExp, value: string): void {
 
 const GOALS = 'Goals, most wanted first';
 const goalRows = () => within(screen.getByRole('list', { name: GOALS })).getAllByRole('listitem');
-const card = (name: 'Next point' | 'Then') => screen.getByRole('article', { name });
-const cards = () => screen.queryAllByRole('article');
+// The next-points fold is closed by default; its content stays in the document, so the cards are found hidden too.
+const card = (name: 'Next point' | 'Then') => screen.getByRole('article', { name, hidden: true });
+const cards = () => screen.queryAllByRole('article', { hidden: true });
 const pick = (group: string, option: string): void => {
   fireEvent.click(
     within(screen.getByRole('radiogroup', { name: group })).getByRole('radio', { name: option }),
@@ -296,7 +297,7 @@ test('a group the player switched off puts no talent point into its nodes beyond
   setTalents({ heroLevel: 150, pointsOverride: 120, groupOverrides: { specialist: false } });
   renderWithTheme(<TalentsPage />);
   const text = screen
-    .getAllByRole('article')
+    .getAllByRole('article', { hidden: true })
     .map((c) => c.textContent)
     .join(' ');
   expect(text).not.toMatch(/Specialists' (strength|health)/);
@@ -336,13 +337,30 @@ test('ranks worth more than the stock say so and plan nothing', () => {
   expect(cards()).toHaveLength(0);
 });
 
-test('a click on an open tile spends a point on it, as in the game', () => {
+const plusOf = (name: string) => screen.getByRole('button', { name: `Add one rank to ${name}` });
+
+test('a click on a tile only selects it: the + and - pad appears under it and nothing is spent', () => {
+  const node = rootNode();
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 10 });
+  renderWithTheme(<TalentsPage />);
+  expect(screen.queryByRole('button', { name: /^Add one rank to/ })).toBeNull();
+  fireEvent.click(tileOf(node.name));
+  fireEvent.click(tileOf(node.name));
+  expect(talentsOf().ranks[String(node.id)]).toBeUndefined();
+  expect(plusOf(node.name)).toBeTruthy();
+  const other = TALENTS.find((t) => t.tree === 'economy' && t.parents.includes(node.id))!;
+  fireEvent.click(tileOf(other.name));
+  expect(screen.queryByRole('button', { name: `Add one rank to ${node.name}` })).toBeNull();
+});
+
+test('the + on the selected tile spends a point on it, as in the game', () => {
   const node = rootNode();
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 10 });
   renderWithTheme(<TalentsPage />);
   fireEvent.click(tileOf(node.name));
+  fireEvent.click(plusOf(node.name));
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
-  fireEvent.click(tileOf(node.name));
+  fireEvent.click(plusOf(node.name));
   expect(talentsOf().ranks[String(node.id)]).toBe(2);
   expect(screen.getByText(/8 of 10 points left/i)).toBeTruthy();
 });
@@ -357,11 +375,13 @@ test('a click does not spend on a locked tile, past the maximum, or beyond the s
   });
   renderWithTheme(<TalentsPage />);
   fireEvent.click(tileOf(node.name));
+  fireEvent.click(plusOf(node.name));
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
   expect(screen.getByText(/not enough points/i)).toBeTruthy();
   const locked = TALENTS.find((t) => t.tree === 'economy' && t.parents.length > 0 && t.layout.y > 3)!;
   setTalents({ pointsOverride: 50 });
   fireEvent.click(tileOf(locked.name));
+  fireEvent.click(plusOf(locked.name));
   expect(talentsOf().ranks[String(locked.id)]).toBeUndefined();
 });
 
@@ -369,7 +389,7 @@ test('Mark as spent on the next point buys it and moves the plan on', () => {
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
   renderWithTheme(<TalentsPage />);
   const before = card('Next point').textContent;
-  fireEvent.click(within(card('Next point')).getByRole('button', { name: /mark as spent/i }));
+  fireEvent.click(within(card('Next point')).getByRole('button', { name: /mark as spent/i, hidden: true }));
   expect(Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0)).toBe(1);
   expect(screen.getByText(/29 of 30 points left/i)).toBeTruthy();
   expect(card('Next point').textContent === before && Object.keys(talentsOf().ranks).length === 0).toBe(
@@ -407,7 +427,7 @@ test('a tile locked by hero level says so with a lock and the level, not just di
   expect(tree.querySelector('[data-lock="level"] svg')).not.toBeNull();
 });
 
-test('a tile with a rank has its own Take back button, in place', () => {
+test('the selected tile has a Take back button on its pad, off when it holds no rank', () => {
   const node = rootNode();
   setTalents({
     goals: ['economy', 'battle', 'archeology'],
@@ -417,17 +437,22 @@ test('a tile with a rank has its own Take back button, in place', () => {
   });
   renderWithTheme(<TalentsPage />);
   const tree = screen.getByRole('region', { name: 'Economy tree' });
+  expect(within(tree).queryByRole('button', { name: `Take one rank back from ${node.name}` })).toBeNull();
+  fireEvent.click(tileOf(node.name));
   fireEvent.click(within(tree).getByRole('button', { name: `Take one rank back from ${node.name}` }));
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
   fireEvent.click(within(tree).getByRole('button', { name: `Take one rank back from ${node.name}` }));
   expect(talentsOf().ranks[String(node.id)]).toBeUndefined();
-  expect(within(tree).queryByRole('button', { name: `Take one rank back from ${node.name}` })).toBeNull();
+  expect(
+    (within(tree).getByRole('button', { name: `Take one rank back from ${node.name}` }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
 });
 
 test('Spend up to here on the second card buys both planned steps at once', () => {
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
   renderWithTheme(<TalentsPage />);
-  fireEvent.click(within(card('Then')).getByRole('button', { name: /spend up to here/i }));
+  fireEvent.click(within(card('Then')).getByRole('button', { name: /spend up to here/i, hidden: true }));
   const held = Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0);
   expect(held).toBe(2);
   expect(screen.getByText(/28 of 30 points left/i)).toBeTruthy();
@@ -439,7 +464,7 @@ test('a planned node offers to spend the plan up to it, and the points left foll
   const tree = screen.getByRole('region', { name: 'Economy tree' });
   const planned = tree.querySelector('button[data-state="planned"]') as HTMLElement;
   expect(planned).not.toBeNull();
-  fireEvent.click(planned); // selects it, and spends its first rank
+  fireEvent.click(planned); // selects it
   const button = screen.getByRole('button', { name: /spend the plan up to here/i });
   expect(button.textContent).toMatch(/\d+ points?/);
   const before = Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0);
@@ -495,4 +520,43 @@ test('the tree head and the tab count held ranks and planned steps apart, and ti
   ).toBeGreaterThan(0);
   const tree = screen.getByRole('region', { name: 'Economy tree' });
   expect(within(tree).getAllByRole('button', { name: /step \d+ of the plan/ }).length).toBeGreaterThan(0);
+});
+
+test('the next-points fold is closed by default and keeps the points left in view', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  const fold = screen.getByRole('button', { name: /spend your next points/i });
+  expect(fold.getAttribute('aria-expanded')).toBe('false');
+  expect(fold.textContent).toMatch(/30 of 30 points left/);
+  fireEvent.click(fold);
+  expect(fold.getAttribute('aria-expanded')).toBe('true');
+});
+
+test('Reset gives back every rank held in the open tree and leaves the other trees alone', () => {
+  const node = rootNode();
+  const other = TALENTS.find((t) => t.tree === 'battle' && t.parents.length === 0)!;
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 2, [String(other.id)]: 1 },
+  });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /reset points spent in economy/i }));
+  expect(talentsOf().ranks).toEqual({ [String(other.id)]: 1 });
+  expect(
+    (screen.getByRole('button', { name: /reset points spent in economy/i }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+});
+
+test('Spend the plan up to here takes only the open tree, up to the tile and its level', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  const planned = tree.querySelector('button[data-state="planned"]') as HTMLElement;
+  fireEvent.click(planned);
+  fireEvent.click(screen.getByRole('button', { name: /spend the plan up to here/i }));
+  const held = Object.keys(talentsOf().ranks).map((id) => TALENTS.find((t) => String(t.id) === id)!);
+  expect(held.length).toBeGreaterThan(0);
+  expect(held.every((t) => t.tree === 'economy')).toBe(true);
 });
