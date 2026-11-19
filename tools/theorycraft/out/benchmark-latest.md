@@ -12,7 +12,7 @@ The last six columns are the rare stock read the way the owner asked for it on 2
 
 Under each table, the **goal line** (S-101): the plan’s best stop against the captured `TotalStack · Total Optimization` row on the owner’s own three readings — damage a silver, damage a hired soldier and damage a monster — with `✓` at or above 1.0 and `✗` below it. The floors pinned on those three are today’s measured figures, so a `✗` is a discrepancy to judge and not a failing test.
 
-Run: 2026-10-23T12:41:14.154Z, commit (working tree)
+Run: 2026-11-19T13:36:08.366Z, commit (working tree)
 
 No baseline is registered (`tests/engine/plan-baseline.json` is absent or still reads `registeredBy: null`), so **no row below is held to a previous run**. `pnpm bench:baseline` writes a proposal for the owner to register.
 
@@ -201,41 +201,42 @@ The plan offers 4 stops.
 
 ## first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)
 
-The plan offers 5 stops.
+The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 10 · 20,000 | 79,635,913 | 35,450,400 | 5,536 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
-| Tier ladder · Generate (average damage) | 4 | 8 · 20,000 | 103,438,192 | 37,939,200 | 19,984 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,948 |
-| Tier ladder · Generate (best worst case) | 4 | 8 · 20,000 | 103,451,512 | 37,939,200 | 19,984 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,949 |
-| Tier ladder · Generate (damage per silver) | 4 | **none** | 29,737,655 | 1,885,600 | 50,624 | 34 | 15.77 | 194,110 | 30 | 26 | 17,360 | 175,111 | 941,705 | 1,713 |
-| Tier ladder · Generate (damage per gold) | 4 | 10 · 20,000 | 64,345,724 | 35,450,400 | 1,280 | 0 | 1.82 | 0 | 0 | 80 | 31,680 | 0 | 578,361 | 2,031 |
-| Tier ladder · Generate (damage per dragon coin) | 4 | 6 · 20,000 | 96,666,159 | 47,684,000 | 37,280 | 34 | 2.03 | 417,524 | 30 | 32 | 18,560 | 405,874 | 2,023,835 | 5,208 |
-| Troops first · all types | 4 | 10 · 20,000 | 82,845,061 | 35,450,400 | 5,472 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
-| Troops first · Generate (average damage) | 4 | 8 · 20,000 | 104,626,942 | 37,290,800 | 18,928 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
-| Troops first · Generate (best worst case) | 4 | 8 · 20,000 | 104,631,382 | 37,290,800 | 18,928 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
-| Troops first · Generate (damage per silver) | 4 | **none** | 29,737,655 | 1,885,600 | 50,624 | 34 | 15.77 | 194,110 | 30 | 26 | 17,360 | 175,111 | 941,705 | 1,713 |
-| Troops first · Generate (damage per gold) | 4 | 10 · 20,000 | 64,345,724 | 35,450,400 | 1,280 | 0 | 1.82 | 0 | 0 | 80 | 31,680 | 0 | 578,361 | 2,031 |
+| Tier ladder · all types | 4 | 10 · 20,000 | 79,635,913 | 35,450,400 | 49,056 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
+| Tier ladder · Generate (average damage) | 4 | 8 · 20,000 | 103,438,192 | 37,939,200 | 51,184 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,948 |
+| Tier ladder · Generate (best worst case) | 4 | 8 · 20,000 | 103,451,512 | 37,939,200 | 51,184 | 34 | 2.73 | 584,975 | 30 | 46 | 26,200 | 569,471 | 1,483,855 | 3,949 |
+| Tier ladder · Generate (damage per silver) | 4 | **none** | 29,737,655 | 1,885,600 | 54,784 | 34 | 15.77 | 194,110 | 30 | 26 | 17,360 | 175,111 | 941,705 | 1,713 |
+| Tier ladder · Generate (damage per gold) | 4 | 9 · 20,000 | 29,942,175 | 33,291,200 | 2,016 | 30 | 0.90 | 405,874 | 30 | 0 | 0 | 405,874 | 0 | 29,942,175 |
+| Tier ladder · Generate (damage per dragon coin) | 4 | 6 · 20,000 | 96,666,159 | 47,684,000 | 53,920 | 34 | 2.03 | 417,524 | 30 | 32 | 18,560 | 405,874 | 2,023,835 | 5,208 |
+| Troops first · all types | 4 | 10 · 20,000 | 82,845,061 | 35,450,400 | 48,992 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
+| Troops first · Generate (average damage) | 4 | 8 · 20,000 | 104,626,942 | 37,290,800 | 49,888 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
+| Troops first · Generate (best worst case) | 4 | 8 · 20,000 | 104,631,382 | 37,290,800 | 49,888 | 34 | 2.81 | 622,813 | 30 | 47 | 26,760 | 601,135 | 1,467,569 | 3,910 |
+| Troops first · Generate (damage per silver) | 4 | **none** | 29,737,655 | 1,885,600 | 54,784 | 34 | 15.77 | 194,110 | 30 | 26 | 17,360 | 175,111 | 941,705 | 1,713 |
+| Troops first · Generate (damage per gold) | 4 | 10 · 20,000 | 29,864,429 | 32,525,600 | 1,952 | 29 | 0.92 | 406,470 | 29 | 0 | 0 | 406,470 | 0 | 29,864,429 |
 | Troops first · Generate (damage per dragon coin) | 4 | 10 · 20,000 | 37,003,229 | 32,712,800 | 10,848 | 33 | 1.13 | 418,401 | 29 | 8 | 2,080 | 406,470 | 892,350 | 17,790 |
-| Troops first · allow damage trades | 4 | 10 · 20,000 | 82,845,061 | 35,450,400 | 5,472 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
-| Tier ladder · monsters after troops | 4 | 10 · 20,000 | 79,635,913 | 35,450,400 | 5,536 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
-| Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 80,527,377 | 35,425,200 | 5,152 | 33 | 2.27 | 418,401 | 29 | 82 | 31,320 | 406,470 | 617,841 | 2,571 |
-| TotalStack · M’s Preservation | 4 | 10 · 20,000 | 64,727,476 | 34,658,400 | 6,336 | 4 | 1.87 | 645,150 | 0 | 72 | 22,880 | 0 | 656,346 | 2,829 |
-| TotalStack · Total Optimization | 4 | 10 · 20,000 | 79,770,931 | 35,454,400 | 4,072 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
-| TotalStack · Elite Preservation | 4 | 10 · 20,000 | 79,770,931 | 35,454,400 | 4,072 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
-| Complete optimization · burn-saver | 4 | 10 · 19,996 | 81,548,470 | 34,920,400 | 11,072 | 15 | 2.34 | 541,060 | 11 | 48 | 24,120 | 482,810 | 1,205,643 | 3,381 |
-| Complete optimization · sweet-spot | 4 | 10 · 19,996 | 89,486,680 | 35,230,000 | 9,424 | 24 | 2.54 | 476,719 | 20 | 60 | 28,200 | 487,913 | 1,022,696 | 3,173 |
-| Complete optimization · more-mercs | 4 | 10 · 19,996 | 93,588,286 | 35,230,000 | 10,272 | 26 | 2.66 | 597,802 | 22 | 60 | 28,200 | 604,494 | 1,032,046 | 3,319 |
-| Complete optimization · steady-max | 4 | 9 · 19,983 | 97,759,924 | 36,432,700 | 14,232 | 32 | 2.68 | 543,725 | 28 | 57 | 28,200 | 521,221 | 1,147,440 | 3,467 |
-| Complete optimization · all-in | 4 | 9 · 19,983 | 103,197,710 | 37,309,700 | 17,888 | 34 | 2.77 | 594,278 | 30 | 48 | 27,040 | 561,315 | 1,429,491 | 3,816 |
+| Troops first · allow damage trades | 4 | 10 · 20,000 | 82,845,061 | 35,450,400 | 48,992 | 33 | 2.34 | 425,201 | 29 | 84 | 31,680 | 406,470 | 630,722 | 2,615 |
+| Tier ladder · monsters after troops | 4 | 10 · 20,000 | 79,635,913 | 35,450,400 | 49,056 | 34 | 2.25 | 287,394 | 30 | 84 | 31,680 | 250,913 | 630,722 | 2,514 |
+| Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 80,527,377 | 35,425,200 | 45,648 | 33 | 2.27 | 418,401 | 29 | 82 | 31,320 | 406,470 | 617,841 | 2,571 |
+| TotalStack · M’s Preservation | 4 | 10 · 20,000 | 64,727,476 | 34,658,400 | 46,208 | 4 | 1.87 | 645,150 | 0 | 72 | 22,880 | 0 | 656,346 | 2,829 |
+| TotalStack · Total Optimization | 4 | 10 · 20,000 | 79,770,931 | 35,454,400 | 48,872 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
+| TotalStack · Elite Preservation | 4 | 10 · 20,000 | 79,770,931 | 35,454,400 | 48,872 | 32 | 2.25 | 421,574 | 28 | 84 | 31,680 | 396,313 | 602,007 | 2,518 |
+| Complete optimization · burn-saver | 4 | 10 · 19,996 | 81,548,470 | 34,920,400 | 41,056 | 15 | 2.34 | 541,060 | 11 | 48 | 24,120 | 482,810 | 1,205,643 | 3,381 |
+| Complete optimization · sweet-spot | 4 | 10 · 19,996 | 91,892,080 | 35,156,800 | 48,288 | 20 | 2.61 | 520,974 | 16 | 52 | 27,040 | 557,718 | 1,242,345 | 3,398 |
+| Complete optimization · thrifty | 4 | 10 · 20,000 | 90,312,124 | 35,148,000 | 41,840 | 26 | 2.57 | 597,802 | 22 | 54 | 26,640 | 604,494 | 1,091,416 | 3,390 |
+| Complete optimization · more-mercs | 4 | 10 · 19,996 | 97,533,600 | 35,156,800 | 49,440 | 24 | 2.77 | 669,208 | 20 | 52 | 27,040 | 690,850 | 1,256,729 | 3,607 |
+| Complete optimization · steady-max | 4 | 9 · 19,983 | 97,759,924 | 36,432,700 | 48,776 | 32 | 2.68 | 543,725 | 28 | 57 | 28,200 | 521,221 | 1,147,440 | 3,467 |
+| Complete optimization · all-in | 4 | 9 · 19,983 | 103,197,710 | 37,309,700 | 49,808 | 34 | 2.77 | 594,278 | 30 | 48 | 27,040 | 561,315 | 1,429,491 | 3,816 |
 
-**Matched spend — NO STOP FITS** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 79,770,931 for 35,454,400 silver, 4,072 gold, 31,680 coins, 32 burned, 10,622,220 s. **No stop of ours fits inside it**, over gold.
+**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 79,770,931 for 35,454,400 silver, 48,872 gold, 31,680 coins, 32 burned, 10,622,220 s. Our best stop inside that budget (5 %) is `Complete optimization · steady-max` at 97,759,924 — **+22.6 %**.
 
-**Over all 3 of their comparable marches**, the bar dominates **0** at matched spend; none of its stops fits inside any of them.
+**Over all 3 of their comparable marches**, the bar dominates **2** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at +22.6 %.
 
-**The six markers**, our best against theirs on each alone: damage ✓, silver ✗, burned ✗, gold ✗, dragonCoins ✗, seconds ✗.
+**The six markers**, our best against theirs on each alone: damage ✓, silver ✗, burned ✗, gold ✓, dragonCoins ✗, seconds ✗.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.229** ✓, damage a hired soldier **1.525** ✓, damage a monster **2.375** ✓. All three are at or above the goal. And the fourth currency, where one is spent: **damage a dragon coin 1.516** ✓ — the monsters’ own price (S-102).
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.233** ✓, damage a hired soldier **1.743** ✓, damage a monster **2.375** ✓. All three are at or above the goal. And the fourth currency, where one is spent: **damage a dragon coin 1.516** ✓ — the monsters’ own price (S-102).
 
 ## first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)
 
@@ -243,27 +244,27 @@ The plan offers 6 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 10 · 20,000 | 1,720,194,630 | 66,887,200 | 42,848 | 34 | 25.72 | 976,667 | 30 | 1,044 | 366,720 | 927,370 | 1,549,704 | 4,691 |
+| Tier ladder · all types | 4 | 10 · 20,000 | 1,720,194,630 | 66,887,200 | 1,137,504 | 34 | 25.72 | 976,667 | 30 | 1,044 | 366,720 | 927,370 | 1,549,704 | 4,691 |
 | Tier ladder · Generate (average damage) | 4 | 3 · 20,000 | 2,804,986,074 | 106,136,000 | 1,150,176 | 34 | 26.43 | 278,349 | 30 | 200 | 334,240 | 270,583 | 13,785,828 | 8,392 |
-| Tier ladder · Generate (best worst case) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 399,712 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
-| Tier ladder · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
-| Tier ladder · Generate (damage per gold) | 4 | 2 · 20,000 | 1,268,850,628 | 88,110,400 | 8,640 | 0 | 14.40 | 0 | 0 | 1,060 | 356,320 | 0 | 1,182,191 | 3,561 |
-| Tier ladder · Generate (damage per dragon coin) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 399,712 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
-| Troops first · all types | 4 | 10 · 20,000 | 207,058,163 | 38,919,200 | 4,192 | 33 | 5.32 | 693,826 | 29 | 136 | 62,080 | 634,768 | 1,254,214 | 3,335 |
+| Tier ladder · Generate (best worst case) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 1,144,480 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
+| Tier ladder · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 1,144,480 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Tier ladder · Generate (damage per gold) | 4 | 9 · 20,000 | 29,942,175 | 33,291,200 | 2,016 | 30 | 0.90 | 405,874 | 30 | 0 | 0 | 405,874 | 0 | 29,942,175 |
+| Tier ladder · Generate (damage per dragon coin) | 4 | 2 · 20,000 | 3,349,313,919 | 103,460,000 | 1,144,480 | 34 | 32.37 | 417,524 | 30 | 244 | 345,440 | 405,874 | 13,351,610 | 9,696 |
+| Troops first · all types | 4 | 10 · 20,000 | 207,058,163 | 38,919,200 | 93,600 | 33 | 5.32 | 693,826 | 29 | 136 | 62,080 | 634,768 | 1,254,214 | 3,335 |
 | Troops first · Generate (average damage) | 4 | **none** | 2,760,551,141 | 50,136,000 | 1,150,176 | 34 | 55.06 | 139,175 | 30 | 200 | 334,240 | 135,291 | 13,782,462 | 8,259 |
-| Troops first · Generate (best worst case) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
-| Troops first · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 399,712 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
-| Troops first · Generate (damage per gold) | 4 | 3 · 20,000 | 768,551,272 | 65,593,600 | 2,752 | 0 | 11.72 | 0 | 0 | 564 | 189,280 | 0 | 1,332,862 | 4,060 |
+| Troops first · Generate (best worst case) | 4 | **none** | 3,265,910,282 | 47,460,000 | 1,144,480 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Troops first · Generate (damage per silver) | 4 | **none** | 3,265,910,282 | 47,460,000 | 1,144,480 | 34 | 68.81 | 298,149 | 30 | 244 | 345,440 | 270,583 | 13,351,610 | 9,454 |
+| Troops first · Generate (damage per gold) | 4 | 6 · 20,000 | 106,618,432 | 44,412,000 | 1,920 | 0 | 2.40 | 0 | 0 | 20 | 32,480 | 0 | 4,461,160 | 3,283 |
 | Troops first · Generate (damage per dragon coin) | 4 | 10 · 20,000 | 37,003,229 | 32,712,800 | 10,848 | 33 | 1.13 | 418,401 | 29 | 8 | 2,080 | 406,470 | 892,350 | 17,790 |
-| Troops first · allow damage trades | 4 | 10 · 20,000 | 282,891,430 | 43,071,200 | 4,192 | 33 | 6.57 | 833,293 | 29 | 152 | 89,760 | 770,258 | 1,522,410 | 3,152 |
-| Tier ladder · monsters after troops | 4 | 10 · 20,000 | 202,818,501 | 38,919,200 | 4,256 | 34 | 5.21 | 509,173 | 30 | 136 | 62,080 | 427,463 | 1,256,373 | 3,267 |
-| Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 111,509,009 | 36,239,200 | 5,888 | 33 | 3.08 | 418,401 | 29 | 94 | 38,400 | 406,470 | 868,559 | 2,904 |
-| Complete optimization · silver-saver | 4 | 2 · 10,604 | 758,014,640 | 46,561,600 | 12,512 | 16 | 16.28 | 716,694 | 12 | 328 | 164,480 | 805,992 | 2,255,821 | 4,609 |
-| Complete optimization · thrifty | 4 | 2 · 15,150 | 897,515,601 | 56,957,600 | 18,776 | 24 | 15.76 | 690,920 | 20 | 367 | 171,760 | 722,514 | 2,369,237 | 5,225 |
-| Complete optimization · sweet-spot | 4 | 2 · 19,998 | 1,132,374,984 | 76,544,800 | 23,936 | 20 | 14.79 | 780,610 | 16 | 444 | 208,320 | 863,562 | 2,483,456 | 5,436 |
-| Complete optimization · more-mercs | 4 | 2 · 19,998 | 1,591,128,864 | 84,032,000 | 36,192 | 28 | 18.93 | 824,031 | 24 | 644 | 291,520 | 849,169 | 2,414,356 | 5,458 |
-| Complete optimization · steady-max | 4 | 2 · 20,000 | 1,704,237,793 | 82,375,400 | 39,672 | 32 | 20.69 | 831,119 | 28 | 698 | 304,440 | 829,636 | 2,385,130 | 5,598 |
-| Complete optimization · all-in | 4 | 2 · 20,000 | 1,924,929,114 | 88,360,000 | 48,544 | 34 | 21.79 | 835,048 | 30 | 740 | 336,480 | 811,748 | 2,546,660 | 5,721 |
+| Troops first · allow damage trades | 4 | 10 · 20,000 | 282,891,430 | 43,071,200 | 93,600 | 33 | 6.57 | 833,293 | 29 | 152 | 89,760 | 770,258 | 1,522,410 | 3,152 |
+| Tier ladder · monsters after troops | 4 | 10 · 20,000 | 202,818,501 | 38,919,200 | 93,664 | 34 | 5.21 | 509,173 | 30 | 136 | 62,080 | 427,463 | 1,256,373 | 3,267 |
+| Troops first · monsters after mercenaries | 4 | 10 · 20,000 | 111,509,009 | 36,239,200 | 58,432 | 33 | 3.08 | 418,401 | 29 | 94 | 38,400 | 406,470 | 868,559 | 2,904 |
+| Complete optimization · silver-saver | 4 | 2 · 10,604 | 758,014,640 | 46,561,600 | 421,792 | 16 | 16.28 | 716,694 | 12 | 328 | 164,480 | 805,992 | 2,255,821 | 4,609 |
+| Complete optimization · thrifty | 4 | 2 · 15,150 | 897,515,601 | 56,957,600 | 479,032 | 24 | 15.76 | 690,920 | 20 | 367 | 171,760 | 722,514 | 2,369,237 | 5,225 |
+| Complete optimization · sweet-spot | 4 | 2 · 19,998 | 1,132,374,984 | 76,544,800 | 607,808 | 20 | 14.79 | 780,610 | 16 | 444 | 208,320 | 863,562 | 2,483,456 | 5,436 |
+| Complete optimization · more-mercs | 4 | 2 · 19,998 | 1,591,128,864 | 84,032,000 | 893,984 | 28 | 18.93 | 824,031 | 24 | 644 | 291,520 | 849,169 | 2,414,356 | 5,458 |
+| Complete optimization · steady-max | 4 | 2 · 20,000 | 1,704,237,793 | 82,375,400 | 936,136 | 32 | 20.69 | 831,119 | 28 | 698 | 304,440 | 829,636 | 2,385,130 | 5,598 |
+| Complete optimization · all-in | 4 | 2 · 20,000 | 1,924,929,114 | 88,360,000 | 1,048,544 | 34 | 21.79 | 835,048 | 30 | 740 | 336,480 | 811,748 | 2,546,660 | 5,721 |
 
 **Matched spend — not measured**: no comparable march from a calculator outside this repo on this army, so there is nothing to be better or worse than.
 
@@ -640,35 +641,35 @@ The plan offers 3 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 8 · 5,225 | 6,739,348 | 7,990,800 | 1,952 | 29 | 0.84 | 0 | 29 | 16 | 3,840 | 0 | 126,953 | 1,755 |
-| Tier ladder · Generate (average damage) | 4 | 5 · 5,225 | 8,444,893 | 9,547,400 | 1,952 | 29 | 0.88 | 105,962 | 29 | 16 | 3,840 | 105,962 | 97,163 | 2,199 |
-| Tier ladder · Generate (best worst case) | 4 | 5 · 5,225 | 8,444,893 | 9,547,400 | 1,952 | 29 | 0.88 | 105,962 | 29 | 16 | 3,840 | 105,962 | 97,163 | 2,199 |
-| Tier ladder · Generate (damage per silver) | 4 | **none** | 682,004 | 145,600 | 1,952 | 29 | 4.68 | 0 | 29 | 12 | 2,080 | 0 | 56,834 | 328 |
-| Tier ladder · Generate (damage per gold) | 4 | 5 · 5,225 | 8,444,893 | 9,547,400 | 1,952 | 29 | 0.88 | 105,962 | 29 | 16 | 3,840 | 105,962 | 97,163 | 2,199 |
-| Tier ladder · Generate (damage per dragon coin) | 4 | 5 · 5,225 | 8,145,045 | 9,413,000 | 1,952 | 29 | 0.87 | 105,962 | 29 | 12 | 1,920 | 105,962 | 104,563 | 4,242 |
-| Troops first · all types | 4 | 8 · 5,225 | 7,673,968 | 7,990,800 | 1,056 | 16 | 0.96 | 104,118 | 16 | 16 | 3,840 | 104,118 | 126,953 | 1,998 |
-| Troops first · Generate (average damage) | 4 | 5 · 5,225 | 8,647,583 | 9,142,200 | 1,872 | 28 | 0.95 | 105,324 | 28 | 16 | 3,840 | 105,324 | 102,779 | 2,252 |
-| Troops first · Generate (best worst case) | 4 | 5 · 5,225 | 8,647,583 | 9,142,200 | 1,872 | 28 | 0.95 | 105,324 | 28 | 16 | 3,840 | 105,324 | 102,779 | 2,252 |
-| Troops first · Generate (damage per silver) | 4 | **none** | 682,004 | 145,600 | 1,952 | 29 | 4.68 | 0 | 29 | 12 | 2,080 | 0 | 56,834 | 328 |
-| Troops first · Generate (damage per gold) | 4 | 8 · 5,225 | 7,809,640 | 7,890,000 | 1,056 | 16 | 0.99 | 104,118 | 16 | 8 | 2,400 | 104,118 | 270,864 | 3,254 |
-| Troops first · Generate (damage per dragon coin) | 4 | 5 · 5,225 | 8,266,034 | 8,887,000 | 1,808 | 27 | 0.93 | 105,473 | 27 | 12 | 1,920 | 105,473 | 110,985 | 4,305 |
-| Troops first · allow damage trades | 4 | 8 · 5,225 | 7,673,968 | 7,990,800 | 1,056 | 16 | 0.96 | 104,118 | 16 | 16 | 3,840 | 104,118 | 126,953 | 1,998 |
-| Tier ladder · monsters after troops | 4 | 8 · 5,225 | 6,739,348 | 7,990,800 | 1,952 | 29 | 0.84 | 0 | 29 | 16 | 3,840 | 0 | 126,953 | 1,755 |
-| Troops first · monsters after mercenaries | 4 | 8 · 5,225 | 7,673,968 | 7,990,800 | 1,056 | 16 | 0.96 | 104,118 | 16 | 16 | 3,840 | 104,118 | 126,953 | 1,998 |
-| TotalStack · M’s Preservation | 4 | 8 · 5,225 | 5,187,364 | 7,862,000 | 0 | 0 | 0.66 | 0 | 0 | 12 | 1,920 | 0 | 130,251 | 2,702 |
-| TotalStack · Total Optimization | 4 | 8 · 5,225 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
-| TotalStack · Elite Preservation | 4 | 8 · 5,225 | 6,779,808 | 7,989,200 | 1,952 | 29 | 0.85 | 0 | 29 | 16 | 3,840 | 0 | 129,633 | 1,766 |
-| Complete optimization · silver-saver | 4 | 8 · 2,031 | 4,935,728 | 4,431,600 | 480 | 7 | 1.11 | 131,856 | 7 | 16 | 3,840 | 131,856 | 116,603 | 1,285 |
-| Complete optimization · sweet-spot | 4 | 7 · 5,225 | 8,250,940 | 8,344,200 | 1,320 | 19 | 0.99 | 109,005 | 19 | 16 | 3,840 | 109,005 | 118,153 | 2,149 |
-| Complete optimization · steady-max | 4 | 6 · 5,221 | 8,443,234 | 8,706,000 | 1,584 | 25 | 0.97 | 100,404 | 25 | 16 | 3,840 | 100,404 | 110,928 | 2,199 |
+| Tier ladder · all types | 4 | 8 · 5,225 | 6,739,348 | 8,830,800 | 1,952 | 29 | 0.76 | 0 | 29 | 16 | 15,840 | 0 | 126,953 | 425 |
+| Tier ladder · Generate (average damage) | 4 | 5 · 5,225 | 8,444,893 | 10,387,400 | 1,952 | 29 | 0.81 | 105,962 | 29 | 16 | 15,840 | 105,962 | 97,163 | 533 |
+| Tier ladder · Generate (best worst case) | 4 | 5 · 5,225 | 8,444,893 | 10,387,400 | 1,952 | 29 | 0.81 | 105,962 | 29 | 16 | 15,840 | 105,962 | 97,163 | 533 |
+| Tier ladder · Generate (damage per silver) | 4 | 5 · 5,225 | 8,080,066 | 9,628,000 | 1,952 | 29 | 0.84 | 105,962 | 29 | 16 | 15,840 | 105,962 | 97,163 | 510 |
+| Tier ladder · Generate (damage per gold) | 4 | 5 · 5,225 | 8,444,893 | 10,387,400 | 1,952 | 29 | 0.81 | 105,962 | 29 | 16 | 15,840 | 105,962 | 97,163 | 533 |
+| Tier ladder · Generate (damage per dragon coin) | 4 | 5 · 5,225 | 8,362,460 | 10,356,600 | 1,952 | 29 | 0.81 | 105,962 | 29 | 9 | 15,400 | 105,962 | 163,575 | 543 |
+| Troops first · all types | 4 | 8 · 5,225 | 7,673,968 | 8,830,800 | 1,056 | 16 | 0.87 | 104,118 | 16 | 16 | 15,840 | 104,118 | 126,953 | 484 |
+| Troops first · Generate (average damage) | 4 | 5 · 5,225 | 8,647,583 | 9,982,200 | 1,872 | 28 | 0.87 | 105,324 | 28 | 16 | 15,840 | 105,324 | 102,779 | 546 |
+| Troops first · Generate (best worst case) | 4 | 5 · 5,225 | 8,647,583 | 9,982,200 | 1,872 | 28 | 0.87 | 105,324 | 28 | 16 | 15,840 | 105,324 | 102,779 | 546 |
+| Troops first · Generate (damage per silver) | 4 | 7 · 5,225 | 8,364,852 | 9,307,600 | 1,408 | 20 | 0.90 | 110,309 | 20 | 16 | 16,000 | 110,309 | 116,045 | 523 |
+| Troops first · Generate (damage per gold) | 4 | 8 · 5,225 | 7,809,640 | 8,808,400 | 1,056 | 16 | 0.89 | 104,118 | 16 | 8 | 15,520 | 104,118 | 270,864 | 503 |
+| Troops first · Generate (damage per dragon coin) | 4 | 5 · 5,225 | 8,359,298 | 9,694,600 | 1,720 | 26 | 0.86 | 104,334 | 26 | 10 | 15,120 | 104,334 | 164,144 | 553 |
+| Troops first · allow damage trades | 4 | 8 · 5,225 | 7,673,968 | 8,830,800 | 1,056 | 16 | 0.87 | 104,118 | 16 | 16 | 15,840 | 104,118 | 126,953 | 484 |
+| Tier ladder · monsters after troops | 4 | 8 · 5,225 | 6,739,348 | 8,830,800 | 1,952 | 29 | 0.76 | 0 | 29 | 16 | 15,840 | 0 | 126,953 | 425 |
+| Troops first · monsters after mercenaries | 4 | 8 · 5,225 | 7,673,968 | 8,830,800 | 1,056 | 16 | 0.87 | 104,118 | 16 | 16 | 15,840 | 104,118 | 126,953 | 484 |
+| TotalStack · M’s Preservation | 4 | 8 · 5,225 | 5,187,364 | 8,836,400 | 0 | 0 | 0.59 | 0 | 0 | 12 | 15,840 | 0 | 130,251 | 327 |
+| TotalStack · Total Optimization | 4 | 8 · 5,225 | 6,779,808 | 8,840,400 | 1,952 | 29 | 0.77 | 0 | 29 | 16 | 16,000 | 0 | 129,633 | 424 |
+| TotalStack · Elite Preservation | 4 | 8 · 5,225 | 6,779,808 | 8,840,400 | 1,952 | 29 | 0.77 | 0 | 29 | 16 | 16,000 | 0 | 129,633 | 424 |
+| Complete optimization · silver-saver | 4 | 8 · 2,031 | 4,935,728 | 5,254,800 | 480 | 7 | 0.94 | 131,856 | 7 | 16 | 15,600 | 131,856 | 116,603 | 316 |
+| Complete optimization · sweet-spot | 4 | 7 · 5,225 | 8,250,940 | 9,184,200 | 1,320 | 19 | 0.90 | 109,005 | 19 | 16 | 15,840 | 109,005 | 118,153 | 521 |
+| Complete optimization · steady-max | 4 | 6 · 5,221 | 8,443,234 | 9,546,000 | 1,584 | 25 | 0.88 | 100,404 | 25 | 16 | 15,840 | 100,404 | 110,928 | 533 |
 
-**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 6,779,808 for 7,989,200 silver, 1,952 gold, 3,840 coins, 29 burned, 1,745,160 s. Our best stop inside that budget (5 %) is `Complete optimization · sweet-spot` at 8,250,940 — **+21.7 %**.
+**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · Elite Preservation` at 6,779,808 for 8,840,400 silver, 1,952 gold, 16,000 coins, 29 burned, 2,255,880 s. Our best stop inside that budget (5 %) is `Complete optimization · sweet-spot` at 8,250,940 — **+21.7 %**.
 
 **Over all 3 of their comparable marches**, the bar dominates **2** at matched spend; the one it does worst on is `TotalStack · Total Optimization` at +21.7 %.
 
-**The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✗, gold ✗, dragonCoins ✗, seconds ✓.
+**The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✗, gold ✗, dragonCoins ✓, seconds ✓.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.312** ✓, damage a hired soldier —, damage a monster **0.911** ✗. **Below the goal: damage a monster** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.245** ✓ — the monsters’ own price (S-102).
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.225** ✓, damage a hired soldier —, damage a monster **0.911** ✗. **Below the goal: damage a monster** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.258** ✓ — the monsters’ own price (S-102).
 
 ## his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90)
 
@@ -676,43 +677,41 @@ The plan offers 3 stops.
 
 | sequence | marches | troops | four-march damage | silver | gold | hired burned | a silver | a hired | soldiers burned | monsters burned | dragon coins | a soldier | a monster | a dragon coin |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tier ladder · all types | 4 | 8 · 5,200 | 8,572,792 | 7,989,600 | 2,192 | 33 | 1.07 | 0 | 33 | 20 | 4,320 | 0 | 187,737 | 1,984 |
-| Tier ladder · Generate (average damage) | 4 | 2 · 5,200 | 11,780,261 | 11,670,000 | 2,192 | 33 | 1.01 | 150,515 | 33 | 18 | 3,960 | 150,515 | 134,246 | 2,975 |
-| Tier ladder · Generate (best worst case) | 4 | 2 · 5,200 | 11,780,261 | 11,670,000 | 2,192 | 33 | 1.01 | 150,515 | 33 | 18 | 3,960 | 150,515 | 134,246 | 2,975 |
-| Tier ladder · Generate (damage per silver) | 4 | **none** | 1,436,400 | 235,200 | 2,192 | 33 | 6.11 | 0 | 33 | 12 | 3,360 | 0 | 119,700 | 428 |
-| Tier ladder · Generate (damage per gold) | 4 | 2 · 5,200 | 11,780,261 | 11,670,000 | 2,192 | 33 | 1.01 | 150,515 | 33 | 18 | 3,960 | 150,515 | 134,246 | 2,975 |
-| Tier ladder · Generate (damage per dragon coin) | 4 | 2 · 5,200 | 11,159,327 | 11,628,000 | 2,192 | 33 | 0.96 | 150,515 | 33 | 12 | 3,360 | 150,515 | 149,625 | 3,321 |
-| Troops first · all types | 4 | 8 · 5,200 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
-| Troops first · Generate (average damage) | 4 | 2 · 5,200 | 11,892,528 | 11,071,800 | 1,960 | 30 | 1.07 | 165,566 | 30 | 20 | 4,080 | 165,566 | 126,534 | 2,915 |
-| Troops first · Generate (best worst case) | 4 | 6 · 5,200 | 12,178,602 | 9,592,600 | 1,288 | 21 | 1.27 | 214,180 | 21 | 20 | 4,200 | 214,180 | 157,247 | 2,900 |
-| Troops first · Generate (damage per silver) | 4 | **none** | 1,436,400 | 235,200 | 2,192 | 33 | 6.11 | 0 | 33 | 12 | 3,360 | 0 | 119,700 | 428 |
-| Troops first · Generate (damage per gold) | 4 | 8 · 5,200 | 11,472,532 | 8,023,200 | 544 | 8 | 1.43 | 461,105 | 8 | 16 | 4,800 | 461,105 | 213,964 | 2,390 |
-| Troops first · Generate (damage per dragon coin) | 4 | 7 · 5,200 | 9,451,652 | 8,280,000 | 704 | 12 | 1.14 | 269,652 | 12 | 8 | 1,920 | 269,652 | 190,320 | 4,923 |
-| Troops first · allow damage trades | 4 | 8 · 5,200 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
-| Tier ladder · monsters after troops | 4 | 8 · 5,200 | 8,572,792 | 7,989,600 | 2,192 | 33 | 1.07 | 0 | 33 | 20 | 4,320 | 0 | 187,737 | 1,984 |
-| Troops first · monsters after mercenaries | 4 | 8 · 5,200 | 10,574,240 | 7,989,600 | 544 | 8 | 1.32 | 307,403 | 8 | 20 | 4,320 | 307,403 | 187,737 | 2,448 |
-| TotalStack · M’s Preservation | 4 | 7 · 5,200 | 9,138,264 | 8,451,200 | 288 | 4 | 1.08 | 323,582 | 4 | 20 | 4,320 | 323,582 | 154,358 | 2,115 |
-| TotalStack · priority search under M’s (averageDamage) | 4 | 3 · 5,200 | 11,041,652 | 11,617,600 | 2,192 | 33 | 0.95 | 150,515 | 33 | 20 | 4,320 | 150,515 | 103,393 | 2,556 |
-| TotalStack · priority search under M’s (damagePerSilver) | 4 | 6 · 5,200 | 11,235,848 | 8,929,600 | 896 | 16 | 1.26 | 258,866 | 16 | 20 | 4,320 | 258,866 | 171,047 | 2,601 |
-| TotalStack · Total Optimization | 4 | 7 · 5,200 | 9,172,640 | 8,449,600 | 256 | 4 | 1.09 | 436,836 | 4 | 20 | 4,320 | 436,836 | 136,403 | 2,123 |
-| TotalStack · priority search under Total Optimization (averageDamage) | 4 | 7 · 5,200 | 10,526,996 | 8,483,200 | 544 | 8 | 1.24 | 461,105 | 8 | 16 | 4,800 | 461,105 | 133,808 | 2,193 |
-| TotalStack · priority search under Total Optimization (damagePerSilver) | 4 | 7 · 5,200 | 10,526,996 | 8,483,200 | 544 | 8 | 1.24 | 461,105 | 8 | 16 | 4,800 | 461,105 | 133,808 | 2,193 |
-| TotalStack · Elite Preservation | 4 | 7 · 5,200 | 9,167,008 | 8,449,600 | 2,192 | 33 | 1.08 | 0 | 33 | 20 | 4,320 | 0 | 171,047 | 2,122 |
-| TotalStack · priority search under Elite (averageDamage) | 4 | 3 · 5,200 | 10,948,229 | 11,611,200 | 2,192 | 33 | 0.94 | 150,515 | 33 | 20 | 4,320 | 150,515 | 103,393 | 2,534 |
-| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 5,200 | 9,167,008 | 8,449,600 | 2,192 | 33 | 1.08 | 0 | 33 | 20 | 4,320 | 0 | 171,047 | 2,122 |
-| Complete optimization · burn-saver | 4 | 8 · 3,577 | 8,211,151 | 6,132,900 | 352 | 5 | 1.34 | 317,110 | 5 | 17 | 3,960 | 317,110 | 194,993 | 2,074 |
-| Complete optimization · sweet-spot | 4 | 8 · 5,200 | 11,485,771 | 8,092,800 | 544 | 8 | 1.42 | 422,679 | 8 | 23 | 5,760 | 422,679 | 159,797 | 1,994 |
-| Complete optimization · steady-max | 4 | 6 · 5,196 | 11,756,170 | 8,698,800 | 808 | 14 | 1.35 | 265,799 | 14 | 20 | 4,320 | 265,799 | 175,220 | 2,721 |
+| Tier ladder · all types | 4 | 8 · 5,200 | 8,572,792 | 9,916,000 | 2,192 | 33 | 0.86 | 0 | 33 | 20 | 31,840 | 0 | 187,737 | 269 |
+| Tier ladder · Generate (average damage) | 4 | 2 · 5,200 | 11,780,261 | 13,624,400 | 2,192 | 33 | 0.86 | 150,515 | 33 | 18 | 31,880 | 150,515 | 134,246 | 370 |
+| Tier ladder · Generate (best worst case) | 4 | 2 · 5,200 | 11,780,261 | 13,624,400 | 2,192 | 33 | 0.86 | 150,515 | 33 | 18 | 31,880 | 150,515 | 134,246 | 370 |
+| Tier ladder · Generate (damage per silver) | 4 | 2 · 5,200 | 8,605,604 | 9,072,400 | 2,192 | 33 | 0.95 | 83,837 | 33 | 8 | 16,000 | 83,837 | 263,615 | 538 |
+| Tier ladder · Generate (damage per gold) | 4 | 2 · 5,200 | 11,780,261 | 13,624,400 | 2,192 | 33 | 0.86 | 150,515 | 33 | 18 | 31,880 | 150,515 | 134,246 | 370 |
+| Tier ladder · Generate (damage per dragon coin) | 4 | 2 · 5,200 | 11,666,033 | 13,579,600 | 2,192 | 33 | 0.86 | 150,515 | 33 | 17 | 31,240 | 150,515 | 135,424 | 373 |
+| Troops first · all types | 4 | 8 · 5,200 | 10,574,240 | 9,916,000 | 544 | 8 | 1.07 | 307,403 | 8 | 20 | 31,840 | 307,403 | 187,737 | 332 |
+| Troops first · Generate (average damage) | 4 | 2 · 5,200 | 11,892,528 | 13,015,000 | 1,960 | 30 | 0.91 | 165,566 | 30 | 20 | 31,840 | 165,566 | 126,534 | 374 |
+| Troops first · Generate (best worst case) | 4 | 6 · 5,200 | 12,178,602 | 11,527,400 | 1,288 | 21 | 1.06 | 214,180 | 21 | 20 | 31,840 | 214,180 | 157,247 | 382 |
+| Troops first · Generate (damage per silver) | 4 | 8 · 5,200 | 11,472,532 | 9,781,600 | 544 | 8 | 1.17 | 461,105 | 8 | 16 | 29,920 | 461,105 | 213,964 | 383 |
+| Troops first · Generate (damage per gold) | 4 | 8 · 5,200 | 11,472,532 | 9,781,600 | 544 | 8 | 1.17 | 461,105 | 8 | 16 | 29,920 | 461,105 | 213,964 | 383 |
+| Troops first · Generate (damage per dragon coin) | 4 | 8 · 5,200 | 9,471,832 | 8,762,400 | 544 | 8 | 1.08 | 461,105 | 8 | 8 | 15,360 | 461,105 | 177,840 | 617 |
+| Troops first · allow damage trades | 4 | 8 · 5,200 | 10,574,240 | 9,916,000 | 544 | 8 | 1.07 | 307,403 | 8 | 20 | 31,840 | 307,403 | 187,737 | 332 |
+| Tier ladder · monsters after troops | 4 | 8 · 5,200 | 8,572,792 | 9,916,000 | 2,192 | 33 | 0.86 | 0 | 33 | 20 | 31,840 | 0 | 187,737 | 269 |
+| Troops first · monsters after mercenaries | 4 | 8 · 5,200 | 10,574,240 | 9,916,000 | 544 | 8 | 1.07 | 307,403 | 8 | 20 | 31,840 | 307,403 | 187,737 | 332 |
+| TotalStack · M’s Preservation | 4 | 7 · 5,200 | 9,138,264 | 10,377,600 | 288 | 4 | 0.88 | 323,582 | 4 | 20 | 31,840 | 323,582 | 154,358 | 287 |
+| TotalStack · priority search under M’s (averageDamage) | 4 | 3 · 5,200 | 11,041,652 | 13,544,000 | 2,192 | 33 | 0.82 | 150,515 | 33 | 20 | 31,840 | 150,515 | 103,393 | 347 |
+| TotalStack · priority search under M’s (damagePerSilver) | 4 | 6 · 5,200 | 11,235,848 | 10,856,000 | 896 | 16 | 1.03 | 258,866 | 16 | 20 | 31,840 | 258,866 | 171,047 | 353 |
+| TotalStack · Total Optimization | 4 | 7 · 5,200 | 9,172,640 | 10,376,000 | 256 | 4 | 0.88 | 436,836 | 4 | 20 | 31,840 | 436,836 | 136,403 | 288 |
+| TotalStack · priority search under Total Optimization (averageDamage) | 4 | 7 · 5,200 | 10,526,996 | 10,320,000 | 544 | 8 | 1.02 | 461,105 | 8 | 16 | 31,040 | 461,105 | 133,808 | 339 |
+| TotalStack · priority search under Total Optimization (damagePerSilver) | 4 | 7 · 5,200 | 10,526,996 | 10,320,000 | 544 | 8 | 1.02 | 461,105 | 8 | 16 | 31,040 | 461,105 | 133,808 | 339 |
+| TotalStack · Elite Preservation | 4 | 7 · 5,200 | 9,167,008 | 10,376,000 | 2,192 | 33 | 0.88 | 0 | 33 | 20 | 31,840 | 0 | 171,047 | 288 |
+| TotalStack · priority search under Elite (averageDamage) | 4 | 3 · 5,200 | 10,948,229 | 13,537,600 | 2,192 | 33 | 0.81 | 150,515 | 33 | 20 | 31,840 | 150,515 | 103,393 | 344 |
+| TotalStack · priority search under Elite (damagePerSilver) | 4 | 7 · 5,200 | 9,167,008 | 10,376,000 | 2,192 | 33 | 0.88 | 0 | 33 | 20 | 31,840 | 0 | 171,047 | 288 |
+| Complete optimization · burn-saver | 4 | 8 · 3,577 | 7,570,576 | 7,303,300 | 352 | 5 | 1.04 | 317,110 | 5 | 17 | 20,680 | 317,110 | 157,312 | 366 |
+| Complete optimization · sweet-spot | 4 | 8 · 5,200 | 11,485,771 | 9,918,400 | 544 | 8 | 1.16 | 422,679 | 8 | 23 | 31,840 | 422,679 | 159,797 | 361 |
+| Complete optimization · steady-max | 4 | 6 · 5,196 | 11,756,170 | 10,625,200 | 808 | 14 | 1.11 | 265,799 | 14 | 20 | 31,840 | 265,799 | 175,220 | 369 |
 
-**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · priority search under M’s (damagePerSilver)` at 11,235,848 for 8,929,600 silver, 896 gold, 4,320 coins, 16 burned, 2,584,080 s. Our best stop inside that budget (5 %) is `Complete optimization · steady-max` at 11,756,170 — **+4.6 %**.
+**Matched spend — BEAT** (owner, 2026-09-21: *"beat means using constrained resources to produce better damage with a fixed silver/merc/gold/dragon coins set"*). Their hardest comparable march is `TotalStack · priority search under M’s (damagePerSilver)` at 11,235,848 for 10,856,000 silver, 896 gold, 31,840 coins, 16 burned, 3,739,920 s. Our best stop inside that budget (5 %) is `Complete optimization · steady-max` at 11,756,170 — **+4.6 %**.
 
-**Over all 9 of their comparable marches**, the bar dominates **5** at matched spend; the one it does worst on is `TotalStack · priority search under Total Optimization (averageDamage)` at -22.0 %.
-
-**But the damage is reachable**: counting every algorithm the app offers — the sizers, their switches and all five objectives — 7 of their 9 marches are dominated, against the bar's 5. The gap between those two numbers is the plan failing to reach what this engine can already do, not the engine losing.
+**Over all 9 of their comparable marches**, the bar dominates **7** at matched spend; the one it does worst on is `TotalStack · priority search under M’s (damagePerSilver)` at +4.6 %.
 
 **The six markers**, our best against theirs on each alone: damage ✓, silver ✓, burned ✗, gold ✗, dragonCoins ✓, seconds ✓.
 
-**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.307** ✓, damage a hired soldier **0.968** ✗, damage a monster **1.430** ✓. **Below the goal: damage a hired soldier** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.282** ✓ — the monsters’ own price (S-102).
+**Goal — at least TotalStack’s Total Optimization** (owner, 2026-09-19: *"at least the same as TotalStack full opt in silver/dmg, merc/dmg and monster/dmg"*), the plan’s best stop over that row: damage a silver **1.310** ✓, damage a hired soldier **0.968** ✗, damage a monster **1.285** ✓. **Below the goal: damage a hired soldier** — a discrepancy for the owner, not a pin. And the fourth currency, where one is spent: **damage a dragon coin 1.282** ✓ — the monsters’ own price (S-102).
 
 ## his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14)
 
@@ -754,7 +753,7 @@ The reading the owner’s definition of *beating* another calculator reduces to 
 | first-run army, Bear V ×3 (20 000 leadership) | **short** | TotalStack · priority search under M’s (averageDamage) | Complete optimization · all-in | -11.1 % | 8/9 | 0 | 8/9 |
 | first-run army, Bear V ×10 (20 000 leadership) | **short** | TotalStack · priority search under M’s (averageDamage) | Complete optimization · all-in | -5.3 % | 4/9 | 0 | 4/9 |
 | first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | **short** | TotalStack · M’s Preservation | Complete optimization · all-in | -0.3 % | 7/9 | 0 | 7/9 |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | **no stop fits** | TotalStack · Elite Preservation | — (over gold) | — | 0/3 | 3 | 0/3 |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | **beat** | TotalStack · Elite Preservation | Complete optimization · steady-max | +22.6 % | 2/3 | 1 | 2/3 |
 | the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | **beat** | TotalStack · M’s Preservation | Complete optimization · all-in | +2.5 % | 11/11 | 0 | 11/11 |
 | 2026-09-17 export, its setup (7 000 leadership) | **beat** | TotalStack · priority search under M’s (averageDamage) | Complete optimization · sweet-spot | +38.5 % | 6/9 | 3 | 6/9 |
 | 2026-09-17 export, 12 000 leadership | **short** | TotalStack · priority search under M’s (averageDamage) | Complete optimization · burn-saver | -2.1 % | 3/9 | 2 | 3/9 |
@@ -765,7 +764,7 @@ The reading the owner’s definition of *beating* another calculator reduces to 
 | his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | **beat** | TotalStack · Elite Preservation | Complete optimization · silver-saver | +22.1 % | 2/3 | 1 | 2/3 |
 | his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | **beat** | TotalStack · Elite Preservation | Complete optimization · silver-saver | +12.5 % | 2/3 | 1 | 2/3 |
 | his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | **beat** | TotalStack · Elite Preservation | Complete optimization · sweet-spot | +21.7 % | 2/3 | 1 | 2/3 |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | **beat** | TotalStack · priority search under M’s (damagePerSilver) | Complete optimization · steady-max | +4.6 % | 5/9 | 2 | 7/9 |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | **beat** | TotalStack · priority search under M’s (damagePerSilver) | Complete optimization · steady-max | +4.6 % | 7/9 | 2 | 7/9 |
 
 The last column is the diagnostic, never a verdict: how many of their marches **any** algorithm the app offers would have dominated — the sizers, their switches and all five objectives. An army where it is ahead of the column beside it is an army where the damage is provably reachable and the bar is simply not reaching it.
 
@@ -778,8 +777,8 @@ Our best stop against their best comparable march **on each marker alone**, coun
 | damage | max | 11 | 0 | 6 |
 | silver | min | 15 | 0 | 2 |
 | burned | min | 6 | 4 | 7 |
-| gold | min | 7 | 3 | 7 |
-| dragonCoins | min | 1 | 14 | 2 |
+| gold | min | 8 | 3 | 6 |
+| dragonCoins | min | 2 | 14 | 1 |
 | seconds | min | 9 | 0 | 8 |
 
 ### Where the time goes, and where a clock binds
@@ -790,33 +789,33 @@ Not asserted, and deliberately — a timing floor would be red on a slow machine
 
 | army | planner (median of 3) | cpu time | contended? | of its budget | bound? | search, all calls | a call | of its budget |
 |---|---|---|---|---|---|---|---|---|
-| first-run army, Bear V ×1 (20 000 leadership) | 35 ms | 35 ms | no | 0 % | no | 4,141 ms over 40 | 104 ms | 1 % |
-| first-run army, Bear V ×2 (20 000 leadership) | 88 ms | 81 ms | no | 0 % | no | 3,519 ms over 40 | 88 ms | 1 % |
-| first-run army, Bear V ×3 (20 000 leadership) | 71 ms | 65 ms | no | 0 % | no | 3,948 ms over 40 | 99 ms | 1 % |
-| first-run army, Bear V ×10 (20 000 leadership) | 78 ms | 111 ms | no | 0 % | no | 3,407 ms over 40 | 85 ms | 1 % |
-| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 248 ms | 254 ms | no | 1 % | no | 3,670 ms over 40 | 92 ms | 1 % |
-| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 1,467 ms | 1,205 ms | no | 4 % | no | 78,930 ms over 40 | 1,973 ms | 25 % |
-| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 667 ms | 943 ms | no | 2 % | no | 125,710 ms over 40 | 3,143 ms | 39 % |
-| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 101 ms | 212 ms | no | 0 % | no | 4,657 ms over 40 | 116 ms | 1 % |
-| 2026-09-17 export, its setup (7 000 leadership) | 355 ms | 454 ms | no | 1 % | no | 1,662 ms over 40 | 42 ms | 1 % |
-| 2026-09-17 export, 12 000 leadership | 340 ms | 391 ms | no | 1 % | no | 1,424 ms over 40 | 36 ms | 0 % |
-| live account of 2026-09-18 (one hired type, 20 000 leadership) | 218 ms | 229 ms | no | 1 % | no | 141 ms over 40 | 4 ms | 0 % |
-| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 352 ms | 397 ms | no | 1 % | no | 1,385 ms over 40 | 35 ms | 0 % |
-| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 77 ms | 195 ms | no | 0 % | no | 2,936 ms over 40 | 73 ms | 1 % |
-| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 165 ms | 281 ms | no | 0 % | no | 661 ms over 40 | 17 ms | 0 % |
-| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 128 ms | 223 ms | no | 0 % | no | 149 ms over 40 | 4 ms | 0 % |
-| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 108 ms | 118 ms | no | 0 % | no | 141 ms over 40 | 4 ms | 0 % |
-| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 106 ms | 268 ms | no | 0 % | no | 2,527 ms over 40 | 63 ms | 1 % |
-| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 128 ms | 221 ms | no | 0 % | no | 2,539 ms over 40 | 63 ms | 1 % |
-| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 214 ms | 314 ms | no | 1 % | no | 3,081 ms over 40 | 77 ms | 1 % |
+| first-run army, Bear V ×1 (20 000 leadership) | 32 ms | 31 ms | no | 0 % | no | 4,704 ms over 40 | 118 ms | 1 % |
+| first-run army, Bear V ×2 (20 000 leadership) | 83 ms | 50 ms | **yes** | 0 % | no | 3,366 ms over 40 | 84 ms | 1 % |
+| first-run army, Bear V ×3 (20 000 leadership) | 73 ms | 61 ms | no | 0 % | no | 3,873 ms over 40 | 97 ms | 1 % |
+| first-run army, Bear V ×10 (20 000 leadership) | 197 ms | 121 ms | **yes** | 0 % | no | 4,684 ms over 40 | 117 ms | 1 % |
+| first-run army, Epic Monster Hunter VI ×83 (20 000 leadership — the e2e seed) | 243 ms | 292 ms | no | 1 % | no | 6,189 ms over 40 | 155 ms | 2 % |
+| first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp) | 2,351 ms | 1,043 ms | **yes** | 6 % | no | 156,207 ms over 40 | 3,905 ms | 49 % |
+| first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) | 2,559 ms | 1,881 ms | **yes** | 6 % | no | 252,668 ms over 40 | 6,317 ms | 79 % |
+| the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows) | 308 ms | 464 ms | no | 1 % | no | 12,631 ms over 40 | 316 ms | 4 % |
+| 2026-09-17 export, its setup (7 000 leadership) | 584 ms | 801 ms | no | 1 % | no | 2,723 ms over 40 | 68 ms | 1 % |
+| 2026-09-17 export, 12 000 leadership | 446 ms | 536 ms | no | 1 % | no | 1,696 ms over 40 | 42 ms | 1 % |
+| live account of 2026-09-18 (one hired type, 20 000 leadership) | 279 ms | 308 ms | no | 1 % | no | 174 ms over 40 | 4 ms | 0 % |
+| live account, evening (hunters 83, legionaries unlimited, chariots 10, arbalesters 60, 11 000) | 465 ms | 646 ms | no | 1 % | no | 1,625 ms over 40 | 41 ms | 1 % |
+| Aydae alone, 4 975 (one captain, four hired types — experiment 103’s camp) | 129 ms | 325 ms | no | 0 % | no | 3,478 ms over 40 | 87 ms | 1 % |
+| the owner’s live camp of 2026-09-18 (arbalesters 485, legionaries 1 002, bears unlimited) | 237 ms | 343 ms | no | 1 % | no | 876 ms over 40 | 22 ms | 0 % |
+| his camp of 2026-09-19, the localStorage dump (4 975 / 2 180, hunters 450) | 175 ms | 262 ms | no | 0 % | no | 205 ms over 40 | 5 ms | 0 % |
+| his camp of 2026-09-19, as his message reads it (5 100 / 2 200, hunters 120) | 142 ms | 183 ms | no | 0 % | no | 182 ms over 40 | 5 ms | 0 % |
+| his TotalStack profile of 2026-09-19 (5 225 / 2 120 / 100 dominance, monster tier 3, hunters V ×80) | 156 ms | 267 ms | no | 0 % | no | 3,105 ms over 40 | 78 ms | 1 % |
+| his usual setup of 2026-09-19 (Aydae alone, 5 200 / 2 000 / 200, monster tier 3, hunters VI ×90) | 160 ms | 297 ms | no | 0 % | no | 2,874 ms over 40 | 72 ms | 1 % |
+| his browser setup of 2026-09-24 (Aydae 50 ★3, 5 600 / 2 180 / 600, monster tier 3, hunters VI ×14) | 243 ms | 401 ms | no | 1 % | no | 3,614 ms over 40 | 90 ms | 1 % |
 
 **0 of 19** armies leave the planner budget-bound, and the priority search is bound on none of them either.
 
-**0 of 19** armies are flagged **contended** on this run — read their `planner` figures as an upper bound, not a clean measurement; the other armies’ wall and CPU time agree, which is what a single-file run against an otherwise idle machine looks like.
+**4 of 19** armies are flagged **contended** on this run: first-run army, Bear V ×2 (20 000 leadership); first-run army, Bear V ×10 (20 000 leadership); first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp); first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp) — read their `planner` figures as an upper bound, not a clean measurement; the other armies’ wall and CPU time agree, which is what a single-file run against an otherwise idle machine looks like.
 
 **So on this table a speed-up buys latency and not answer quality**, and that is worth stating plainly because it is the opposite of what the engine felt like. The one army measured to fill its clock is the **20 000-dominance camp** (experiment 129: 40,843–40,934 ms against a 40,000 ms cap), and it is not a scenario here *precisely because* it does not converge — which is what W3 is for. Until W3 registers it, "faster means better answers" is a claim about **one army, and it is not on this table**.
 
 The other reading: the priority search costs far more of a run than the planner does — 78 s over forty calls against 9.6 s on the monster camp — and within a call the **sizer** is 85–90 % of it (experiment 131). A run that wants to be shorter goes after `stacker.ts`.
 
-**9 of 17** armies are beaten at matched spend on their hardest comparable march; 1 have no stop of ours inside their budget at all.
+**10 of 17** armies are beaten at matched spend on their hardest comparable march; 0 have no stop of ours inside their budget at all.
 

@@ -7,7 +7,7 @@
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
 import { unitById } from '../data';
-import { DEFAULT_SETTINGS } from './defaults';
+import { DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
 import { profileSchema, rootDocumentSchema, savedStackSchema, SCHEMA_VERSION } from './schema';
 import type { Profile, RootDocument, SavedStack } from './schema';
 
@@ -211,6 +211,14 @@ export function dropEquipmentWearer(profile: Record<string, unknown>): Record<st
   return { ...profile, sources: { ...profile.sources, equipment } };
 }
 
+/**
+ * `10 → 11` for one profile (B-21): the account gains the hero talent planner's inputs, empty: level 1, no
+ * rank bought, the Battle goal. Nothing else moves.
+ */
+export function addTalents(profile: Record<string, unknown>): Record<string, unknown> {
+  return isPlainObject(profile.talents) ? profile : { ...profile, talents: structuredClone(DEFAULT_TALENTS) };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -228,6 +236,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `7 → 8`: every setup gains an unspecified march type, so no captain restriction applies (W17 C5-0).
  * `8 → 9`: every profile gains its settings at the defaults (the pool line opens on neither pool).
  * `9 → 10`: a piece of equipment loses its wearer name and may carry a set (B-19).
+ * `10 → 11`: every profile gains an empty hero talent plan (B-21).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -240,6 +249,7 @@ export const migrations: MigrationTable = {
   7: (doc) => ({ ...doc, schemaVersion: 8, profiles: migrateProfiles(doc, addMarchType) }),
   8: (doc) => ({ ...doc, schemaVersion: 9, profiles: migrateProfiles(doc, addSettings) }),
   9: (doc) => ({ ...doc, schemaVersion: 10, profiles: migrateProfiles(doc, dropEquipmentWearer) }),
+  10: (doc) => ({ ...doc, schemaVersion: 11, profiles: migrateProfiles(doc, addTalents) }),
 };
 
 /**
@@ -261,6 +271,7 @@ export const profileMigrations: MigrationTable = {
   7: addMarchType,
   8: addSettings,
   9: dropEquipmentWearer,
+  10: addTalents,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -281,6 +292,7 @@ export const savedStackMigrations: MigrationTable = {
   7: (doc) => ({ ...doc, setup: withMarchType(doc.setup) }),
   8: identity,
   9: identity,
+  10: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
