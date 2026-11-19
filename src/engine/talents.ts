@@ -140,42 +140,164 @@ export interface TalentPlan {
 
 const EPS = 1e-12;
 
+/** How strongly rank 1 wins: Focus, Lean or Even. */
+export const TALENT_STRENGTHS = ['focus', 'lean', 'even'] as const;
+export type TalentStrength = (typeof TALENT_STRENGTHS)[number];
+
+/** How points are spread: Blended (one value-per-point search) or Strict order (rank 1 full first). */
+export const TALENT_MODES = ['blended', 'strict'] as const;
+export type TalentMode = (typeof TALENT_MODES)[number];
+
+/**
+ * The goal weight of each rank (1st, 2nd, 3rd active goal), per strength. The one place to tune them (B-22: a
+ * first guess, the owner may change it after trying real plans).
+ */
+export const TALENT_RANK_WEIGHTS: Readonly<Record<TalentStrength, readonly [number, number, number]>> = {
+  focus: [1, 0.5, 0.25],
+  lean: [1, 0.8, 0.6],
+  even: [1, 1, 1],
+};
+
+/** What the player wants most: the goals in order, the ones ignored, how strongly rank 1 wins, and the mode. */
+export interface TalentPriority {
+  /** The goals, most wanted first. A goal missing from the list comes after the listed ones, in the default order. */
+  order: readonly TalentGoal[];
+  /** An ignored goal weighs 0 and takes no rank. */
+  ignored: Readonly<Partial<Record<TalentGoal, boolean>>>;
+  strength: TalentStrength;
+  mode: TalentMode;
+}
+
+export const DEFAULT_TALENT_PRIORITY: TalentPriority = {
+  order: ['battle', 'archeology', 'economy'],
+  ignored: {},
+  strength: 'focus',
+  mode: 'blended',
+};
+
+const GOALS = Object.keys(TALENT_GOALS) as TalentGoal[];
+
+/** The active goals in rank order (ignored ones dropped, missing ones appended in the default order). */
+function activeGoals(priority: TalentPriority): TalentGoal[] {
+  const order = [...new Set([...priority.order.filter((g) => g in TALENT_GOALS), ...GOALS])];
+  return order.filter((g) => priority.ignored[g] !== true);
+}
+
+/** The weight of each goal: its rank's weight under the strength; 0 for an ignored goal. Ranks count active goals only. */
+export function talentGoalWeights(priority: TalentPriority): Record<TalentGoal, number> {
+  const out = { battle: 0, economy: 0, archeology: 0 } as Record<TalentGoal, number>;
+  const table = TALENT_RANK_WEIGHTS[priority.strength];
+  activeGoals(priority).forEach((g, i) => (out[g] = table[i] ?? 0));
+  return out;
+}
+
+export interface TalentPriorityInput extends Omit<TalentPlanInput, 'goal' | 'weights'> {
+  priority: TalentPriority;
+  /** Weight per stat kind inside each goal, 1 when absent. */
+  weightsByGoal?: Readonly<Partial<Record<TalentGoal, Readonly<Partial<Record<string, number>>>>>>;
+}
+
+export interface TalentPriorityStep extends TalentStep {
+  /**
+   * The goal the step serves: the goal that set its weight (for a step that opens another node, the goal of that
+   * node; in Strict order, the goal being filled). Null for a filler.
+   */
+  goal: TalentGoal | null;
+}
+
+export interface TalentPriorityPlan extends Omit<TalentPlan, 'steps'> {
+  /** One merged list. `before` and `after` cover the stats of every active goal. */
+  steps: TalentPriorityStep[];
+}
+
 interface Prepared {
   rec: TalentRecord;
   /**
-   * The weight of the node: the highest weight among its stats that are in the goal (0 when none is). A node
-   * with two stats (a caravan bonus and its clan twin) has one series of figures that applies to both, so
-   * adding the weights would count the same percentage points twice; the dearest stat sets the value instead.
+   * The weight of the node: the highest (goal weight x stat weight) among its stats that are in an active goal
+   * (0 when none is). A node with two stats (a caravan bonus and its clan twin) has one series of figures that
+   * applies to both, so adding the weights would count the same percentage points twice; the dearest sets it.
    */
   weight: number;
+  /** The goal that set `weight`, null when it is 0. */
+  goal: TalentGoal | null;
+  /** The same, counted for one goal at a time (Strict order). */
+  byGoal: Record<TalentGoal, number>;
   /** Whether the node's army relevance holds (true for nodes that are not about units). */
   counts: boolean;
   /** -1 when a lower figure is the gain (a price cut), else 1. */
   sign: 1 | -1;
 }
 
-/** The weighted value of one rank of a node: its table gain times the node weight. The seam for an engine-scored value. */
-function rankValue(p: Prepared, rank: number): number {
+/** The weighted value of one rank of a node: its table gain times a node weight. The seam for an engine-scored value. */
+function rankValue(p: Prepared, rank: number, weight: number = p.weight): number {
   const v = p.rec.values;
-  return rankGain(v, rank) * p.weight * p.sign;
+  return rankGain(v, rank) * weight * p.sign;
 }
 
+/** The single-goal plan: the priority plan with that goal alone. */
 export function planTalents(input: TalentPlanInput): TalentPlan {
-  const { talents, heroLevel, goal } = input;
-  const inGoal = new Set<string>(TALENT_GOALS[goal]);
+  const { goal, weights, ...rest } = input;
+  const plan = planCore(
+    rest,
+    [goal],
+    { battle: 0, economy: 0, archeology: 0, [goal]: 1 },
+    { [goal]: weights ?? {} },
+    'blended',
+  );
+  return { ...plan, steps: plan.steps.map(({ goal: _goal, ...s }) => s) };
+}
+
+/**
+ * The priority plan (B-22): one merged list of steps serving every active goal, each step tagged with its goal.
+ * Blended runs the single-goal search once with each node weighted by its best goal; Strict order runs it goal
+ * by goal in rank order, each goal taking points until nothing it values is affordable. With one active goal
+ * both equal `planTalents` for that goal.
+ */
+export function planTalentPriorities(input: TalentPriorityInput): TalentPriorityPlan {
+  const { priority, weightsByGoal, ...rest } = input;
+  return planCore(
+    rest,
+    activeGoals(priority),
+    talentGoalWeights(priority),
+    weightsByGoal ?? {},
+    priority.mode,
+  );
+}
+
+function planCore(
+  input: Omit<TalentPlanInput, 'goal' | 'weights'>,
+  active: readonly TalentGoal[],
+  goalWeight: Readonly<Record<TalentGoal, number>>,
+  weightsByGoal: Readonly<Partial<Record<TalentGoal, Readonly<Partial<Record<string, number>>>>>>,
+  mode: TalentMode,
+): TalentPriorityPlan {
+  const { talents, heroLevel } = input;
+  const ranked = active.filter((g) => goalWeight[g] > 0);
+  const goalOf = new Map<string, TalentGoal>();
+  for (const g of ranked) for (const s of TALENT_GOALS[g]) goalOf.set(s, g);
   const kinds = new Set<UnitKind>(input.kinds);
-  const weightOf = (stat: string) => input.weights?.[stat] ?? 1;
 
   const nodes = new Map<number, Prepared>();
   for (const rec of talents) {
-    let weight = 0;
+    const byGoal = { battle: 0, economy: 0, archeology: 0 } as Record<TalentGoal, number>;
     for (const s of rec.stats) {
-      if (inGoal.has(s)) weight = Math.max(weight, weightOf(s));
+      const g = goalOf.get(s);
+      if (g === undefined) continue;
+      byGoal[g] = Math.max(byGoal[g], goalWeight[g] * (weightsByGoal[g]?.[s] ?? 1));
     }
     const scoped = rec.stats.some((s) => UNIT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
     const counts = !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
+    let weight = 0;
+    let goal: TalentGoal | null = null;
+    for (const g of ranked) {
+      if (!counts) byGoal[g] = 0;
+      if (byGoal[g] > weight) {
+        weight = byGoal[g];
+        goal = g;
+      }
+    }
     const sign = rec.stats.some((s) => LOWER_IS_BETTER.has(s)) ? -1 : 1;
-    nodes.set(rec.id, { rec, weight: counts ? weight : 0, counts, sign });
+    nodes.set(rec.id, { rec, weight, goal, byGoal, counts, sign });
   }
 
   const held = new Map<number, number>();
@@ -189,7 +311,7 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
     for (const [id, r] of held) {
       const p = nodes.get(id)!;
       if (!p.counts) continue;
-      for (const s of p.rec.stats) if (inGoal.has(s)) out[s] = (out[s] ?? 0) + p.rec.values[r - 1]!;
+      for (const s of p.rec.stats) if (goalOf.has(s)) out[s] = (out[s] ?? 0) + p.rec.values[r - 1]!;
     }
     return out;
   };
@@ -226,80 +348,104 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
     else if (c.order.length > 0) locked[p.rec.id] = { reason: 'parent', level: null };
   }
 
-  const steps: TalentStep[] = [];
+  const steps: TalentPriorityStep[] = [];
   let left = Math.max(0, Math.floor(input.points));
   const start = left;
 
-  while (left > 0) {
-    let best: {
-      id: number;
-      ancestors: number[];
-      upTo: number;
-      ratio: number;
-      value: number;
-    } | null = null;
+  /**
+   * The greedy search on value per point with one node weight: each candidate is a whole path (missing ancestors,
+   * one rank each, then a run of ranks of the node). `tag` names the goal a bought path serves.
+   */
+  const search = (weightOf: (p: Prepared) => number, tag: (p: Prepared) => TalentGoal | null): void => {
+    while (left > 0) {
+      let best: {
+        id: number;
+        ancestors: number[];
+        upTo: number;
+        ratio: number;
+        value: number;
+      } | null = null;
 
-    for (const p of nodes.values()) {
-      if (p.weight <= 0) continue;
-      const cur = held.get(p.rec.id) ?? 0;
-      if (cur >= p.rec.maxRank) continue;
-      let ancestors: number[] = [];
-      let cost = 0;
-      let value = 0;
-      if (cur === 0) {
-        const c = closure(p.rec.id);
-        if (c.gate > heroLevel) continue;
-        ancestors = c.order;
-        for (const a of ancestors) {
-          const ap = nodes.get(a)!;
-          cost += ap.rec.costs[0]!;
-          value += rankValue(ap, 1);
+      for (const p of nodes.values()) {
+        const w = weightOf(p);
+        if (w <= 0) continue;
+        const cur = held.get(p.rec.id) ?? 0;
+        if (cur >= p.rec.maxRank) continue;
+        let ancestors: number[] = [];
+        let cost = 0;
+        let value = 0;
+        if (cur === 0) {
+          const c = closure(p.rec.id);
+          if (c.gate > heroLevel) continue;
+          ancestors = c.order;
+          for (const a of ancestors) {
+            const ap = nodes.get(a)!;
+            cost += ap.rec.costs[0]!;
+            value += rankValue(ap, 1, weightOf(ap));
+          }
+        }
+        if (cost > left) continue;
+        for (let m = cur + 1; m <= p.rec.maxRank; m++) {
+          cost += p.rec.costs[m - 1]!;
+          if (cost > left) break;
+          value += rankValue(p, m, w);
+          const ratio = value / cost;
+          if (
+            value > 0 &&
+            (best === null ||
+              ratio > best.ratio + EPS ||
+              (Math.abs(ratio - best.ratio) <= EPS && value > best.value + EPS))
+          ) {
+            best = { id: p.rec.id, ancestors, upTo: m, ratio, value };
+          }
         }
       }
-      if (cost > left) continue;
-      for (let m = cur + 1; m <= p.rec.maxRank; m++) {
-        cost += p.rec.costs[m - 1]!;
-        if (cost > left) break;
-        value += rankValue(p, m);
-        const ratio = value / cost;
-        if (
-          value > 0 &&
-          (best === null ||
-            ratio > best.ratio + EPS ||
-            (Math.abs(ratio - best.ratio) <= EPS && value > best.value + EPS))
-        ) {
-          best = { id: p.rec.id, ancestors, upTo: m, ratio, value };
-        }
-      }
-    }
-    if (!best) break;
+      if (!best) break;
 
-    for (const a of best.ancestors) {
-      const ap = nodes.get(a)!;
-      steps.push({
-        nodeId: a,
-        rank: 1,
-        cost: ap.rec.costs[0]!,
-        value: rankValue(ap, 1),
-        opens: best.id,
-        filler: false,
-      });
-      held.set(a, 1);
-      left -= ap.rec.costs[0]!;
+      const p = nodes.get(best.id)!;
+      const goal = tag(p);
+      for (const a of best.ancestors) {
+        const ap = nodes.get(a)!;
+        steps.push({
+          nodeId: a,
+          rank: 1,
+          cost: ap.rec.costs[0]!,
+          value: rankValue(ap, 1, weightOf(ap)),
+          opens: best.id,
+          filler: false,
+          goal,
+        });
+        held.set(a, 1);
+        left -= ap.rec.costs[0]!;
+      }
+      const w = weightOf(p);
+      for (let r = (held.get(best.id) ?? 0) + 1; r <= best.upTo; r++) {
+        steps.push({
+          nodeId: best.id,
+          rank: r,
+          cost: p.rec.costs[r - 1]!,
+          value: rankValue(p, r, w),
+          opens: null,
+          filler: false,
+          goal,
+        });
+        left -= p.rec.costs[r - 1]!;
+      }
+      held.set(best.id, best.upTo);
     }
-    const p = nodes.get(best.id)!;
-    for (let r = (held.get(best.id) ?? 0) + 1; r <= best.upTo; r++) {
-      steps.push({
-        nodeId: best.id,
-        rank: r,
-        cost: p.rec.costs[r - 1]!,
-        value: rankValue(p, r),
-        opens: null,
-        filler: false,
-      });
-      left -= p.rec.costs[r - 1]!;
-    }
-    held.set(best.id, best.upTo);
+  };
+
+  if (mode === 'strict') {
+    for (const g of ranked)
+      search(
+        (p) => p.byGoal[g],
+        () => g,
+      );
+  } else {
+    search(
+      (p) => p.weight,
+      (p) => p.goal,
+    );
   }
 
   // Fillers: every point is spent. Nothing of value is affordable any more, so buy any rank that is legal now,
@@ -343,6 +489,7 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
       value: rankValue(pick.p, rank),
       opens: null,
       filler: true,
+      goal: null,
     });
     held.set(pick.p.rec.id, rank);
     left -= pick.cost;
@@ -389,74 +536,4 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
     locked,
     nextGate,
   };
-}
-
-export interface TalentGoalRankInput {
-  talents: readonly TalentRecord[];
-  heroLevel: number;
-  points: number;
-  ranks?: Readonly<Record<number, number>>;
-  /** Weights per goal, then per stat; a goal or stat missing counts 1. */
-  weightsByGoal?: Readonly<Partial<Record<TalentGoal, Readonly<Partial<Record<string, number>>>>>>;
-  kinds: ReadonlySet<UnitKind> | readonly UnitKind[];
-}
-
-export interface TalentGoalRank {
-  goal: TalentGoal;
-  plan: TalentPlan;
-  /** Weighted percentage points gained per point spent, or null when the goal plans nothing. */
-  valuePerPoint: number | null;
-  /** Points spent on steps that add value (fillers excluded); the plan itself may spend more. */
-  pointsSpent: number;
-  /** Why nothing is planned; null when something is. */
-  reason: string | null;
-}
-
-/**
- * The three goals compared on the same points: `planTalents` for each goal with its own weights, ordered by
- * weighted value per point spent (best first, ties in the default goal order). A goal that plans nothing goes
- * last, with the reason.
- */
-export function rankTalentGoals(input: TalentGoalRankInput): TalentGoalRank[] {
-  const kindCount = new Set<UnitKind>(input.kinds).size;
-  const rows = (Object.keys(TALENT_GOALS) as TalentGoal[]).map((goal): TalentGoalRank => {
-    const plan = planTalents({
-      talents: input.talents,
-      heroLevel: input.heroLevel,
-      points: input.points,
-      ...(input.ranks === undefined ? {} : { ranks: input.ranks }),
-      goal,
-      weights: input.weightsByGoal?.[goal] ?? {},
-      kinds: input.kinds,
-    });
-    // Fillers add nothing for the goal: value and points per point count the real steps only.
-    const real = plan.steps.filter((s) => !s.filler);
-    const value = real.reduce((sum, s) => sum + s.value, 0);
-    const realPoints = real.reduce((sum, s) => sum + s.cost, 0);
-    if (realPoints > 0 && value > 0) {
-      return {
-        goal,
-        plan,
-        valuePerPoint: value / realPoints,
-        pointsSpent: realPoints,
-        reason: null,
-      };
-    }
-    const reason =
-      input.points <= 0
-        ? 'No points to spend'
-        : kindCount === 0 && goalHasUnitStats(goal)
-          ? 'No unit counts yet'
-          : 'Nothing open adds anything';
-    return { goal, plan, valuePerPoint: null, pointsSpent: plan.pointsSpent, reason };
-  });
-  return rows
-    .map((row, i) => ({ row, i }))
-    .sort((a, b) => {
-      const av = a.row.valuePerPoint;
-      const bv = b.row.valuePerPoint;
-      if (av === null || bv === null) return av === bv ? a.i - b.i : av === null ? 1 : -1;
-      return Math.abs(av - bv) <= EPS ? a.i - b.i : bv - av;
-    })
-    .map(({ row }) => row);
 }

@@ -3,13 +3,18 @@ import { describe, expect, test } from 'vitest';
 import { talents as realTalents } from '@/data';
 import type { TalentRecord } from '@/data/types';
 import {
+  DEFAULT_TALENT_PRIORITY,
   TALENT_GOALS,
+  TALENT_RANK_WEIGHTS,
+  planTalentPriorities,
   planTalents,
-  rankTalentGoals,
   rankGain,
+  talentGoalWeights,
   unitKindOf,
   type TalentGoal,
   type TalentPlanInput,
+  type TalentPriority,
+  type TalentPriorityInput,
   type UnitKind,
 } from '@/engine/talents';
 
@@ -599,65 +604,356 @@ describe('a parent id that is not in the table', () => {
   });
 });
 
-describe('rankTalentGoals', () => {
-  const eco = (id: number, values: number[]) =>
-    node(id, { values, stats: ['STORAGE_BOOST'], tree: 'economy' });
-  const rank = (talents: TalentRecord[], over: Partial<Parameters<typeof rankTalentGoals>[0]> = {}) =>
-    rankTalentGoals({ talents, heroLevel: 200, points: 10, kinds: ALL, ...over });
-
-  test('orders the goals by weighted value per point spent, best first', () => {
-    const r = rank([node(1, { values: [2, 4] }), eco(2, [5, 10])]);
-    expect(r.map((g) => g.goal)).toEqual(['economy', 'battle', 'archeology']);
-    expect(r[0]!.valuePerPoint).toBeCloseTo(5);
-    expect(r[0]!.pointsSpent).toBe(2);
-    expect(r[1]!.valuePerPoint).toBeCloseTo(2);
+describe('planTalentPriorities', () => {
+  const eco = (id: number, values: number[], over: Partial<TalentRecord> = {}) =>
+    node(id, { values, stats: ['STORAGE_BOOST'], tree: 'economy', ...over });
+  const arch = (id: number, values: number[], over: Partial<TalentRecord> = {}) =>
+    node(id, { values, stats: ['SKLEP_STRIKE_DAMAGE'], tree: 'archeology', ...over });
+  const prio = (
+    talents: TalentRecord[],
+    priority: Partial<TalentPriority> = {},
+    over: Partial<Omit<TalentPriorityInput, 'priority'>> = {},
+  ) =>
+    planTalentPriorities({
+      talents,
+      heroLevel: 200,
+      points: 10,
+      kinds: ALL,
+      priority: { ...DEFAULT_TALENT_PRIORITY, ...priority },
+      ...over,
+    });
+  const tagged = (steps: { nodeId: number; goal: TalentGoal | null }[]) =>
+    steps.map((s) => [s.nodeId, s.goal]);
+  const only = (goal: TalentGoal): Partial<TalentPriority> => ({
+    order: [goal, ...(Object.keys(TALENT_GOALS) as TalentGoal[]).filter((g) => g !== goal)],
+    ignored: Object.fromEntries((Object.keys(TALENT_GOALS) as TalentGoal[]).map((g) => [g, g !== goal])),
   });
 
-  test('fillers neither count in value per point nor hide the no-value reason', () => {
-    const r = rank([node(1, { values: [2] }), eco(2, [0, 0, 0])]);
-    const e = r.find((g) => g.goal === 'economy')!;
-    expect(e.plan.steps.some((s) => s.filler)).toBe(true);
-    expect(e.valuePerPoint).toBeNull();
-    expect(e.reason).toBe('Nothing open adds anything');
-    expect(r.find((g) => g.goal === 'battle')!.valuePerPoint).toBeCloseTo(2);
+  describe('the model', () => {
+    test('the default is Battle, Archeology, Economy, nothing ignored, Focus, Blended', () => {
+      expect(DEFAULT_TALENT_PRIORITY).toEqual({
+        order: ['battle', 'archeology', 'economy'],
+        ignored: {},
+        strength: 'focus',
+        mode: 'blended',
+      });
+    });
+
+    test('the weights per rank are Focus 1/0.5/0.25, Lean 1/0.8/0.6, Even 1/1/1', () => {
+      expect(TALENT_RANK_WEIGHTS).toEqual({ focus: [1, 0.5, 0.25], lean: [1, 0.8, 0.6], even: [1, 1, 1] });
+    });
+
+    test.each([
+      ['Focus, default order', {}, { battle: 1, archeology: 0.5, economy: 0.25 }],
+      ['Lean, default order', { strength: 'lean' }, { battle: 1, archeology: 0.8, economy: 0.6 }],
+      ['Even', { strength: 'even' }, { battle: 1, archeology: 1, economy: 1 }],
+      [
+        'Battle ignored: Archeology is rank 1',
+        { ignored: { battle: true } },
+        { battle: 0, archeology: 1, economy: 0.5 },
+      ],
+      [
+        'Economy first, Battle last',
+        { order: ['economy', 'archeology', 'battle'] },
+        { economy: 1, archeology: 0.5, battle: 0.25 },
+      ],
+      [
+        'an order missing a goal ranks it last',
+        { order: ['economy'] },
+        { economy: 1, battle: 0.5, archeology: 0.25 },
+      ],
+    ] as const)('%s', (_name, p, weights) => {
+      expect(talentGoalWeights({ ...DEFAULT_TALENT_PRIORITY, ...(p as Partial<TalentPriority>) })).toEqual(
+        weights,
+      );
+    });
   });
 
-  test('a goal with nothing plannable goes last with a reason and no ratio', () => {
-    const r = rank([node(1, { values: [2] })]);
-    expect(r[0]!.goal).toBe('battle');
-    expect(r[0]!.reason).toBeNull();
-    for (const g of r.slice(1)) {
-      expect(g.valuePerPoint).toBeNull();
-      expect(g.reason).toMatch(/.+/);
-    }
-    expect(r.slice(1).map((g) => g.goal)).toEqual(['economy', 'archeology']);
-  });
+  describe('one active goal', () => {
+    const mixed = [
+      node(1, { values: [1, 3] }),
+      node(2, { values: [9], parents: [1] }),
+      eco(3, [4, 5]),
+      eco(4, [0.1]),
+      eco(5, [30], { parents: [4] }),
+      arch(6, [2, 2]),
+      arch(7, [-3], { stats: ['SKLEP_PRICE_CUT'], levelGate: 250 }),
+      node(8, { values: [7], unitIds: [31] }),
+    ];
 
-  test('uses each goal own weights and the plan matches planTalents for that goal', () => {
-    const talents = [node(1, { values: [2] }), node(2, { values: [3], stats: ['UNIT_HEALTH'] })];
-    const r = rank(talents, { weightsByGoal: { battle: { UNIT_HEALTH: 4 } } });
-    const b = r.find((g) => g.goal === 'battle')!;
-    expect(b.plan).toEqual(
-      planTalents({
-        talents,
-        heroLevel: 200,
-        points: 10,
-        goal: 'battle',
-        kinds: ALL,
-        weights: { UNIT_HEALTH: 4 },
-      }),
+    test.each(['battle', 'economy', 'archeology'] as const)(
+      '%s alone gives exactly the single-goal plan, every value step tagged with it',
+      (goal) => {
+        for (const mode of ['blended', 'strict'] as const) {
+          for (const points of [0, 3, 10, 40]) {
+            const r = prio(mixed, { ...only(goal), mode }, { points, kinds: ['melee'] });
+            const single = planTalents({ talents: mixed, heroLevel: 200, points, goal, kinds: ['melee'] });
+            const { steps, ...rest } = r;
+            const { steps: singleSteps, ...singleRest } = single;
+            expect(steps.map(({ goal: _g, ...s }) => s)).toEqual(singleSteps);
+            expect(rest).toEqual(singleRest);
+            for (const s of steps) expect(s.goal).toBe(s.filler ? null : goal);
+          }
+        }
+      },
     );
-    expect(b.valuePerPoint).toBeCloseTo((2 + 12) / 2);
   });
 
-  test('no points gives every goal the no-points reason, in the default order', () => {
-    const r = rank([node(1, { values: [2] })], { points: 0 });
-    expect(r.map((g) => g.goal)).toEqual(['battle', 'economy', 'archeology']);
-    expect(r.every((g) => g.reason !== null)).toBe(true);
+  describe('Blended', () => {
+    test.each([
+      ['Focus: a Battle step goes before an Economy step of equal value', 'focus', 3, [1]],
+      ['Focus: but not before a much stronger Economy step', 'focus', 20, [2]], // Economy is rank 3: 20 x 0.25 = 5 beats 3
+      ['Even: the stronger raw value goes first', 'even', 4, [2]],
+    ] as const)('%s', (_name, strength, ecoValue, want) => {
+      const t = [node(1, { values: [3] }), eco(2, [ecoValue])];
+      expect(ids(prio(t, { strength }, { points: 1 }).steps)).toEqual(want);
+    });
+
+    test.each([
+      ['Focus follows the rank order', 'focus', [1, 3, 2]],
+      ['Lean lets cheap lower wins in early', 'lean', [3, 1, 2]],
+      ['Even interleaves by raw value', 'even', [3, 2, 1]],
+    ] as const)('%s', (_name, strength, want) => {
+      // Battle 3, Archeology 5, Economy 4; default order Battle, Archeology, Economy.
+      const t = [node(1, { values: [3] }), eco(2, [4]), arch(3, [5])];
+      expect(ids(prio(t, { strength }, { points: 3 }).steps)).toEqual(want);
+    });
+
+    test('each step carries the goal it serves and its goal-weighted value', () => {
+      const t = [node(1, { values: [3] }), eco(2, [4]), arch(3, [5])];
+      const r = prio(t, {}, { points: 3 });
+      expect(r.steps.map((s) => [s.nodeId, s.goal, s.value])).toEqual([
+        [1, 'battle', 3],
+        [3, 'archeology', 2.5],
+        [2, 'economy', 1],
+      ]);
+    });
+
+    test('an ignored goal never gets a step of value nor a tag', () => {
+      const t = [node(1, { values: [1] }), eco(2, [100, 100]), arch(3, [1])];
+      const r = prio(t, { ignored: { economy: true }, strength: 'even' }, { points: 2 });
+      expect(tagged(r.steps)).toEqual([
+        [1, 'battle'],
+        [3, 'archeology'],
+      ]);
+      const rich = prio(t, { ignored: { economy: true } }, { points: 10 });
+      for (const s of rich.steps) {
+        expect(s.goal).not.toBe('economy');
+        if (s.nodeId === 2) expect(s.filler).toBe(true);
+      }
+      expect(Object.keys(rich.after)).not.toContain('STORAGE_BOOST');
+    });
+
+    test('the first goal ignored makes the second goal rank 1', () => {
+      const t = [node(1, { values: [100] }), arch(2, [2]), eco(3, [3])];
+      // Archeology is rank 1 (weight 1), Economy rank 2 (weight 0.5): 2 beats 1.5.
+      const r = prio(t, { ignored: { battle: true } }, { points: 1 });
+      expect(r.steps.map((s) => [s.nodeId, s.goal, s.value])).toEqual([[2, 'archeology', 2]]);
+    });
+
+    test('a node serving two goals takes the highest weight, not the sum, and is tagged with that goal', () => {
+      const two = node(1, { values: [4], stats: ['UNIT_POWER', 'STORAGE_BOOST'] });
+      expect(prio([two], { strength: 'even' }, { points: 1 }).steps.map((s) => [s.goal, s.value])).toEqual([
+        ['battle', 4],
+      ]);
+      const ecoFirst = { order: ['economy', 'battle', 'archeology'] as TalentGoal[] };
+      expect(prio([two], ecoFirst, { points: 1 }).steps.map((s) => [s.goal, s.value])).toEqual([
+        ['economy', 4],
+      ]);
+      // A dearer stat weight on the Battle side lifts it over Economy's rank: 0.5 x 3 = 1.5 against 1.
+      const r = prio([two], ecoFirst, { points: 1, weightsByGoal: { battle: { UNIT_POWER: 3 } } });
+      expect(r.steps.map((s) => [s.goal, s.value])).toEqual([['battle', 6]]);
+    });
+
+    test('a bonus for a unit kind the player does not field counts zero in every goal', () => {
+      const t = [
+        node(1, { values: [50], unitIds: [31] }), // Battle, flying
+        eco(2, [50], { stats: ['FACTORY_PRODUCTION_SPEED'], unitIds: [31] }), // Economy, flying training
+        arch(3, [1]),
+      ];
+      const r = prio(t, { strength: 'even' }, { points: 1, kinds: ['melee'] });
+      expect(tagged(r.steps)).toEqual([[3, 'archeology']]);
+    });
+
+    test('per-stat weights still work inside a goal', () => {
+      const t = [node(1, { values: [3] }), node(2, { values: [2], stats: ['UNIT_HEALTH'] })];
+      expect(ids(prio(t, {}, { points: 1 }).steps)).toEqual([1]);
+      expect(ids(prio(t, {}, { points: 1, weightsByGoal: { battle: { UNIT_HEALTH: 2 } } }).steps)).toEqual([
+        2,
+      ]);
+    });
+
+    test('a cheap parent that opens a strong child under a lower goal is still taken', () => {
+      const t = [node(1, { values: [3] }), eco(2, [0.1]), eco(3, [50], { parents: [2] })];
+      // Economy at 0.25: (0.1 + 50) x 0.25 / 2 = 6.26 a point, against Battle's 3.
+      const r = prio(t, {}, { points: 2 });
+      expect(r.steps.map((s) => [s.nodeId, s.goal, s.opens])).toEqual([
+        [2, 'economy', 3],
+        [3, 'economy', null],
+      ]);
+    });
+
+    test('running out of points mid-path stops at the last affordable rank', () => {
+      const t = [eco(1, [1, 2, 3, 4, 5]), node(2, { values: [0.1] })];
+      const r = prio(t, {}, { points: 2 });
+      expect(r.steps.map((s) => [s.nodeId, s.rank])).toEqual([
+        [1, 1],
+        [1, 2],
+      ]);
+      expect(r.pointsLeft).toBe(0);
+    });
+
+    test('totals before and after cover the stats of every active goal', () => {
+      const t = [node(1, { values: [3] }), eco(2, [4]), arch(3, [5])];
+      const r = prio(t, { ignored: { archeology: true } }, { points: 3, ranks: { 1: 1 } });
+      expect(r.before).toEqual({ UNIT_POWER: 3 });
+      expect(r.after).toEqual({ UNIT_POWER: 3, STORAGE_BOOST: 4 });
+    });
   });
 
-  test('ties keep the default goal order', () => {
-    const r = rank([node(1, { values: [2] }), eco(2, [2])]);
-    expect(r.slice(0, 2).map((g) => g.goal)).toEqual(['battle', 'economy']);
+  describe('Strict order', () => {
+    const t = [node(1, { values: [1, 2] }), eco(2, [100]), arch(3, [1])];
+
+    test('fills goal 1 completely before goal 2, then goal 3', () => {
+      const r = prio(t, { mode: 'strict', order: ['battle', 'economy', 'archeology'] }, { points: 4 });
+      expect(r.steps.map((s) => [s.nodeId, s.rank, s.goal])).toEqual([
+        [1, 1, 'battle'],
+        [1, 2, 'battle'],
+        [2, 1, 'economy'],
+        [3, 1, 'archeology'],
+      ]);
+    });
+
+    test('spills only what goal 1 cannot take', () => {
+      const r = prio(t, { mode: 'strict', order: ['battle', 'economy', 'archeology'] }, { points: 2 });
+      expect(tagged(r.steps)).toEqual([
+        [1, 'battle'],
+        [1, 'battle'],
+      ]);
+    });
+
+    test('Blended places a strong Economy step before a weak Battle one where Strict cannot', () => {
+      const order: TalentGoal[] = ['battle', 'economy', 'archeology'];
+      expect(ids(prio(t, { order }, { points: 1 }).steps)).toEqual([2]);
+      expect(ids(prio(t, { order, mode: 'strict' }, { points: 1 }).steps)).toEqual([1]);
+    });
+
+    test('skips an ignored goal', () => {
+      const r = prio(t, { mode: 'strict', ignored: { battle: true } }, { points: 2 });
+      expect(tagged(r.steps)).toEqual([
+        [3, 'archeology'],
+        [2, 'economy'],
+      ]);
+    });
+
+    test('points no goal can use are spent as fillers or left over, as in the single-goal plan', () => {
+      const r = prio(
+        [node(1, { values: [1] }), eco(2, [0, 0], { stats: ['MINE_PRODUCTION_SPEED'] })],
+        { mode: 'strict', ignored: { economy: true } },
+        { points: 5 },
+      );
+      expect(r.steps.map((s) => [s.nodeId, s.goal, s.filler])).toEqual([
+        [1, 'battle', false],
+        [2, null, true],
+        [2, null, true],
+      ]);
+      expect(r.pointsLeft).toBe(2);
+    });
+  });
+
+  describe('properties', () => {
+    const byId = new Map(realTalents.map((t) => [t.id, t]));
+    const priorities: TalentPriority[] = [
+      DEFAULT_TALENT_PRIORITY,
+      { ...DEFAULT_TALENT_PRIORITY, strength: 'even' },
+      { ...DEFAULT_TALENT_PRIORITY, strength: 'lean', order: ['economy', 'battle', 'archeology'] },
+      { ...DEFAULT_TALENT_PRIORITY, mode: 'strict' },
+      { ...DEFAULT_TALENT_PRIORITY, mode: 'strict', order: ['archeology', 'economy', 'battle'] },
+      { ...DEFAULT_TALENT_PRIORITY, ignored: { battle: true, archeology: true } },
+    ];
+
+    test.each([
+      [24, 20],
+      [86, 300],
+      [150, 600],
+      [400, 1500],
+    ])(
+      'real table, level %i, %i points: every step is affordable and open at its moment',
+      (heroLevel, points) => {
+        for (const priority of priorities) {
+          const r = planTalentPriorities({ talents: realTalents, heroLevel, points, kinds: ALL, priority });
+          const held = new Map<number, number>();
+          let spent = 0;
+          for (const s of r.steps) {
+            const t = byId.get(s.nodeId)!;
+            expect(s.rank).toBe((held.get(s.nodeId) ?? 0) + 1);
+            expect(s.cost).toBe(t.costs[s.rank - 1]);
+            if (s.rank === 1) {
+              if (t.levelGate) expect(heroLevel).toBeGreaterThanOrEqual(t.levelGate);
+              for (const p of t.parents) expect(held.get(p) ?? 0).toBeGreaterThanOrEqual(1);
+            }
+            if (!s.filler) expect(priority.ignored[s.goal!] ?? false).toBe(false);
+            held.set(s.nodeId, s.rank);
+            spent += s.cost;
+          }
+          expect(spent).toBeLessThanOrEqual(points);
+          expect(r.pointsSpent).toBe(spent);
+          expect(r.pointsSpent + r.pointsLeft).toBe(points);
+        }
+      },
+    );
+
+    test('with one goal, the plan equals the single-goal planner on random tables', () => {
+      let seed = 22;
+      const rnd = () => {
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        return seed / 2147483648;
+      };
+      const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)]!;
+      const statPool = ['UNIT_POWER', 'UNIT_HEALTH', 'STORAGE_BOOST', 'CARAVAN_SPEED', 'SKLEP_EXP_BONUS'];
+      const goals = Object.keys(TALENT_GOALS) as TalentGoal[];
+      for (let trial = 0; trial < 60; trial++) {
+        const n = 3 + Math.floor(rnd() * 8);
+        const table: TalentRecord[] = [];
+        for (let id = 1; id <= n; id++) {
+          const ranks = 1 + Math.floor(rnd() * 3);
+          let total = 0;
+          const values = Array.from({ length: ranks }, () => (total += Math.round(rnd() * 10)));
+          const parents = id > 1 && rnd() < 0.5 ? [1 + Math.floor(rnd() * (id - 1))] : [];
+          table.push(
+            node(id, {
+              values,
+              stats: [pick(statPool)],
+              parents,
+              costs: values.map(() => 1 + Math.floor(rnd() * 3)),
+              ...(rnd() < 0.2 ? { levelGate: 100 } : {}),
+            }),
+          );
+        }
+        const goal = pick(goals);
+        const points = Math.floor(rnd() * 15);
+        const heroLevel = rnd() < 0.5 ? 50 : 200;
+        const r = prio(
+          table,
+          { ...only(goal), mode: pick(['blended', 'strict'] as const) },
+          { points, heroLevel },
+        );
+        const single = planTalents({ talents: table, heroLevel, points, goal, kinds: ALL });
+        const { steps, ...rest } = r;
+        const { steps: singleSteps, ...singleRest } = single;
+        expect(steps.map(({ goal: _g, ...s }) => s)).toEqual(singleSteps);
+        expect(rest).toEqual(singleRest);
+      }
+    });
+
+    test('the plan is a pure function: same input, same output, input untouched', () => {
+      const priority: TalentPriority = {
+        ...DEFAULT_TALENT_PRIORITY,
+        order: ['economy', 'battle', 'archeology'],
+      };
+      const args = { talents: realTalents, heroLevel: 120, points: 60, kinds: ALL, priority };
+      expect(planTalentPriorities(args)).toEqual(planTalentPriorities(args));
+      expect(priority.order).toEqual(['economy', 'battle', 'archeology']);
+    });
   });
 });
