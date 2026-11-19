@@ -44,6 +44,8 @@ for (const { name, width, height } of WIDTHS) {
     await expect(page.getByRole('button', { name: /, rank 1 of \d+/ }).first()).toBeVisible();
     expect(await pageOverflowsSideways(page)).toBe(false);
 
+    await expect(page.getByText(/ · \d+ spent( \+ \d+ planned)?$/).first()).toBeVisible();
+
     await page.getByRole('radiogroup', { name: 'Tree' }).getByText('Expert', { exact: true }).click();
     expect(await pageOverflowsSideways(page)).toBe(false);
 

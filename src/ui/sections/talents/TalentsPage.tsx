@@ -32,7 +32,7 @@ import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
-import { spentPoints } from './spentPoints';
+import { treePoints } from './spentPoints';
 import { TalentTree } from './TalentTree';
 
 const BY_ID = new Map(TALENTS.map((t) => [t.id, t]));
@@ -334,6 +334,7 @@ export function TalentsPage() {
         <Stack gap="md">
           <SegmentedControl
             fullWidth
+            styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 4, minWidth: 0 } }}
             aria-label="Tree"
             value={viewTree}
             data={TALENT_TREES.map((t) => ({
@@ -341,7 +342,10 @@ export function TalentsPage() {
               label: (
                 <span style={{ display: 'grid', lineHeight: 1.2 }}>
                   <span>{TREE_SHORT[t]}</span>
-                  <span>{plural(spentPoints(TALENTS, t, talentsState.ranks), 'point')}</span>
+                  <span>{`${String(treePoints(TALENTS, t, talentsState.ranks, plan.steps).spent)} spent`}</span>
+                  {treePoints(TALENTS, t, talentsState.ranks, plan.steps).planned > 0 && (
+                    <span>{`${String(treePoints(TALENTS, t, talentsState.ranks, plan.steps).planned)} planned`}</span>
+                  )}
                 </span>
               ),
             }))}

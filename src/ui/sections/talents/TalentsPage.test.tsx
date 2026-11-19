@@ -133,3 +133,31 @@ test('a goal with nothing plannable is last and says why', () => {
     .map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
   expect(labels.every((l) => /No points to spend/.test(l))).toBe(true);
 });
+
+test('the tree head and the tab count held ranks and planned steps apart (never a flat 0)', () => {
+  const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0)!;
+  const id = selectActiveProfile(useStore.getState())!.id;
+  useStore.getState().updateProfile(id, {
+    talents: {
+      ...talentsOf(),
+      goal: 'economy',
+      heroLevel: 150,
+      pointsOverride: 40,
+      ranks: { [String(node.id)]: 1 },
+    },
+  });
+  renderWithTheme(<TalentsPage />);
+  const head = screen.getByText(/ · \d+ spent \+ \d+ planned$/);
+  expect(head.textContent).toMatch(/^Economy · 1 spent \+ [1-9]\d* planned$/);
+  expect(
+    within(screen.getByRole('radiogroup', { name: 'Tree' })).getAllByText(/^\d+ planned$/).length,
+  ).toBeGreaterThan(0);
+});
+
+test('with planned steps and no held ranks the head says planned, not 0 spent', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(economyRadio());
+  type('Hero level', '150');
+  type('Points to spend', '30');
+  expect(screen.getByText(/^Economy · [1-9]\d* planned$/)).toBeTruthy();
+});

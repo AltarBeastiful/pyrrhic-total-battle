@@ -1,8 +1,7 @@
 /**
  * One hero tree on the game's own grid (B-21): a tile per node at its column and row, showing the rank bought,
- * what the plan adds there, and why a node is locked. Tiles read in the game's order (row by row), two or three to a row,
- * each with its name, an icon and its tier; the grid's own five columns do not fit names at the 13 px floor of
- * design rule 19. A rank shows only once held or planned; the maximum lives in the editor. Colour is never the only signal (rule 24): a locked tile is dashed and
+ * what the plan adds there, and why a node is locked. Tiles sit at the game's own column and row with a line to each parent, each with its name, an icon and its tier.
+ * A rank shows only once held or planned; the maximum lives in the editor. Colour is never the only signal (rule 24): a locked tile is dashed and
  * says "Lv 65" or "Parent".
  */
 import { ActionIcon, Group, Stack, Text } from '@mantine/core';
@@ -14,9 +13,9 @@ import { Glyph } from '@/ui/domain/Glyph';
 import { NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
-import { spentPoints } from './spentPoints';
+import { pointsWords, treePoints } from './spentPoints';
 import classes from './talents.module.css';
-import { talentFamily, talentIcons, treeOrder } from './talentFamily';
+import { talentFamily, talentIcons } from './talentFamily';
 
 /** Rule 10: a stepper only for a short run of values; Army strength has 150 ranks and takes the typed field alone. */
 const STEPPER_MAX = 100;
@@ -44,67 +43,120 @@ function lockWords(plan: TalentPlan, id: number): string | null {
   return lock.reason === 'level' ? `Lv ${String(lock.level)}` : 'Parent';
 }
 
+/** The game's grid: six columns, cell size in px. Tiles are 124 x 104 inside a 144 x 128 cell. */
+const CELL_W = 144;
+const CELL_H = 128;
+const TILE_W = 124;
+const TILE_H = 104;
+const COLS = 6;
+
 export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onRank }: TalentTreeProps) {
-  const nodes = treeOrder(talents.filter((t) => t.tree === tree));
+  const nodes = talents.filter((t) => t.tree === tree);
   const added = plannedByNode(plan);
   const node = nodes.find((n) => n.id === selected) ?? null;
-  const points = spentPoints(talents, tree, ranks);
+  const points = treePoints(talents, tree, ranks, plan.steps);
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const rows = Math.max(...nodes.map((n) => n.layout.y)) + 1;
+  const width = COLS * CELL_W;
+  const height = rows * CELL_H;
+  const centre = (n: TalentRecord): [number, number] => [
+    n.layout.x * CELL_W + CELL_W / 2,
+    n.layout.y * CELL_H + CELL_H / 2,
+  ];
+  // One line from each node to each of its parents, as the game draws them; a line into a node that is held
+  // is firm, and a line into a node the plan spends on is bold and in the accent colour.
+  const lines = nodes.flatMap((n) =>
+    n.parents.flatMap((pid) => {
+      const p = byId.get(pid);
+      if (p === undefined) return [];
+      const planned = (added.get(n.id) ?? 0) > 0;
+      const lit = (ranks[String(n.id)] ?? 0) > 0 || planned;
+      return [{ key: `${String(pid)}-${String(n.id)}`, from: centre(p), to: centre(n), lit, planned }];
+    }),
+  );
 
   return (
     <div className={classes.layout}>
-      <Stack gap="md">
+      <Stack gap="md" style={{ minWidth: 0 }}>
         <Text fw={600}>
-          {TREE_LABELS[tree]} · {points} {points === 1 ? 'point' : 'points'} spent
+          {TREE_LABELS[tree]} · {pointsWords(points)}
         </Text>
-        <div className={classes.grid}>
-          {nodes.map((n) => {
-            const bought = ranks[String(n.id)] ?? 0;
-            const plus = added.get(n.id) ?? 0;
-            const lock = bought === 0 && plus === 0 ? lockWords(plan, n.id) : null;
-            const fam = talentFamily(n.name);
-            const icons = talentIcons(n.name, n.stats);
-            const state = plus > 0 ? 'planned' : lock !== null ? 'locked' : 'open';
-            const spoken =
-              `${n.name}, rank ${String(bought)} of ${String(n.maxRank)}` +
-              (plus > 0 ? `, the plan adds ${String(plus)}` : '') +
-              (lock !== null
-                ? plan.locked[n.id]?.reason === 'level'
-                  ? `, locked until hero level ${String(plan.locked[n.id]?.level)}`
-                  : ', locked until a node above it has a rank'
-                : '');
-            return (
-              <button
-                key={n.id}
-                type="button"
-                className={classes.tile}
-                data-state={state}
-                aria-pressed={selected === n.id}
-                aria-label={spoken}
-                onClick={() => {
-                  onSelect(n.id);
-                }}
-              >
-                <span className={classes.head}>
-                  <span className={classes.icons}>
-                    {icons.subject !== null && <Glyph kind={icons.subject} />}
-                    <Glyph kind={icons.stat} />
+        {/*
+          Owner request (talents tree shape): the tree keeps the game's shape and, on a phone, pans sideways INSIDE
+          this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.
+        */}
+        <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
+          <div className={classes.plane} style={{ width, height }}>
+            <svg className={classes.lines} width={width} height={height} aria-hidden>
+              {lines.map((l) => (
+                <line
+                  key={l.key}
+                  x1={l.from[0]}
+                  y1={l.from[1]}
+                  x2={l.to[0]}
+                  y2={l.to[1]}
+                  className={classes.line}
+                  data-lit={l.lit}
+                  data-planned={l.planned}
+                />
+              ))}
+            </svg>
+            {nodes.map((n) => {
+              const bought = ranks[String(n.id)] ?? 0;
+              const plus = added.get(n.id) ?? 0;
+              const lock = bought === 0 && plus === 0 ? lockWords(plan, n.id) : null;
+              const fam = talentFamily(n.name);
+              const icons = talentIcons(n.name, n.stats);
+              const state = plus > 0 ? 'planned' : lock !== null ? 'locked' : 'open';
+              const spoken =
+                `${n.name}, rank ${String(bought)} of ${String(n.maxRank)}` +
+                (plus > 0 ? `, the plan adds ${String(plus)}` : '') +
+                (lock !== null
+                  ? plan.locked[n.id]?.reason === 'level'
+                    ? `, locked until hero level ${String(plan.locked[n.id]?.level)}`
+                    : ', locked until a node above it has a rank'
+                  : '');
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  className={classes.tile}
+                  data-state={state}
+                  style={{
+                    left: n.layout.x * CELL_W + (CELL_W - TILE_W) / 2,
+                    top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
+                    width: TILE_W,
+                    height: TILE_H,
+                  }}
+                  aria-pressed={selected === n.id}
+                  aria-label={spoken}
+                  onClick={() => {
+                    onSelect(n.id);
+                  }}
+                >
+                  <span className={classes.head}>
+                    <span className={classes.icons}>
+                      {icons.subject !== null && <Glyph kind={icons.subject} />}
+                      <Glyph kind={icons.stat} />
+                    </span>
+                    {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
                   </span>
-                  {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
-                </span>
-                <span className={classes.name}>{fam.family}</span>
-                {(bought > 0 || plus > 0 || lock !== null) && (
-                  <span className={classes.marks}>
-                    {bought > 0 && <span>rank {bought}</span>}
-                    {plus > 0 && <span>+{plus}</span>}
-                    {lock !== null && <span>{lock}</span>}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  <span className={classes.name}>{fam.family}</span>
+                  {(bought > 0 || plus > 0 || lock !== null) && (
+                    <span className={classes.marks}>
+                      {bought > 0 && <span>rank {bought}</span>}
+                      {plus > 0 && <span>+{plus}</span>}
+                      {lock !== null && <span>{lock}</span>}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <Text size="sm" c="dimmed">
-          Filled tiles are where the plan spends. Dashed tiles are locked: Lv is the hero level they need,
+          Lines join each node to the node above it that opens it; bold lines lead to nodes the plan spends
+          on. Filled tiles are where the plan spends. Dashed tiles are locked: Lv is the hero level they need,
           Parent means a node above them must hold a rank first.
         </Text>
       </Stack>
@@ -132,6 +184,8 @@ function NodeEditor({
   plan: TalentPlan;
   onRank: (id: number, rank: number) => void;
 }) {
+  const fam = talentFamily(node.name);
+  const icons = talentIcons(node.name, node.stats);
   const lock = plan.locked[node.id];
   const next = bought < node.maxRank ? rankGain(node.values, bought + 1) : null;
   const set = (rank: number): void => {
@@ -139,7 +193,14 @@ function NodeEditor({
   };
   return (
     <Stack gap="xs" aria-label={`${node.name}`} role="group">
-      <Text fw={600}>{node.name}</Text>
+      <Group gap="xs" align="center">
+        <span className={classes.icons} aria-hidden>
+          {icons.subject !== null && <Glyph kind={icons.subject} />}
+          <Glyph kind={icons.stat} />
+        </span>
+        <Text fw={600}>{fam.family}</Text>
+        {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
+      </Group>
       <Text size="sm" c="dimmed">
         {node.stats.map(statLabel).join(', ')}
         {bought > 0 ? `, now ${percent(node.values[bought - 1]!)}` : ''}
