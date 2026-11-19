@@ -5,6 +5,7 @@ import type { TalentRecord } from '@/data/types';
 import {
   TALENT_GOALS,
   planTalents,
+  rankGain,
   unitKindOf,
   type TalentGoal,
   type TalentPlanInput,
@@ -440,5 +441,53 @@ describe('planTalents on the real table', () => {
     const t0 = performance.now();
     planTalents({ talents: realTalents, heroLevel: 200, points: 600, goal: 'battle', kinds: ALL });
     expect(performance.now() - t0).toBeLessThan(1500);
+  });
+});
+
+describe('rankGain', () => {
+  test('is the table figure of a rank minus the one before it', () => {
+    expect(rankGain([1, 3, 6], 1)).toBe(1);
+    expect(rankGain([1, 3, 6], 3)).toBe(3);
+  });
+});
+
+describe('a node that carries two stats on one series of figures', () => {
+  test('is worth its dearest in-goal stat, not the sum of both', () => {
+    const two = node(1, { values: [4], stats: ['CARAVAN_CAPACITY', 'CLAN_CARAVAN_CAPACITY'] });
+    const one = node(2, { values: [5], stats: ['CARAVAN_SPEED'] });
+    const r = plan([two, one], { goal: 'economy', points: 1 });
+    expect(ids(r.steps)).toEqual([2]);
+    expect(plan([two], { goal: 'economy', points: 1 }).steps[0]!.value).toBe(4);
+    const weighted = plan([two], {
+      goal: 'economy',
+      points: 1,
+      weights: { CARAVAN_CAPACITY: 0.5, CLAN_CARAVAN_CAPACITY: 2 },
+    });
+    expect(weighted.steps[0]!.value).toBe(8);
+  });
+});
+
+describe('the next gate', () => {
+  test('counts the missing ancestors in what it costs and is worth', () => {
+    const t = [
+      node(1, { values: [1], levelGate: 105, costs: [7] }),
+      node(2, { values: [10], parents: [1], levelGate: 105, costs: [3] }),
+    ];
+    const r = plan(t, { heroLevel: 100, points: 0 });
+    // node 2 alone: 10 for 3 points (3.33 a point); with its parent: 11 for 10 (1.1 a point), node 1 alone: 1 for 7.
+    expect(r.nextGate).toEqual({ level: 105, nodeId: 2, value: 11, points: 10 });
+  });
+
+  test('skips a node that already holds a rank', () => {
+    const t = [node(1, { values: [9], levelGate: 105 }), node(2, { values: [3], levelGate: 105 })];
+    const r = plan(t, { heroLevel: 100, points: 0, ranks: { 1: 1 } });
+    expect(r.nextGate?.nodeId).toBe(2);
+  });
+});
+
+describe('a parent id that is not in the table', () => {
+  test('is a broken table, not a satisfied condition', () => {
+    const t = [node(1, { values: [1], parents: [99] })];
+    expect(() => plan(t)).toThrow(/99/);
   });
 });

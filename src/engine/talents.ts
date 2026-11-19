@@ -31,6 +31,11 @@ export function unitKindOf(id: number): UnitKind | null {
   return KIND_BY_ID.get(id) ?? null;
 }
 
+/** What rank `rank` (1-based) adds over the one before it: the table holds running totals, a rank is the step. */
+export function rankGain(values: readonly number[], rank: number): number {
+  return values[rank - 1]! - (rank > 1 ? values[rank - 2]! : 0);
+}
+
 export const TALENT_GOALS: Readonly<Record<'battle' | 'economy' | 'archeology', readonly string[]>> = {
   /** Army strength, health, double-damage chance, march speed and carrying capacity. */
   battle: ['UNIT_POWER', 'UNIT_HEALTH', 'UNIT_CRIT', 'MARCH_SPEED', 'MARCH_SPEED_PVP', 'UNIT_LOAD_CAPACITY'],
@@ -69,6 +74,11 @@ const UNIT_SCOPED_STATS: ReadonlySet<string> = new Set([
   'MARCH_SPEED_PVP',
   'FACTORY_PRODUCTION_SPEED',
 ]);
+
+/** Whether a goal has stats about units, so the army decides what counts for it. */
+export function goalHasUnitStats(goal: TalentGoal): boolean {
+  return TALENT_GOALS[goal].some((s) => UNIT_SCOPED_STATS.has(s));
+}
 
 /** Stats where a lower figure is the gain (the table stores a price cut as a negative percentage). */
 const LOWER_IS_BETTER: ReadonlySet<string> = new Set(['SKLEP_PRICE_CUT']);
@@ -130,7 +140,11 @@ const EPS = 1e-12;
 
 interface Prepared {
   rec: TalentRecord;
-  /** Sum of the weights of the node's stats that are in the goal (0 when nothing counts). */
+  /**
+   * The weight of the node: the highest weight among its stats that are in the goal (0 when none is). A node
+   * with two stats (a caravan bonus and its clan twin) has one series of figures that applies to both, so
+   * adding the weights would count the same percentage points twice; the dearest stat sets the value instead.
+   */
   weight: number;
   /** Whether the node's army relevance holds (true for nodes that are not about units). */
   counts: boolean;
@@ -141,7 +155,7 @@ interface Prepared {
 /** The weighted value of one rank of a node: its table gain times the node weight. The seam for an engine-scored value. */
 function rankValue(p: Prepared, rank: number): number {
   const v = p.rec.values;
-  return (v[rank - 1]! - (rank > 1 ? v[rank - 2]! : 0)) * p.weight * p.sign;
+  return rankGain(v, rank) * p.weight * p.sign;
 }
 
 export function planTalents(input: TalentPlanInput): TalentPlan {
@@ -154,7 +168,7 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
   for (const rec of talents) {
     let weight = 0;
     for (const s of rec.stats) {
-      if (inGoal.has(s)) weight += weightOf(s);
+      if (inGoal.has(s)) weight = Math.max(weight, weightOf(s));
     }
     const scoped = rec.stats.some((s) => UNIT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
     const counts = !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
@@ -191,7 +205,8 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
       if (seen.has(nid)) return;
       seen.add(nid);
       const p = nodes.get(nid);
-      if (!p) return;
+      if (!p)
+        throw new Error(`talent table: node ${String(nid)} is named as a parent but is not in the table`);
       if (!isTarget && (held.get(nid) ?? 0) >= 1) return;
       for (const parent of p.rec.parents) visit(parent, false);
       gate = Math.max(gate, p.rec.levelGate ?? 0);
@@ -284,9 +299,17 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
   for (const level of gates) {
     let pick: { id: number; ratio: number; value: number; points: number } | null = null;
     for (const p of nodes.values()) {
-      if (p.rec.levelGate !== level || p.weight <= 0) continue;
+      if (p.rec.levelGate !== level || p.weight <= 0 || (held.get(p.rec.id) ?? 0) > 0) continue;
+      // The path to the node: its missing ancestors (one rank each), then every rank of the node.
+      const c = closure(p.rec.id);
+      if (c.gate > level) continue; // a later gate sits on the way; that gate's turn comes later
       let value = 0;
       let points = 0;
+      for (const a of c.order) {
+        const ap = nodes.get(a)!;
+        value += rankValue(ap, 1);
+        points += ap.rec.costs[0]!;
+      }
       for (let r = 1; r <= p.rec.maxRank; r++) {
         value += rankValue(p, r);
         points += p.rec.costs[r - 1]!;

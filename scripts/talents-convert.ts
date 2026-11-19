@@ -7,7 +7,8 @@
  * rank n needs rank n - 1 is the game's and is checked, not stored. Anything the decoder does not
  * understand throws, so a changed game cannot slip through as a wrong table.
  *
- * Run it with `pnpm data:talents <path to talents.json>`; the default is the owner's recon folder.
+ * Run it with `pnpm data:talents <path to talents.json>`, or set `TALENTS_DUMP` to the path (the test that rebuilds the
+ * whole table from the dump reads the same variable, and is skipped without it).
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -15,7 +16,8 @@ import path from 'node:path';
 import { canonicalText, TABLES_DIR } from './data-tables.ts';
 import type { TalentRecord, TalentTree } from '../src/data/types.ts';
 
-export const DEFAULT_SOURCE = '/home/remi/projects/tb-analyze/recon/work/talents/talents.json';
+/** The dump named by the environment, or null. */
+export const DUMP_SOURCE: string | null = process.env['TALENTS_DUMP'] ?? null;
 
 /** Branch id in the dump to the tree it is. */
 const TREE_OF_BRANCH: Record<number, TalentTree> = {
@@ -76,7 +78,7 @@ function convertTech(tech: Tech, tree: TalentTree): TalentRecord {
       if (b !== 1) fail(tech, `needs ${b} ranks of parent ${a}`);
       parents.add(a);
     } else if (call.fn === 'HasLevel' && b === 0) {
-      levelGate = a;
+      levelGate = Math.max(levelGate ?? 0, a); // several level conditions: the highest binds
     } else fail(tech, `unknown first-rank condition ${call.fn}(${call.args.join(',')})`);
   }
 
@@ -153,11 +155,22 @@ export function convertTalents(dump: TalentDump): TalentRecord[] {
     if (branch.type !== 'heroAbility' || tree === undefined) continue;
     for (const tech of branch.techs) if (tech.layout !== null) rows.push(convertTech(tech, tree));
   }
+  const ids = new Set(rows.map((row) => row.id));
+  for (const row of rows) {
+    for (const parent of row.parents) {
+      if (!ids.has(parent))
+        throw new Error(`talent ${row.id} (${row.name}): parent ${parent} is not in the output`);
+    }
+  }
   return rows;
 }
 
 async function main() {
-  const source = process.argv[2] ?? DEFAULT_SOURCE;
+  const source = process.argv[2] ?? DUMP_SOURCE;
+  if (source === null)
+    throw new Error(
+      'Give the path of the recon talents.json: pnpm data:talents <path>, or set TALENTS_DUMP.',
+    );
   const rows = convertTalents(JSON.parse(await readFile(source, 'utf8')) as TalentDump);
   const text = await canonicalText('talents.json', rows as never);
   await writeFile(path.join(TABLES_DIR, 'talents.json'), text);

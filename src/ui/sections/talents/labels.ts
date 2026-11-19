@@ -37,6 +37,9 @@ export const KIND_LABELS = {
   engineers: 'Engineers',
 } as const;
 
+/** The tree tabs: a goal's own name, plus the expert tree. */
+export const TREE_SHORT = { ...GOAL_LABELS, expert: 'Expert' } as const;
+
 export const TREE_LABELS = {
   battle: 'Battle tactics',
   expert: 'Expert battle tactics',

@@ -18,36 +18,23 @@ import { useMemo, useState } from 'react';
 
 import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentTree as TreeId } from '@/data/types';
-import { planTalents, TALENT_GOALS as GOAL_STATS, type TalentStep, type UnitKind } from '@/engine/talents';
 import {
-  TALENT_GOALS,
-  TALENT_UNIT_KINDS,
-  type TalentGoal,
-  type TalentUnitKind,
-  type Talents,
-} from '@/state/schema';
+  goalHasUnitStats,
+  planTalents,
+  rankGain,
+  TALENT_GOALS as GOAL_STATS,
+  type TalentStep,
+  type UnitKind,
+} from '@/engine/talents';
+import { TALENT_GOALS, TALENT_UNIT_KINDS, type TalentUnitKind, type Talents } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedKinds } from './armyKinds';
-import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS } from './labels';
+import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
 import { TalentTree } from './TalentTree';
 
 const BY_ID = new Map(TALENTS.map((t) => [t.id, t]));
-
-const TREE_SHORT: Record<TreeId, string> = {
-  battle: 'Battle',
-  expert: 'Expert',
-  economy: 'Economy',
-  archeology: 'Archeology',
-};
-
-/** The tree a goal is mostly played on, which the view opens on. */
-const GOAL_TREE: Record<TalentGoal, TreeId> = {
-  battle: 'battle',
-  economy: 'economy',
-  archeology: 'archeology',
-};
 
 interface Run {
   nodeId: number;
@@ -63,7 +50,7 @@ function runsOf(steps: readonly TalentStep[]): Run[] {
   const runs: Run[] = [];
   for (const s of steps) {
     const rec = BY_ID.get(s.nodeId)!;
-    const gain = rec.values[s.rank - 1]! - (s.rank > 1 ? rec.values[s.rank - 2]! : 0);
+    const gain = rankGain(rec.values, s.rank);
     const last = runs.at(-1);
     if (last !== undefined && last.nodeId === s.nodeId && last.opens === s.opens && last.to === s.rank - 1) {
       last.to = s.rank;
@@ -117,7 +104,7 @@ export function TalentsPage() {
 
   const points = talentsState.pointsOverride;
   const runs = runsOf(plan.steps);
-  const viewTree = tree ?? GOAL_TREE[goal];
+  const viewTree = tree ?? goal; // a goal opens the tree of its own name
   const goalStats = GOAL_STATS[goal];
   const shownStats = goalStats.filter((s) => (plan.before[s] ?? 0) !== 0 || (plan.after[s] ?? 0) !== 0);
   const gate = plan.nextGate === null ? null : BY_ID.get(plan.nextGate.nodeId);
@@ -146,7 +133,7 @@ export function TalentsPage() {
               min={1}
               max={1000}
               onChange={(v) => {
-                edit({ heroLevel: v ?? 1 });
+                edit({ heroLevel: Math.min(1000, Math.max(1, v ?? 1)) });
               }}
             />
             <NumberField
@@ -180,20 +167,20 @@ export function TalentsPage() {
                   accessibleName={`Weight of ${statLabel(stat)}`}
                   value={talentsState.weights[goal]?.[stat] ?? 1}
                   allowDecimal
+                  allowEmpty
                   min={0}
                   onChange={(v) => {
-                    edit({
-                      weights: {
-                        ...talentsState.weights,
-                        [goal]: { ...talentsState.weights[goal], [stat]: v ?? 1 },
-                      },
-                    });
+                    // Empty means the default of 1, which is no override at all.
+                    const rest = { ...talentsState.weights[goal] };
+                    if (v === null) delete rest[stat];
+                    else rest[stat] = v;
+                    edit({ weights: { ...talentsState.weights, [goal]: rest } });
                   }}
                 />
               ))}
             </Stack>
           </Disclosure>
-          {goal === 'battle' && (
+          {goalHasUnitStats(goal) && (
             <Disclosure
               title="Units that count"
               summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
@@ -242,7 +229,7 @@ export function TalentsPage() {
             <Text>
               {points === 0
                 ? 'No points to spend, so there is nothing to plan.'
-                : kinds.size === 0 && goal === 'battle'
+                : kinds.size === 0 && goalHasUnitStats(goal)
                   ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
                   : 'No node open at this hero level adds anything for this goal and army, so nothing is planned.'}
             </Text>

@@ -10,6 +10,7 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { closeOpenEditors } from '@/ui/kit';
 
 import { useResultStore } from '../resultStore';
+import { useUiStore } from '../uiStore';
 import { cancelGenerate, runGenerate } from '../sections/march/generate';
 import { setupFingerprint, useRunStore } from '../sections/march/runStore';
 import { blockedReason, fabState, type FabState } from './state';
@@ -69,6 +70,8 @@ export function useGenerateShortcut(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.repeat) return;
+      // The Talents page has no march to generate; the key keeps its usual meaning there.
+      if (useUiStore.getState().page !== 'calculator') return;
       event.preventDefault();
       if (useResultStore.getState().running) {
         cancelGenerate();

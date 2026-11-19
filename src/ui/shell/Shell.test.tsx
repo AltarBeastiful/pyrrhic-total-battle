@@ -15,6 +15,7 @@ import { selectActiveSetup, useStore } from '@/state/store';
 
 import { registerOpenEditor } from '../kit/openEditors';
 import { ThemeHarness } from '../kit/testRender';
+import { useUiStore } from '../uiStore';
 import { useResultStore } from '../resultStore';
 import { useRunStore } from '../sections/march/runStore';
 import { DESKTOP_BAR } from './command';
@@ -408,4 +409,14 @@ test('the shortcut puts down the setup editor it was pressed in — but not whil
   expect(calls.run).toBe(1);
 
   unregister();
+});
+
+test('Ctrl + Enter does nothing on the Talents page, where there is no march to generate', () => {
+  withHousing();
+  const { rerender } = renderShell();
+  useUiStore.getState().setPage('talents');
+  rerender(<Shell />);
+  fireEvent.keyDown(document, { key: 'Enter', ctrlKey: true });
+  expect(calls.run).toBe(0);
+  useUiStore.getState().setPage('calculator');
 });

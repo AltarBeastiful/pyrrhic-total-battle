@@ -8,7 +8,7 @@ import { readFile } from 'node:fs/promises';
 
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_SOURCE, convertTalents, type TalentDump } from '../../scripts/talents-convert.ts';
+import { DUMP_SOURCE, convertTalents, type TalentDump } from '../../scripts/talents-convert.ts';
 import { talents } from '../../src/data/index.ts';
 
 const level = (n: number, guard: [string, number[]][], b: number, cost = 1) => ({
@@ -65,6 +65,18 @@ const dump: TalentDump = {
 };
 
 describe('convertTalents', () => {
+  it('takes the highest of several level conditions', () => {
+    const odd = structuredClone(dump);
+    odd.branches[0]?.techs[1]?.levels[0]?.learnGuard.calls.push({ fn: 'HasLevel', args: [80, 0] });
+    expect(convertTalents(odd)[1]).toMatchObject({ levelGate: 80 });
+  });
+
+  it('refuses a parent that is not in the output', () => {
+    const odd = structuredClone(dump);
+    odd.branches[0]?.techs[1]?.levels[0]?.learnGuard.calls.push({ fn: 'HasTech', args: [555, 1, 1] });
+    expect(() => convertTalents(odd)).toThrow(/555/);
+  });
+
   it('keeps hero-tree nodes with a place, decodes parents, gate, values and costs', () => {
     const rows = convertTalents(dump);
     expect(rows.map((row) => row.id)).toEqual([100, 101]);
@@ -88,9 +100,9 @@ describe('convertTalents', () => {
   });
 });
 
-describe.skipIf(!existsSync(DEFAULT_SOURCE))('against the recon dump', () => {
+describe.skipIf(!(DUMP_SOURCE !== null && existsSync(DUMP_SOURCE)))('against the recon dump', () => {
   it('rebuilds exactly the committed table', async () => {
-    const rebuilt = convertTalents(JSON.parse(await readFile(DEFAULT_SOURCE, 'utf8')) as TalentDump);
+    const rebuilt = convertTalents(JSON.parse(await readFile(DUMP_SOURCE!, 'utf8')) as TalentDump);
     expect(rebuilt).toEqual(talents);
   });
 });

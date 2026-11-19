@@ -73,3 +73,35 @@ test('ranks already bought are kept and the plan builds on them', () => {
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
   expect(screen.getByRole('list', { name: LIST })).toBeTruthy();
 });
+
+test('a hero level out of range is clamped before it is saved', () => {
+  renderWithTheme(<TalentsPage />);
+  // Mid-keystroke, before any blur: what is typed is saved at once, so it must already be in range.
+  const field = screen.getByRole('textbox', { name: 'Hero level' });
+  fireEvent.focus(field);
+  fireEvent.change(field, { target: { value: '5000' } });
+  expect(talentsOf().heroLevel).toBe(1000);
+  fireEvent.change(field, { target: { value: '0' } });
+  expect(talentsOf().heroLevel).toBe(1);
+});
+
+test('an emptied weight goes back to 1 by dropping the override', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  const field = screen.getByRole('textbox', { name: 'Weight of Strength', hidden: true });
+  fireEvent.focus(field);
+  fireEvent.change(field, { target: { value: '3' } });
+  expect(Object.values(talentsOf().weights.battle ?? {})).toContain(3);
+  fireEvent.change(field, { target: { value: '' } });
+  expect(Object.values(talentsOf().weights.battle ?? {})).toEqual([]);
+});
+
+test('Units that count is offered for the economy goal too, and its empty message says so', () => {
+  renderWithTheme(<TalentsPage />);
+  type('Hero level', '150');
+  type('Points to spend', '30');
+  fireEvent.click(
+    within(screen.getByRole('radiogroup', { name: 'Goal' })).getByRole('radio', { name: 'Economy' }),
+  );
+  expect(screen.getByText('Units that count')).toBeTruthy();
+});

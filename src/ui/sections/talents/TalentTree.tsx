@@ -9,7 +9,7 @@ import { ActionIcon, Group, Stack, Text } from '@mantine/core';
 import { Minus, Plus } from 'lucide-react';
 
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
-import type { TalentPlan } from '@/engine/talents';
+import { rankGain, type TalentPlan } from '@/engine/talents';
 import { NumberField } from '@/ui/kit';
 
 import { percent, statLabel } from './labels';
@@ -107,8 +107,7 @@ function NodeEditor({
   onRank: (id: number, rank: number) => void;
 }) {
   const lock = plan.locked[node.id];
-  const next =
-    bought < node.maxRank ? node.values[bought]! - (bought > 0 ? node.values[bought - 1]! : 0) : null;
+  const next = bought < node.maxRank ? rankGain(node.values, bought + 1) : null;
   const set = (rank: number): void => {
     onRank(node.id, Math.max(0, Math.min(node.maxRank, rank)));
   };
