@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -406,6 +406,31 @@ export const profileSettingsSchema = z.object({
 });
 export type ProfileSettings = z.infer<typeof profileSettingsSchema>;
 
+// ---- Hero talents (schema v11, B-21) ----------------------------------------------------------------
+/** What the talent plan serves: Battle draws from both battle trees, Economy and Archeology from their own. */
+export const TALENT_GOALS = ['battle', 'economy', 'archeology'] as const;
+export type TalentGoal = (typeof TALENT_GOALS)[number];
+
+/** The unit kinds the player can force on, whatever his army says: the four categories and monsters. */
+export const TALENT_UNIT_KINDS = ['melee', 'ranged', 'mounted', 'flying', 'monsters'] as const;
+export type TalentUnitKind = (typeof TALENT_UNIT_KINDS)[number];
+
+/**
+ * **The hero talent planner's inputs** (B-21). `ranks` maps a node id (the game's tech id, as a string) to the
+ * ranks bought; a node absent holds none. `weights` are per goal, then per stat kind (the game's name, such as
+ * `UNIT_HEALTH`); a stat absent weighs 1. `pointsOverride` replaces the points the level table gives, `null`
+ * when the player lets the table decide.
+ */
+export const talentsSchema = z.object({
+  heroLevel: z.int().min(1).max(1000),
+  ranks: z.record(z.string(), z.int().min(0).max(1000)),
+  goal: z.enum(TALENT_GOALS),
+  weights: z.partialRecord(z.enum(TALENT_GOALS), z.record(z.string(), z.number().min(0))),
+  forcedUnitKinds: z.array(z.enum(TALENT_UNIT_KINDS)),
+  pointsOverride: z.int().min(0).nullable(),
+});
+export type Talents = z.infer<typeof talentsSchema>;
+
 // ---- Profile --------------------------------------------------------------------------------------
 /**
  * The parts of a profile two devices can change independently (S-49e). Each gets its own edit time in
@@ -421,6 +446,7 @@ export const PROFILE_SECTIONS = [
   'activeSetupId',
   'upgrades',
   'settings',
+  'talents',
 ] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
@@ -439,6 +465,8 @@ export const profileSchema = syncMetaSchema.extend({
   upgrades: z.array(userUpgradeSchema),
   /** The account's preferences (schema v9): the pool line a Generate opens with. */
   settings: profileSettingsSchema,
+  /** The hero talent planner's inputs (schema v11, B-21). */
+  talents: talentsSchema,
   /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
   sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
 });

@@ -10,6 +10,7 @@ import type {
   BuiltinPermanentSource,
   Profile,
   ProfileSettings,
+  Talents,
   RootDocument,
   SavedStack,
 } from './schema';
@@ -26,6 +27,16 @@ export const CURRENT_DATA_VERSION = 1;
  * is the push, until the player switches the round on from a pool line.
  */
 export const DEFAULT_SETTINGS: ProfileSettings = { poolLine: 'neither', poolLineRule: 'push' };
+
+/** A new profile's talent plan: level 1, nothing bought, Battle, every stat weighing 1, the level table deciding the points. */
+export const DEFAULT_TALENTS: Talents = {
+  heroLevel: 1,
+  ranks: {},
+  goal: 'battle',
+  weights: {},
+  forcedUnitKinds: [],
+  pointsOverride: null,
+};
 
 export function uuid(): string {
   return crypto.randomUUID();
@@ -163,6 +174,7 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
     savedStacks: [],
     upgrades: [],
     settings: { ...DEFAULT_SETTINGS },
+    talents: structuredClone(DEFAULT_TALENTS),
   };
 }
 

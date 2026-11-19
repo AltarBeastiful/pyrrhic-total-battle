@@ -272,6 +272,28 @@ test('the pool line chosen on one device and troops changed on the other both su
   }
 });
 
+test('hero talents set on one device and troops changed on the other both survive (schema v11)', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const onPhone = edit(
+    base,
+    { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
+    t + 10,
+  );
+  const talents = { ...base.talents, heroLevel: 120, ranks: { '26005': 2 } };
+  const onPc = edit(base, { talents, sectionUpdatedAt: { talents: t + 20 } }, t + 20);
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.talents).toEqual(talents);
+    expect(profile?.troops.guardsmen).toBeNull();
+  }
+});
+
 test('sameContent ignores the order of profiles, tombstones and section stamps', () => {
   const { phone } = twoDevices();
   const [first] = phone.profiles;

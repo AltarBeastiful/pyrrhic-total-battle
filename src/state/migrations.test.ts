@@ -509,6 +509,40 @@ describe('migrate', () => {
     expect(migrated.profiles[0]?.sources.equipment).toHaveLength(1);
   });
 
+  it('v10 → v11 gives every profile an empty talents plan at level 1, and moves nothing else', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fixture = v9Fixture();
+    const migrated = migrate(fixture);
+    warn.mockRestore();
+    expect(migrations[10]?.({ ...fixture, schemaVersion: 11, profiles: [] }).schemaVersion).toBe(11);
+    expect(migrated.profiles[0]?.talents).toEqual({
+      heroLevel: 1,
+      ranks: {},
+      goal: 'battle',
+      weights: {},
+      forcedUnitKinds: [],
+      pointsOverride: null,
+    });
+    expect(migrated.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
+  });
+
+  it('keeps the talents a player saved through a load and refuses a bad goal', () => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const talents = {
+      heroLevel: 110,
+      ranks: { '26005': 3 },
+      goal: 'economy',
+      weights: { economy: { UNIT_HEALTH: 2 } },
+      forcedUnitKinds: ['flying', 'monsters'],
+      pointsOverride: 40,
+    };
+    const stored = { ...doc, profiles: [{ ...profile, talents }] };
+    expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.talents).toEqual(talents);
+    const broken = { ...doc, profiles: [{ ...profile, talents: { ...talents, goal: 'war' } }] };
+    expect(() => migrate(broken)).toThrow();
+  });
+
   it('keeps the set a piece belongs to and the name of the set through a load', () => {
     const doc = migrate(v9Fixture());
     const profile = doc.profiles[0]!;
