@@ -63,7 +63,6 @@ export function MainMenu() {
   const installable = useSyncExternalStore(subscribeToInstall, isInstallAvailable, () => false);
   const updateReady = useSyncExternalStore(subscribeToUpdate, isUpdateReady, () => false);
 
-
   const [dialog, setDialog] = useState<DialogKind | null>(null);
 
   if (profile === undefined) return null;
