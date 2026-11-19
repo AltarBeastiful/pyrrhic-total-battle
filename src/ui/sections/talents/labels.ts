@@ -17,10 +17,10 @@ export const STAT_LABELS: Readonly<Record<string, string>> = {
   CARAVAN_SPEED: 'Caravan speed',
   BUILDING_UPGRADE_SPEED: 'Building speed',
   EFFECT_B_ABOVE_1_SUMMARIZABLE: 'Other economy bonuses',
-  SKLEP_STRIKE_DAMAGE: 'Crypt damage',
-  SKLEP_CRIT_PROBABILITY: 'Crypt double damage chance',
+  SKLEP_STRIKE_DAMAGE: 'Crypt exploration efficiency',
+  SKLEP_CRIT_PROBABILITY: 'Chance to explore a Crypt twice',
   SKLEP_EXP_BONUS: 'Crypt experience',
-  SKLEP_PRICE_CUT: 'Crypt price cut',
+  SKLEP_PRICE_CUT: 'Crypt exploration cost',
   HERO_MAX_MARCH_TIME: 'Hero march time',
 };
 

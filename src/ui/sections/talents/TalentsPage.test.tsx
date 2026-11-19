@@ -199,6 +199,20 @@ test('an emptied weight goes back to 1 by dropping the override', () => {
   expect(Object.values(talentsOf().weights.battle ?? {})).toEqual([]);
 });
 
+test('the Archeology weights carry the game\'s own words for crypt exploration', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  for (const name of [
+    'Crypt exploration efficiency',
+    'Chance to explore a Crypt twice',
+    'Crypt exploration cost',
+    'Crypt experience',
+  ]) {
+    expect(screen.getByRole('textbox', { name: `Weight of ${name}`, hidden: true })).toBeTruthy();
+  }
+  expect(screen.queryByRole('textbox', { name: 'Weight of Crypt damage', hidden: true })).toBeNull();
+});
+
 test('the tree head and the tab count held ranks and planned steps apart, and tiles show the plan order', () => {
   const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0)!;
   setTalents({
