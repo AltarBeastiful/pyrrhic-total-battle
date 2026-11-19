@@ -1087,7 +1087,7 @@ describe('which stats count by default (B-23 b)', () => {
       node(1, { values: [5], stats: ['UNIT_LOAD_CAPACITY'], unitIds: [6] }),
       node(2, { values: [2], stats: ['UNIT_POWER'], unitIds: [6] }),
     ];
-    const run = (weightsByGoal: ReturnType<typeof withDefaultStatWeights>) =>
+    const run = (weightsByGoal: NonNullable<TalentPriorityInput['weightsByGoal']>) =>
       planTalentPriorities({
         talents: t,
         heroLevel: 200,
@@ -1113,7 +1113,7 @@ describe('crypt types scope the archeology stats (B-23 b)', () => {
         points: 5,
         goal: 'archeology',
         kinds: [],
-        crypts,
+        ...(crypts === undefined ? {} : { crypts }),
       }).steps.filter((s) => !s.filler),
     );
 
