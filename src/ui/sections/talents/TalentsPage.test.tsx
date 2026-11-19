@@ -100,6 +100,17 @@ test('an ignored goal vanishes from the cards, the next goal takes rank 1, and o
   expect(talentsOf().ignored).toEqual(['archeology']);
 });
 
+test('a move is announced with the rank shown on the row, counting active goals only', () => {
+  setTalents({ ignored: ['battle'] });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
+  expect(talentsOf().goals).toEqual(['battle', 'economy', 'archeology']);
+  expect(goalRows()[1]!.textContent).toMatch(/^1Economy/);
+  expect(screen.getByRole('status').textContent).toBe('Economy is now 1 of 2.');
+  fireEvent.click(screen.getByRole('button', { name: 'Move Battle down' }));
+  expect(screen.getByRole('status').textContent).toBe('Battle moved down. It is ignored.');
+});
+
 test('strength and mode change the order with no button press', () => {
   setTalents({ heroLevel: 100, pointsOverride: 20 });
   renderWithTheme(<TalentsPage />);

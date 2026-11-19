@@ -561,3 +561,20 @@
 .barSurface {
   background: var(--pyr-bar);
 }
+
+/* The page button on the top bar: on a phone its word goes and the icon stays (its name is its
+   aria-label), so the bar fits at 320 px signed out with Sign in, the profile menu and the app menu. */
+@media (max-width: 40em) {
+  .pageButton {
+    width: 36px;
+    padding-inline: 0;
+  }
+
+  .pageButton .pageSection {
+    margin-inline: 0;
+  }
+
+  .pageButton .pageLabel {
+    display: none;
+  }
+}

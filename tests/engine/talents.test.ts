@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
 import { talents as realTalents } from '@/data';
-import type { TalentRecord } from '@/data/types';
+import { TALENT_TREES, type TalentRecord } from '@/data/types';
 import {
   DEFAULT_TALENT_PRIORITY,
+  goalOfTree,
   TALENT_GOALS,
   TALENT_RANK_WEIGHTS,
   planTalentPriorities,
@@ -15,6 +16,7 @@ import {
   type TalentPlanInput,
   type TalentPriority,
   type TalentPriorityInput,
+  type TalentPriorityPlan,
   type UnitKind,
 } from '@/engine/talents';
 
@@ -624,6 +626,36 @@ describe('planTalentPriorities', () => {
     });
   const tagged = (steps: { nodeId: number; goal: TalentGoal | null }[]) =>
     steps.map((s) => [s.nodeId, s.goal]);
+  /**
+   * One active goal against the single-goal planner: the steps bought for value, the totals before and the
+   * locks are the same; the fillers differ only in that they never land in an ignored goal's tree (`planTalents`
+   * ignores nothing, so its fillers may), and so may the next gate's cost (it counts the ancestors still
+   * missing). When none of the single-goal fillers sat in an ignored tree, the plans are equal.
+   */
+  const expectSingleGoalPlan = (
+    talents: readonly TalentRecord[],
+    r: TalentPriorityPlan,
+    single: ReturnType<typeof planTalents>,
+    goal: TalentGoal,
+  ) => {
+    const treeOf = new Map(talents.map((t) => [t.id, t.tree]));
+    const inGoal = (s: { nodeId: number }) => goalOfTree(treeOf.get(s.nodeId)!) === goal;
+    const valueSteps = single.steps.filter((s) => !s.filler);
+    const steps = r.steps.map(({ goal: _g, ...s }) => s);
+    expect(steps.slice(0, valueSteps.length)).toEqual(valueSteps);
+    for (const s of steps.slice(valueSteps.length)) {
+      expect(s.filler).toBe(true);
+      expect(inGoal(s)).toBe(true);
+    }
+    expect(r.before).toEqual(single.before);
+    expect(r.locked).toEqual(single.locked);
+    if (single.steps.every((s) => !s.filler || inGoal(s))) {
+      const { steps: _s, ...rest } = r;
+      const { steps: _ss, ...singleRest } = single;
+      expect(steps).toEqual(single.steps);
+      expect(rest).toEqual(singleRest);
+    }
+  };
   const only = (goal: TalentGoal): Partial<TalentPriority> => ({
     order: [goal, ...(Object.keys(TALENT_GOALS) as TalentGoal[]).filter((g) => g !== goal)],
     ignored: Object.fromEntries((Object.keys(TALENT_GOALS) as TalentGoal[]).map((g) => [g, g !== goal])),
@@ -682,17 +714,14 @@ describe('planTalentPriorities', () => {
     ];
 
     test.each(['battle', 'economy', 'archeology'] as const)(
-      '%s alone gives exactly the single-goal plan, every value step tagged with it',
+      '%s alone gives the single-goal plan, fillers kept in its own trees, every value step tagged with it',
       (goal) => {
         for (const mode of ['blended', 'strict'] as const) {
           for (const points of [0, 3, 10, 40]) {
             const r = prio(mixed, { ...only(goal), mode }, { points, kinds: ['melee'] });
             const single = planTalents({ talents: mixed, heroLevel: 200, points, goal, kinds: ['melee'] });
-            const { steps, ...rest } = r;
-            const { steps: singleSteps, ...singleRest } = single;
-            expect(steps.map(({ goal: _g, ...s }) => s)).toEqual(singleSteps);
-            expect(rest).toEqual(singleRest);
-            for (const s of steps) expect(s.goal).toBe(s.filler ? null : goal);
+            expectSingleGoalPlan(mixed, r, single, goal);
+            for (const s of r.steps) expect(s.goal).toBe(s.filler ? null : goal);
           }
         }
       },
@@ -846,18 +875,65 @@ describe('planTalentPriorities', () => {
       ]);
     });
 
-    test('points no goal can use are spent as fillers or left over, as in the single-goal plan', () => {
+    test('points no goal can use are spent as fillers in an active tree, never in an ignored one', () => {
       const r = prio(
-        [node(1, { values: [1] }), eco(2, [0, 0], { stats: ['MINE_PRODUCTION_SPEED'] })],
+        [
+          node(1, { values: [1] }),
+          eco(2, [0, 0], { stats: ['MINE_PRODUCTION_SPEED'], costs: [2, 2] }), // dearest, but Economy is ignored
+          node(3, { values: [0, 0], stats: ['CARAVAN_SPEED'] }), // worth nothing, in the Battle tree
+        ],
         { mode: 'strict', ignored: { economy: true } },
         { points: 5 },
       );
       expect(r.steps.map((s) => [s.nodeId, s.goal, s.filler])).toEqual([
         [1, 'battle', false],
-        [2, null, true],
-        [2, null, true],
+        [3, null, true],
+        [3, null, true],
       ]);
       expect(r.pointsLeft).toBe(2);
+    });
+  });
+
+  describe('fillers and ignored goals', () => {
+    test('a filler never lands in an ignored goal tree: the points go to an active tree instead', () => {
+      const t = [
+        node(1, { values: [3] }),
+        eco(2, [0], { stats: ['MINE_PRODUCTION_SPEED'], costs: [2] }),
+        node(3, { values: [0, 0], stats: ['CARAVAN_SPEED'] }),
+      ];
+      for (const mode of ['blended', 'strict'] as const) {
+        const r = prio(t, { mode, ignored: { economy: true } }, { points: 3 });
+        expect(r.steps.map((s) => [s.nodeId, s.filler])).toEqual([
+          [1, false],
+          [3, true],
+          [3, true],
+        ]);
+        expect(r.pointsLeft).toBe(0);
+      }
+    });
+
+    test('with only ignored trees left to fill, the points stay left over', () => {
+      const t = [node(1, { values: [3] }), eco(2, [0, 0], { stats: ['MINE_PRODUCTION_SPEED'] })];
+      const r = prio(t, { ignored: { economy: true } }, { points: 3 });
+      expect(r.steps.map((s) => s.nodeId)).toEqual([1]);
+      expect(r.pointsSpent).toBe(1);
+      expect(r.pointsLeft).toBe(2);
+    });
+
+    test('the Expert tree is Battle: ignoring Battle keeps fillers out of it', () => {
+      const t = [eco(1, [3]), node(2, { values: [0], stats: ['CARAVAN_SPEED'], tree: 'expert' })];
+      const r = prio(t, { ignored: { battle: true } }, { points: 2 });
+      expect(r.steps.map((s) => s.nodeId)).toEqual([1]);
+      expect(r.pointsLeft).toBe(1);
+    });
+
+    test('with nothing ignored, fillers go anywhere as before', () => {
+      const t = [node(1, { values: [3] }), eco(2, [0], { stats: ['MINE_PRODUCTION_SPEED'], costs: [2] })];
+      const r = prio(t, {}, { points: 3 });
+      expect(r.steps.map((s) => [s.nodeId, s.filler])).toEqual([
+        [1, false],
+        [2, true],
+      ]);
     });
   });
 
@@ -893,6 +969,7 @@ describe('planTalentPriorities', () => {
               for (const p of t.parents) expect(held.get(p) ?? 0).toBeGreaterThanOrEqual(1);
             }
             if (!s.filler) expect(priority.ignored[s.goal!] ?? false).toBe(false);
+            else expect(priority.ignored[goalOfTree(t.tree)] ?? false).toBe(false);
             held.set(s.nodeId, s.rank);
             spent += s.cost;
           }
@@ -903,7 +980,7 @@ describe('planTalentPriorities', () => {
       },
     );
 
-    test('with one goal, the plan equals the single-goal planner on random tables', () => {
+    test('with one goal, the plan equals the single-goal planner on random tables, fillers aside', () => {
       let seed = 22;
       const rnd = () => {
         seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -919,13 +996,17 @@ describe('planTalentPriorities', () => {
           const ranks = 1 + Math.floor(rnd() * 3);
           let total = 0;
           const values = Array.from({ length: ranks }, () => (total += Math.round(rnd() * 10)));
-          const parents = id > 1 && rnd() < 0.5 ? [1 + Math.floor(rnd() * (id - 1))] : [];
+          const tree = pick(TALENT_TREES);
+          // Trees never share nodes: a parent is an earlier node of the same tree.
+          const sameTree = table.filter((t) => t.tree === tree).map((t) => t.id);
+          const parents = sameTree.length > 0 && rnd() < 0.5 ? [pick(sameTree)] : [];
           table.push(
             node(id, {
               values,
               stats: [pick(statPool)],
               parents,
               costs: values.map(() => 1 + Math.floor(rnd() * 3)),
+              tree,
               ...(rnd() < 0.2 ? { levelGate: 100 } : {}),
             }),
           );
@@ -939,10 +1020,7 @@ describe('planTalentPriorities', () => {
           { points, heroLevel },
         );
         const single = planTalents({ talents: table, heroLevel, points, goal, kinds: ALL });
-        const { steps, ...rest } = r;
-        const { steps: singleSteps, ...singleRest } = single;
-        expect(steps.map(({ goal: _g, ...s }) => s)).toEqual(singleSteps);
-        expect(rest).toEqual(singleRest);
+        expectSingleGoalPlan(table, r, single, goal);
       }
     });
 

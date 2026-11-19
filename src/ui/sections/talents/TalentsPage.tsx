@@ -10,8 +10,7 @@
  * the page converts at this boundary.
  *
  * **Ignored goals buy nothing (story 3).** The engine spends leftover points on fillers (no value for any
- * goal); a filler sitting in an ignored goal's tree is dropped here, from the cards and the tree alike, and its
- * points are shown as left over. Trees never share nodes, so no kept step depends on a dropped one.
+ * goal) and never in an ignored goal's tree, so those points go to an active tree or are shown as left over.
  *
  * **Points.** Only the points the player types are used: the game's points-per-level table below hero level 86
  * is not known to us (only "10 per level from 86"), and a per-level rate alone cannot give a total, so a figure
@@ -46,12 +45,12 @@ import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentRecord, type TalentTree as TreeId } from '@/data/types';
 import {
   goalHasUnitStats,
+  goalOfTree,
   planTalentPriorities,
   rankGain,
   TALENT_GOALS as GOAL_STATS,
   talentGoalWeights,
   type TalentPriority,
-  type TalentPriorityPlan,
   type TalentPriorityStep,
   type UnitKind,
 } from '@/engine/talents';
@@ -92,25 +91,10 @@ const MODE_HELP: Readonly<Record<TalentMode, string>> = {
   strict: 'Fills rank 1 first, then rank 2, then rank 3.',
 };
 
-/** The goal a tree belongs to: the expert tree is Battle's second tree. */
-const goalOfTree = (tree: TreeId): TalentGoal => (tree === 'expert' ? 'battle' : tree);
-
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 
 /** The weight shown on a goal row: "Weight 0.5". */
 const weightWords = (w: number): string => `Weight ${String(Math.round(w * 100) / 100)}`;
-
-/** Leftover-point fillers that sit in an ignored goal's tree are not bought (story 3): drop them. */
-function withoutIgnoredFillers(
-  plan: TalentPriorityPlan,
-  ignored: ReadonlySet<TalentGoal>,
-  points: number,
-): TalentPriorityPlan {
-  const steps = plan.steps.filter((s) => !(s.filler && ignored.has(goalOfTree(BY_ID.get(s.nodeId)!.tree))));
-  if (steps.length === plan.steps.length) return plan;
-  const spent = steps.reduce((sum, s) => sum + s.cost, 0);
-  return { ...plan, steps, pointsSpent: spent, pointsLeft: Math.max(0, points - spent) };
-}
 
 export function TalentsPage() {
   const profile = useStore(selectActiveProfile);
@@ -139,18 +123,16 @@ export function TalentsPage() {
       strength: talentsState.strength,
       mode: talentsState.mode,
     };
-    const points = talentsState.pointsOverride ?? 0;
-    const raw = planTalentPriorities({
-      talents: TALENTS,
-      heroLevel: talentsState.heroLevel,
-      points,
-      ranks,
-      priority,
-      weightsByGoal: talentsState.weights,
-      kinds,
-    });
     return {
-      plan: withoutIgnoredFillers(raw, new Set(talentsState.ignored), points),
+      plan: planTalentPriorities({
+        talents: TALENTS,
+        heroLevel: talentsState.heroLevel,
+        points: talentsState.pointsOverride ?? 0,
+        ranks,
+        priority,
+        weightsByGoal: talentsState.weights,
+        kinds,
+      }),
       goalWeights: talentGoalWeights(priority),
     };
   }, [talentsState, kinds]);
@@ -181,7 +163,13 @@ export function TalentsPage() {
     next.splice(i, 1);
     next.splice(target, 0, goal);
     edit({ goals: next });
-    setMessage(`${GOAL_LABELS[goal]} is now ${String(target + 1)} of ${String(order.length)}.`);
+    // The rank the row shows: among the active goals only; an ignored goal has none.
+    const nextActive = next.filter((g) => !ignored.has(g));
+    setMessage(
+      ignored.has(goal)
+        ? `${GOAL_LABELS[goal]} moved ${delta < 0 ? 'up' : 'down'}. It is ignored.`
+        : `${GOAL_LABELS[goal]} is now ${String(nextActive.indexOf(goal) + 1)} of ${String(nextActive.length)}.`,
+    );
   };
 
   const toggleIgnore = (goal: TalentGoal): void => {

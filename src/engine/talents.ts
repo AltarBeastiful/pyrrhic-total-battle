@@ -11,7 +11,8 @@
  * judged together with the child. A candidate that the remaining points cannot pay in full is shortened (a run
  * stops at the last rank that fits) or dropped. Ranks are only ever added.
  */
-import type { TalentRecord } from '../data/types';
+import type { TalentRecord, TalentTree } from '../data/types';
+import type { TalentMode, TalentStrength } from '../state/schema';
 import { UNIT_ID_RANGES } from './talentUnitIds';
 
 /** The kinds of army unit a talent bonus can be about. Engineers (siege engines) are the game's own sixth kind. */
@@ -63,6 +64,11 @@ export const TALENT_GOALS: Readonly<Record<'battle' | 'economy' | 'archeology', 
   ],
 };
 export type TalentGoal = keyof typeof TALENT_GOALS;
+
+/** The goal a tree belongs to: the Expert tree is Battle's second tree. */
+export function goalOfTree(tree: TalentTree): TalentGoal {
+  return tree === 'expert' ? 'battle' : tree;
+}
 
 /** Stats whose bonus is about units: they count only when the node's unit ids include a kind in play. */
 const UNIT_SCOPED_STATS: ReadonlySet<string> = new Set([
@@ -139,14 +145,6 @@ export interface TalentPlan {
 }
 
 const EPS = 1e-12;
-
-/** How strongly rank 1 wins: Focus, Lean or Even. */
-export const TALENT_STRENGTHS = ['focus', 'lean', 'even'] as const;
-export type TalentStrength = (typeof TALENT_STRENGTHS)[number];
-
-/** How points are spread: Blended (one value-per-point search) or Strict order (rank 1 full first). */
-export const TALENT_MODES = ['blended', 'strict'] as const;
-export type TalentMode = (typeof TALENT_MODES)[number];
 
 /**
  * The goal weight of each rank (1st, 2nd, 3rd active goal), per strength. The one place to tune them (B-22: a
@@ -243,6 +241,7 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
     { battle: 0, economy: 0, archeology: 0, [goal]: 1 },
     { [goal]: weights ?? {} },
     'blended',
+    new Set(),
   );
   return { ...plan, steps: plan.steps.map(({ goal: _goal, ...s }) => s) };
 }
@@ -250,8 +249,10 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
 /**
  * The priority plan (B-22): one merged list of steps serving every active goal, each step tagged with its goal.
  * Blended runs the single-goal search once with each node weighted by its best goal; Strict order runs it goal
- * by goal in rank order, each goal taking points until nothing it values is affordable. With one active goal
- * both equal `planTalents` for that goal.
+ * by goal in rank order, each goal taking points until nothing it values is affordable. Leftover points are
+ * spent on fillers outside the trees of ignored goals (story 3): an ignored goal buys nothing, so its points go
+ * to an active goal's tree or stay left over. With one active goal both equal `planTalents` for that goal up
+ * to the fillers, which `planTalents` may place in any tree.
  */
 export function planTalentPriorities(input: TalentPriorityInput): TalentPriorityPlan {
   const { priority, weightsByGoal, ...rest } = input;
@@ -261,6 +262,7 @@ export function planTalentPriorities(input: TalentPriorityInput): TalentPriority
     talentGoalWeights(priority),
     weightsByGoal ?? {},
     priority.mode,
+    new Set(GOALS.filter((g) => priority.ignored[g] === true)),
   );
 }
 
@@ -270,6 +272,8 @@ function planCore(
   goalWeight: Readonly<Record<TalentGoal, number>>,
   weightsByGoal: Readonly<Partial<Record<TalentGoal, Readonly<Partial<Record<string, number>>>>>>,
   mode: TalentMode,
+  /** Goals whose trees take no filler. */
+  closed: ReadonlySet<TalentGoal>,
 ): TalentPriorityPlan {
   const { talents, heroLevel } = input;
   const ranked = active.filter((g) => goalWeight[g] > 0);
@@ -450,7 +454,8 @@ function planCore(
 
   // Fillers: every point is spent. Nothing of value is affordable any more, so buy any rank that is legal now,
   // parents of valuable nodes (and valuable nodes the points cannot yet finish) first, then the dearest rank
-  // that fits (the least waste), then the lowest id. Only a remainder below the cheapest legal rank stays.
+  // that fits (the least waste), then the lowest id. Never in the tree of an ignored goal. Only a remainder
+  // below the cheapest legal rank outside those trees stays.
   const useful = new Set<number>();
   for (const p of nodes.values()) {
     if (p.weight <= 0) continue;
@@ -465,7 +470,7 @@ function planCore(
     let pick: { p: Prepared; cost: number } | null = null;
     for (const p of nodes.values()) {
       const cur = held.get(p.rec.id) ?? 0;
-      if (cur >= p.rec.maxRank) continue;
+      if (cur >= p.rec.maxRank || closed.has(goalOfTree(p.rec.tree))) continue;
       if (
         cur === 0 &&
         ((p.rec.levelGate ?? 0) > heroLevel || p.rec.parents.some((q) => (held.get(q) ?? 0) < 1))
