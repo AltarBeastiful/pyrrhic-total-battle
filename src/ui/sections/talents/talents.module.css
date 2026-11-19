@@ -354,3 +354,78 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The tile's bottom line: rank on the left, the bonus it gives on the right. */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 8px;
+  width: 100%;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.bonus {
+  margin-left: auto;
+  color: var(--mantine-color-teal-6);
+}
+
+/* The detail's rank table: scrolls inside its box, the held rank marked. */
+.rankBox {
+  max-height: 14rem;
+  overflow: auto;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.ranks {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.ranks th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  background: var(--mantine-color-body);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.ranks td {
+  padding: 3px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.ranks th:first-child,
+.ranks td:first-child {
+  text-align: left;
+}
+
+.ranks tr[data-rank='held'] td {
+  color: var(--mantine-color-dimmed);
+}
+
+.ranks tr[data-rank='now'] td {
+  background: var(--mantine-primary-color-light);
+  font-weight: 700;
+}
+
+.ranks tr[data-rank='plan'] td {
+  background: repeating-linear-gradient(45deg, var(--mantine-primary-color-light) 0 4px, transparent 4px 8px);
+}
+
+.rankTag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+}

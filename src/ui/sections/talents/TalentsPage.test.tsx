@@ -574,3 +574,21 @@ test('Spend the plan up to here takes only the open tree, up to the tile and its
   expect(held.length).toBeGreaterThan(0);
   expect(held.every((t) => t.tree === 'economy')).toBe(true);
 });
+
+test('a tile shows its rank on the left and its bonus on the right, and the detail lists every rank with the held one marked', () => {
+  const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0 && t.maxRank >= 10)!;
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 5 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const tile = tileOf(node.name);
+  expect(tile.textContent).toContain('rank 5');
+  expect(tile.textContent).toContain(`+${String(node.values[4])} %`);
+  fireEvent.click(tile);
+  const table = screen.getByRole('region', { name: `${node.name} ranks` });
+  expect(within(table).getAllByRole('row')).toHaveLength(node.maxRank + 1);
+  expect(table.querySelector('tr[data-rank="now"]')!.textContent).toMatch(/^5you are here/);
+});

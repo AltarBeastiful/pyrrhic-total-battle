@@ -6,6 +6,7 @@
  */
 import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
 import { Lock, Minus, Plus } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
@@ -56,6 +57,14 @@ function lockWords(plan: TalentPlan, id: number): string | null {
   const lock = plan.locked[id];
   if (lock === undefined) return null;
   return lock.reason === 'level' ? `Lv ${String(lock.level)}` : 'Parent';
+}
+
+/** The bonus a tile shows: what the held ranks give, and where the plan takes it ("+4 % → 7.5 %"). */
+function bonusWords(n: TalentRecord, bought: number, plus: number): string {
+  const now = bought > 0 ? (n.values[bought - 1] ?? 0) : 0;
+  if (plus === 0) return `+${percent(now)}`;
+  const after = n.values[Math.min(bought + plus, n.maxRank) - 1] ?? now;
+  return bought > 0 ? `+${percent(now)} → ${percent(after)}` : `→ +${percent(after)}`;
 }
 
 /** The game's grid: six columns, cell size in px. Tiles are 124 x 104 inside a 144 x 128 cell. */
@@ -193,23 +202,28 @@ export function TalentTree({
                         />
                       </span>
                     )}
-                    {(bought > 0 || plus > 0 || lock !== null) && (
+                    {(bought > 0 || plus > 0) && (
+                      <span className={classes.split}>
+                        <span>
+                          {[
+                            full ? 'max' : bought > 0 ? `rank ${String(bought)}` : '',
+                            plus > 0 ? `+${String(plus)}` : '',
+                          ]
+                            .filter((x) => x !== '')
+                            .join(' ')}
+                        </span>
+                        <b className={classes.bonus}>{bonusWords(n, bought, plus)}</b>
+                      </span>
+                    )}
+                    {lock !== null && bought === 0 && plus === 0 && (
                       <span className={classes.marks}>
-                        {bought > 0 && (
-                          <span>
-                            {full ? 'max' : `rank ${String(bought)}`}
-                          </span>
-                        )}
-                        {plus > 0 && <span>+{plus}</span>}
-                        {lock !== null && (
-                          <span
-                            className={classes.lock}
-                            data-lock={plan.locked[n.id]?.reason === 'level' ? 'level' : 'parent'}
-                          >
-                            <Lock size={12} aria-hidden />
-                            {lock}
-                          </span>
-                        )}
+                        <span
+                          className={classes.lock}
+                          data-lock={plan.locked[n.id]?.reason === 'level' ? 'level' : 'parent'}
+                        >
+                          <Lock size={12} aria-hidden />
+                          {lock}
+                        </span>
                       </span>
                     )}
                   </button>
@@ -315,6 +329,7 @@ function NodeEditor({
           ? `. Next rank adds ${percent(next)} for ${String(node.costs[bought]!)} points.`
           : '. Fully ranked.'}
       </Text>
+      <RankTable node={node} bought={bought} plus={plan.steps.filter((st) => st.nodeId === node.id).length} />
       {lock !== undefined && bought === 0 && (
         <Text size="sm">
           {lock.reason === 'level'
@@ -399,5 +414,50 @@ function NodeEditor({
         </Button>
       </Group>
     </Stack>
+  );
+}
+
+/** Every rank of a node: its cost, what it adds and the total bonus, the held rank marked and the plan's ranks hatched. */
+function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number; plus: number }) {
+  const box = useRef<HTMLDivElement>(null);
+  const here = useRef<HTMLTableRowElement>(null);
+  // Open on the held rank (or the first one): the table scrolls inside the panel, never the page.
+  useEffect(() => {
+    if (box.current !== null && here.current !== null) {
+      box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
+    }
+  }, [node.id]);
+  return (
+    <div ref={box} className={classes.rankBox} role="region" aria-label={`${node.name} ranks`} tabIndex={0}>
+      <table className={classes.ranks}>
+        <thead>
+          <tr>
+            <th scope="col">Rank</th>
+            <th scope="col">Cost</th>
+            <th scope="col">Adds</th>
+            <th scope="col">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {node.values.map((value, i) => {
+            const rank = i + 1;
+            const state =
+              rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
+            return (
+              <tr key={rank} ref={rank === Math.max(bought, 1) ? here : undefined} data-rank={state}>
+                <td>
+                  {rank}
+                  {state === 'now' && <span className={classes.rankTag}>you are here</span>}
+                  {state === 'plan' && <span className={classes.rankTag}>plan</span>}
+                </td>
+                <td>{node.costs[i]}</td>
+                <td>{`+${percent(rankGain(node.values, rank))}`}</td>
+                <td>{`+${percent(value)}`}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
