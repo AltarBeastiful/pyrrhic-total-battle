@@ -8,7 +8,14 @@
  */
 import { unitById } from '../data';
 import { DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
-import { profileSchema, rootDocumentSchema, savedStackSchema, SCHEMA_VERSION } from './schema';
+import {
+  DEFAULT_TALENT_GOAL_ORDER,
+  profileSchema,
+  rootDocumentSchema,
+  savedStackSchema,
+  SCHEMA_VERSION,
+  TALENT_GOALS,
+} from './schema';
 import type { Profile, RootDocument, SavedStack } from './schema';
 
 export type Migration = (doc: Record<string, unknown>) => Record<string, unknown>;
@@ -219,6 +226,23 @@ export function addTalents(profile: Record<string, unknown>): Record<string, unk
   return isPlainObject(profile.talents) ? profile : { ...profile, talents: structuredClone(DEFAULT_TALENTS) };
 }
 
+/**
+ * `11 → 12` for one profile (B-22): the single saved goal becomes rank 1 of an order, the other two follow in
+ * the default order; nothing is ignored, the strength is Focus and the mode Blended. A goal it does not know
+ * gives the default order. Every other talents field is kept as it was.
+ */
+export function prioritiseTalentGoals(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainObject(profile.talents)) return profile;
+  const { goal, ...rest } = profile.talents;
+  const first = TALENT_GOALS.find((g) => g === goal);
+  const goals =
+    first === undefined
+      ? [...DEFAULT_TALENT_GOAL_ORDER]
+      : [first, ...DEFAULT_TALENT_GOAL_ORDER.filter((g) => g !== first)];
+  const talents = { ignored: [], strength: 'focus', mode: 'blended', ...rest, goals: rest.goals ?? goals };
+  return { ...profile, talents };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -237,6 +261,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `8 → 9`: every profile gains its settings at the defaults (the pool line opens on neither pool).
  * `9 → 10`: a piece of equipment loses its wearer name and may carry a set (B-19).
  * `10 → 11`: every profile gains an empty hero talent plan (B-21).
+ * `11 → 12`: the talents' single goal becomes rank 1 of an ordered list, with ignore, strength and mode (B-22).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -250,6 +275,7 @@ export const migrations: MigrationTable = {
   8: (doc) => ({ ...doc, schemaVersion: 9, profiles: migrateProfiles(doc, addSettings) }),
   9: (doc) => ({ ...doc, schemaVersion: 10, profiles: migrateProfiles(doc, dropEquipmentWearer) }),
   10: (doc) => ({ ...doc, schemaVersion: 11, profiles: migrateProfiles(doc, addTalents) }),
+  11: (doc) => ({ ...doc, schemaVersion: 12, profiles: migrateProfiles(doc, prioritiseTalentGoals) }),
 };
 
 /**
@@ -272,6 +298,7 @@ export const profileMigrations: MigrationTable = {
   8: addSettings,
   9: dropEquipmentWearer,
   10: addTalents,
+  11: prioritiseTalentGoals,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -293,6 +320,7 @@ export const savedStackMigrations: MigrationTable = {
   8: identity,
   9: identity,
   10: identity,
+  11: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -4,7 +4,7 @@
  * against (ADR-0005): `SHARE_PROFILE_TEMPLATE` / `SHARE_SETUP_TEMPLATE` are the same objects built
  * with fixed ids and timestamps so they are deterministic.
  */
-import { BUILTIN_PERMANENT_SOURCES, SCHEMA_VERSION } from './schema';
+import { BUILTIN_PERMANENT_SOURCES, DEFAULT_TALENT_GOAL_ORDER, SCHEMA_VERSION } from './schema';
 import type {
   BattleSetup,
   BuiltinPermanentSource,
@@ -28,11 +28,17 @@ export const CURRENT_DATA_VERSION = 1;
  */
 export const DEFAULT_SETTINGS: ProfileSettings = { poolLine: 'neither', poolLineRule: 'push' };
 
-/** A new profile's talent plan: level 1, nothing bought, Battle, every stat weighing 1, the level table deciding the points. */
+/**
+ * A new profile's talent plan: level 1, nothing bought, Battle then Archeology then Economy with none ignored,
+ * Focus, Blended, every stat weighing 1, the level table deciding the points.
+ */
 export const DEFAULT_TALENTS: Talents = {
   heroLevel: 1,
   ranks: {},
-  goal: 'battle',
+  goals: [...DEFAULT_TALENT_GOAL_ORDER],
+  ignored: [],
+  strength: 'focus',
+  mode: 'blended',
   weights: {},
   forcedUnitKinds: [],
   pointsOverride: null,

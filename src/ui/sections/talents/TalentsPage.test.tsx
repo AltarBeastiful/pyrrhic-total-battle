@@ -62,7 +62,7 @@ test('a different goal gives a different plan, saved on the account', () => {
   const battle = rows()[0]!.textContent;
   fireEvent.click(economyRadio());
   expect(rows()[0]!.textContent).not.toBe(battle);
-  expect(talentsOf().goal).toBe('economy');
+  expect(talentsOf().goals[0]).toBe('economy');
 });
 
 test('ranks already bought are kept and the plan builds on them', () => {
@@ -117,7 +117,7 @@ test('the goals are ranked by value per point and tapping one selects it', () =>
   expect(names[0]).toMatch(/per point, \d+ points? spent/);
   const economy = names.findIndex((n) => /Economy/.test(n));
   fireEvent.click(economyRadio());
-  expect(talentsOf().goal).toBe('economy');
+  expect(talentsOf().goals[0]).toBe('economy');
   // Selecting does not reorder: the ranking only informs.
   const after = within(screen.getByRole('radiogroup', { name: GOALS }))
     .getAllByRole('radio')
@@ -140,7 +140,7 @@ test('the tree head and the tab count held ranks and planned steps apart (never 
   useStore.getState().updateProfile(id, {
     talents: {
       ...talentsOf(),
-      goal: 'economy',
+      goals: ['economy', 'battle', 'archeology'],
       heroLevel: 150,
       pointsOverride: 40,
       ranks: { [String(node.id)]: 1 },

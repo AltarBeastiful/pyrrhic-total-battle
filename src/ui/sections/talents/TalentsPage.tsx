@@ -93,7 +93,7 @@ export function TalentsPage() {
     [profile],
   );
 
-  const goal = talentsState?.goal ?? 'battle';
+  const goal = talentsState?.goals[0] ?? 'battle'; // B-22 interim: rank 1 stands in for the single goal
   const forced = talentsState?.forcedUnitKinds;
   const kinds = useMemo(() => new Set<UnitKind>([...fielded, ...(forced ?? [])]), [fielded, forced]);
 
@@ -170,7 +170,7 @@ export function TalentsPage() {
             onChange={(v) => {
               const next = TALENT_GOALS.find((g) => g === v);
               if (next === undefined) return;
-              edit({ goal: next });
+              edit({ goals: [next, ...talentsState.goals.filter((g) => g !== next)] });
               setTree(null);
             }}
           >

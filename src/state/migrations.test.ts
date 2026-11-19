@@ -518,7 +518,10 @@ describe('migrate', () => {
     expect(migrated.profiles[0]?.talents).toEqual({
       heroLevel: 1,
       ranks: {},
-      goal: 'battle',
+      goals: ['battle', 'archeology', 'economy'],
+      ignored: [],
+      strength: 'focus',
+      mode: 'blended',
       weights: {},
       forcedUnitKinds: [],
       pointsOverride: null,
@@ -526,21 +529,102 @@ describe('migrate', () => {
     expect(migrated.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
   });
 
-  it('keeps the talents a player saved through a load and refuses a bad goal', () => {
+  /** A v11 document as B-21 saved it: one `goal`, everything else typed by the player. */
+  function v11Doc(goal: unknown): Record<string, unknown> {
+    const doc = newRoot('device');
+    const {
+      goals: _goals,
+      ignored: _ignored,
+      strength: _strength,
+      mode: _mode,
+      ...rest
+    } = doc.profiles[0]!.talents;
+    const talents = {
+      ...rest,
+      heroLevel: 110,
+      ranks: { '26005': 3 },
+      goal,
+      weights: { economy: { UNIT_HEALTH: 2 } },
+      forcedUnitKinds: ['flying', 'monsters'],
+      pointsOverride: 40,
+    };
+    return JSON.parse(
+      JSON.stringify({ ...doc, schemaVersion: 11, profiles: [{ ...doc.profiles[0], talents }] }),
+    ) as Record<string, unknown>;
+  }
+
+  it('v11 → v12 makes the saved goal rank 1, keeps every other talents field, and starts at Focus, Blended', () => {
+    const fixture = v11Doc('economy');
+    expect(migrations[11]?.(fixture).schemaVersion).toBe(12);
+    expect(migrate(fixture).profiles[0]?.talents).toEqual({
+      heroLevel: 110,
+      ranks: { '26005': 3 },
+      goals: ['economy', 'battle', 'archeology'],
+      ignored: [],
+      strength: 'focus',
+      mode: 'blended',
+      weights: { economy: { UNIT_HEALTH: 2 } },
+      forcedUnitKinds: ['flying', 'monsters'],
+      pointsOverride: 40,
+    });
+  });
+
+  it('v11 → v12 falls back to the default order when the saved goal is not one it knows', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const talents = migrate(v11Doc('war')).profiles[0]?.talents;
+    warn.mockRestore();
+    expect(talents?.goals).toEqual(['battle', 'archeology', 'economy']);
+    expect(talents?.heroLevel).toBe(110);
+  });
+
+  it('keeps the talent priorities a player saved through a load', () => {
     const doc = newRoot('device');
     const profile = doc.profiles[0]!;
     const talents = {
       heroLevel: 110,
       ranks: { '26005': 3 },
-      goal: 'economy',
+      goals: ['archeology', 'economy', 'battle'] as const,
+      ignored: ['battle'] as const,
+      strength: 'even',
+      mode: 'strict',
       weights: { economy: { UNIT_HEALTH: 2 } },
       forcedUnitKinds: ['flying', 'monsters'],
       pointsOverride: 40,
     };
     const stored = { ...doc, profiles: [{ ...profile, talents }] };
     expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.talents).toEqual(talents);
-    const broken = { ...doc, profiles: [{ ...profile, talents: { ...talents, goal: 'war' } }] };
-    expect(() => migrate(broken)).toThrow();
+  });
+
+  it.each([
+    ['an order missing a goal', { goals: ['battle', 'battle', 'economy'] }],
+    ['an order of unknown goals', { goals: ['war', 'peace', 'trade'] }],
+    ['a strength it does not know', { strength: 'max' }],
+    ['a mode it does not know', { mode: 'chaos' }],
+    ['every goal ignored', { ignored: ['battle', 'economy', 'archeology'] }],
+  ])('falls back to the default on %s, and keeps the rest', (_label, patch) => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const saved = {
+      ...profile.talents,
+      heroLevel: 77,
+      goals: ['economy', 'archeology', 'battle'],
+      ignored: ['battle'],
+      strength: 'lean',
+      mode: 'strict',
+    };
+    const talents = { ...saved, ...patch };
+    const stored = JSON.parse(JSON.stringify({ ...doc, profiles: [{ ...profile, talents }] })) as unknown;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const loaded = migrate(stored).profiles[0]?.talents;
+    warn.mockRestore();
+    const defaults = {
+      goals: ['battle', 'archeology', 'economy'],
+      ignored: [],
+      strength: 'focus',
+      mode: 'blended',
+    };
+    const key = Object.keys(patch)[0] as keyof typeof defaults;
+    expect(loaded).toEqual({ ...saved, [key]: defaults[key] });
   });
 
   it('keeps the set a piece belongs to and the name of the set through a load', () => {

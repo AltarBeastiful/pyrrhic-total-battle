@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -415,16 +415,49 @@ export type TalentGoal = (typeof TALENT_GOALS)[number];
 export const TALENT_UNIT_KINDS = ['melee', 'ranged', 'mounted', 'flying', 'monsters'] as const;
 export type TalentUnitKind = (typeof TALENT_UNIT_KINDS)[number];
 
+// ---- Talent priorities (schema v12, B-22) -------------------------------------------------------------
+/** The order a new account ranks the goals in, rank 1 first. */
+export const DEFAULT_TALENT_GOAL_ORDER = [
+  'battle',
+  'archeology',
+  'economy',
+] as const satisfies readonly TalentGoal[];
+
+/** How strongly rank 1 wins: Focus 1 / 0.5 / 0.25, Lean 1 / 0.8 / 0.6, Even 1 / 1 / 1 (the table is the engine's). */
+export const TALENT_STRENGTHS = ['focus', 'lean', 'even'] as const;
+export type TalentStrength = (typeof TALENT_STRENGTHS)[number];
+
+/** How points are spread: one weighted plan across the goals, or rank 1 filled before rank 2 before rank 3. */
+export const TALENT_MODES = ['blended', 'strict'] as const;
+export type TalentMode = (typeof TALENT_MODES)[number];
+
+/** Every goal exactly once, rank 1 first; anything else loads as the default order. */
+const talentGoalOrderSchema = z
+  .array(z.enum(TALENT_GOALS))
+  .refine((goals) => goals.length === TALENT_GOALS.length && new Set(goals).size === goals.length)
+  .catch(() => [...DEFAULT_TALENT_GOAL_ORDER]);
+
+/** The goals the plan leaves out, each once; at least one goal stays active, or nothing is ignored. */
+const talentIgnoredSchema = z
+  .array(z.enum(TALENT_GOALS))
+  .refine((ignored) => new Set(ignored).size === ignored.length && ignored.length < TALENT_GOALS.length)
+  .catch(() => []);
+
 /**
- * **The hero talent planner's inputs** (B-21). `ranks` maps a node id (the game's tech id, as a string) to the
- * ranks bought; a node absent holds none. `weights` are per goal, then per stat kind (the game's name, such as
- * `UNIT_HEALTH`); a stat absent weighs 1. `pointsOverride` replaces the points the level table gives, `null`
- * when the player lets the table decide.
+ * **The hero talent planner's inputs** (B-21, priorities B-22). `ranks` maps a node id (the game's tech id, as
+ * a string) to the ranks bought; a node absent holds none. `goals` ranks the three goals, rank 1 first;
+ * `ignored` lists the goals left out (never all three); `strength` says how strongly rank 1 wins and `mode`
+ * how the points are spread. A bad saved order, ignore list, strength or mode loads as its default.
+ * `weights` are per goal, then per stat kind (the game's name, such as `UNIT_HEALTH`); a stat absent weighs
+ * 1. `pointsOverride` replaces the points the level table gives, `null` when the player lets the table decide.
  */
 export const talentsSchema = z.object({
   heroLevel: z.int().min(1).max(1000),
   ranks: z.record(z.string(), z.int().min(0).max(1000)),
-  goal: z.enum(TALENT_GOALS),
+  goals: talentGoalOrderSchema,
+  ignored: talentIgnoredSchema,
+  strength: z.enum(TALENT_STRENGTHS).catch('focus'),
+  mode: z.enum(TALENT_MODES).catch('blended'),
   weights: z.partialRecord(z.enum(TALENT_GOALS), z.record(z.string(), z.number().min(0))),
   forcedUnitKinds: z.array(z.enum(TALENT_UNIT_KINDS)),
   pointsOverride: z.int().min(0).nullable(),
@@ -465,7 +498,7 @@ export const profileSchema = syncMetaSchema.extend({
   upgrades: z.array(userUpgradeSchema),
   /** The account's preferences (schema v9): the pool line a Generate opens with. */
   settings: profileSettingsSchema,
-  /** The hero talent planner's inputs (schema v11, B-21). */
+  /** The hero talent planner's inputs (schema v11, B-21; priorities v12, B-22). */
   talents: talentsSchema,
   /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
   sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
