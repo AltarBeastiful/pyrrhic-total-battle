@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 /**
- * **The Talents page** (B-21 Seam 2): enter a hero level and the points to spend, pick a goal and read the
- * ordered list; a hero with no ranks plans from zero; the plan follows the goal, and what the player types is
- * saved on the account. Sideways overflow is left to the end-to-end journey.
+ * **The Talents page** (B-21 Seam 2, priorities B-22 Seam 2): enter a hero level and the points to spend, rank
+ * the goals, and read the next two points on cards; the tree carries the whole plan. What the player types or
+ * chooses is saved on the account. Sideways overflow is left to the end-to-end journey.
  */
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
 import { newRoot } from '@/state/defaults';
+import { migrate } from '@/state/migrations';
+import type { Talents } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
@@ -25,6 +27,11 @@ afterEach(() => {
 
 const talentsOf = () => selectActiveProfile(useStore.getState())!.talents;
 
+function setTalents(patch: Partial<Talents>): void {
+  const id = selectActiveProfile(useStore.getState())!.id;
+  useStore.getState().updateProfile(id, { talents: { ...talentsOf(), ...patch } });
+}
+
 function type(label: string | RegExp, value: string): void {
   const field = screen.getByRole('textbox', { name: label });
   fireEvent.focus(field);
@@ -32,48 +39,131 @@ function type(label: string | RegExp, value: string): void {
   fireEvent.blur(field);
 }
 
-const GOALS = 'Goals, best value per point first';
-const economyRadio = () =>
-  within(screen.getByRole('radiogroup', { name: GOALS })).getByRole('radio', { name: /Economy/ });
-
-const LIST = 'Spend in this order';
-const rows = () => within(screen.getByRole('list', { name: LIST })).getAllByRole('listitem');
+const GOALS = 'Goals, most wanted first';
+const goalRows = () => within(screen.getByRole('list', { name: GOALS })).getAllByRole('listitem');
+const card = (name: 'Next point' | 'Then') => screen.getByRole('article', { name });
+const cards = () => screen.queryAllByRole('article');
+const pick = (group: string, option: string): void => {
+  fireEvent.click(
+    within(screen.getByRole('radiogroup', { name: group })).getByRole('radio', { name: option }),
+  );
+};
 
 test('without a points figure it asks for one and plans nothing', () => {
   renderWithTheme(<TalentsPage />);
   expect(screen.getByText(/type the points you have to spend/i)).toBeTruthy();
-  expect(screen.queryByRole('list', { name: LIST })).toBeNull();
+  expect(cards()).toHaveLength(0);
 });
 
-test('a level and points give an ordered list from zero ranks', () => {
+test('a level and points give the next point and the one after it, from zero ranks', () => {
   renderWithTheme(<TalentsPage />);
-  type('Hero level', '150');
-  type('Points to spend', '30');
-  expect(rows().length).toBeGreaterThan(0);
-  expect(talentsOf().heroLevel).toBe(150);
-  expect(talentsOf().pointsOverride).toBe(30);
-  expect(screen.getByText(/spends \d+ of 30 points/i)).toBeTruthy();
+  type('Hero level', '100');
+  type('Points to spend', '20');
+  expect(talentsOf().heroLevel).toBe(100);
+  expect(talentsOf().pointsOverride).toBe(20);
+  expect(cards()).toHaveLength(2);
+  // Default order Battle, Archeology, Economy at Focus, Blended: a cheap Archeology parent opens a strong child.
+  expect(card('Next point').textContent).toMatch(/Tar production speed I/);
+  expect(card('Next point').textContent).toMatch(/Archeology/);
+  expect(card('Next point').textContent).toMatch(/Opens a stronger talent/i);
+  expect(screen.getByText(/spends \d+ of 20 points/i)).toBeTruthy();
 });
 
-test('a different goal gives a different plan, saved on the account', () => {
+test('moving a goal to the top changes the next point, and the order is saved', () => {
   renderWithTheme(<TalentsPage />);
   type('Hero level', '150');
-  type('Points to spend', '30');
-  const battle = rows()[0]!.textContent;
-  fireEvent.click(economyRadio());
-  expect(rows()[0]!.textContent).not.toBe(battle);
-  expect(talentsOf().goals[0]).toBe('economy');
+  type('Points to spend', '60');
+  expect(card('Next point').textContent).toMatch(/Battle/);
+  fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
+  expect(talentsOf().goals).toEqual(['economy', 'battle', 'archeology']);
+  expect(goalRows()[0]!.textContent).toMatch(/^1Economy/);
+  expect(card('Next point').textContent).toMatch(/Production of building resources/);
+  expect(card('Next point').textContent).toMatch(/Economy/);
+  expect(screen.getByRole('button', { name: 'Move Economy up' }).hasAttribute('disabled')).toBe(true);
+});
+
+test('an ignored goal vanishes from the cards, the next goal takes rank 1, and one goal stays active', () => {
+  renderWithTheme(<TalentsPage />);
+  type('Hero level', '100');
+  type('Points to spend', '20');
+  expect(card('Next point').textContent).toMatch(/Archeology/);
+  fireEvent.click(screen.getByRole('button', { name: 'Ignore Archeology' }));
+  expect(talentsOf().ignored).toEqual(['archeology']);
+  for (const c of cards()) expect(c.textContent).not.toMatch(/Archeology/);
+  fireEvent.click(screen.getByRole('button', { name: 'Ignore Battle' }));
+  expect(goalRows().find((r) => /Economy/.test(r.textContent))!.textContent).toMatch(/^1Economy/);
+  expect(screen.getByRole('button', { name: 'Ignore Economy' }).hasAttribute('disabled')).toBe(true);
+  for (const c of cards()) expect(c.textContent).toMatch(/Economy/);
+  // Putting a goal back is the same button.
+  fireEvent.click(screen.getByRole('button', { name: 'Ignore Battle' }));
+  expect(talentsOf().ignored).toEqual(['archeology']);
+});
+
+test('strength and mode change the order with no button press', () => {
+  setTalents({ heroLevel: 100, pointsOverride: 20 });
+  renderWithTheme(<TalentsPage />);
+  expect(card('Next point').textContent).toMatch(/Archeology/);
+  pick('How points are spread', 'Strict order');
+  expect(talentsOf().mode).toBe('strict');
+  expect(card('Next point').textContent).toMatch(/Battle/);
+  expect(screen.getByText(/rank 1 first, then rank 2/i)).toBeTruthy();
+  pick('How points are spread', 'Blended');
+
+  cleanup();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 60,
+    mode: 'blended',
+  });
+  renderWithTheme(<TalentsPage />);
+  expect(card('Next point').textContent).toMatch(/Economy/);
+  pick('Strength of rank 1', 'Even');
+  expect(talentsOf().strength).toBe('even');
+  expect(card('Next point').textContent).toMatch(/Battle/);
+});
+
+test('the strength help is hidden until its button opens it', () => {
+  renderWithTheme(<TalentsPage />);
+  const help = screen.getByRole('button', { name: /what focus, lean and even mean/i });
+  expect(help.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.queryByText(/rank 2 counts half/i)).toBeNull();
+  fireEvent.click(help);
+  expect(help.getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByText(/rank 2 counts half/i)).toBeTruthy();
+  // The strength selector sits on the rank 1 row only.
+  expect(within(goalRows()[0]!).getByRole('radiogroup', { name: 'Strength of rank 1' })).toBeTruthy();
+  expect(within(goalRows()[1]!).queryByRole('radiogroup')).toBeNull();
+});
+
+test('a saved old single goal comes back as rank 1', () => {
+  const doc = newRoot('device');
+  const { goals: _g, ignored: _i, strength: _s, mode: _m, ...rest } = doc.profiles[0]!.talents;
+  const old = {
+    ...doc,
+    schemaVersion: 11,
+    profiles: [{ ...doc.profiles[0], talents: { ...rest, goal: 'archeology' } }],
+  };
+  useStore.getState().replaceDocument(migrate(JSON.parse(JSON.stringify(old))));
+  renderWithTheme(<TalentsPage />);
+  expect(goalRows()[0]!.textContent).toMatch(/^1Archeology/);
+  expect(talentsOf().goals[0]).toBe('archeology');
+});
+
+test('the old ranking by value per point is gone', () => {
+  setTalents({ heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  expect(screen.queryByText(/per point, \d+ points? spent/)).toBeNull();
+  expect(screen.queryByRole('radiogroup', { name: /best value per point/i })).toBeNull();
 });
 
 test('ranks already bought are kept and the plan builds on them', () => {
   const node = TALENTS.find((t) => t.tree === 'battle' && t.parents.length === 0)!;
-  const id = selectActiveProfile(useStore.getState())!.id;
-  useStore.getState().updateProfile(id, {
-    talents: { ...talentsOf(), heroLevel: 150, pointsOverride: 5, ranks: { [String(node.id)]: 1 } },
-  });
+  setTalents({ heroLevel: 150, pointsOverride: 5, ranks: { [String(node.id)]: 1 } });
   renderWithTheme(<TalentsPage />);
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
-  expect(screen.getByRole('list', { name: LIST })).toBeTruthy();
+  expect(card('Next point')).toBeTruthy();
 });
 
 test('a hero level out of range is clamped before it is saved', () => {
@@ -98,53 +188,13 @@ test('an emptied weight goes back to 1 by dropping the override', () => {
   expect(Object.values(talentsOf().weights.battle ?? {})).toEqual([]);
 });
 
-test('Units that count is offered for the economy goal too, and its empty message says so', () => {
-  renderWithTheme(<TalentsPage />);
-  type('Hero level', '150');
-  type('Points to spend', '30');
-  fireEvent.click(economyRadio());
-  expect(screen.getByText('Units that count')).toBeTruthy();
-});
-
-test('the goals are ranked by value per point and tapping one selects it', () => {
-  renderWithTheme(<TalentsPage />);
-  type('Hero level', '150');
-  type('Points to spend', '30');
-  const radios = within(screen.getByRole('radiogroup', { name: GOALS })).getAllByRole('radio');
-  expect(radios).toHaveLength(3);
-  const names = radios.map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
-  expect(names[0]).toMatch(/^1\. /);
-  expect(names[0]).toMatch(/per point, \d+ points? spent/);
-  const economy = names.findIndex((n) => /Economy/.test(n));
-  fireEvent.click(economyRadio());
-  expect(talentsOf().goals[0]).toBe('economy');
-  // Selecting does not reorder: the ranking only informs.
-  const after = within(screen.getByRole('radiogroup', { name: GOALS }))
-    .getAllByRole('radio')
-    .map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
-  expect(after).toEqual(names);
-  expect(after[economy]).toMatch(/Economy/);
-});
-
-test('a goal with nothing plannable is last and says why', () => {
-  renderWithTheme(<TalentsPage />);
-  const labels = within(screen.getByRole('radiogroup', { name: GOALS }))
-    .getAllByRole('radio')
-    .map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
-  expect(labels.every((l) => /No points to spend/.test(l))).toBe(true);
-});
-
-test('the tree head and the tab count held ranks and planned steps apart (never a flat 0)', () => {
+test('the tree head and the tab count held ranks and planned steps apart, and tiles show the plan order', () => {
   const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0)!;
-  const id = selectActiveProfile(useStore.getState())!.id;
-  useStore.getState().updateProfile(id, {
-    talents: {
-      ...talentsOf(),
-      goals: ['economy', 'battle', 'archeology'],
-      heroLevel: 150,
-      pointsOverride: 40,
-      ranks: { [String(node.id)]: 1 },
-    },
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 1 },
   });
   renderWithTheme(<TalentsPage />);
   const head = screen.getByText(/ · \d+ spent \+ \d+ planned$/);
@@ -152,12 +202,6 @@ test('the tree head and the tab count held ranks and planned steps apart (never 
   expect(
     within(screen.getByRole('radiogroup', { name: 'Tree' })).getAllByText(/^\d+ planned$/).length,
   ).toBeGreaterThan(0);
-});
-
-test('with planned steps and no held ranks the head says planned, not 0 spent', () => {
-  renderWithTheme(<TalentsPage />);
-  fireEvent.click(economyRadio());
-  type('Hero level', '150');
-  type('Points to spend', '30');
-  expect(screen.getByText(/^Economy · [1-9]\d* planned$/)).toBeTruthy();
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  expect(within(tree).getAllByRole('button', { name: /step \d+ of the plan/ }).length).toBeGreaterThan(0);
 });

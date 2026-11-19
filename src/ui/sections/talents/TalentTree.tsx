@@ -37,6 +37,15 @@ export function plannedByNode(plan: TalentPlan): Map<number, number> {
   return out;
 }
 
+/** Where each node first comes in the plan: its first step's place, 1-based (story 28). */
+function firstStepByNode(plan: TalentPlan): Map<number, number> {
+  const out = new Map<number, number>();
+  plan.steps.forEach((s, i) => {
+    if (!out.has(s.nodeId)) out.set(s.nodeId, i + 1);
+  });
+  return out;
+}
+
 function lockWords(plan: TalentPlan, id: number): string | null {
   const lock = plan.locked[id];
   if (lock === undefined) return null;
@@ -53,6 +62,7 @@ const COLS = 6;
 export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onRank }: TalentTreeProps) {
   const nodes = talents.filter((t) => t.tree === tree);
   const added = plannedByNode(plan);
+  const firstStep = firstStepByNode(plan);
   const node = nodes.find((n) => n.id === selected) ?? null;
   const points = treePoints(talents, tree, ranks, plan.steps);
   const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -104,6 +114,7 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
             {nodes.map((n) => {
               const bought = ranks[String(n.id)] ?? 0;
               const plus = added.get(n.id) ?? 0;
+              const step = firstStep.get(n.id) ?? null;
               const lock = bought === 0 && plus === 0 ? lockWords(plan, n.id) : null;
               const fam = talentFamily(n.name);
               const icons = talentIcons(n.name, n.stats);
@@ -111,6 +122,7 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
               const spoken =
                 `${n.name}, rank ${String(bought)} of ${String(n.maxRank)}` +
                 (plus > 0 ? `, the plan adds ${String(plus)}` : '') +
+                (step !== null ? `, from step ${String(step)} of the plan` : '') +
                 (lock !== null
                   ? plan.locked[n.id]?.reason === 'level'
                     ? `, locked until hero level ${String(plan.locked[n.id]?.level)}`
@@ -146,6 +158,7 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
                     <span className={classes.marks}>
                       {bought > 0 && <span>rank {bought}</span>}
                       {plus > 0 && <span>+{plus}</span>}
+                      {step !== null && <span>#{step}</span>}
                       {lock !== null && <span>{lock}</span>}
                     </span>
                   )}
@@ -156,8 +169,8 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
         </div>
         <Text size="sm" c="dimmed">
           Lines join each node to the node above it that opens it; bold lines lead to nodes the plan spends
-          on. Filled tiles are where the plan spends. Dashed tiles are locked: Lv is the hero level they need,
-          Parent means a node above them must hold a rank first.
+          on. Filled tiles are where the plan spends, and #1 marks the plan&apos;s first step. Dashed tiles
+          are locked: Lv is the hero level they need, Parent means a node above them must hold a rank first.
         </Text>
       </Stack>
       <aside className={classes.detail} data-empty={node === null} aria-label="Selected node">

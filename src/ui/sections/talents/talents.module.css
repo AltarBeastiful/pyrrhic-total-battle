@@ -144,3 +144,56 @@
     display: block;
   }
 }
+
+/* B-22 goal rows: rank, name and weight, the rank 1 strength cluster, the move and ignore buttons. On a
+   narrow screen the strength cluster wraps under the row (story 37). */
+.goalRow {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.goalRow[data-off='true'] {
+  opacity: 0.75;
+}
+
+.goalRank {
+  font-variant-numeric: tabular-nums;
+}
+
+.goalName {
+  min-width: 0;
+}
+
+.goalStrength {
+  justify-self: end;
+}
+
+.goalMoves {
+  grid-column: 4;
+  justify-self: end;
+}
+
+@media (max-width: 40em) {
+  .goalRow {
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  }
+
+  .goalMoves {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .goalStrength {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+    max-width: 100%;
+  }
+}
+
+/* The Next point card stands out from Then (story 24): a heavier border in the accent colour. */
+.stepCard[data-next='true'] {
+  border: 2px solid var(--mantine-primary-color-filled);
+}
