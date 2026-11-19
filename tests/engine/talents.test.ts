@@ -613,6 +613,15 @@ describe('rankTalentGoals', () => {
     expect(r[1]!.valuePerPoint).toBeCloseTo(2);
   });
 
+  test('fillers neither count in value per point nor hide the no-value reason', () => {
+    const r = rank([node(1, { values: [2] }), eco(2, [0, 0, 0])]);
+    const e = r.find((g) => g.goal === 'economy')!;
+    expect(e.plan.steps.some((s) => s.filler)).toBe(true);
+    expect(e.valuePerPoint).toBeNull();
+    expect(e.reason).toBe('Nothing open adds anything');
+    expect(r.find((g) => g.goal === 'battle')!.valuePerPoint).toBeCloseTo(2);
+  });
+
   test('a goal with nothing plannable goes last with a reason and no ratio', () => {
     const r = rank([node(1, { values: [2] })]);
     expect(r[0]!.goal).toBe('battle');

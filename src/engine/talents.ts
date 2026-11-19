@@ -406,6 +406,7 @@ export interface TalentGoalRank {
   plan: TalentPlan;
   /** Weighted percentage points gained per point spent, or null when the goal plans nothing. */
   valuePerPoint: number | null;
+  /** Points spent on steps that add value (fillers excluded); the plan itself may spend more. */
   pointsSpent: number;
   /** Why nothing is planned; null when something is. */
   reason: string | null;
@@ -428,13 +429,16 @@ export function rankTalentGoals(input: TalentGoalRankInput): TalentGoalRank[] {
       weights: input.weightsByGoal?.[goal] ?? {},
       kinds: input.kinds,
     });
-    const value = plan.steps.reduce((sum, s) => sum + s.value, 0);
-    if (plan.pointsSpent > 0 && value > 0) {
+    // Fillers add nothing for the goal: value and points per point count the real steps only.
+    const real = plan.steps.filter((s) => !s.filler);
+    const value = real.reduce((sum, s) => sum + s.value, 0);
+    const realPoints = real.reduce((sum, s) => sum + s.cost, 0);
+    if (realPoints > 0 && value > 0) {
       return {
         goal,
         plan,
-        valuePerPoint: value / plan.pointsSpent,
-        pointsSpent: plan.pointsSpent,
+        valuePerPoint: value / realPoints,
+        pointsSpent: realPoints,
         reason: null,
       };
     }
