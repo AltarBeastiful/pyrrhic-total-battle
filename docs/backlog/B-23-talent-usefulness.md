@@ -107,4 +107,6 @@ Each talent bonus gets a usefulness factor worked out from the account's army. S
   - "Other economy bonuses" is named for what it is: Tile bonus.
   - The page is in the address bar: `#talents` reloads to the talents page.
   - Tree tiles show the rank as a bar over the number; the plan-order number is gone from the tile (kept in the accessible name).
+  - The points are the player's **whole stock** (schema v15 converts saved accounts so the points left are unchanged). Ranks held spend it and the plan works on what is left. A click on a tile spends one rank on it, as in the game (a locked node, a full node or an unaffordable rank says why and does nothing); each held tile has a Take back button; the Next point card has Mark as spent.
+  - Silver production talents wear the grey silver coin. Locked tiles are striped with a lock pill (`Lv n` or `Parent`); the rank bar has three distinct states (hollow ticked outline, solid fill, green when full) and the plan's share hatched.
 

@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -476,6 +476,7 @@ export const talentsSchema = z.object({
     .catch([...TALENT_CRYPT_TYPES]),
   /** A troop group forced off (`false`) or on (`true`) whatever the account fields; absent follows the account (B-23). */
   groupOverrides: z.partialRecord(z.enum(TALENT_TROOP_GROUPS), z.boolean()).catch({}),
+  /** The player's whole stock of talent points (schema v15: held ranks spend it; before, points left to spend). */
   pointsOverride: z.int().min(0).nullable(),
 });
 export type Talents = z.infer<typeof talentsSchema>;

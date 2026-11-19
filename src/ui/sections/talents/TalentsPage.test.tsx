@@ -51,7 +51,7 @@ const pick = (group: string, option: string): void => {
 
 test('without a points figure it asks for one and plans nothing', () => {
   renderWithTheme(<TalentsPage />);
-  expect(screen.getByText(/type the points you have to spend/i)).toBeTruthy();
+  expect(screen.getByText(/type your whole stock of talent points/i)).toBeTruthy();
   expect(cards()).toHaveLength(0);
 });
 
@@ -59,7 +59,7 @@ test('a level and points give the next point and the one after it, from zero ran
   setTalents({ weights: { archeology: { SKLEP_EXP_BONUS: 1 } } });
   renderWithTheme(<TalentsPage />);
   type('Hero level', '100');
-  type('Points to spend', '20');
+  type('Talent points (your whole stock)', '20');
   expect(talentsOf().heroLevel).toBe(100);
   expect(talentsOf().pointsOverride).toBe(20);
   expect(cards()).toHaveLength(2);
@@ -73,7 +73,7 @@ test('a level and points give the next point and the one after it, from zero ran
 test('moving a goal to the top changes the next point, and the order is saved', () => {
   renderWithTheme(<TalentsPage />);
   type('Hero level', '150');
-  type('Points to spend', '60');
+  type('Talent points (your whole stock)', '60');
   expect(card('Next point').textContent).toMatch(/Battle/);
   fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
   fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
@@ -88,7 +88,7 @@ test('an ignored goal vanishes from the cards, the next goal takes rank 1, and o
   setTalents({ weights: { archeology: { SKLEP_EXP_BONUS: 1 } } });
   renderWithTheme(<TalentsPage />);
   type('Hero level', '100');
-  type('Points to spend', '20');
+  type('Talent points (your whole stock)', '20');
   expect(card('Next point').textContent).toMatch(/Archeology/);
   fireEvent.click(screen.getByRole('button', { name: 'Ignore Archeology' }));
   expect(talentsOf().ignored).toEqual(['archeology']);
@@ -300,6 +300,152 @@ test('a group the player switched off puts no talent point into its nodes beyond
     .map((c) => c.textContent)
     .join(' ');
   expect(text).not.toMatch(/Specialists' (strength|health)/);
+});
+
+// ---- The points are the whole stock; ranks held spend them (B-23) --------------------------------------
+const rootNode = () =>
+  TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0 && t.maxRank >= 3 && t.costs[0] === 1)!;
+const tileOf = (name: string) =>
+  within(screen.getByRole('region', { name: 'Economy tree' })).getByRole('button', {
+    name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, rank`),
+  });
+
+test('the ranks held spend the stock, and the plan works on what is left', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 20,
+    ranks: { [String(node.id)]: 3 },
+  });
+  renderWithTheme(<TalentsPage />);
+  expect(screen.getByText(/17 of 20 points left/i)).toBeTruthy();
+  expect(screen.getByText(/plan spends \d+ of 17 points/i)).toBeTruthy();
+});
+
+test('ranks worth more than the stock say so and plan nothing', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 2,
+    ranks: { [String(node.id)]: 3 },
+  });
+  renderWithTheme(<TalentsPage />);
+  expect(screen.getByText(/1 point more than your stock/i)).toBeTruthy();
+  expect(cards()).toHaveLength(0);
+});
+
+test('a click on an open tile spends a point on it, as in the game', () => {
+  const node = rootNode();
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 10 });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(tileOf(node.name));
+  expect(talentsOf().ranks[String(node.id)]).toBe(1);
+  fireEvent.click(tileOf(node.name));
+  expect(talentsOf().ranks[String(node.id)]).toBe(2);
+  expect(screen.getByText(/8 of 10 points left/i)).toBeTruthy();
+});
+
+test('a click does not spend on a locked tile, past the maximum, or beyond the stock', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 1,
+    ranks: { [String(node.id)]: 1 },
+  });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(tileOf(node.name));
+  expect(talentsOf().ranks[String(node.id)]).toBe(1);
+  expect(screen.getByText(/not enough points/i)).toBeTruthy();
+  const locked = TALENTS.find((t) => t.tree === 'economy' && t.parents.length > 0 && t.layout.y > 3)!;
+  setTalents({ pointsOverride: 50 });
+  fireEvent.click(tileOf(locked.name));
+  expect(talentsOf().ranks[String(locked.id)]).toBeUndefined();
+});
+
+test('Mark as spent on the next point buys it and moves the plan on', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  const before = card('Next point').textContent;
+  fireEvent.click(within(card('Next point')).getByRole('button', { name: /mark as spent/i }));
+  expect(Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0)).toBe(1);
+  expect(screen.getByText(/29 of 30 points left/i)).toBeTruthy();
+  expect(card('Next point').textContent === before && Object.keys(talentsOf().ranks).length === 0).toBe(
+    false,
+  );
+});
+
+test('a full rank reads differently from an empty one, on the bar and in the label', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    // Exactly what the full rank costs: nothing is left, so the plan adds no rank anywhere.
+    pointsOverride: node.costs.reduce((a, b) => a + b, 0),
+    ranks: { [String(node.id)]: node.maxRank },
+  });
+  renderWithTheme(<TalentsPage />);
+  const full = tileOf(node.name);
+  expect(full.querySelector('[data-bar-state="full"]')).not.toBeNull();
+  expect(full.textContent).toMatch(
+    new RegExp(`${String(node.maxRank)}\\s*/\\s*${String(node.maxRank)}|max`, 'i'),
+  );
+  const other = TALENTS.find((t) => t.tree === 'economy' && t.parents.includes(node.id) && t.maxRank >= 3)!;
+  const empty = tileOf(other.name);
+  expect(empty.querySelector('[data-bar-state="empty"]')).not.toBeNull();
+});
+
+test('a tile locked by hero level says so with a lock and the level, not just dimmed text', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 1, pointsOverride: 10 });
+  renderWithTheme(<TalentsPage />);
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  const badges = tree.querySelectorAll('[data-lock="level"]');
+  expect(badges.length).toBeGreaterThan(0);
+  expect(badges[0]!.textContent).toMatch(/Lv\s*\d+/);
+  expect(tree.querySelector('[data-lock="level"] svg')).not.toBeNull();
+});
+
+test('a tile with a rank has its own Take back button, in place', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 10,
+    ranks: { [String(node.id)]: 2 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  fireEvent.click(within(tree).getByRole('button', { name: `Take one rank back from ${node.name}` }));
+  expect(talentsOf().ranks[String(node.id)]).toBe(1);
+  fireEvent.click(within(tree).getByRole('button', { name: `Take one rank back from ${node.name}` }));
+  expect(talentsOf().ranks[String(node.id)]).toBeUndefined();
+  expect(within(tree).queryByRole('button', { name: `Take one rank back from ${node.name}` })).toBeNull();
+});
+
+test('Spend up to here on the second card buys both planned steps at once', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(within(card('Then')).getByRole('button', { name: /spend up to here/i }));
+  const held = Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0);
+  expect(held).toBe(2);
+  expect(screen.getByText(/28 of 30 points left/i)).toBeTruthy();
+});
+
+test('a planned node offers to spend the plan up to it, and the points left follow', () => {
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+  renderWithTheme(<TalentsPage />);
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  const planned = tree.querySelector('button[data-state="planned"]') as HTMLElement;
+  expect(planned).not.toBeNull();
+  fireEvent.click(planned); // selects it, and spends its first rank
+  const button = screen.getByRole('button', { name: /spend the plan up to here/i });
+  expect(button.textContent).toMatch(/\d+ points?/);
+  const before = Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0);
+  fireEvent.click(button);
+  const after = Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0);
+  expect(after).toBeGreaterThan(before);
 });
 
 test('crypt types start all ticked, and unticking one is saved', () => {

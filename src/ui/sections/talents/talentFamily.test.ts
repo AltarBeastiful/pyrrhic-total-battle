@@ -29,10 +29,13 @@ test('the icon is the stat, plus the unit kind the name speaks of', () => {
     stat: 'doubleDamage',
     subject: 'guardsmen',
   });
+  // Owner, 2026-11-19: silver is the silver coin (the greyed glyph the rest of the app uses), not the wheat of food.
   expect(talentIcons('Silver production in the City I', ['MINE_PRODUCTION_SPEED'])).toEqual({
-    stat: 'production',
+    stat: 'silver',
     subject: null,
   });
+  expect(talentIcons('Food production in the City I', ['MINE_PRODUCTION_SPEED']).stat).toBe('production');
+  expect(talentIcons('Tar production speed I', ['MINE_PRODUCTION_SPEED']).stat).toBe('production');
 });
 
 test('every talent in the tables gets icons that exist', () => {

@@ -77,7 +77,10 @@ export function talentIcons(
   name: string,
   stats: readonly string[],
 ): { stat: GlyphKind; subject: GlyphKind | null } {
-  const stat = (stats[0] !== undefined ? STAT_ICONS[stats[0]] : undefined) ?? 'tile';
+  // One production stat serves silver, food, wood and tar; the name says which, and silver has its own coin.
+  const stat: GlyphKind = /^silver/i.test(name)
+    ? 'silver'
+    : ((stats[0] !== undefined ? STAT_ICONS[stats[0]] : undefined) ?? 'tile');
   const subject = SUBJECTS.find(([re]) => re.test(name))?.[1] ?? null;
   return { stat, subject };
 }

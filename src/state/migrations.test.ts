@@ -567,7 +567,8 @@ describe('migrate', () => {
       mode: 'blended',
       weights: { economy: { UNIT_HEALTH: 2 } },
       forcedUnitKinds: ['flying', 'monsters'],
-      pointsOverride: 40,
+      // 40 typed + 3 for the three held ranks of node 26005 (v14 → v15 makes the points the whole stock).
+      pointsOverride: 43,
       crypts: ['common', 'rare', 'epic'],
       groupOverrides: {},
     });
@@ -609,6 +610,39 @@ describe('migrate', () => {
     expect(talents?.groupOverrides).toEqual({});
     expect(talents?.heroLevel).toBe(130);
     expect(talents?.crypts).toEqual(['rare']);
+  });
+
+  it('v14 → v15 turns the points to spend into the whole stock: what the held ranks cost is added', () => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const fixture = JSON.parse(
+      JSON.stringify({
+        ...doc,
+        schemaVersion: 14,
+        profiles: [
+          { ...profile, talents: { ...profile.talents, ranks: { '25000': 3 }, pointsOverride: 40 } },
+        ],
+      }),
+    ) as Record<string, unknown>;
+    expect(migrations[14]?.(fixture).schemaVersion).toBe(15);
+    const talents = migrate(fixture).profiles[0]?.talents;
+    expect(talents?.pointsOverride).toBe(43);
+    expect(talents?.ranks).toEqual({ '25000': 3 });
+  });
+
+  it('v14 → v15 leaves an empty points field empty', () => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const fixture = JSON.parse(
+      JSON.stringify({
+        ...doc,
+        schemaVersion: 14,
+        profiles: [
+          { ...profile, talents: { ...profile.talents, ranks: { '25000': 3 }, pointsOverride: null } },
+        ],
+      }),
+    ) as Record<string, unknown>;
+    expect(migrate(fixture).profiles[0]?.talents.pointsOverride).toBeNull();
   });
 
   it('v11 → v12 falls back to the default order when the saved goal is not one it knows', () => {

@@ -76,7 +76,7 @@ import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
-import { treePoints } from './spentPoints';
+import { spentPoints, treePoints } from './spentPoints';
 import classes from './talents.module.css';
 import { TalentTree } from './TalentTree';
 
@@ -173,6 +173,8 @@ export function TalentsPage() {
     if (talentsState === undefined) return null;
     const ranks: Record<number, number> = {};
     for (const [key, value] of Object.entries(talentsState.ranks)) ranks[Number(key)] = value;
+    // The stock is what the player has in all; the ranks he holds have spent part of it.
+    const heldCost = TALENT_TREES.reduce((sum, t) => sum + spentPoints(TALENTS, t, talentsState.ranks), 0);
     const priority: TalentPriority = {
       order: talentsState.goals,
       ignored: Object.fromEntries(talentsState.ignored.map((g) => [g, true])),
@@ -183,7 +185,7 @@ export function TalentsPage() {
       plan: planTalentPriorities({
         talents: TALENTS,
         heroLevel: talentsState.heroLevel,
-        points: talentsState.pointsOverride ?? 0,
+        points: Math.max(0, (talentsState.pointsOverride ?? 0) - heldCost),
         ranks,
         priority,
         weightsByGoal: withDefaultStatWeights(talentsState.weights),
@@ -192,11 +194,12 @@ export function TalentsPage() {
         groups,
       }),
       goalWeights: talentGoalWeights(priority),
+      heldCost,
     };
   }, [talentsState, kinds, groups]);
 
   if (profile === undefined || talentsState === undefined || plan === null) return null;
-  const { plan: result, goalWeights } = plan;
+  const { plan: result, goalWeights, heldCost } = plan;
 
   const edit = (patch: Partial<Talents>): void => {
     updateProfile(profile.id, (current) => ({ talents: { ...current.talents, ...patch } }));
@@ -206,7 +209,9 @@ export function TalentsPage() {
   const ignored = new Set(talentsState.ignored);
   const active = order.filter((g) => !ignored.has(g));
   const first = active[0] ?? order[0]!;
-  const points = talentsState.pointsOverride;
+  const stock = talentsState.pointsOverride;
+  const left = stock === null ? null : Math.max(0, stock - heldCost);
+  const over = stock === null ? 0 : Math.max(0, heldCost - stock);
   const viewTree = tree ?? first; // the rank 1 goal opens the tree of its own name
   const activeStats = active.flatMap((g) => GOAL_STATS[g]);
   const shownStats = activeStats.filter((s) => (result.before[s] ?? 0) !== 0 || (result.after[s] ?? 0) !== 0);
@@ -244,6 +249,52 @@ export function TalentsPage() {
     });
   };
 
+  /** Spend the plan from its first step to step `index`, inclusive: every node on the way reaches its planned rank. */
+  const spendPlanTo = (index: number): void => {
+    const steps = result.steps.slice(0, index + 1);
+    if (steps.length === 0) return;
+    updateProfile(profile.id, (current) => {
+      const ranks = { ...current.talents.ranks };
+      for (const step of steps)
+        ranks[String(step.nodeId)] = Math.max(ranks[String(step.nodeId)] ?? 0, step.rank);
+      return { talents: { ...current.talents, ranks } };
+    });
+    const cost = steps.reduce((sum, step) => sum + step.cost, 0);
+    setMessage(`Spent ${plural(cost, 'point')} on the first ${plural(steps.length, 'step')} of the plan.`);
+  };
+
+  /** A click on a tile: one rank, as in the game, if the node is open, not full and the stock pays for it. */
+  const spend = (id: number): void => {
+    const rec = BY_ID.get(id);
+    if (rec === undefined) return;
+    const bought = talentsState.ranks[String(id)] ?? 0;
+    if (bought >= rec.maxRank) {
+      setMessage(`${rec.name} is at its maximum.`);
+      return;
+    }
+    const lock = bought === 0 ? result.locked[id] : undefined;
+    if (lock !== undefined) {
+      setMessage(
+        lock.reason === 'level'
+          ? `${rec.name} needs hero level ${String(lock.level)}.`
+          : `${rec.name} is locked until a node above it has a rank.`,
+      );
+      return;
+    }
+    const cost = rec.costs[bought] ?? 0;
+    const have = left ?? 0;
+    if (stock === null || cost > have) {
+      setMessage(
+        stock === null
+          ? 'Not enough points: type your stock of talent points first.'
+          : `Not enough points: ${rec.name} rank ${String(bought + 1)} costs ${String(cost)}, you have ${String(have)} left.`,
+      );
+      return;
+    }
+    setRank(id, bought + 1);
+    setMessage(`${rec.name} is now rank ${String(bought + 1)}. ${String(have - cost)} points left.`);
+  };
+
   const rankOf = new Map(active.map((g, i) => [g, i + 1]));
 
   return (
@@ -265,8 +316,8 @@ export function TalentsPage() {
               }}
             />
             <NumberField
-              label="Points to spend"
-              value={points}
+              label="Talent points (your whole stock)"
+              value={stock}
               allowEmpty
               min={0}
               onChange={(v) => {
@@ -563,31 +614,46 @@ export function TalentsPage() {
       <Panel
         component="section"
         title="Spend your next points"
-        meta={points === null ? undefined : plural(points, 'point')}
+        meta={stock === null || left === null ? undefined : `${String(left)} of ${String(stock)} points left`}
       >
         <Stack gap="md">
-          {points === null ? (
+          {stock === null ? (
             <Text>
-              Type the points you have to spend. The game&apos;s points per hero level are only known from
-              level 86 (10 each), so the page cannot work out your total from the level alone.
+              Type your whole stock of talent points. The game&apos;s points per hero level are only known
+              from level 86 (10 each), so the page cannot work out your total from the level alone. The ranks
+              you hold, or click on the tree, spend it, and the plan works on what is left.
             </Text>
           ) : result.steps.length === 0 ? (
             <Text>
-              {points === 0
-                ? 'No points to spend, so there is nothing to plan.'
-                : kinds.size === 0 && unitStats
-                  ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
-                  : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
+              {over > 0
+                ? `The ranks you hold cost ${plural(over, 'point')} more than your stock. Raise the stock, or take a rank back.`
+                : left === 0
+                  ? 'No points left to spend, so there is nothing to plan.'
+                  : kinds.size === 0 && unitStats
+                    ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
+                    : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
             </Text>
           ) : (
             <>
               <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
                 {result.steps.slice(0, 2).map((step, i) => (
-                  <StepCard key={`${String(step.nodeId)}-${String(step.rank)}`} step={step} next={i === 0} />
+                  <StepCard
+                    key={`${String(step.nodeId)}-${String(step.rank)}`}
+                    step={step}
+                    next={i === 0}
+                    onSpend={i === 0 ? spend : undefined}
+                    onSpendUpToHere={
+                      i > 0
+                        ? () => {
+                            spendPlanTo(i);
+                          }
+                        : undefined
+                    }
+                  />
                 ))}
               </SimpleGrid>
               <Text size="sm">
-                Plan spends {String(result.pointsSpent)} of {String(points)} points
+                Plan spends {String(result.pointsSpent)} of {String(left ?? 0)} points
                 {result.pointsLeft > 0 ? `, ${String(result.pointsLeft)} left.` : '.'} The tree below shows
                 every step in order.
               </Text>
@@ -658,6 +724,8 @@ export function TalentsPage() {
             selected={selected}
             onSelect={setSelected}
             onRank={setRank}
+            onSpend={spend}
+            onSpendPlan={spendPlanTo}
           />
         </Stack>
       </Panel>
@@ -666,7 +734,17 @@ export function TalentsPage() {
 }
 
 /** One card: the talent and rank, its goal, the gain, and whether it only opens a stronger talent. */
-function StepCard({ step, next }: { step: TalentPriorityStep; next: boolean }) {
+function StepCard({
+  step,
+  next,
+  onSpend,
+  onSpendUpToHere,
+}: {
+  step: TalentPriorityStep;
+  next: boolean;
+  onSpend: ((id: number) => void) | undefined;
+  onSpendUpToHere: (() => void) | undefined;
+}) {
   const rec: TalentRecord = BY_ID.get(step.nodeId)!;
   const title = next ? 'Next point' : 'Then';
   const goal = step.goal ?? goalOfTree(rec.tree);
@@ -708,6 +786,23 @@ function StepCard({ step, next }: { step: TalentPriorityStep; next: boolean }) {
           <Text size="sm" c="dimmed">
             No gain for your goals: it spends points nothing better can use.
           </Text>
+        )}
+        {onSpendUpToHere !== undefined && (
+          <Button size="xs" variant="light" style={{ alignSelf: 'flex-start' }} onClick={onSpendUpToHere}>
+            Spend up to here
+          </Button>
+        )}
+        {onSpend !== undefined && (
+          <Button
+            size="xs"
+            variant="light"
+            style={{ alignSelf: 'flex-start' }}
+            onClick={() => {
+              onSpend(step.nodeId);
+            }}
+          >
+            Mark as spent
+          </Button>
         )}
       </Stack>
     </Paper>

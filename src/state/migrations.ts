@@ -6,7 +6,7 @@
  *
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
-import { unitById } from '../data';
+import { talents as talentTable, unitById } from '../data';
 import { DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
 import {
   DEFAULT_TALENT_GOAL_ORDER,
@@ -255,6 +255,23 @@ export function addTalentGroupOverrides(profile: Record<string, unknown>): Recor
   return { ...profile, talents: { groupOverrides: {}, ...profile.talents } };
 }
 
+/**
+ * `14 → 15` for one profile (B-23): the typed points were the points left to spend, beside the ranks already
+ * held; they become the whole stock, which the held ranks spend. What the held ranks cost is added, so the
+ * points left after the upgrade are the points left before it. An empty field stays empty.
+ */
+export function pointsBecomeStock(profile: Record<string, unknown>): Record<string, unknown> {
+  const t = profile.talents;
+  if (!isPlainObject(t) || typeof t.pointsOverride !== 'number') return profile;
+  const ranks = isPlainObject(t.ranks) ? t.ranks : {};
+  let spent = 0;
+  for (const rec of talentTable) {
+    const held = Math.min(Number(ranks[String(rec.id)] ?? 0) || 0, rec.costs.length);
+    for (let i = 0; i < held; i++) spent += rec.costs[i] ?? 0;
+  }
+  return { ...profile, talents: { ...t, pointsOverride: t.pointsOverride + spent } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -276,6 +293,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `11 → 12`: the talents' single goal becomes rank 1 of an ordered list, with ignore, strength and mode (B-22).
  * `12 → 13`: the talents gain the crypt types that count, all three (B-23).
  * `13 → 14`: the talents gain the troop-group overrides, none (B-23).
+ * `14 → 15`: the typed talent points become the whole stock, which held ranks spend (B-23).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -292,6 +310,7 @@ export const migrations: MigrationTable = {
   11: (doc) => ({ ...doc, schemaVersion: 12, profiles: migrateProfiles(doc, prioritiseTalentGoals) }),
   12: (doc) => ({ ...doc, schemaVersion: 13, profiles: migrateProfiles(doc, addTalentCrypts) }),
   13: (doc) => ({ ...doc, schemaVersion: 14, profiles: migrateProfiles(doc, addTalentGroupOverrides) }),
+  14: (doc) => ({ ...doc, schemaVersion: 15, profiles: migrateProfiles(doc, pointsBecomeStock) }),
 };
 
 /**
@@ -317,6 +336,7 @@ export const profileMigrations: MigrationTable = {
   11: prioritiseTalentGoals,
   12: addTalentCrypts,
   13: addTalentGroupOverrides,
+  14: pointsBecomeStock,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -341,6 +361,7 @@ export const savedStackMigrations: MigrationTable = {
   11: identity,
   12: identity,
   13: identity,
+  14: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
