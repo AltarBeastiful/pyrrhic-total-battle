@@ -5,6 +5,8 @@ import { TALENT_TREES, type TalentRecord } from '@/data/types';
 import {
   DEFAULT_TALENT_PRIORITY,
   withDefaultStatWeights,
+  strengthShareOf,
+  STRENGTH_SHARES,
   goalOfTree,
   TALENT_GOALS,
   TALENT_RANK_WEIGHTS,
@@ -1136,5 +1138,163 @@ describe('crypt types scope the archeology stats (B-23 b)', () => {
   test('the price cut and the explore-twice chance are scoped the same way', () => {
     const t = [crypt(1, [17], 'SKLEP_PRICE_CUT'), crypt(2, [17], 'SKLEP_CRIT_PROBABILITY')];
     expect(run(t, ['common'])).toEqual([]);
+  });
+});
+
+describe('strength by troop group (B-23 d, experiment 363)', () => {
+  const strengthNodes = realTalents.filter((t) => t.stats.includes('UNIT_POWER'));
+
+  test.each([
+    ["Guardsmen's strength I", 1],
+    ['Army strength', 1.11],
+    ["Mounted units' strength II", 0.41],
+    ["Melee units' strength III", 0.23],
+    ["Ranged units' strength I", 0.2],
+    ["Specialists' strength II", 0.14],
+    ["Monsters' strength III", 0.14],
+    ["Flying units' strength I", 0.06],
+  ])('%s is worth %s of a guardsmen point', (name, share) => {
+    const rec = strengthNodes.find((t) => t.name === name);
+    expect(rec, name).toBeDefined();
+    expect(strengthShareOf(rec!)).toBe(share);
+  });
+
+  test('every strength node of the real table is covered or deliberately left at 1', () => {
+    const left = strengthNodes
+      .filter((t) => strengthShareOf(t) === 1 && !t.name.startsWith("Guardsmen's"))
+      .map((t) => t.name.replace(/ (I|II|III)$/, ''));
+    expect([...new Set(left)].sort()).toEqual(['Strength of fortifications']);
+  });
+
+  test('a node that is not strength, or has no known group, keeps a share of 1', () => {
+    expect(
+      strengthShareOf(node(1, { values: [1], stats: ['UNIT_HEALTH'], name: "Specialists' health I" })),
+    ).toBe(1);
+    expect(strengthShareOf(node(2, { values: [1], stats: ['UNIT_POWER'], name: 'Node 2' }))).toBe(1);
+  });
+
+  test('the table is what experiment 363 measured', () => {
+    expect(STRENGTH_SHARES.guardsmen).toBe(1);
+    expect(STRENGTH_SHARES.specialist).toBeLessThan(STRENGTH_SHARES.mounted);
+  });
+
+  const prio = (talents: TalentRecord[], kinds: UnitKind[]) =>
+    ids(
+      planTalentPriorities({
+        talents,
+        heroLevel: 200,
+        points: 1,
+        kinds,
+        priority: DEFAULT_TALENT_PRIORITY,
+        weightsByGoal: withDefaultStatWeights({}),
+      }).steps,
+    );
+
+  test('a smaller guardsmen bonus beats a bigger specialist one', () => {
+    const t = [
+      node(1, { values: [20], name: "Specialists' strength I", unitIds: [21] }),
+      node(2, { values: [5], name: "Guardsmen's strength I", unitIds: [1] }),
+    ];
+    expect(prio(t, ['melee', 'ranged'])).toEqual([2]);
+  });
+
+  test('a specialist bonus still wins when it is far bigger than the guardsmen one', () => {
+    const t = [
+      node(1, { values: [60], name: "Specialists' strength I", unitIds: [21] }),
+      node(2, { values: [5], name: "Guardsmen's strength I", unitIds: [1] }),
+    ];
+    expect(prio(t, ['melee', 'ranged'])).toEqual([1]);
+  });
+
+  test('health on the same specialists is not scaled', () => {
+    const t = [
+      node(1, { values: [20], name: "Specialists' health I", stats: ['UNIT_HEALTH'], unitIds: [21] }),
+      node(2, { values: [5], name: "Guardsmen's strength I", unitIds: [1] }),
+    ];
+    expect(prio(t, ['melee', 'ranged'])).toEqual([1]);
+  });
+});
+
+describe('troop groups the player does not use (B-23 d)', () => {
+  const run = (t: TalentRecord[], groups?: ('guardsmen' | 'specialist' | 'monster' | 'engineers')[]) =>
+    ids(
+      planTalentPriorities({
+        talents: t,
+        heroLevel: 200,
+        points: 5,
+        kinds: ['melee', 'ranged', 'mounted'],
+        priority: DEFAULT_TALENT_PRIORITY,
+        weightsByGoal: withDefaultStatWeights({}),
+        ...(groups === undefined ? {} : { groups }),
+      }).steps.filter((s) => !s.filler),
+    );
+  const spec = (stat: string, name: string) => node(1, { values: [9], stats: [stat], name, unitIds: [21] });
+
+  test.each([
+    ['strength', 'UNIT_POWER', "Specialists' strength I"],
+    ['health', 'UNIT_HEALTH', "Specialists' health I"],
+    ['double damage', 'UNIT_CRIT', 'Chance for specialists to deal double damage I'],
+  ])('a specialists %s bonus counts only when specialists are in play', (_label, stat, name) => {
+    const t = [spec(stat, name)];
+    expect(run(t, ['guardsmen'])).toEqual([]);
+    expect(run(t, ['guardsmen', 'specialist'])).toEqual([1]);
+    expect(run(t, undefined)).toEqual([1]);
+  });
+
+  test('engineer corps, siege engines and monsters follow the same rule', () => {
+    const t = [
+      node(1, { values: [9], name: "Engineer corps' strength I", unitIds: [16] }),
+      node(2, { values: [9], name: "Siege engines' strength I", unitIds: [16] }),
+      node(3, { values: [9], name: "Monsters' strength I", unitIds: [149] }),
+    ];
+    const all = ['melee', 'engineers', 'monsters'] as const;
+    const go = (groups: ('guardsmen' | 'specialist' | 'monster' | 'engineers')[]) =>
+      ids(
+        planTalentPriorities({
+          talents: t,
+          heroLevel: 200,
+          points: 5,
+          kinds: [...all],
+          priority: DEFAULT_TALENT_PRIORITY,
+          weightsByGoal: withDefaultStatWeights({}),
+          groups,
+        }).steps.filter((s) => !s.filler),
+      );
+    expect(go(['guardsmen'])).toEqual([]);
+    expect(go(['engineers']).sort()).toEqual([1, 2]);
+    expect(go(['monster'])).toEqual([3]);
+  });
+
+  test('a bonus for all the army and the categories is not a group bonus', () => {
+    const t = [
+      node(1, { values: [9], name: 'Army strength', unitIds: [1, 21] }),
+      node(2, { values: [9], name: "Melee units' strength I", unitIds: [6] }),
+    ];
+    expect(run(t, ['guardsmen']).sort()).toEqual([1, 2]);
+  });
+
+  test('on the real table, a guardsmen-only army puts at most one opening rank into a group it does not use', () => {
+    const plan = planTalentPriorities({
+      talents: realTalents,
+      heroLevel: 150,
+      points: 120,
+      kinds: ALL,
+      priority: DEFAULT_TALENT_PRIORITY,
+      weightsByGoal: withDefaultStatWeights({}),
+      groups: ['guardsmen'],
+    });
+    const deepest = new Map<string, number>();
+    for (const s of plan.steps) {
+      const name = realTalents.find((t) => t.id === s.nodeId)!.name;
+      if (
+        /^(Specialists'|Monsters'|Engineer corps'|Siege engines'|Chance for (specialists|monsters|engineer corps))/.test(
+          name,
+        )
+      )
+        deepest.set(name, Math.max(deepest.get(name) ?? 0, s.rank));
+    }
+    // A rank on such a node is only ever the one a path to a stronger node has to pass through.
+    expect([...deepest.values()].filter((rank) => rank > 1)).toEqual([]);
+    expect(plan.steps.length).toBeGreaterThan(0);
   });
 });

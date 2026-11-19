@@ -249,6 +249,12 @@ export function addTalentCrypts(profile: Record<string, unknown>): Record<string
   return { ...profile, talents: { crypts: ['common', 'rare', 'epic'], ...profile.talents } };
 }
 
+/** `13 → 14` for one profile (B-23): the talents gain the troop-group overrides, none (follow the account). */
+export function addTalentGroupOverrides(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainObject(profile.talents)) return profile;
+  return { ...profile, talents: { groupOverrides: {}, ...profile.talents } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -269,6 +275,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `10 → 11`: every profile gains an empty hero talent plan (B-21).
  * `11 → 12`: the talents' single goal becomes rank 1 of an ordered list, with ignore, strength and mode (B-22).
  * `12 → 13`: the talents gain the crypt types that count, all three (B-23).
+ * `13 → 14`: the talents gain the troop-group overrides, none (B-23).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -284,6 +291,7 @@ export const migrations: MigrationTable = {
   10: (doc) => ({ ...doc, schemaVersion: 11, profiles: migrateProfiles(doc, addTalents) }),
   11: (doc) => ({ ...doc, schemaVersion: 12, profiles: migrateProfiles(doc, prioritiseTalentGoals) }),
   12: (doc) => ({ ...doc, schemaVersion: 13, profiles: migrateProfiles(doc, addTalentCrypts) }),
+  13: (doc) => ({ ...doc, schemaVersion: 14, profiles: migrateProfiles(doc, addTalentGroupOverrides) }),
 };
 
 /**
@@ -308,6 +316,7 @@ export const profileMigrations: MigrationTable = {
   10: addTalents,
   11: prioritiseTalentGoals,
   12: addTalentCrypts,
+  13: addTalentGroupOverrides,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -331,6 +340,7 @@ export const savedStackMigrations: MigrationTable = {
   10: identity,
   11: identity,
   12: identity,
+  13: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

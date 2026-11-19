@@ -81,6 +81,72 @@ const UNIT_SCOPED_STATS: ReadonlySet<string> = new Set([
   'FACTORY_PRODUCTION_SPEED',
 ]);
 
+/**
+ * What one point of strength is worth on each troop group, against a guardsmen point (= 1): the median of what
+ * experiment 363 measured on 22 armies, the gain of the plan's sweet-spot march per point. It was flat across
+ * the whole scale (no diminishing returns), and it follows how much of the army a group is: specialists, monsters
+ * and the categories are worth less than guardsmen because most armies field fewer of them. Engineers have no
+ * reading (no army fielded them) and take the specialists' figure. These are **typical shares**; the share of
+ * the player's own army is a later refinement.
+ */
+export const STRENGTH_SHARES = {
+  army: 1.11,
+  guardsmen: 1,
+  mounted: 0.41,
+  melee: 0.23,
+  ranged: 0.2,
+  specialist: 0.14,
+  monster: 0.14,
+  engineers: 0.14,
+  flying: 0.06,
+} as const;
+
+/** The troop group a strength node is about, read from the game's own node name. */
+const STRENGTH_STEMS: readonly (readonly [string, keyof typeof STRENGTH_SHARES])[] = [
+  ["Guardsmen's strength", 'guardsmen'],
+  ["Specialists' strength", 'specialist'],
+  ["Monsters' strength", 'monster'],
+  ["Engineer corps' strength", 'engineers'],
+  ["Siege engines' strength", 'engineers'],
+  ["Melee units' strength", 'melee'],
+  ["Ranged units' strength", 'ranged'],
+  ["Mounted units' strength", 'mounted'],
+  ["Flying units' strength", 'flying'],
+  ['Army strength', 'army'],
+];
+
+/** What a strength node's points are worth against a guardsmen point; 1 for any other node. */
+export function strengthShareOf(rec: Pick<TalentRecord, 'name' | 'stats'>): number {
+  if (!rec.stats.includes('UNIT_POWER')) return 1;
+  const hit = STRENGTH_STEMS.find(([stem]) => rec.name.startsWith(stem));
+  return hit === undefined ? 1 : STRENGTH_SHARES[hit[1]];
+}
+
+/** The troop groups a bonus can be about: the player may not use some of them at all. */
+export const TROOP_GROUPS = ['guardsmen', 'specialist', 'monster', 'engineers'] as const;
+export type TroopGroup = (typeof TROOP_GROUPS)[number];
+
+/** The group a troop-bonus node is for, read from the game's own node name; null for the army and the categories. */
+const GROUP_STEMS: readonly (readonly [RegExp, TroopGroup])[] = [
+  [/^Guardsmen's /, 'guardsmen'],
+  [/^Chance for guardsmen /, 'guardsmen'],
+  [/^Specialists' /, 'specialist'],
+  [/^Chance for specialists /, 'specialist'],
+  [/^Monsters' /, 'monster'],
+  [/^Chance for monsters /, 'monster'],
+  [/^Engineer corps' /, 'engineers'],
+  [/^Chance for engineer corps /, 'engineers'],
+  [/^Siege engines' /, 'engineers'],
+];
+
+/** Stats a group gate applies to: the ones about what a unit does in a fight. */
+const GROUP_GATED_STATS: ReadonlySet<string> = new Set(['UNIT_POWER', 'UNIT_HEALTH', 'UNIT_CRIT']);
+
+export function troopGroupOf(rec: Pick<TalentRecord, 'name' | 'stats'>): TroopGroup | null {
+  if (!rec.stats.some((s) => GROUP_GATED_STATS.has(s))) return null;
+  return GROUP_STEMS.find(([re]) => re.test(rec.name))?.[1] ?? null;
+}
+
 /** The crypt types a player explores. */
 export const CRYPT_TYPES = ['common', 'rare', 'epic'] as const;
 export type CryptType = (typeof CRYPT_TYPES)[number];
@@ -159,6 +225,8 @@ export interface TalentPlanInput {
   weights?: Readonly<Partial<Record<string, number>>>;
   /** The unit kinds whose bonuses count. */
   kinds: ReadonlySet<UnitKind> | readonly UnitKind[];
+  /** The troop groups the player uses; a bonus for another group counts for nothing. Absent means every group. */
+  groups?: ReadonlySet<TroopGroup> | readonly TroopGroup[];
   /** The crypt types whose bonuses count; absent means every type. */
   crypts?: ReadonlySet<CryptType> | readonly CryptType[];
 }
@@ -341,20 +409,29 @@ function planCore(
   for (const g of ranked) for (const s of TALENT_GOALS[g]) goalOf.set(s, g);
   const kinds = new Set<UnitKind>(input.kinds);
   const crypts = input.crypts === undefined ? undefined : new Set<CryptType>(input.crypts);
+  const groups = input.groups === undefined ? undefined : new Set<TroopGroup>(input.groups);
 
   const nodes = new Map<number, Prepared>();
   for (const rec of talents) {
     const byGoal = { battle: 0, economy: 0, archeology: 0 } as Record<TalentGoal, number>;
+    const share = strengthShareOf(rec);
     for (const s of rec.stats) {
       const g = goalOf.get(s);
       if (g === undefined) continue;
-      byGoal[g] = Math.max(byGoal[g], goalWeight[g] * (weightsByGoal[g]?.[s] ?? 1));
+      byGoal[g] = Math.max(
+        byGoal[g],
+        goalWeight[g] * (weightsByGoal[g]?.[s] ?? 1) * (s === 'UNIT_POWER' ? share : 1),
+      );
     }
     const scoped = rec.stats.some((s) => UNIT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
     const cryptScoped = rec.stats.some((s) => CRYPT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
-    const counts = cryptScoped
-      ? rec.unitIds.some((id) => cryptCounts(id, crypts))
-      : !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
+    const group = troopGroupOf(rec);
+    const groupCounts = groups === undefined || group === null || groups.has(group);
+    const counts = !groupCounts
+      ? false
+      : cryptScoped
+        ? rec.unitIds.some((id) => cryptCounts(id, crypts))
+        : !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
     let weight = 0;
     let goal: TalentGoal | null = null;
     for (const g of ranked) {

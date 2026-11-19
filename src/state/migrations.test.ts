@@ -525,6 +525,7 @@ describe('migrate', () => {
       weights: {},
       forcedUnitKinds: [],
       crypts: ['common', 'rare', 'epic'],
+      groupOverrides: {},
       pointsOverride: null,
     });
     expect(migrated.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
@@ -568,6 +569,7 @@ describe('migrate', () => {
       forcedUnitKinds: ['flying', 'monsters'],
       pointsOverride: 40,
       crypts: ['common', 'rare', 'epic'],
+      groupOverrides: {},
     });
   });
 
@@ -589,6 +591,24 @@ describe('migrate', () => {
     expect(talents?.crypts).toEqual(['common', 'rare', 'epic']);
     expect(talents?.heroLevel).toBe(120);
     expect(talents?.weights).toEqual({ battle: { UNIT_HEALTH: 2 } });
+  });
+
+  it('v13 → v14 adds the troop-group overrides, none, and keeps every other talents field', () => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const { groupOverrides: _overrides, ...old } = profile.talents;
+    const fixture = JSON.parse(
+      JSON.stringify({
+        ...doc,
+        schemaVersion: 13,
+        profiles: [{ ...profile, talents: { ...old, heroLevel: 130, crypts: ['rare'] } }],
+      }),
+    ) as Record<string, unknown>;
+    expect(migrations[13]?.(fixture).schemaVersion).toBe(14);
+    const talents = migrate(fixture).profiles[0]?.talents;
+    expect(talents?.groupOverrides).toEqual({});
+    expect(talents?.heroLevel).toBe(130);
+    expect(talents?.crypts).toEqual(['rare']);
   });
 
   it('v11 → v12 falls back to the default order when the saved goal is not one it knows', () => {
@@ -613,6 +633,7 @@ describe('migrate', () => {
       forcedUnitKinds: ['flying', 'monsters'],
       pointsOverride: 40,
       crypts: ['rare'],
+      groupOverrides: { specialist: false },
     };
     const stored = { ...doc, profiles: [{ ...profile, talents }] };
     expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.talents).toEqual(talents);

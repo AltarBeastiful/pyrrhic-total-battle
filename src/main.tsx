@@ -16,6 +16,7 @@ import { registerServiceWorker } from '@/pwa/register';
 import { loadKernel } from '@/kernel/boot';
 import { createLocalStorageAdapter } from '@/state/storage';
 import { initPersistence, useStore } from '@/state/store';
+import { bindPageToHash } from '@/ui/pageHash';
 import { consumeShareFragment } from '@/ui/shareFragment';
 import { applyTheme, cssVariablesResolver, documentColorSchemeManager, theme } from '@/ui/theme';
 import { trackUnsavedChanges, withSaveTracking } from '@/ui/uiStore';
@@ -50,6 +51,9 @@ void requestPersistentStorage();
 // A share link is decoded before the first paint and parked in the UI store; `LoadSharedDialog` asks
 // what to do with it, and the fragment is stripped from the address bar straight away (ADR-0005).
 void consumeShareFragment();
+
+// `#talents` opens the hero talent planner, so a reload comes back to the page the player was on.
+bindPageToHash();
 
 const container = document.getElementById('root');
 if (!container) {

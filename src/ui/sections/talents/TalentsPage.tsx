@@ -46,6 +46,7 @@ import { TALENT_TREES, type TalentRecord, type TalentTree as TreeId } from '@/da
 import {
   goalHasUnitStats,
   STATS_OFF_BY_DEFAULT,
+  STRENGTH_SHARES,
   withDefaultStatWeights,
   goalOfTree,
   planTalentPriorities,
@@ -53,12 +54,14 @@ import {
   TALENT_GOALS as GOAL_STATS,
   talentGoalWeights,
   type TalentPriority,
+  type TroopGroup,
   type TalentPriorityStep,
   type UnitKind,
 } from '@/engine/talents';
 import {
   TALENT_CRYPT_TYPES,
   TALENT_MODES,
+  TALENT_TROOP_GROUPS,
   TALENT_STRENGTHS,
   TALENT_UNIT_KINDS,
   type TalentCryptType,
@@ -71,7 +74,7 @@ import {
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
-import { fieldedKinds } from './armyKinds';
+import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
 import { treePoints } from './spentPoints';
 import classes from './talents.module.css';
@@ -93,6 +96,28 @@ const MODE_LABELS: Readonly<Record<TalentMode, string>> = { blended: 'Blended', 
 const MODE_HELP: Readonly<Record<TalentMode, string>> = {
   blended: 'One list: each point goes where it adds the most after the goal weights.',
   strict: 'Fills rank 1 first, then rank 2, then rank 3.',
+};
+
+/** The groups the measured strength shares are shown for, in the order a player reads them. */
+const SHARE_LABELS: readonly (readonly [keyof typeof STRENGTH_SHARES, string])[] = [
+  ['army', 'Army'],
+  ['guardsmen', 'Guardsmen'],
+  ['mounted', 'Mounted'],
+  ['melee', 'Melee'],
+  ['ranged', 'Ranged'],
+  ['specialist', 'Specialists'],
+  ['monster', 'Monsters'],
+  ['flying', 'Flying'],
+];
+const SHARES_NOTE = `A strength point counts by troop group, measured on 22 armies: ${SHARE_LABELS.map(
+  ([key, label]) => `${label} x${String(STRENGTH_SHARES[key])}`,
+).join(', ')}.`;
+
+const GROUP_LABELS: Readonly<Record<TroopGroup, string>> = {
+  guardsmen: 'Guardsmen',
+  specialist: 'Specialists',
+  monster: 'Monsters',
+  engineers: 'Engineers',
 };
 
 const CRYPT_LABELS: Readonly<Record<TalentCryptType, string>> = {
@@ -120,8 +145,29 @@ export function TalentsPage() {
     () => (profile === undefined ? new Set<UnitKind>() : fieldedKinds(profile)),
     [profile],
   );
+  const fieldedGroupSet = useMemo(
+    () => (profile === undefined ? new Set<TroopGroup>() : fieldedGroups(profile)),
+    [profile],
+  );
+  const overrides = talentsState?.groupOverrides;
+  /** The groups that count: what the account fields, then the player's own switches over it. */
+  const groups = useMemo(() => {
+    const out = new Set<TroopGroup>(fieldedGroupSet);
+    for (const group of TALENT_TROOP_GROUPS) {
+      const forcedState = overrides?.[group];
+      if (forcedState === true) out.add(group);
+      else if (forcedState === false) out.delete(group);
+    }
+    return out;
+  }, [fieldedGroupSet, overrides]);
   const forced = talentsState?.forcedUnitKinds;
-  const kinds = useMemo(() => new Set<UnitKind>([...fielded, ...(forced ?? [])]), [fielded, forced]);
+  // Monsters and engineers are a kind and a group at once: a group switched on brings its kind.
+  const kinds = useMemo(() => {
+    const out = new Set<UnitKind>([...fielded, ...(forced ?? [])]);
+    if (groups.has('monster')) out.add('monsters');
+    if (groups.has('engineers')) out.add('engineers');
+    return out;
+  }, [fielded, forced, groups]);
 
   const plan = useMemo(() => {
     if (talentsState === undefined) return null;
@@ -143,10 +189,11 @@ export function TalentsPage() {
         weightsByGoal: withDefaultStatWeights(talentsState.weights),
         kinds,
         crypts: talentsState.crypts,
+        groups,
       }),
       goalWeights: talentGoalWeights(priority),
     };
-  }, [talentsState, kinds]);
+  }, [talentsState, kinds, groups]);
 
   if (profile === undefined || talentsState === undefined || plan === null) return null;
   const { plan: result, goalWeights } = plan;
@@ -374,6 +421,11 @@ export function TalentsPage() {
                   <Text fw={600} size="sm">
                     {GOAL_LABELS[goal]}
                   </Text>
+                  {goal === 'battle' && (
+                    <Text size="xs" c="dimmed">
+                      {SHARES_NOTE}
+                    </Text>
+                  )}
                   {GOAL_STATS[goal].map((stat) => {
                     const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
                     const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
@@ -409,6 +461,41 @@ export function TalentsPage() {
               ))}
             </Stack>
           </Disclosure>
+          {goalHasUnitStats('battle') && active.includes('battle') && (
+            <Disclosure
+              title="Troop groups"
+              summary={
+                TALENT_TROOP_GROUPS.filter((g) => groups.has(g))
+                  .map((g) => GROUP_LABELS[g])
+                  .join(', ') || 'None'
+              }
+            >
+              <Stack gap="xs">
+                {TALENT_TROOP_GROUPS.map((group) => {
+                  const inArmy = fieldedGroupSet.has(group);
+                  return (
+                    <Checkbox
+                      key={group}
+                      label={GROUP_LABELS[group]}
+                      description={inArmy ? 'In your army' : undefined}
+                      checked={groups.has(group)}
+                      onChange={(event) => {
+                        const on = event.currentTarget.checked;
+                        const rest = { ...talentsState.groupOverrides };
+                        // Back to what the account says is no override at all.
+                        if (on === inArmy) delete rest[group];
+                        else rest[group] = on;
+                        edit({ groupOverrides: rest });
+                      }}
+                    />
+                  );
+                })}
+                <Text size="sm" c="dimmed">
+                  A group you do not use gets no points, beyond the one rank that opens a stronger talent.
+                </Text>
+              </Stack>
+            </Disclosure>
+          )}
           {active.includes('archeology') && (
             <Disclosure
               title="Crypts that count"
@@ -445,7 +532,7 @@ export function TalentsPage() {
               summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
             >
               <Stack gap="xs">
-                {TALENT_UNIT_KINDS.map((kind) => {
+                {TALENT_UNIT_KINDS.filter((kind) => kind !== 'monsters').map((kind) => {
                   const inArmy = fielded.has(kind);
                   return (
                     <Checkbox

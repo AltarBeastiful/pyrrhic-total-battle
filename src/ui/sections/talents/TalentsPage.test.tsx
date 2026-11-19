@@ -232,6 +232,14 @@ test('every stat has a tick, set by the defaults: carrying capacity and march sp
   expect(countBox('Crypt exploration efficiency').checked).toBe(true);
 });
 
+test('research speed has its own tick, on; the catch-all economy stat is named for what it is, off', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  expect(countBox('Research speed').checked).toBe(true);
+  expect(countBox('Tile bonus').checked).toBe(false);
+  expect(screen.queryByRole('checkbox', { name: /other economy bonuses/i, hidden: true })).toBeNull();
+});
+
 test('ticking a stat that is off saves a weight of 1, unticking one that is on saves 0, and going back drops the override', () => {
   renderWithTheme(<TalentsPage />);
   fireEvent.click(screen.getByRole('button', { name: /weights/i }));
@@ -255,6 +263,45 @@ test('a saved weight shows in the field and a stat off by default shows 0', () =
   expect(field('Strength').value).toBe('1');
 });
 
+test('the Strength weight shows what a point is worth on each troop group, as measured', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  const note = screen.getByText(/measured on 22 armies/i, { ignore: 'script' });
+  expect(note.textContent).toMatch(/Guardsmen x1\b/);
+  expect(note.textContent).toMatch(/Specialists x0\.14/);
+  expect(note.textContent).toMatch(/Mounted x0\.41/);
+  expect(note.textContent).not.toMatch(/—/);
+});
+
+const groupBox = (name: string) => screen.getByRole('checkbox', { name, hidden: true }) as HTMLInputElement;
+
+test('troop groups follow the account, and the player can switch one off or on', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /troop groups/i }));
+  // A first-run account: guardsmen and specialists, no engineers, no monsters.
+  expect(groupBox('Guardsmen').checked).toBe(true);
+  expect(groupBox('Specialists').checked).toBe(true);
+  expect(groupBox('Engineers').checked).toBe(false);
+  expect(groupBox('Monsters').checked).toBe(false);
+  fireEvent.click(groupBox('Specialists'));
+  expect(talentsOf().groupOverrides).toEqual({ specialist: false });
+  fireEvent.click(groupBox('Engineers'));
+  expect(talentsOf().groupOverrides).toEqual({ specialist: false, engineers: true });
+  fireEvent.click(groupBox('Specialists'));
+  fireEvent.click(groupBox('Engineers'));
+  expect(talentsOf().groupOverrides).toEqual({});
+});
+
+test('a group the player switched off puts no talent point into its nodes beyond an opening rank', () => {
+  setTalents({ heroLevel: 150, pointsOverride: 120, groupOverrides: { specialist: false } });
+  renderWithTheme(<TalentsPage />);
+  const text = screen
+    .getAllByRole('article')
+    .map((c) => c.textContent)
+    .join(' ');
+  expect(text).not.toMatch(/Specialists' (strength|health)/);
+});
+
 test('crypt types start all ticked, and unticking one is saved', () => {
   renderWithTheme(<TalentsPage />);
   fireEvent.click(screen.getByRole('button', { name: /crypts that count/i }));
@@ -266,7 +313,27 @@ test('crypt types start all ticked, and unticking one is saved', () => {
   expect(talentsOf().crypts).toEqual(['common', 'epic']);
 });
 
-test('the tree head and the tab count held ranks and planned steps apart, and tiles show the plan order', () => {
+test('a tile shows its rank as a bar over the number, and no #step number', () => {
+  const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0 && t.maxRank >= 10)!;
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 5 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const tree = screen.getByRole('region', { name: 'Economy tree' });
+  const tile = within(tree).getByRole('button', {
+    name: new RegExp(`^${node.name}, rank 5 of ${String(node.maxRank)}`),
+  });
+  const bought = tile.querySelector('[data-bar="bought"]') as HTMLElement;
+  expect(bought).not.toBeNull();
+  expect(bought.style.width).toBe(`${String((5 / node.maxRank) * 100)}%`);
+  expect(tile.textContent).toMatch(/rank 5/);
+  for (const t of within(tree).getAllByRole('button')) expect(t.textContent).not.toMatch(/#\d/);
+});
+
+test('the tree head and the tab count held ranks and planned steps apart, and tiles carry the plan order for a screen reader', () => {
   const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0)!;
   setTalents({
     goals: ['economy', 'battle', 'archeology'],

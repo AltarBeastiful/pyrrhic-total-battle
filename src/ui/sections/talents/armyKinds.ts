@@ -8,7 +8,7 @@
  * corps"), so the row is one kind here too.
  */
 import { unitById } from '@/data';
-import type { UnitKind } from '@/engine/talents';
+import type { TroopGroup, UnitKind } from '@/engine/talents';
 import type { Profile } from '@/state/schema';
 
 import { rowSelection } from '../troops/rows';
@@ -26,4 +26,14 @@ export function fieldedKinds(profile: Pick<Profile, 'troops' | 'mercenaries'>): 
     if (category !== undefined) kinds.add(category);
   }
   return kinds;
+}
+
+/** Which troop groups the account fields: a row with a unit in range, or the engineers row in use (B-23). */
+export function fieldedGroups(profile: Pick<Profile, 'troops'>): Set<TroopGroup> {
+  const groups = new Set<TroopGroup>();
+  if (rowSelection(profile.troops, 'guardsmen').length > 0) groups.add('guardsmen');
+  if (rowSelection(profile.troops, 'specialists').length > 0) groups.add('specialist');
+  if (rowSelection(profile.troops, 'monsters').length > 0) groups.add('monster');
+  if (profile.troops.engineers !== null) groups.add('engineers');
+  return groups;
 }

@@ -101,3 +101,10 @@ Each talent bonus gets a usefulness factor worked out from the account's army. S
 - Carrying capacity is already part of the Battle goal today and competes at weight 1; that is the bug this removes.
 - `SKLEP_*` stats map to exploration efficiency (strike damage), explore twice (crit chance), exploration cost (price cut) and crypt experience (experience); the code names stay.
 - The unit-id tags 202, 17, 90 and 325 mark Common, Rare, Epic and all crypts in the talent table.
+- **Decided during the build (2026-11-19).**
+  - Strength is valued by troop group with a typical-share table from experiment 363 (guardsmen 1, army 1.11, mounted 0.41, melee 0.23, ranged 0.2, specialists 0.14, monsters 0.14, engineers 0.14 provisional, flying 0.06). The share of the player's own army is a later refinement. Health and double-damage chance stay at weight 1: the plan's damage figure cannot see them (health reorders the enemy's kill order; double damage is left out of the bill).
+  - A troop group the player does not use (Guardsmen, Specialists, Monsters, Engineers) gets no points beyond the one opening rank a path to a stronger node needs. The group follows what the account fields and the player can switch it off or on (schema v14, `groupOverrides`).
+  - "Other economy bonuses" is named for what it is: Tile bonus.
+  - The page is in the address bar: `#talents` reloads to the talents page.
+  - Tree tiles show the rank as a bar over the number; the plan-order number is gone from the tile (kept in the accessible name).
+

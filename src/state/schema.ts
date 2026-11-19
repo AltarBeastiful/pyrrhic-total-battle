@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -436,6 +436,10 @@ export type TalentMode = (typeof TALENT_MODES)[number];
 export const TALENT_CRYPT_TYPES = ['common', 'rare', 'epic'] as const;
 export type TalentCryptType = (typeof TALENT_CRYPT_TYPES)[number];
 
+/** The troop groups a bonus can be for; the player may not use some of them (schema v14). */
+export const TALENT_TROOP_GROUPS = ['guardsmen', 'specialist', 'monster', 'engineers'] as const;
+export type TalentTroopGroup = (typeof TALENT_TROOP_GROUPS)[number];
+
 /** Every goal exactly once, rank 1 first; anything else loads as the default order. */
 const talentGoalOrderSchema = z
   .array(z.enum(TALENT_GOALS))
@@ -470,6 +474,8 @@ export const talentsSchema = z.object({
     .array(z.enum(TALENT_CRYPT_TYPES))
     .refine((c) => new Set(c).size === c.length)
     .catch([...TALENT_CRYPT_TYPES]),
+  /** A troop group forced off (`false`) or on (`true`) whatever the account fields; absent follows the account (B-23). */
+  groupOverrides: z.partialRecord(z.enum(TALENT_TROOP_GROUPS), z.boolean()).catch({}),
   pointsOverride: z.int().min(0).nullable(),
 });
 export type Talents = z.infer<typeof talentsSchema>;

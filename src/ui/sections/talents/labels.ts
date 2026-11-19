@@ -16,7 +16,7 @@ export const STAT_LABELS: Readonly<Record<string, string>> = {
   CLAN_CARAVAN_CAPACITY: 'Clan caravan capacity',
   CARAVAN_SPEED: 'Caravan speed',
   BUILDING_UPGRADE_SPEED: 'Building speed',
-  EFFECT_B_ABOVE_1_SUMMARIZABLE: 'Other economy bonuses',
+  EFFECT_B_ABOVE_1_SUMMARIZABLE: 'Tile bonus',
   SKLEP_STRIKE_DAMAGE: 'Crypt exploration efficiency',
   SKLEP_CRIT_PROBABILITY: 'Chance to explore a Crypt twice',
   SKLEP_EXP_BONUS: 'Crypt experience',

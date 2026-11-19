@@ -102,6 +102,27 @@
   overflow-wrap: anywhere;
 }
 
+.bar {
+  display: flex;
+  flex: none;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--mantine-color-default-border);
+}
+
+.barBought {
+  flex: none;
+  background: var(--mantine-primary-color-filled);
+}
+
+.barPlanned {
+  flex: none;
+  background: var(--mantine-primary-color-filled);
+  opacity: 0.45;
+}
+
 .marks {
   display: flex;
   flex-wrap: wrap;

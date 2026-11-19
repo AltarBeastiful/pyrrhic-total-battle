@@ -154,11 +154,26 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
                     {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
                   </span>
                   <span className={classes.name}>{fam.family}</span>
+                  {(bought > 0 || plus > 0) && n.maxRank > 1 && (
+                    <span className={classes.bar} aria-hidden>
+                      <span
+                        className={classes.barBought}
+                        data-bar="bought"
+                        style={{ width: `${String((bought / n.maxRank) * 100)}%` }}
+                      />
+                      <span
+                        className={classes.barPlanned}
+                        data-bar="planned"
+                        style={{
+                          width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
+                        }}
+                      />
+                    </span>
+                  )}
                   {(bought > 0 || plus > 0 || lock !== null) && (
                     <span className={classes.marks}>
                       {bought > 0 && <span>rank {bought}</span>}
                       {plus > 0 && <span>+{plus}</span>}
-                      {step !== null && <span>#{step}</span>}
                       {lock !== null && <span>{lock}</span>}
                     </span>
                   )}
@@ -169,8 +184,9 @@ export function TalentTree({ talents, tree, ranks, plan, selected, onSelect, onR
         </div>
         <Text size="sm" c="dimmed">
           Lines join each node to the node above it that opens it; bold lines lead to nodes the plan spends
-          on. Filled tiles are where the plan spends, and #1 marks the plan&apos;s first step. Dashed tiles
-          are locked: Lv is the hero level they need, Parent means a node above them must hold a rank first.
+          on. Filled tiles are where the plan spends, and the bar on a tile shows its rank out of the maximum,
+          the plan&apos;s share lighter. Dashed tiles are locked: Lv is the hero level they need, Parent means
+          a node above them must hold a rank first.
         </Text>
       </Stack>
       <aside className={classes.detail} data-empty={node === null} aria-label="Selected node">

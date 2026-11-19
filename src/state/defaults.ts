@@ -42,6 +42,7 @@ export const DEFAULT_TALENTS: Talents = {
   weights: {},
   forcedUnitKinds: [],
   crypts: ['common', 'rare', 'epic'],
+  groupOverrides: {},
   pointsOverride: null,
 };
 
