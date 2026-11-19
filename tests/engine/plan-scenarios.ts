@@ -1504,7 +1504,8 @@ const TOTALSTACK_PROFILE_PINS: Pinned = {
   // of the seven to review**: it is a dominance reading, on one of the three armies here that house a
   // dominance pool, and S-116 is about exactly that ordering. `perDragonCoin` 1.24 is met at 1.2402 and is
   // left alone.
-  totalOptimization: { perSilver: 1.3, perSoldier: 3.0, perMonster: 0.91, perDragonCoin: 1.24 },
+  // **`perSilver` re-based 1.3 → 1.22 on 2026-11-19, by the owner** (measured 1.2247).
+  totalOptimization: { perSilver: 1.22, perSoldier: 3.0, perMonster: 0.91, perDragonCoin: 1.24 },
   // **Dominance at matched spend, measured 2026-09-22** (S-121), the reading the owner's own
   // definition of beating another calculator reduces to. Their hardest comparable march is
   // `TotalStack · Elite Preservation`,

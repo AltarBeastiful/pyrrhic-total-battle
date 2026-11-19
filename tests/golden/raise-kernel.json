@@ -3794,10 +3794,7 @@
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "seeded march 6",
     "position": "tight",
-    "moved": {
-      "emerald-dragon": 4,
-      "water-elemental": 9
-    },
+    "moved": {},
     "how": "walked",
     "space": 12,
     "scored": 13
@@ -3893,9 +3890,7 @@
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "seeded march 8",
     "position": "tight",
-    "moved": {
-      "stone-gargoyle": 2
-    },
+    "moved": {},
     "how": "walked",
     "space": 2,
     "scored": 3
@@ -3993,9 +3988,7 @@
     "army": "first-run army, monster tiers 3–5 at 900 dominance (hunters 83 · Bear V 6 — experiment 110’s camp)",
     "march": "seeded march 10",
     "position": "tight",
-    "moved": {
-      "water-elemental": 10
-    },
+    "moved": {},
     "how": "walked",
     "space": 2,
     "scored": 3
@@ -4167,19 +4160,22 @@
     "march": "a fractional mercenary cost",
     "position": "tight",
     "moved": {
-      "battle-boar": 15,
-      "emerald-dragon": 12,
+      "bear-5": 6,
+      "desert-vanquisher": 3,
+      "emerald-dragon": 11,
       "epic-monster-hunter-6": 40,
+      "ettin": 3,
+      "fearsome-manticore": 3,
+      "flaming-centaur": 3,
       "gorgon-medusa": 11,
-      "ice-phoenix": 8,
-      "magic-dragon": 9,
-      "many-armed-guardian": 11,
-      "stone-gargoyle": 11,
-      "water-elemental": 28
+      "ice-phoenix": 7,
+      "magic-dragon": 8,
+      "many-armed-guardian": 4,
+      "water-elemental": 24
     },
     "how": "searched",
     "space": 6721263360000,
-    "scored": 2745971
+    "scored": 2460838
   },
   {
     "army": "first-run army, monster tiers 3–7 at 20 000 dominance (hunters 83 · Bear V 6 — experiment 129’s camp)",
@@ -4905,9 +4901,11 @@
     "march": "a fractional mercenary cost",
     "position": "tight",
     "moved": {
-      "battle-boar": 38,
+      "battle-boar": 37,
+      "bear-5": 6,
       "desert-vanquisher": 3,
-      "emerald-dragon": 33,
+      "emerald-dragon": 32,
+      "epic-monster-hunter-6": 40,
       "ettin": 3,
       "fearsome-manticore": 3,
       "flaming-centaur": 3,
@@ -4915,12 +4913,12 @@
       "ice-phoenix": 8,
       "magic-dragon": 9,
       "many-armed-guardian": 11,
-      "stone-gargoyle": 28,
-      "water-elemental": 78
+      "stone-gargoyle": 27,
+      "water-elemental": 76
     },
     "how": "searched",
     "space": 514382400000,
-    "scored": 574399
+    "scored": 918816
   },
   {
     "army": "the 4 000-leadership case of 2026-09-15 (TotalStack’s query; TotalStack and Kai’s answers as rows)",

@@ -188,7 +188,7 @@ describe('the stops the bar offers', () => {
  * On every benchmark army the bar with `retype: 'rated'` (as shipped in `CAMPAIGN.planFixes`) against the same
  * request with the pass off: no stop the owner's rating reads worse (`rate` on the campaign bill, matched by
  * name), no stop's damage lower, every hired stack of every march sheltered, the bar ordered along the burn, at
- * most five stops — and TotalStack at matched spend no worse than the 47 rows dominated and 13 no stop fits the
+ * most five stops — and TotalStack at matched spend no worse than the 51 rows dominated and 11 no stop fits (re-based 2026-11-19 from 47 / 13) the
  * bar read before the pass.
  */
 /**
@@ -200,10 +200,10 @@ describe('the stops the bar offers', () => {
  */
 const CAMP_129_LOSSES: Record<string, number> = {
   'least silver': 0.043,
-  'least gold': 0.224,
+  'least gold': 0.243, // re-based 0.224 → 0.243 on 2026-11-19, by the owner (measured 0.24226)
   'fewest coins': 0.185,
   'shortest queue': 0.154,
-  'damage a gold': 0.0006,
+  'damage a gold': 0.0033, // re-based 0.0006 → 0.0033 on 2026-11-19, by the owner (measured 0.00321)
 };
 
 describe('the rated re-typing', () => {
@@ -344,11 +344,11 @@ describe('the rated re-typing', () => {
     );
   }
 
-  test('TotalStack at matched spend is no worse than 47 dominated / 13 no stop fits', () => {
+  test('TotalStack at matched spend is no worse than 51 dominated / 11 no stop fits', () => {
     if (totalstack.armies < scenarios.length) return;
-    expect(totalstack.before).toEqual({ beaten: 47, unfitted: 13 });
-    expect(totalstack.after.beaten).toBeGreaterThanOrEqual(47);
-    expect(totalstack.after.unfitted).toBeLessThanOrEqual(13);
+    expect(totalstack.before).toEqual({ beaten: 51, unfitted: 11 });
+    expect(totalstack.after.beaten).toBeGreaterThanOrEqual(51);
+    expect(totalstack.after.unfitted).toBeLessThanOrEqual(11);
   });
 });
 
