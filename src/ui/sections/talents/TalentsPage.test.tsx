@@ -32,6 +32,10 @@ function type(label: string | RegExp, value: string): void {
   fireEvent.blur(field);
 }
 
+const GOALS = 'Goals, best value per point first';
+const economyRadio = () =>
+  within(screen.getByRole('radiogroup', { name: GOALS })).getByRole('radio', { name: /Economy/ });
+
 const LIST = 'Spend in this order';
 const rows = () => within(screen.getByRole('list', { name: LIST })).getAllByRole('listitem');
 
@@ -56,9 +60,7 @@ test('a different goal gives a different plan, saved on the account', () => {
   type('Hero level', '150');
   type('Points to spend', '30');
   const battle = rows()[0]!.textContent;
-  fireEvent.click(
-    within(screen.getByRole('radiogroup', { name: 'Goal' })).getByRole('radio', { name: 'Economy' }),
-  );
+  fireEvent.click(economyRadio());
   expect(rows()[0]!.textContent).not.toBe(battle);
   expect(talentsOf().goal).toBe('economy');
 });
@@ -100,8 +102,34 @@ test('Units that count is offered for the economy goal too, and its empty messag
   renderWithTheme(<TalentsPage />);
   type('Hero level', '150');
   type('Points to spend', '30');
-  fireEvent.click(
-    within(screen.getByRole('radiogroup', { name: 'Goal' })).getByRole('radio', { name: 'Economy' }),
-  );
+  fireEvent.click(economyRadio());
   expect(screen.getByText('Units that count')).toBeTruthy();
+});
+
+test('the goals are ranked by value per point and tapping one selects it', () => {
+  renderWithTheme(<TalentsPage />);
+  type('Hero level', '150');
+  type('Points to spend', '30');
+  const radios = within(screen.getByRole('radiogroup', { name: GOALS })).getAllByRole('radio');
+  expect(radios).toHaveLength(3);
+  const names = radios.map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
+  expect(names[0]).toMatch(/^1\. /);
+  expect(names[0]).toMatch(/per point, \d+ points? spent/);
+  const economy = names.findIndex((n) => /Economy/.test(n));
+  fireEvent.click(economyRadio());
+  expect(talentsOf().goal).toBe('economy');
+  // Selecting does not reorder: the ranking only informs.
+  const after = within(screen.getByRole('radiogroup', { name: GOALS }))
+    .getAllByRole('radio')
+    .map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
+  expect(after).toEqual(names);
+  expect(after[economy]).toMatch(/Economy/);
+});
+
+test('a goal with nothing plannable is last and says why', () => {
+  renderWithTheme(<TalentsPage />);
+  const labels = within(screen.getByRole('radiogroup', { name: GOALS }))
+    .getAllByRole('radio')
+    .map((r) => (r as HTMLInputElement).labels?.[0]?.textContent ?? '');
+  expect(labels.every((l) => /No points to spend/.test(l))).toBe(true);
 });

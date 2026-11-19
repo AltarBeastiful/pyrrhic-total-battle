@@ -5,6 +5,7 @@ import type { TalentRecord } from '@/data/types';
 import {
   TALENT_GOALS,
   planTalents,
+  rankTalentGoals,
   rankGain,
   unitKindOf,
   type TalentGoal,
@@ -489,5 +490,59 @@ describe('a parent id that is not in the table', () => {
   test('is a broken table, not a satisfied condition', () => {
     const t = [node(1, { values: [1], parents: [99] })];
     expect(() => plan(t)).toThrow(/99/);
+  });
+});
+
+describe('rankTalentGoals', () => {
+  const eco = (id: number, values: number[]) =>
+    node(id, { values, stats: ['STORAGE_BOOST'], tree: 'economy' });
+  const rank = (talents: TalentRecord[], over: Partial<Parameters<typeof rankTalentGoals>[0]> = {}) =>
+    rankTalentGoals({ talents, heroLevel: 200, points: 10, kinds: ALL, ...over });
+
+  test('orders the goals by weighted value per point spent, best first', () => {
+    const r = rank([node(1, { values: [2, 4] }), eco(2, [5, 10])]);
+    expect(r.map((g) => g.goal)).toEqual(['economy', 'battle', 'archeology']);
+    expect(r[0]!.valuePerPoint).toBeCloseTo(5);
+    expect(r[0]!.pointsSpent).toBe(2);
+    expect(r[1]!.valuePerPoint).toBeCloseTo(2);
+  });
+
+  test('a goal with nothing plannable goes last with a reason and no ratio', () => {
+    const r = rank([node(1, { values: [2] })]);
+    expect(r[0]!.goal).toBe('battle');
+    expect(r[0]!.reason).toBeNull();
+    for (const g of r.slice(1)) {
+      expect(g.valuePerPoint).toBeNull();
+      expect(g.reason).toMatch(/.+/);
+    }
+    expect(r.slice(1).map((g) => g.goal)).toEqual(['economy', 'archeology']);
+  });
+
+  test('uses each goal own weights and the plan matches planTalents for that goal', () => {
+    const talents = [node(1, { values: [2] }), node(2, { values: [3], stats: ['UNIT_HEALTH'] })];
+    const r = rank(talents, { weightsByGoal: { battle: { UNIT_HEALTH: 4 } } });
+    const b = r.find((g) => g.goal === 'battle')!;
+    expect(b.plan).toEqual(
+      planTalents({
+        talents,
+        heroLevel: 200,
+        points: 10,
+        goal: 'battle',
+        kinds: ALL,
+        weights: { UNIT_HEALTH: 4 },
+      }),
+    );
+    expect(b.valuePerPoint).toBeCloseTo((2 + 12) / 2);
+  });
+
+  test('no points gives every goal the no-points reason, in the default order', () => {
+    const r = rank([node(1, { values: [2] })], { points: 0 });
+    expect(r.map((g) => g.goal)).toEqual(['battle', 'economy', 'archeology']);
+    expect(r.every((g) => g.reason !== null)).toBe(true);
+  });
+
+  test('ties keep the default goal order', () => {
+    const r = rank([node(1, { values: [2] }), eco(2, [2])]);
+    expect(r.slice(0, 2).map((g) => g.goal)).toEqual(['battle', 'economy']);
   });
 });

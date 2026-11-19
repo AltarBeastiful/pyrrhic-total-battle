@@ -13,15 +13,15 @@
  *
  * Design rules 1, 3-5, 15, 17-24, 26, 28.
  */
-import { Checkbox, Group, SegmentedControl, Stack, Text } from '@mantine/core';
+import { Checkbox, Group, Radio, SegmentedControl, Stack, Text } from '@mantine/core';
 import { useMemo, useState } from 'react';
 
 import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentTree as TreeId } from '@/data/types';
 import {
   goalHasUnitStats,
-  planTalents,
   rankGain,
+  rankTalentGoals,
   TALENT_GOALS as GOAL_STATS,
   type TalentStep,
   type UnitKind,
@@ -81,22 +81,23 @@ export function TalentsPage() {
   const forced = talentsState?.forcedUnitKinds;
   const kinds = useMemo(() => new Set<UnitKind>([...fielded, ...(forced ?? [])]), [fielded, forced]);
 
-  const plan = useMemo(() => {
+  /** The three goals compared on the same points, best value per point first; the saved goal's plan is among them. */
+  const ranking = useMemo(() => {
     if (talentsState === undefined) return null;
     const ranks: Record<number, number> = {};
     for (const [key, value] of Object.entries(talentsState.ranks)) ranks[Number(key)] = value;
-    return planTalents({
+    return rankTalentGoals({
       talents: TALENTS,
       heroLevel: talentsState.heroLevel,
       points: talentsState.pointsOverride ?? 0,
       ranks,
-      goal: talentsState.goal,
-      weights: talentsState.weights[talentsState.goal] ?? {},
+      weightsByGoal: talentsState.weights,
       kinds,
     });
   }, [talentsState, kinds]);
+  const plan = ranking?.find((r) => r.goal === goal)?.plan ?? null;
 
-  if (profile === undefined || talentsState === undefined || plan === null) return null;
+  if (profile === undefined || talentsState === undefined || ranking === null || plan === null) return null;
 
   const edit = (patch: Partial<Talents>): void => {
     updateProfile(profile.id, (current) => ({ talents: { ...current.talents, ...patch } }));
@@ -146,18 +147,36 @@ export function TalentsPage() {
               }}
             />
           </Group>
-          <SegmentedControl
-            fullWidth
-            aria-label="Goal"
+          <Radio.Group
+            label="Goals, best value per point first"
+            description="Choose one to see its plan, totals and tree."
             value={goal}
-            data={TALENT_GOALS.map((g) => ({ value: g, label: GOAL_LABELS[g] }))}
             onChange={(v) => {
               const next = TALENT_GOALS.find((g) => g === v);
               if (next === undefined) return;
               edit({ goal: next });
               setTree(null);
             }}
-          />
+          >
+            <Stack gap="xs" mt="xs" role="presentation">
+              {ranking.map((r, i) => (
+                <Radio
+                  key={r.goal}
+                  value={r.goal}
+                  label={
+                    <>
+                      <Text span fw={600}>{`${String(i + 1)}. ${GOAL_LABELS[r.goal]}`}</Text>
+                      <Text span size="sm" c="dimmed" display="block">
+                        {r.valuePerPoint === null
+                          ? (r.reason ?? '')
+                          : `${percent(r.valuePerPoint)} per point, ${plural(r.pointsSpent, 'point')} spent`}
+                      </Text>
+                    </>
+                  }
+                />
+              ))}
+            </Stack>
+          </Radio.Group>
           <Disclosure title="Weights" summary="Every stat counts 1 unless you change it">
             <Stack gap="xs">
               {goalStats.map((stat) => (
