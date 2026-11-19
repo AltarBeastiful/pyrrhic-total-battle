@@ -43,6 +43,7 @@ interface Run {
   cost: number;
   gain: number;
   opens: number | null;
+  filler: boolean;
 }
 
 /** Consecutive ranks of one node read as one line: "ranks 3 to 9" rather than seven. */
@@ -52,12 +53,26 @@ function runsOf(steps: readonly TalentStep[]): Run[] {
     const rec = BY_ID.get(s.nodeId)!;
     const gain = rankGain(rec.values, s.rank);
     const last = runs.at(-1);
-    if (last !== undefined && last.nodeId === s.nodeId && last.opens === s.opens && last.to === s.rank - 1) {
+    if (
+      last !== undefined &&
+      last.nodeId === s.nodeId &&
+      last.opens === s.opens &&
+      last.filler === s.filler &&
+      last.to === s.rank - 1
+    ) {
       last.to = s.rank;
       last.cost += s.cost;
       last.gain += gain;
     } else {
-      runs.push({ nodeId: s.nodeId, from: s.rank, to: s.rank, cost: s.cost, gain, opens: s.opens });
+      runs.push({
+        nodeId: s.nodeId,
+        from: s.rank,
+        to: s.rank,
+        cost: s.cost,
+        gain,
+        opens: s.opens,
+        filler: s.filler,
+      });
     }
   }
   return runs;
@@ -252,6 +267,11 @@ export function TalentsPage() {
                         ? `, rank ${String(run.to)}`
                         : `, ranks ${String(run.from)} to ${String(run.to)}`}
                       {`, ${plural(run.cost, 'point')}, ${run.gain >= 0 ? '+' : ''}${percent(run.gain)} ${rec.stats.map(statLabel).join(', ')}`}
+                      {run.filler && (
+                        <Text span c="dimmed">
+                          {'. Filler, no gain for this goal'}
+                        </Text>
+                      )}
                       {opened !== null && opened !== undefined && (
                         <Text span c="dimmed">{`. Opens ${opened.name}`}</Text>
                       )}
@@ -261,8 +281,7 @@ export function TalentsPage() {
               </ol>
               {plan.pointsLeft > 0 && (
                 <Text size="sm" c="dimmed">
-                  {plural(plan.pointsLeft, 'point')} left over: no further rank that is open adds anything for
-                  this goal and army, or the next one costs more than what is left.
+                  {plural(plan.pointsLeft, 'point')} left over: less than the cheapest rank still open.
                 </Text>
               )}
             </>

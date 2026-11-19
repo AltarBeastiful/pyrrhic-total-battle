@@ -106,6 +106,8 @@ export interface TalentStep {
   value: number;
   /** Set when the step is bought to open this stronger node; null for a step bought for itself. */
   opens: number | null;
+  /** Set when the step adds nothing for this goal and army: it only spends points that nothing better could use. */
+  filler: boolean;
 }
 
 export interface TalentLock {
@@ -274,7 +276,14 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
 
     for (const a of best.ancestors) {
       const ap = nodes.get(a)!;
-      steps.push({ nodeId: a, rank: 1, cost: ap.rec.costs[0]!, value: rankValue(ap, 1), opens: best.id });
+      steps.push({
+        nodeId: a,
+        rank: 1,
+        cost: ap.rec.costs[0]!,
+        value: rankValue(ap, 1),
+        opens: best.id,
+        filler: false,
+      });
       held.set(a, 1);
       left -= ap.rec.costs[0]!;
     }
@@ -286,10 +295,57 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
         cost: p.rec.costs[r - 1]!,
         value: rankValue(p, r),
         opens: null,
+        filler: false,
       });
       left -= p.rec.costs[r - 1]!;
     }
     held.set(best.id, best.upTo);
+  }
+
+  // Fillers: every point is spent. Nothing of value is affordable any more, so buy any rank that is legal now,
+  // parents of valuable nodes (and valuable nodes the points cannot yet finish) first, then the dearest rank
+  // that fits (the least waste), then the lowest id. Only a remainder below the cheapest legal rank stays.
+  const useful = new Set<number>();
+  for (const p of nodes.values()) {
+    if (p.weight <= 0) continue;
+    const mark = (id: number): void => {
+      if (useful.has(id)) return;
+      useful.add(id);
+      for (const parent of nodes.get(id)!.rec.parents) mark(parent);
+    };
+    mark(p.rec.id);
+  }
+  while (left > 0) {
+    let pick: { p: Prepared; cost: number } | null = null;
+    for (const p of nodes.values()) {
+      const cur = held.get(p.rec.id) ?? 0;
+      if (cur >= p.rec.maxRank) continue;
+      if (
+        cur === 0 &&
+        ((p.rec.levelGate ?? 0) > heroLevel || p.rec.parents.some((q) => (held.get(q) ?? 0) < 1))
+      )
+        continue;
+      const cost = p.rec.costs[cur]!;
+      if (cost > left) continue;
+      const better =
+        pick === null ||
+        (useful.has(p.rec.id) ? 1 : 0) - (useful.has(pick.p.rec.id) ? 1 : 0) > 0 ||
+        ((useful.has(p.rec.id) ? 1 : 0) === (useful.has(pick.p.rec.id) ? 1 : 0) &&
+          (cost > pick.cost || (cost === pick.cost && p.rec.id < pick.p.rec.id)));
+      if (better) pick = { p, cost };
+    }
+    if (!pick) break;
+    const rank = (held.get(pick.p.rec.id) ?? 0) + 1;
+    steps.push({
+      nodeId: pick.p.rec.id,
+      rank,
+      cost: pick.cost,
+      value: rankValue(pick.p, rank),
+      opens: null,
+      filler: true,
+    });
+    held.set(pick.p.rec.id, rank);
+    left -= pick.cost;
   }
 
   let nextGate: TalentNextGate | null = null;

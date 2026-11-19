@@ -206,7 +206,7 @@ describe('planTalents on small tables', () => {
 
   test('forcing a kind on is the same as fielding it', () => {
     const t = [node(1, { values: [50], unitIds: [31] })];
-    expect(plan(t, { kinds: [], points: 1 }).steps).toEqual([]);
+    expect(plan(t, { kinds: [], points: 1 }).steps.filter((s) => !s.filler)).toEqual([]);
     expect(ids(plan(t, { kinds: new Set<UnitKind>(['flying']), points: 1 }).steps)).toEqual([1]);
   });
 
@@ -239,7 +239,7 @@ describe('planTalents on small tables', () => {
       node(2, { values: [1], stats: ['UNIT_HEALTH'] }),
     ];
     const r = plan(t, { points: 2 });
-    expect(ids(r.steps)).toEqual([2]);
+    expect(ids(r.steps.filter((s) => !s.filler))).toEqual([2]);
     expect(Object.keys(r.after)).toEqual(['UNIT_HEALTH']);
   });
 
@@ -254,7 +254,9 @@ describe('planTalents on small tables', () => {
 
   test('a weight of zero removes a stat from the plan', () => {
     const t = [node(1, { values: [3] }), node(2, { values: [2], stats: ['UNIT_HEALTH'] })];
-    expect(ids(plan(t, { points: 2, weights: { UNIT_POWER: 0 } }).steps)).toEqual([2]);
+    expect(ids(plan(t, { points: 2, weights: { UNIT_POWER: 0 } }).steps.filter((s) => !s.filler))).toEqual([
+      2,
+    ]);
   });
 
   test('a price cut is a gain: the more negative the better', () => {
@@ -297,10 +299,57 @@ describe('planTalents on small tables', () => {
     expect(r.pointsSpent).toBe(0);
   });
 
-  test('nothing in the goal worth anything means no steps and the points are left', () => {
-    const r = plan([node(1, { values: [1], stats: ['MINE_PRODUCTION_SPEED'] })], { points: 4 });
+  test('nothing in the goal worth anything still spends the points, as flagged fillers worth 0', () => {
+    const r = plan([node(1, { values: [1, 1, 1], stats: ['MINE_PRODUCTION_SPEED'] })], { points: 4 });
+    expect(r.steps.map((s) => [s.nodeId, s.rank, s.value, s.filler])).toEqual([
+      [1, 1, 0, true],
+      [1, 2, 0, true],
+      [1, 3, 0, true],
+    ]);
+    expect(r.pointsSpent).toBe(3);
+    expect(r.pointsLeft).toBe(1); // nothing left to buy
+  });
+
+  test('steps bought for their value are not fillers', () => {
+    const r = plan([node(1, { values: [1, 2] })], { points: 2 });
+    expect(r.steps.every((s) => !s.filler)).toBe(true);
+  });
+
+  test('a remainder smaller than the cheapest buyable rank is the only thing left over', () => {
+    const t = [
+      node(1, { values: [5], costs: [10] }),
+      node(2, { values: [0], costs: [10], stats: ['MINE_PRODUCTION_SPEED'] }),
+    ];
+    const r = plan(t, { points: 25 });
+    expect(r.pointsLeft).toBe(5);
+    expect(r.steps.map((s) => [s.nodeId, s.filler])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
+  test('fillers open the parents of valuable nodes first, then the cheapest waste', () => {
+    const t = [
+      node(1, { values: [0, 0], stats: ['MINE_PRODUCTION_SPEED'], levelGate: 50 }), // gated now
+      node(2, { values: [0, 0], stats: ['MINE_PRODUCTION_SPEED'] }), // parent of a valuable node out of reach
+      node(3, { values: [9], parents: [2], levelGate: 50 }),
+      node(4, { values: [0, 0], stats: ['MINE_PRODUCTION_SPEED'] }), // unrelated
+    ];
+    const r = plan(t, { points: 2, heroLevel: 10 });
+    expect(r.steps.map((s) => [s.nodeId, s.filler])).toEqual([
+      [2, true],
+      [2, true],
+    ]);
+  });
+
+  test('a filler never breaks a gate or a parent rule', () => {
+    const t = [
+      node(1, { values: [0], stats: ['MINE_PRODUCTION_SPEED'], levelGate: 99 }),
+      node(2, { values: [0], stats: ['MINE_PRODUCTION_SPEED'], parents: [1] }),
+    ];
+    const r = plan(t, { points: 5, heroLevel: 10 });
     expect(r.steps).toEqual([]);
-    expect(r.pointsLeft).toBe(4);
+    expect(r.pointsLeft).toBe(5);
   });
 
   test('nodes the hero cannot open are reported with their reason', () => {
@@ -417,8 +466,65 @@ describe('planTalents on the real table', () => {
     const flying = new Set(realTalents.filter((t) => /^Flying units'/.test(t.name)).map((t) => t.id));
     const monsters = new Set(realTalents.filter((t) => /^Monsters'/.test(t.name)).map((t) => t.id));
     for (const s of r.steps) {
-      if (flying.has(s.nodeId) || monsters.has(s.nodeId)) expect(s.opens).not.toBeNull();
+      if (!s.filler && (flying.has(s.nodeId) || monsters.has(s.nodeId))) expect(s.opens).not.toBeNull();
     }
+  });
+
+  describe('every point is spent', () => {
+    const cheapest = (
+      r: ReturnType<typeof planTalents>,
+      heroLevel: number,
+      ranks: Record<number, number>,
+    ) => {
+      for (const s of r.steps) ranks[s.nodeId] = s.rank;
+      let min = Infinity;
+      for (const t of realTalents) {
+        const cur = ranks[t.id] ?? 0;
+        if (cur >= t.maxRank) continue;
+        if (cur === 0 && ((t.levelGate ?? 0) > heroLevel || t.parents.some((p) => (ranks[p] ?? 0) < 1)))
+          continue;
+        min = Math.min(min, t.costs[cur]!);
+      }
+      return min;
+    };
+
+    test.each([
+      ['all', ALL],
+      ['melee', ['melee']],
+      ['none', []],
+    ] as const)('Battle, %s kinds, leaves less than the cheapest buyable rank', (_n, kinds) => {
+      for (const heroLevel of [1, 24, 50, 64, 65, 150, 300, 400]) {
+        for (const points of [100, 300, 600, 1500]) {
+          const r = planTalents({ talents: realTalents, heroLevel, points, goal: 'battle', kinds });
+          expect(r.pointsSpent + r.pointsLeft).toBe(points);
+          expect(r.pointsLeft).toBeLessThan(cheapest(r, heroLevel, {}));
+        }
+      }
+    });
+
+    test('Battle at level 150 with 300 points buys Expert nodes', () => {
+      const r = planTalents({
+        talents: realTalents,
+        heroLevel: 150,
+        points: 300,
+        goal: 'battle',
+        kinds: ALL,
+      });
+      const expert = new Set(realTalents.filter((t) => t.tree === 'expert').map((t) => t.id));
+      expect(r.steps.some((s) => expert.has(s.nodeId) && !s.filler)).toBe(true);
+    });
+
+    test('a level below the Expert gate spends its points on the battle tree and fills the rest', () => {
+      const r = planTalents({
+        talents: realTalents,
+        heroLevel: 50,
+        points: 1500,
+        goal: 'battle',
+        kinds: ALL,
+      });
+      expect(r.steps.some((s) => s.filler)).toBe(true);
+      expect(r.pointsLeft).toBeGreaterThan(0); // the whole open table is bought
+    });
   });
 
   test('the plan is a pure function: same input, same output, input untouched', () => {
