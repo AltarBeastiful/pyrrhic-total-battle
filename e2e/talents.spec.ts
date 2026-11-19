@@ -31,7 +31,10 @@ for (const { name, width, height } of WIDTHS) {
     expect(await list.getByRole('listitem').count()).toBeGreaterThan(0);
     await expect(page.getByText(/plan spends \d+ of 40 points/i)).toBeVisible();
 
-    await page.getByRole('radiogroup', { name: 'Goal' }).getByText('Economy', { exact: true }).click();
+    await page
+      .getByRole('radiogroup', { name: 'Goals, best value per point first' })
+      .getByRole('radio', { name: /Economy/ })
+      .check({ force: true });
     await expect(list.getByRole('listitem').first()).not.toHaveText(first);
 
     // A node on the tree: pick its tile and type a rank.

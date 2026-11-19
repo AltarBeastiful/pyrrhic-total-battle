@@ -390,3 +390,69 @@ export function planTalents(input: TalentPlanInput): TalentPlan {
     nextGate,
   };
 }
+
+export interface TalentGoalRankInput {
+  talents: readonly TalentRecord[];
+  heroLevel: number;
+  points: number;
+  ranks?: Readonly<Record<number, number>>;
+  /** Weights per goal, then per stat; a goal or stat missing counts 1. */
+  weightsByGoal?: Readonly<Partial<Record<TalentGoal, Readonly<Partial<Record<string, number>>>>>>;
+  kinds: ReadonlySet<UnitKind> | readonly UnitKind[];
+}
+
+export interface TalentGoalRank {
+  goal: TalentGoal;
+  plan: TalentPlan;
+  /** Weighted percentage points gained per point spent, or null when the goal plans nothing. */
+  valuePerPoint: number | null;
+  pointsSpent: number;
+  /** Why nothing is planned; null when something is. */
+  reason: string | null;
+}
+
+/**
+ * The three goals compared on the same points: `planTalents` for each goal with its own weights, ordered by
+ * weighted value per point spent (best first, ties in the default goal order). A goal that plans nothing goes
+ * last, with the reason.
+ */
+export function rankTalentGoals(input: TalentGoalRankInput): TalentGoalRank[] {
+  const kindCount = new Set<UnitKind>(input.kinds).size;
+  const rows = (Object.keys(TALENT_GOALS) as TalentGoal[]).map((goal): TalentGoalRank => {
+    const plan = planTalents({
+      talents: input.talents,
+      heroLevel: input.heroLevel,
+      points: input.points,
+      ...(input.ranks === undefined ? {} : { ranks: input.ranks }),
+      goal,
+      weights: input.weightsByGoal?.[goal] ?? {},
+      kinds: input.kinds,
+    });
+    const value = plan.steps.reduce((sum, s) => sum + s.value, 0);
+    if (plan.pointsSpent > 0 && value > 0) {
+      return {
+        goal,
+        plan,
+        valuePerPoint: value / plan.pointsSpent,
+        pointsSpent: plan.pointsSpent,
+        reason: null,
+      };
+    }
+    const reason =
+      input.points <= 0
+        ? 'No points to spend'
+        : kindCount === 0 && goalHasUnitStats(goal)
+          ? 'No unit counts yet'
+          : 'Nothing open adds anything';
+    return { goal, plan, valuePerPoint: null, pointsSpent: plan.pointsSpent, reason };
+  });
+  return rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) => {
+      const av = a.row.valuePerPoint;
+      const bv = b.row.valuePerPoint;
+      if (av === null || bv === null) return av === bv ? a.i - b.i : av === null ? 1 : -1;
+      return Math.abs(av - bv) <= EPS ? a.i - b.i : bv - av;
+    })
+    .map(({ row }) => row);
+}
