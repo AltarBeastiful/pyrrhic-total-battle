@@ -30,6 +30,8 @@ export interface TalentTreeProps {
   onRank: (id: number, rank: number) => void;
   /** The + on the selected tile spends one rank on it, as in the game; the page checks the lock and the stock. */
   onSpend: (id: number) => void;
+  /** Buy as many ranks of the node as the stock pays, to its maximum. */
+  onMax: (id: number) => void;
   /** Spend this tree's plan steps up to the node and its neighbours on the same level. */
   onSpendPlan: (nodeId: number) => void;
 }
@@ -72,6 +74,7 @@ export function TalentTree({
   onSelect,
   onRank,
   onSpend,
+  onMax,
   onSpendPlan,
 }: TalentTreeProps) {
   const nodes = talents.filter((t) => t.tree === tree);
@@ -255,6 +258,7 @@ export function TalentTree({
             bought={ranks[String(node.id)] ?? 0}
             plan={plan}
             onRank={onRank}
+            onMax={onMax}
             onSpendPlan={onSpendPlan}
           />
         ) : (
@@ -273,6 +277,7 @@ function NodeEditor({
   bought,
   plan,
   onRank,
+  onMax,
   onSpendPlan,
 }: {
   node: TalentRecord;
@@ -280,6 +285,7 @@ function NodeEditor({
   bought: number;
   plan: TalentPlan;
   onRank: (id: number, rank: number) => void;
+  onMax: (id: number) => void;
   onSpendPlan: (nodeId: number) => void;
 }) {
   // Spending up to here takes this tree's steps up to the node and its neighbours on the same level.
@@ -369,6 +375,28 @@ function NodeEditor({
         <Text size="sm" c="dimmed" pb={8}>
           of {node.maxRank}
         </Text>
+      </Group>
+      <Group gap="xs">
+        <Button
+          size="xs"
+          variant="light"
+          disabled={bought >= node.maxRank}
+          onClick={() => {
+            onMax(node.id);
+          }}
+        >
+          Max
+        </Button>
+        <Button
+          size="xs"
+          variant="default"
+          disabled={bought <= 0}
+          onClick={() => {
+            set(0);
+          }}
+        >
+          Reset
+        </Button>
       </Group>
     </Stack>
   );

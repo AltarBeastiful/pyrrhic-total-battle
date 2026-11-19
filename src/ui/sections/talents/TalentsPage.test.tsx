@@ -121,6 +121,7 @@ test('strength and mode change the order with no button press', () => {
   pick('How points are spread', 'Strict order');
   expect(talentsOf().mode).toBe('strict');
   expect(card('Next point').textContent).toMatch(/Battle/);
+  fireEvent.click(screen.getByRole('button', { name: /what blended and strict order mean/i }));
   expect(screen.getByText(/rank 1 first, then rank 2/i)).toBeTruthy();
   pick('How points are spread', 'Blended');
 
@@ -378,23 +379,36 @@ test('a click does not spend on a locked tile, past the maximum, or beyond the s
   fireEvent.click(plusOf(node.name));
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
   expect(screen.getByText(/not enough points/i)).toBeTruthy();
-  const locked = TALENTS.find((t) => t.tree === 'economy' && t.parents.length > 0 && t.layout.y > 3)!;
-  setTalents({ pointsOverride: 50 });
-  fireEvent.click(tileOf(locked.name));
-  fireEvent.click(plusOf(locked.name));
-  expect(talentsOf().ranks[String(locked.id)]).toBeUndefined();
+  // A tile locked by hero level cannot be bought round, whatever the stock.
+  const gated = TALENTS.find((t) => t.tree === 'economy' && (t.levelGate ?? 0) > 1)!;
+  setTalents({ pointsOverride: 50, heroLevel: 1, ranks: {} });
+  fireEvent.click(tileOf(gated.name));
+  fireEvent.click(plusOf(gated.name));
+  expect(talentsOf().ranks[String(gated.id)]).toBeUndefined();
 });
 
-test('Mark as spent on the next point buys it and moves the plan on', () => {
-  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 30 });
+test('a + on a tile locked only by a parent opens the parent with one rank first', () => {
+  const node = rootNode();
+  const child = TALENTS.find(
+    (t) => t.tree === 'economy' && t.parents.length === 1 && t.parents[0] === node.id,
+  )!;
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 50 });
   renderWithTheme(<TalentsPage />);
-  const before = card('Next point').textContent;
-  fireEvent.click(within(card('Next point')).getByRole('button', { name: /mark as spent/i, hidden: true }));
-  expect(Object.values(talentsOf().ranks).reduce((a, b) => a + b, 0)).toBe(1);
-  expect(screen.getByText(/29 of 30 points left/i)).toBeTruthy();
-  expect(card('Next point').textContent === before && Object.keys(talentsOf().ranks).length === 0).toBe(
-    false,
-  );
+  fireEvent.click(tileOf(child.name));
+  fireEvent.click(plusOf(child.name));
+  expect(talentsOf().ranks[String(node.id)]).toBe(1);
+  expect(talentsOf().ranks[String(child.id)]).toBe(1);
+});
+
+test('Max in the detail buys to the maximum the stock pays, and Reset takes the node back to zero', () => {
+  const node = rootNode();
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 500 });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(tileOf(node.name));
+  fireEvent.click(screen.getByRole('button', { name: 'Max' }));
+  expect(talentsOf().ranks[String(node.id)]).toBe(node.maxRank);
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  expect(talentsOf().ranks[String(node.id)]).toBeUndefined();
 });
 
 test('a full rank reads differently from an empty one, on the bar and in the label', () => {

@@ -61,3 +61,28 @@ export function stepsUpToNode<S extends { nodeId: number }>(
   });
   return steps.slice(0, last + 1).filter((s) => inTree.has(s.nodeId));
 }
+
+/**
+ * The nodes that must hold a rank before `id` can be bought, parents first: every ancestor that holds none yet,
+ * the way the plan counts a locked node (all parents, not one). Empty when the node is already open.
+ */
+export function unlockChain(
+  talents: readonly { id: number; parents: readonly number[] }[],
+  ranks: Readonly<Record<string, number>>,
+  id: number,
+): number[] {
+  const byId = new Map(talents.map((t) => [t.id, t]));
+  const order: number[] = [];
+  const seen = new Set<number>();
+  const visit = (nid: number, isTarget: boolean): void => {
+    if (seen.has(nid)) return;
+    seen.add(nid);
+    const rec = byId.get(nid);
+    if (rec === undefined) return;
+    if (!isTarget && (ranks[String(nid)] ?? 0) >= 1) return;
+    for (const parent of rec.parents) visit(parent, false);
+    if (!isTarget) order.push(nid);
+  };
+  visit(id, true);
+  return order;
+}

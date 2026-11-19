@@ -36,6 +36,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  Tooltip,
   VisuallyHidden,
 } from '@mantine/core';
 import { ArrowDown, ArrowUp, CircleHelp, RotateCcw } from 'lucide-react';
@@ -76,7 +77,7 @@ import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
-import { spentPoints, stepsUpToNode, treePoints } from './spentPoints';
+import { spentPoints, stepsUpToNode, treePoints, unlockChain } from './spentPoints';
 import classes from './talents.module.css';
 import { TalentTree } from './TalentTree';
 
@@ -126,6 +127,9 @@ const CRYPT_LABELS: Readonly<Record<TalentCryptType, string>> = {
   epic: 'Epic',
 };
 
+const STRENGTH_TIP = TALENT_STRENGTHS.map((x) => `${STRENGTH_LABELS[x]}. ${STRENGTH_HELP[x]}`).join(' ');
+const MODE_TIP = TALENT_MODES.map((m) => `${MODE_LABELS[m]}. ${MODE_HELP[m]}`).join(' ');
+
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 
 /** The weight shown on a goal row: "Weight 0.5". */
@@ -137,6 +141,8 @@ export function TalentsPage() {
   const [tree, setTree] = useState<TreeId | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [modeHelpOpen, setModeHelpOpen] = useState(false);
+  const modeHelpId = useId();
   const [message, setMessage] = useState('');
   const helpId = useId();
 
@@ -283,8 +289,12 @@ export function TalentsPage() {
     setMessage(`${TREE_LABELS[id]} reset: its points are back in your stock.`);
   };
 
-  /** A click on a tile: one rank, as in the game, if the node is open, not full and the stock pays for it. */
-  const spend = (id: number): void => {
+  /**
+   * Buy up to `count` ranks of a node, as the game does: one at a time while the stock pays. A node that is only
+   * locked by a parent opens first by buying one rank in each ancestor that holds none; a hero-level lock
+   * cannot be bought round.
+   */
+  const buy = (id: number, count: number): void => {
     const rec = BY_ID.get(id);
     if (rec === undefined) return;
     const bought = talentsState.ranks[String(id)] ?? 0;
@@ -293,26 +303,49 @@ export function TalentsPage() {
       return;
     }
     const lock = bought === 0 ? result.locked[id] : undefined;
-    if (lock !== undefined) {
+    if (lock?.reason === 'level') {
+      setMessage(`${rec.name} needs hero level ${String(lock.level)}.`);
+      return;
+    }
+    if (stock === null) {
+      setMessage('Not enough points: type your stock of talent points first.');
+      return;
+    }
+    const chain = lock === undefined ? [] : unlockChain(TALENTS, talentsState.ranks, id);
+    let have = left ?? 0;
+    const unlockCost = chain.reduce((sum, c) => sum + (BY_ID.get(c)?.costs[0] ?? 0), 0);
+    let take = 0;
+    if (unlockCost <= have) {
+      have -= unlockCost;
+      while (take < count && bought + take < rec.maxRank) {
+        const c = rec.costs[bought + take] ?? 0;
+        if (c > have) break;
+        have -= c;
+        take++;
+      }
+    }
+    if (take === 0) {
+      const need = unlockCost + (rec.costs[bought] ?? 0);
       setMessage(
-        lock.reason === 'level'
-          ? `${rec.name} needs hero level ${String(lock.level)}.`
-          : `${rec.name} is locked until a node above it has a rank.`,
+        `Not enough points: ${rec.name} rank ${String(bought + 1)} costs ${String(need)}${chain.length > 0 ? ' with the nodes above it' : ''}, you have ${String(left ?? 0)} left.`,
       );
       return;
     }
-    const cost = rec.costs[bought] ?? 0;
-    const have = left ?? 0;
-    if (stock === null || cost > have) {
-      setMessage(
-        stock === null
-          ? 'Not enough points: type your stock of talent points first.'
-          : `Not enough points: ${rec.name} rank ${String(bought + 1)} costs ${String(cost)}, you have ${String(have)} left.`,
-      );
-      return;
-    }
-    setRank(id, bought + 1);
-    setMessage(`${rec.name} is now rank ${String(bought + 1)}. ${String(have - cost)} points left.`);
+    updateProfile(profile.id, (current) => {
+      const ranks = { ...current.talents.ranks };
+      for (const c of chain) ranks[String(c)] = Math.max(ranks[String(c)] ?? 0, 1);
+      ranks[String(id)] = bought + take;
+      return { talents: { ...current.talents, ranks } };
+    });
+    const opened = chain.map((c) => BY_ID.get(c)?.name ?? '');
+    setMessage(
+      `${opened.length > 0 ? `Opened ${opened.join(', ')}. ` : ''}${rec.name} is now rank ${String(bought + take)}. ${String(have)} points left.`,
+    );
+  };
+
+  /** A click on +: one rank. */
+  const spend = (id: number): void => {
+    buy(id, 1);
   };
 
   const rankOf = new Map(active.map((g, i) => [g, i + 1]));
@@ -347,7 +380,51 @@ export function TalentsPage() {
                   edit({ pointsOverride: v });
                 }}
               />
+              <Stack gap={4}>
+                <Text size="sm" fw={500}>
+                  How points are spread
+                </Text>
+                <Group gap={4} wrap="nowrap">
+                  <SegmentedControl
+                    size="xs"
+                    aria-label="How points are spread"
+                    value={talentsState.mode}
+                    data={TALENT_MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
+                    onChange={(v) => {
+                      const next = TALENT_MODES.find((m) => m === v);
+                      if (next !== undefined) edit({ mode: next });
+                    }}
+                  />
+                  <Tooltip multiline w={280} withArrow label={MODE_TIP}>
+                    <ActionIcon
+                      variant="subtle"
+                      color="slate"
+                      size="md"
+                      aria-label="What Blended and Strict order mean"
+                      aria-expanded={modeHelpOpen}
+                      aria-controls={modeHelpId}
+                      onClick={() => {
+                        setModeHelpOpen((open) => !open);
+                      }}
+                    >
+                      <CircleHelp size={16} aria-hidden />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              </Stack>
             </Group>
+            <div id={modeHelpId} hidden={!modeHelpOpen}>
+              {modeHelpOpen && (
+                <Stack gap={4}>
+                  {TALENT_MODES.map((m) => (
+                    <Text key={m} size="sm">
+                      <Text span fw={600}>{`${MODE_LABELS[m]}. `}</Text>
+                      {MODE_HELP[m]}
+                    </Text>
+                  ))}
+                </Stack>
+              )}
+            </div>
 
             <Stack gap={6}>
               <Text fw={600} size="sm">
@@ -397,19 +474,21 @@ export function TalentsPage() {
                               if (next !== undefined) edit({ strength: next });
                             }}
                           />
-                          <ActionIcon
-                            variant="subtle"
-                            color="slate"
-                            size="md"
-                            aria-label="What Focus, Lean and Even mean"
-                            aria-expanded={helpOpen}
-                            aria-controls={helpId}
-                            onClick={() => {
-                              setHelpOpen((open) => !open);
-                            }}
-                          >
-                            <CircleHelp size={16} aria-hidden />
-                          </ActionIcon>
+                          <Tooltip multiline w={280} withArrow label={STRENGTH_TIP}>
+                            <ActionIcon
+                              variant="subtle"
+                              color="slate"
+                              size="md"
+                              aria-label="What Focus, Lean and Even mean"
+                              aria-expanded={helpOpen}
+                              aria-controls={helpId}
+                              onClick={() => {
+                                setHelpOpen((open) => !open);
+                              }}
+                            >
+                              <CircleHelp size={16} aria-hidden />
+                            </ActionIcon>
+                          </Tooltip>
                         </Group>
                       )}
                       <Group gap={2} wrap="nowrap" className={classes.goalMoves}>
@@ -468,172 +547,6 @@ export function TalentsPage() {
                 )}
               </div>
             </Stack>
-
-            <Stack gap={4}>
-              <Text fw={600} size="sm">
-                How points are spread
-              </Text>
-              <SegmentedControl
-                aria-label="How points are spread"
-                value={talentsState.mode}
-                data={TALENT_MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
-                onChange={(v) => {
-                  const next = TALENT_MODES.find((m) => m === v);
-                  if (next !== undefined) edit({ mode: next });
-                }}
-                style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
-              />
-              <Text size="sm" c="dimmed">
-                {MODE_HELP[talentsState.mode]}
-              </Text>
-            </Stack>
-
-            <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
-              <Stack gap="md">
-                {active.map((goal) => (
-                  <Stack key={goal} gap="xs">
-                    <Text fw={600} size="sm">
-                      {GOAL_LABELS[goal]}
-                    </Text>
-                    {goal === 'battle' && (
-                      <Text size="xs" c="dimmed">
-                        {SHARES_NOTE}
-                      </Text>
-                    )}
-                    <div className={classes.statGrid}>
-                      {GOAL_STATS[goal].map((stat) => {
-                        const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
-                        const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
-                        // A tick sets the weight to 1 and an untick to 0; going back to the default drops the override.
-                        const setWeight = (v: number | null): void => {
-                          const rest = { ...talentsState.weights[goal] };
-                          if (v === null || v === (offByDefault ? 0 : 1)) delete rest[stat];
-                          else rest[stat] = v;
-                          edit({ weights: { ...talentsState.weights, [goal]: rest } });
-                        };
-                        return (
-                          <div key={stat} className={classes.statCell}>
-                            <Checkbox
-                              label={statLabel(stat)}
-                              checked={weight > 0}
-                              onChange={(event) => setWeight(event.currentTarget.checked ? 1 : 0)}
-                            />
-                            <div className={classes.statWeight}>
-                              <NumberField
-                                label="Weight"
-                                accessibleName={`Weight of ${statLabel(stat)}`}
-                                value={weight}
-                                allowDecimal
-                                allowEmpty
-                                min={0}
-                                w={64}
-                                onChange={setWeight}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Stack>
-                ))}
-              </Stack>
-            </Disclosure>
-            {goalHasUnitStats('battle') && active.includes('battle') && (
-              <Disclosure
-                title="Troop groups"
-                summary={
-                  TALENT_TROOP_GROUPS.filter((g) => groups.has(g))
-                    .map((g) => GROUP_LABELS[g])
-                    .join(', ') || 'None'
-                }
-              >
-                <Stack gap="xs">
-                  {TALENT_TROOP_GROUPS.map((group) => {
-                    const inArmy = fieldedGroupSet.has(group);
-                    return (
-                      <Checkbox
-                        key={group}
-                        label={GROUP_LABELS[group]}
-                        description={inArmy ? 'In your army' : undefined}
-                        checked={groups.has(group)}
-                        onChange={(event) => {
-                          const on = event.currentTarget.checked;
-                          const rest = { ...talentsState.groupOverrides };
-                          // Back to what the account says is no override at all.
-                          if (on === inArmy) delete rest[group];
-                          else rest[group] = on;
-                          edit({ groupOverrides: rest });
-                        }}
-                      />
-                    );
-                  })}
-                  <Text size="sm" c="dimmed">
-                    A group you do not use gets no points, beyond the one rank that opens a stronger talent.
-                  </Text>
-                </Stack>
-              </Disclosure>
-            )}
-            {active.includes('archeology') && (
-              <Disclosure
-                title="Crypts that count"
-                summary={
-                  talentsState.crypts.length === 0
-                    ? 'None'
-                    : TALENT_CRYPT_TYPES.filter((c) => talentsState.crypts.includes(c))
-                        .map((c) => CRYPT_LABELS[c])
-                        .join(', ')
-                }
-              >
-                <Stack gap="xs">
-                  {TALENT_CRYPT_TYPES.map((type) => (
-                    <Checkbox
-                      key={type}
-                      label={`${CRYPT_LABELS[type]} crypts`}
-                      checked={talentsState.crypts.includes(type)}
-                      onChange={(event) => {
-                        const rest = talentsState.crypts.filter((c) => c !== type);
-                        edit({
-                          crypts: event.currentTarget.checked
-                            ? TALENT_CRYPT_TYPES.filter((c) => c === type || rest.includes(c))
-                            : rest,
-                        });
-                      }}
-                    />
-                  ))}
-                </Stack>
-              </Disclosure>
-            )}
-            {unitStats && (
-              <Disclosure
-                title="Units that count"
-                summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
-              >
-                <Stack gap="xs">
-                  {TALENT_UNIT_KINDS.filter((kind) => kind !== 'monsters').map((kind) => {
-                    const inArmy = fielded.has(kind);
-                    return (
-                      <Checkbox
-                        key={kind}
-                        label={KIND_LABELS[kind]}
-                        description={inArmy ? 'In your army' : undefined}
-                        checked={inArmy || talentsState.forcedUnitKinds.includes(kind)}
-                        disabled={inArmy}
-                        onChange={(event) => {
-                          const on = event.currentTarget.checked;
-                          const rest = talentsState.forcedUnitKinds.filter((k) => k !== kind);
-                          edit({ forcedUnitKinds: on ? [...rest, kind as TalentUnitKind] : rest });
-                        }}
-                      />
-                    );
-                  })}
-                  {fielded.has('engineers') && (
-                    <Text size="sm" c="dimmed">
-                      Engineers count too: your army uses them.
-                    </Text>
-                  )}
-                </Stack>
-              </Disclosure>
-            )}
           </Stack>
         </Panel>
         {shownStats.length > 0 && (
@@ -651,6 +564,157 @@ export function TalentsPage() {
           </Panel>
         )}
       </div>
+
+      <Panel component="section" title="Bonuses selected" meta="What counts toward the plan">
+        <Stack gap="xs">
+          <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
+            <div className={classes.goalCols}>
+              {active.map((goal) => (
+                <Stack key={goal} gap="xs">
+                  <Text fw={600} size="sm">
+                    {GOAL_LABELS[goal]}
+                  </Text>
+                  {goal === 'battle' && (
+                    <Text size="xs" c="dimmed">
+                      {SHARES_NOTE}
+                    </Text>
+                  )}
+                  <div className={classes.statGrid}>
+                    {GOAL_STATS[goal].map((stat) => {
+                      const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
+                      const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
+                      // A tick sets the weight to 1 and an untick to 0; going back to the default drops the override.
+                      const setWeight = (v: number | null): void => {
+                        const rest = { ...talentsState.weights[goal] };
+                        if (v === null || v === (offByDefault ? 0 : 1)) delete rest[stat];
+                        else rest[stat] = v;
+                        edit({ weights: { ...talentsState.weights, [goal]: rest } });
+                      };
+                      return (
+                        <div key={stat} className={classes.statCell}>
+                          <Checkbox
+                            label={statLabel(stat)}
+                            checked={weight > 0}
+                            onChange={(event) => setWeight(event.currentTarget.checked ? 1 : 0)}
+                          />
+                          <div className={classes.statWeight}>
+                            <NumberField
+                              label="Weight"
+                              accessibleName={`Weight of ${statLabel(stat)}`}
+                              value={weight}
+                              allowDecimal
+                              allowEmpty
+                              min={0}
+                              w={64}
+                              onChange={setWeight}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Stack>
+              ))}
+            </div>
+          </Disclosure>
+          {goalHasUnitStats('battle') && active.includes('battle') && (
+            <Disclosure
+              title="Troop groups"
+              summary={
+                TALENT_TROOP_GROUPS.filter((g) => groups.has(g))
+                  .map((g) => GROUP_LABELS[g])
+                  .join(', ') || 'None'
+              }
+            >
+              <Stack gap="xs">
+                {TALENT_TROOP_GROUPS.map((group) => {
+                  const inArmy = fieldedGroupSet.has(group);
+                  return (
+                    <Checkbox
+                      key={group}
+                      label={GROUP_LABELS[group]}
+                      description={inArmy ? 'In your army' : undefined}
+                      checked={groups.has(group)}
+                      onChange={(event) => {
+                        const on = event.currentTarget.checked;
+                        const rest = { ...talentsState.groupOverrides };
+                        // Back to what the account says is no override at all.
+                        if (on === inArmy) delete rest[group];
+                        else rest[group] = on;
+                        edit({ groupOverrides: rest });
+                      }}
+                    />
+                  );
+                })}
+                <Text size="sm" c="dimmed">
+                  A group you do not use gets no points, beyond the one rank that opens a stronger talent.
+                </Text>
+              </Stack>
+            </Disclosure>
+          )}
+          {active.includes('archeology') && (
+            <Disclosure
+              title="Crypts that count"
+              summary={
+                talentsState.crypts.length === 0
+                  ? 'None'
+                  : TALENT_CRYPT_TYPES.filter((c) => talentsState.crypts.includes(c))
+                      .map((c) => CRYPT_LABELS[c])
+                      .join(', ')
+              }
+            >
+              <Stack gap="xs">
+                {TALENT_CRYPT_TYPES.map((type) => (
+                  <Checkbox
+                    key={type}
+                    label={`${CRYPT_LABELS[type]} crypts`}
+                    checked={talentsState.crypts.includes(type)}
+                    onChange={(event) => {
+                      const rest = talentsState.crypts.filter((c) => c !== type);
+                      edit({
+                        crypts: event.currentTarget.checked
+                          ? TALENT_CRYPT_TYPES.filter((c) => c === type || rest.includes(c))
+                          : rest,
+                      });
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Disclosure>
+          )}
+          {unitStats && (
+            <Disclosure
+              title="Units that count"
+              summary={[...kinds].map((k) => KIND_LABELS[k]).join(', ') || 'None'}
+            >
+              <Stack gap="xs">
+                {TALENT_UNIT_KINDS.filter((kind) => kind !== 'monsters').map((kind) => {
+                  const inArmy = fielded.has(kind);
+                  return (
+                    <Checkbox
+                      key={kind}
+                      label={KIND_LABELS[kind]}
+                      description={inArmy ? 'In your army' : undefined}
+                      checked={inArmy || talentsState.forcedUnitKinds.includes(kind)}
+                      disabled={inArmy}
+                      onChange={(event) => {
+                        const on = event.currentTarget.checked;
+                        const rest = talentsState.forcedUnitKinds.filter((k) => k !== kind);
+                        edit({ forcedUnitKinds: on ? [...rest, kind as TalentUnitKind] : rest });
+                      }}
+                    />
+                  );
+                })}
+                {fielded.has('engineers') && (
+                  <Text size="sm" c="dimmed">
+                    Engineers count too: your army uses them.
+                  </Text>
+                )}
+              </Stack>
+            </Disclosure>
+          )}
+        </Stack>
+      </Panel>
 
       <Panel component="section" aria-label="Spend your next points">
         <Disclosure
@@ -769,6 +833,9 @@ export function TalentsPage() {
             onSelect={setSelected}
             onRank={setRank}
             onSpend={spend}
+            onMax={(id) => {
+              buy(id, Infinity);
+            }}
             onSpendPlan={spendPlanToNode}
           />
         </Stack>

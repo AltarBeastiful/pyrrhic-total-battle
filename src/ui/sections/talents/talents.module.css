@@ -131,15 +131,7 @@
   background: var(--mantine-color-body);
 }
 
-/* An empty bar is a hollow outline; a held rank fills solid; a full one turns green: three states, not shades. */
-.bar[data-bar-state='empty'] {
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 4px,
-    var(--mantine-color-default-border) 4px 5px
-  );
-}
-
+/* Empty, part and full read by the fill alone: an empty bar is the plain track, a full one turns green. */
 .barBought {
   flex: none;
   background: var(--mantine-primary-color-filled);
@@ -330,8 +322,16 @@
 /* Weights: ticked stats in a wrapping grid, the weight field small beside its tick. */
 .statGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: 6px 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+/* Each goal is a column of its own: three or four across on a wide screen, one on a phone. */
+.goalCols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 16px 32px;
+  align-items: start;
 }
 
 .statCell {
