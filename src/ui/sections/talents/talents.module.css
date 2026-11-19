@@ -5,7 +5,7 @@
   overflow-y: hidden;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
-  padding: 8px 0;
+  padding: 8px 0 28px;
 }
 
 .plane {
@@ -194,6 +194,15 @@
   cursor: pointer;
 }
 
+.padMax {
+  composes: padButton;
+  width: auto;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .padButton:hover:not(:disabled) {
   background: var(--mantine-color-default-hover);
 }
@@ -244,7 +253,7 @@
 
   .detail {
     bottom: auto;
-    top: 4.5rem;
+    top: 8rem;
   }
 
   .detail[data-empty='true'] {
@@ -353,6 +362,65 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* A tile on the last row has its pad above it, so the canvas edge never cuts it. */
+.pad[data-above='true'] {
+  bottom: auto;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+/* The tree recap above the detail. */
+.recap {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.recapList {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  max-height: 11rem;
+  overflow: auto;
+  font-size: 0.875rem;
+}
+
+.recapRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recapRow dt {
+  min-width: 0;
+}
+
+.recapRow dd {
+  margin: 0;
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mantine-color-teal-6);
+}
+
+/* The floating points banner: stays under the app bar while the tree scrolls. */
+.banner {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 6px 12px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
+  box-shadow: var(--mantine-shadow-sm);
+  font-size: 0.875rem;
 }
 
 /* The tile's bottom line: rank on the left, the bonus it gives on the right. */

@@ -592,3 +592,44 @@ test('a tile shows its rank on the left and its bonus on the right, and the deta
   expect(within(table).getAllByRole('row')).toHaveLength(node.maxRank + 1);
   expect(table.querySelector('tr[data-rank="now"]')!.textContent).toMatch(/^5you are here/);
 });
+
+test('hovering a tile shows its pad with a small max next to +, and leaving hides it', () => {
+  const node = rootNode();
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 500 });
+  renderWithTheme(<TalentsPage />);
+  const box = tileOf(node.name).parentElement!;
+  expect(screen.queryByRole('button', { name: `Add one rank to ${node.name}` })).toBeNull();
+  fireEvent.mouseEnter(box);
+  fireEvent.click(screen.getByRole('button', { name: `Buy ${node.name} up to its maximum` }));
+  expect(talentsOf().ranks[String(node.id)]).toBe(node.maxRank);
+  fireEvent.mouseLeave(box);
+  expect(screen.queryByRole('button', { name: `Add one rank to ${node.name}` })).toBeNull();
+});
+
+test('the points banner says what this tree and all trees hold, planned and spent, and what is left', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 2 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const banner = screen.getByRole('group', { name: 'Points' });
+  expect(banner.textContent).toMatch(/This tree\s*2 spent/);
+  expect(banner.textContent).toMatch(/All trees\s*2 spent.* of 40 in all/);
+  expect(banner.textContent).toMatch(/38 left/);
+});
+
+test('the tree recap sums each stat over the tree', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
+    ranks: { [String(node.id)]: 2 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const recap = screen.getByRole('region', { name: 'Economy bonuses' });
+  expect(recap.textContent).toContain(`+${String(node.values[1])} %`);
+});

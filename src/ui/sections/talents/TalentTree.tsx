@@ -6,7 +6,7 @@
  */
 import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
 import { Lock, Minus, Plus } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
@@ -87,6 +87,8 @@ export function TalentTree({
   onSpendPlan,
 }: TalentTreeProps) {
   const nodes = talents.filter((t) => t.tree === tree);
+  // The pad shows on the selected tile and on the one the pointer or the keyboard is on.
+  const [hovered, setHovered] = useState<number | null>(null);
   const added = plannedByNode(plan);
   const firstStep = firstStepByNode(plan);
   const node = nodes.find((n) => n.id === selected) ?? null;
@@ -160,6 +162,18 @@ export function TalentTree({
                 <div
                   key={n.id}
                   className={classes.tileBox}
+                  onMouseEnter={() => {
+                    setHovered(n.id);
+                  }}
+                  onMouseLeave={() => {
+                    setHovered(null);
+                  }}
+                  onFocus={() => {
+                    setHovered(n.id);
+                  }}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null);
+                  }}
                   style={{
                     left: n.layout.x * CELL_W + (CELL_W - TILE_W) / 2,
                     top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
@@ -227,8 +241,13 @@ export function TalentTree({
                       </span>
                     )}
                   </button>
-                  {selected === n.id && (
-                    <div className={classes.pad} role="group" aria-label={`Ranks of ${n.name}`}>
+                  {(selected === n.id || hovered === n.id) && (
+                    <div
+                      className={classes.pad}
+                      data-above={n.layout.y === rows - 1}
+                      role="group"
+                      aria-label={`Ranks of ${n.name}`}
+                    >
                       <button
                         type="button"
                         className={classes.padButton}
@@ -250,6 +269,17 @@ export function TalentTree({
                       >
                         <Plus size={16} aria-hidden />
                       </button>
+                      <button
+                        type="button"
+                        className={classes.padMax}
+                        aria-label={`Buy ${n.name} up to its maximum`}
+                        disabled={full}
+                        onClick={() => {
+                          onMax(n.id);
+                        }}
+                      >
+                        max
+                      </button>
                     </div>
                   )}
                 </div>
@@ -265,6 +295,7 @@ export function TalentTree({
         </Text>
       </Stack>
       <aside className={classes.detail} data-empty={node === null} aria-label="Selected node">
+        <TreeRecap nodes={nodes} ranks={ranks} plan={plan} tree={tree} />
         {node !== null ? (
           <NodeEditor
             node={node}
@@ -459,5 +490,57 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Every bonus the tree gives, by stat: what the held ranks add, and where the plan takes it. */
+function TreeRecap({
+  nodes,
+  ranks,
+  plan,
+  tree,
+}: {
+  nodes: readonly TalentRecord[];
+  ranks: Readonly<Record<string, number>>;
+  plan: TalentPlan;
+  tree: TreeId;
+}) {
+  const added = plannedByNode(plan);
+  const totals = new Map<string, { now: number; after: number }>();
+  for (const n of nodes) {
+    const bought = ranks[String(n.id)] ?? 0;
+    const upTo = Math.min(n.maxRank, bought + (added.get(n.id) ?? 0));
+    const now = bought > 0 ? (n.values[bought - 1] ?? 0) : 0;
+    const after = upTo > 0 ? (n.values[upTo - 1] ?? 0) : 0;
+    if (now === 0 && after === 0) continue;
+    for (const stat of n.stats) {
+      const label = statLabel(stat);
+      const row = totals.get(label) ?? { now: 0, after: 0 };
+      row.now += now;
+      row.after += after;
+      totals.set(label, row);
+    }
+  }
+  const rows = [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
+  return (
+    <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
+      <Text fw={600} size="sm">
+        {`${TREE_LABELS[tree]} bonuses`}
+      </Text>
+      {rows.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          No bonus yet in this tree.
+        </Text>
+      ) : (
+        <dl className={classes.recapList}>
+          {rows.map(([label, v]) => (
+            <div key={label} className={classes.recapRow}>
+              <dt>{label}</dt>
+              <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
   );
 }

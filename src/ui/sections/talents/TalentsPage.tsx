@@ -348,6 +348,7 @@ export function TalentsPage() {
     buy(id, 1);
   };
 
+  const treePlanned = treePoints(TALENTS, viewTree, talentsState.ranks, result.steps).planned;
   const rankOf = new Map(active.map((g, i) => [g, i + 1]));
 
   return (
@@ -786,6 +787,20 @@ export function TalentsPage() {
 
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
+          <div className={classes.banner} role="group" aria-label="Points">
+            <span>
+              <b>This tree</b> {String(spentPoints(TALENTS, viewTree, talentsState.ranks))} spent
+              {treePlanned > 0 ? ` + ${String(treePlanned)} planned` : ''}
+            </span>
+            <span>
+              <b>All trees</b> {String(heldCost)} spent
+              {result.pointsSpent > 0 ? ` + ${String(result.pointsSpent)} planned` : ''}
+              {stock === null ? '' : ` of ${String(stock)} in all`}
+            </span>
+            <span>
+              <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
+            </span>
+          </div>
           <Group justify="flex-end">
             <Button
               size="compact-sm"
