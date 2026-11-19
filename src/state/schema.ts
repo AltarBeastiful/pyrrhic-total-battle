@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -431,6 +431,11 @@ export type TalentStrength = (typeof TALENT_STRENGTHS)[number];
 export const TALENT_MODES = ['blended', 'strict'] as const;
 export type TalentMode = (typeof TALENT_MODES)[number];
 
+// ---- Talent usefulness (schema v13, B-23) ------------------------------------------------------------
+/** The crypt types the player explores: a bonus for a type he does not explore counts for nothing. */
+export const TALENT_CRYPT_TYPES = ['common', 'rare', 'epic'] as const;
+export type TalentCryptType = (typeof TALENT_CRYPT_TYPES)[number];
+
 /** Every goal exactly once, rank 1 first; anything else loads as the default order. */
 const talentGoalOrderSchema = z
   .array(z.enum(TALENT_GOALS))
@@ -460,6 +465,11 @@ export const talentsSchema = z.object({
   mode: z.enum(TALENT_MODES).catch('blended'),
   weights: z.partialRecord(z.enum(TALENT_GOALS), z.record(z.string(), z.number().min(0))),
   forcedUnitKinds: z.array(z.enum(TALENT_UNIT_KINDS)),
+  /** The crypt types that count (B-23), each once; a bad saved list loads as all three. */
+  crypts: z
+    .array(z.enum(TALENT_CRYPT_TYPES))
+    .refine((c) => new Set(c).size === c.length)
+    .catch([...TALENT_CRYPT_TYPES]),
   pointsOverride: z.int().min(0).nullable(),
 });
 export type Talents = z.infer<typeof talentsSchema>;

@@ -81,6 +81,64 @@ const UNIT_SCOPED_STATS: ReadonlySet<string> = new Set([
   'FACTORY_PRODUCTION_SPEED',
 ]);
 
+/** The crypt types a player explores. */
+export const CRYPT_TYPES = ['common', 'rare', 'epic'] as const;
+export type CryptType = (typeof CRYPT_TYPES)[number];
+
+/** The tag the talent table puts on a crypt bonus: one crypt type, or every type. */
+const CRYPT_TAG_TYPE: ReadonlyMap<number, CryptType> = new Map([
+  [202, 'common'],
+  [17, 'rare'],
+  [90, 'epic'],
+]);
+const ALL_CRYPTS_TAG = 325;
+
+/** Stats about crypt exploration: they count only when a crypt type they cover is in play. */
+const CRYPT_SCOPED_STATS: ReadonlySet<string> = new Set([
+  'SKLEP_STRIKE_DAMAGE',
+  'SKLEP_CRIT_PROBABILITY',
+  'SKLEP_PRICE_CUT',
+]);
+
+/**
+ * Stats that count for nothing until the player ticks them (B-23 b): they do not help a fight or are not what
+ * most players want. Any other stat counts 1. A saved weight always beats this.
+ */
+export const STATS_OFF_BY_DEFAULT: Readonly<Record<TalentGoal, readonly string[]>> = {
+  battle: ['UNIT_LOAD_CAPACITY', 'MARCH_SPEED', 'MARCH_SPEED_PVP'],
+  economy: [
+    'FACTORY_CRAFT_SPEED',
+    'STORAGE_BOOST',
+    'CARAVAN_CAPACITY',
+    'CLAN_CARAVAN_CAPACITY',
+    'CARAVAN_SPEED',
+    'MAP_MINING_SPEED',
+    'EFFECT_B_ABOVE_1_SUMMARIZABLE',
+  ],
+  archeology: ['SKLEP_EXP_BONUS', 'HERO_MAX_MARCH_TIME'],
+};
+
+/** The player's saved weights over the defaults: a stat off by default weighs 0 unless he saved a figure for it. */
+export function withDefaultStatWeights(
+  saved: Readonly<Partial<Record<TalentGoal, Readonly<Record<string, number>>>>>,
+): Record<TalentGoal, Record<string, number>> {
+  const out = {} as Record<TalentGoal, Record<string, number>>;
+  for (const goal of Object.keys(STATS_OFF_BY_DEFAULT) as TalentGoal[]) {
+    out[goal] = {
+      ...Object.fromEntries(STATS_OFF_BY_DEFAULT[goal].map((s) => [s, 0])),
+      ...saved[goal],
+    };
+  }
+  return out;
+}
+
+function cryptCounts(tag: number, crypts: ReadonlySet<CryptType> | undefined): boolean {
+  if (crypts === undefined) return true;
+  if (tag === ALL_CRYPTS_TAG) return crypts.size > 0;
+  const type = CRYPT_TAG_TYPE.get(tag);
+  return type !== undefined && crypts.has(type);
+}
+
 /** Whether a goal has stats about units, so the army decides what counts for it. */
 export function goalHasUnitStats(goal: TalentGoal): boolean {
   return TALENT_GOALS[goal].some((s) => UNIT_SCOPED_STATS.has(s));
@@ -101,6 +159,8 @@ export interface TalentPlanInput {
   weights?: Readonly<Partial<Record<string, number>>>;
   /** The unit kinds whose bonuses count. */
   kinds: ReadonlySet<UnitKind> | readonly UnitKind[];
+  /** The crypt types whose bonuses count; absent means every type. */
+  crypts?: ReadonlySet<CryptType> | readonly CryptType[];
 }
 
 export interface TalentStep {
@@ -280,6 +340,7 @@ function planCore(
   const goalOf = new Map<string, TalentGoal>();
   for (const g of ranked) for (const s of TALENT_GOALS[g]) goalOf.set(s, g);
   const kinds = new Set<UnitKind>(input.kinds);
+  const crypts = input.crypts === undefined ? undefined : new Set<CryptType>(input.crypts);
 
   const nodes = new Map<number, Prepared>();
   for (const rec of talents) {
@@ -290,7 +351,10 @@ function planCore(
       byGoal[g] = Math.max(byGoal[g], goalWeight[g] * (weightsByGoal[g]?.[s] ?? 1));
     }
     const scoped = rec.stats.some((s) => UNIT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
-    const counts = !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
+    const cryptScoped = rec.stats.some((s) => CRYPT_SCOPED_STATS.has(s)) && rec.unitIds.length > 0;
+    const counts = cryptScoped
+      ? rec.unitIds.some((id) => cryptCounts(id, crypts))
+      : !scoped || rec.unitIds.some((id) => kinds.has(KIND_BY_ID.get(id) as UnitKind));
     let weight = 0;
     let goal: TalentGoal | null = null;
     for (const g of ranked) {

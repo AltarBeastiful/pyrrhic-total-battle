@@ -41,6 +41,7 @@ export const DEFAULT_TALENTS: Talents = {
   mode: 'blended',
   weights: {},
   forcedUnitKinds: [],
+  crypts: ['common', 'rare', 'epic'],
   pointsOverride: null,
 };
 

@@ -524,6 +524,7 @@ describe('migrate', () => {
       mode: 'blended',
       weights: {},
       forcedUnitKinds: [],
+      crypts: ['common', 'rare', 'epic'],
       pointsOverride: null,
     });
     expect(migrated.profiles[0]?.settings).toEqual({ poolLine: 'neither', poolLineRule: 'push' });
@@ -566,7 +567,28 @@ describe('migrate', () => {
       weights: { economy: { UNIT_HEALTH: 2 } },
       forcedUnitKinds: ['flying', 'monsters'],
       pointsOverride: 40,
+      crypts: ['common', 'rare', 'epic'],
     });
+  });
+
+  it('v12 → v13 adds the crypt types, all ticked, and keeps every other talents field', () => {
+    const doc = newRoot('device');
+    const profile = doc.profiles[0]!;
+    const { crypts: _crypts, ...old } = profile.talents;
+    const fixture = JSON.parse(
+      JSON.stringify({
+        ...doc,
+        schemaVersion: 12,
+        profiles: [
+          { ...profile, talents: { ...old, heroLevel: 120, weights: { battle: { UNIT_HEALTH: 2 } } } },
+        ],
+      }),
+    ) as Record<string, unknown>;
+    expect(migrations[12]?.(fixture).schemaVersion).toBe(13);
+    const talents = migrate(fixture).profiles[0]?.talents;
+    expect(talents?.crypts).toEqual(['common', 'rare', 'epic']);
+    expect(talents?.heroLevel).toBe(120);
+    expect(talents?.weights).toEqual({ battle: { UNIT_HEALTH: 2 } });
   });
 
   it('v11 → v12 falls back to the default order when the saved goal is not one it knows', () => {
@@ -590,6 +612,7 @@ describe('migrate', () => {
       weights: { economy: { UNIT_HEALTH: 2 } },
       forcedUnitKinds: ['flying', 'monsters'],
       pointsOverride: 40,
+      crypts: ['rare'],
     };
     const stored = { ...doc, profiles: [{ ...profile, talents }] };
     expect(migrate(JSON.parse(JSON.stringify(stored))).profiles[0]?.talents).toEqual(talents);

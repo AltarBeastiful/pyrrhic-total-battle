@@ -56,6 +56,7 @@ test('without a points figure it asks for one and plans nothing', () => {
 });
 
 test('a level and points give the next point and the one after it, from zero ranks', () => {
+  setTalents({ weights: { archeology: { SKLEP_EXP_BONUS: 1 } } });
   renderWithTheme(<TalentsPage />);
   type('Hero level', '100');
   type('Points to spend', '20');
@@ -78,12 +79,13 @@ test('moving a goal to the top changes the next point, and the order is saved', 
   fireEvent.click(screen.getByRole('button', { name: 'Move Economy up' }));
   expect(talentsOf().goals).toEqual(['economy', 'battle', 'archeology']);
   expect(goalRows()[0]!.textContent).toMatch(/^1Economy/);
-  expect(card('Next point').textContent).toMatch(/Production of building resources/);
+  expect(card('Next point').textContent).toMatch(/production/i);
   expect(card('Next point').textContent).toMatch(/Economy/);
   expect(screen.getByRole('button', { name: 'Move Economy up' }).hasAttribute('disabled')).toBe(true);
 });
 
 test('an ignored goal vanishes from the cards, the next goal takes rank 1, and one goal stays active', () => {
+  setTalents({ weights: { archeology: { SKLEP_EXP_BONUS: 1 } } });
   renderWithTheme(<TalentsPage />);
   type('Hero level', '100');
   type('Points to spend', '20');
@@ -112,7 +114,7 @@ test('a move is announced with the rank shown on the row, counting active goals 
 });
 
 test('strength and mode change the order with no button press', () => {
-  setTalents({ heroLevel: 100, pointsOverride: 20 });
+  setTalents({ heroLevel: 100, pointsOverride: 20, weights: { archeology: { SKLEP_EXP_BONUS: 1 } } });
   renderWithTheme(<TalentsPage />);
   expect(card('Next point').textContent).toMatch(/Archeology/);
   pick('How points are spread', 'Strict order');
@@ -127,6 +129,8 @@ test('strength and mode change the order with no button press', () => {
     heroLevel: 150,
     pointsOverride: 60,
     mode: 'blended',
+    // Resource production is worth +80 % on paper, which would beat any battle bonus at Even; leave it out.
+    weights: { economy: { MINE_PRODUCTION_SPEED: 0 } },
   });
   renderWithTheme(<TalentsPage />);
   expect(card('Next point').textContent).toMatch(/Economy/);
@@ -199,7 +203,7 @@ test('an emptied weight goes back to 1 by dropping the override', () => {
   expect(Object.values(talentsOf().weights.battle ?? {})).toEqual([]);
 });
 
-test('the Archeology weights carry the game\'s own words for crypt exploration', () => {
+test("the Archeology weights carry the game's own words for crypt exploration", () => {
   renderWithTheme(<TalentsPage />);
   fireEvent.click(screen.getByRole('button', { name: /weights/i }));
   for (const name of [
@@ -211,6 +215,55 @@ test('the Archeology weights carry the game\'s own words for crypt exploration',
     expect(screen.getByRole('textbox', { name: `Weight of ${name}`, hidden: true })).toBeTruthy();
   }
   expect(screen.queryByRole('textbox', { name: 'Weight of Crypt damage', hidden: true })).toBeNull();
+});
+
+const countBox = (stat: string) =>
+  screen.getByRole('checkbox', { name: new RegExp(`^${stat}$`), hidden: true }) as HTMLInputElement;
+
+test('every stat has a tick, set by the defaults: carrying capacity and march speed off, strength on (B-23 b)', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  expect(countBox('Strength').checked).toBe(true);
+  expect(countBox('Health').checked).toBe(true);
+  expect(countBox('Carrying capacity').checked).toBe(false);
+  expect(countBox('March speed').checked).toBe(false);
+  expect(countBox('Crafting speed').checked).toBe(false);
+  expect(countBox('Crypt experience').checked).toBe(false);
+  expect(countBox('Crypt exploration efficiency').checked).toBe(true);
+});
+
+test('ticking a stat that is off saves a weight of 1, unticking one that is on saves 0, and going back drops the override', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  fireEvent.click(countBox('Carrying capacity'));
+  expect(talentsOf().weights.battle).toEqual({ UNIT_LOAD_CAPACITY: 1 });
+  fireEvent.click(countBox('Strength'));
+  expect(talentsOf().weights.battle).toEqual({ UNIT_LOAD_CAPACITY: 1, UNIT_POWER: 0 });
+  fireEvent.click(countBox('Strength'));
+  fireEvent.click(countBox('Carrying capacity'));
+  expect(talentsOf().weights.battle).toEqual({});
+});
+
+test('a saved weight shows in the field and a stat off by default shows 0', () => {
+  setTalents({ weights: { battle: { UNIT_HEALTH: 2.5 } } });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /weights/i }));
+  const field = (name: string) =>
+    screen.getByRole('textbox', { name: `Weight of ${name}`, hidden: true }) as HTMLInputElement;
+  expect(field('Health').value).toBe('2.5');
+  expect(field('Carrying capacity').value).toBe('0');
+  expect(field('Strength').value).toBe('1');
+});
+
+test('crypt types start all ticked, and unticking one is saved', () => {
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: /crypts that count/i }));
+  const box = (name: string) => screen.getByRole('checkbox', { name, hidden: true }) as HTMLInputElement;
+  expect(box('Common crypts').checked).toBe(true);
+  expect(box('Rare crypts').checked).toBe(true);
+  expect(box('Epic crypts').checked).toBe(true);
+  fireEvent.click(box('Rare crypts'));
+  expect(talentsOf().crypts).toEqual(['common', 'epic']);
 });
 
 test('the tree head and the tab count held ranks and planned steps apart, and tiles show the plan order', () => {

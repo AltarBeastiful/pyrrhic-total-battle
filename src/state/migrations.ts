@@ -243,6 +243,12 @@ export function prioritiseTalentGoals(profile: Record<string, unknown>): Record<
   return { ...profile, talents };
 }
 
+/** `12 → 13` for one profile (B-23): the talents gain the crypt types that count, all three. Nothing else moves. */
+export function addTalentCrypts(profile: Record<string, unknown>): Record<string, unknown> {
+  if (!isPlainObject(profile.talents)) return profile;
+  return { ...profile, talents: { crypts: ['common', 'rare', 'epic'], ...profile.talents } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -262,6 +268,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `9 → 10`: a piece of equipment loses its wearer name and may carry a set (B-19).
  * `10 → 11`: every profile gains an empty hero talent plan (B-21).
  * `11 → 12`: the talents' single goal becomes rank 1 of an ordered list, with ignore, strength and mode (B-22).
+ * `12 → 13`: the talents gain the crypt types that count, all three (B-23).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -276,6 +283,7 @@ export const migrations: MigrationTable = {
   9: (doc) => ({ ...doc, schemaVersion: 10, profiles: migrateProfiles(doc, dropEquipmentWearer) }),
   10: (doc) => ({ ...doc, schemaVersion: 11, profiles: migrateProfiles(doc, addTalents) }),
   11: (doc) => ({ ...doc, schemaVersion: 12, profiles: migrateProfiles(doc, prioritiseTalentGoals) }),
+  12: (doc) => ({ ...doc, schemaVersion: 13, profiles: migrateProfiles(doc, addTalentCrypts) }),
 };
 
 /**
@@ -299,6 +307,7 @@ export const profileMigrations: MigrationTable = {
   9: dropEquipmentWearer,
   10: addTalents,
   11: prioritiseTalentGoals,
+  12: addTalentCrypts,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -321,6 +330,7 @@ export const savedStackMigrations: MigrationTable = {
   9: identity,
   10: identity,
   11: identity,
+  12: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -45,6 +45,8 @@ import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentRecord, type TalentTree as TreeId } from '@/data/types';
 import {
   goalHasUnitStats,
+  STATS_OFF_BY_DEFAULT,
+  withDefaultStatWeights,
   goalOfTree,
   planTalentPriorities,
   rankGain,
@@ -55,9 +57,11 @@ import {
   type UnitKind,
 } from '@/engine/talents';
 import {
+  TALENT_CRYPT_TYPES,
   TALENT_MODES,
   TALENT_STRENGTHS,
   TALENT_UNIT_KINDS,
+  type TalentCryptType,
   type TalentGoal,
   type TalentMode,
   type TalentStrength,
@@ -89,6 +93,12 @@ const MODE_LABELS: Readonly<Record<TalentMode, string>> = { blended: 'Blended', 
 const MODE_HELP: Readonly<Record<TalentMode, string>> = {
   blended: 'One list: each point goes where it adds the most after the goal weights.',
   strict: 'Fills rank 1 first, then rank 2, then rank 3.',
+};
+
+const CRYPT_LABELS: Readonly<Record<TalentCryptType, string>> = {
+  common: 'Common',
+  rare: 'Rare',
+  epic: 'Epic',
 };
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
@@ -130,8 +140,9 @@ export function TalentsPage() {
         points: talentsState.pointsOverride ?? 0,
         ranks,
         priority,
-        weightsByGoal: talentsState.weights,
+        weightsByGoal: withDefaultStatWeights(talentsState.weights),
         kinds,
+        crypts: talentsState.crypts,
       }),
       goalWeights: talentGoalWeights(priority),
     };
@@ -356,35 +367,78 @@ export function TalentsPage() {
             </Text>
           </Stack>
 
-          <Disclosure title="Weights" summary="Every stat counts 1 unless you change it">
+          <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
             <Stack gap="md">
               {active.map((goal) => (
                 <Stack key={goal} gap="xs">
                   <Text fw={600} size="sm">
                     {GOAL_LABELS[goal]}
                   </Text>
-                  {GOAL_STATS[goal].map((stat) => (
-                    <NumberField
-                      key={stat}
-                      label={statLabel(stat)}
-                      accessibleName={`Weight of ${statLabel(stat)}`}
-                      value={talentsState.weights[goal]?.[stat] ?? 1}
-                      allowDecimal
-                      allowEmpty
-                      min={0}
-                      onChange={(v) => {
-                        // Empty means the default of 1, which is no override at all.
-                        const rest = { ...talentsState.weights[goal] };
-                        if (v === null) delete rest[stat];
-                        else rest[stat] = v;
-                        edit({ weights: { ...talentsState.weights, [goal]: rest } });
-                      }}
-                    />
-                  ))}
+                  {GOAL_STATS[goal].map((stat) => {
+                    const offByDefault = STATS_OFF_BY_DEFAULT[goal].includes(stat);
+                    const weight = talentsState.weights[goal]?.[stat] ?? (offByDefault ? 0 : 1);
+                    // A tick sets the weight to 1 and an untick to 0; going back to the default drops the override.
+                    const setWeight = (v: number | null): void => {
+                      const rest = { ...talentsState.weights[goal] };
+                      if (v === null || v === (offByDefault ? 0 : 1)) delete rest[stat];
+                      else rest[stat] = v;
+                      edit({ weights: { ...talentsState.weights, [goal]: rest } });
+                    };
+                    return (
+                      <Group key={stat} gap="sm" align="flex-end" wrap="wrap">
+                        <Checkbox
+                          label={statLabel(stat)}
+                          checked={weight > 0}
+                          onChange={(event) => setWeight(event.currentTarget.checked ? 1 : 0)}
+                          style={{ flex: '1 1 12rem' }}
+                        />
+                        <NumberField
+                          label="Weight"
+                          accessibleName={`Weight of ${statLabel(stat)}`}
+                          value={weight}
+                          allowDecimal
+                          allowEmpty
+                          min={0}
+                          w={90}
+                          onChange={setWeight}
+                        />
+                      </Group>
+                    );
+                  })}
                 </Stack>
               ))}
             </Stack>
           </Disclosure>
+          {active.includes('archeology') && (
+            <Disclosure
+              title="Crypts that count"
+              summary={
+                talentsState.crypts.length === 0
+                  ? 'None'
+                  : TALENT_CRYPT_TYPES.filter((c) => talentsState.crypts.includes(c))
+                      .map((c) => CRYPT_LABELS[c])
+                      .join(', ')
+              }
+            >
+              <Stack gap="xs">
+                {TALENT_CRYPT_TYPES.map((type) => (
+                  <Checkbox
+                    key={type}
+                    label={`${CRYPT_LABELS[type]} crypts`}
+                    checked={talentsState.crypts.includes(type)}
+                    onChange={(event) => {
+                      const rest = talentsState.crypts.filter((c) => c !== type);
+                      edit({
+                        crypts: event.currentTarget.checked
+                          ? TALENT_CRYPT_TYPES.filter((c) => c === type || rest.includes(c))
+                          : rest,
+                      });
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Disclosure>
+          )}
           {unitStats && (
             <Disclosure
               title="Units that count"

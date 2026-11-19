@@ -4,6 +4,7 @@ import { talents as realTalents } from '@/data';
 import { TALENT_TREES, type TalentRecord } from '@/data/types';
 import {
   DEFAULT_TALENT_PRIORITY,
+  withDefaultStatWeights,
   goalOfTree,
   TALENT_GOALS,
   TALENT_RANK_WEIGHTS,
@@ -1033,5 +1034,107 @@ describe('planTalentPriorities', () => {
       expect(planTalentPriorities(args)).toEqual(planTalentPriorities(args));
       expect(priority.order).toEqual(['economy', 'battle', 'archeology']);
     });
+  });
+});
+
+describe('which stats count by default (B-23 b)', () => {
+  const w = withDefaultStatWeights({});
+
+  test.each([
+    ['battle', 'UNIT_LOAD_CAPACITY'],
+    ['battle', 'MARCH_SPEED'],
+    ['battle', 'MARCH_SPEED_PVP'],
+    ['economy', 'FACTORY_CRAFT_SPEED'],
+    ['economy', 'STORAGE_BOOST'],
+    ['economy', 'CARAVAN_CAPACITY'],
+    ['economy', 'CLAN_CARAVAN_CAPACITY'],
+    ['economy', 'CARAVAN_SPEED'],
+    ['economy', 'MAP_MINING_SPEED'],
+    ['economy', 'EFFECT_B_ABOVE_1_SUMMARIZABLE'],
+    ['archeology', 'SKLEP_EXP_BONUS'],
+    ['archeology', 'HERO_MAX_MARCH_TIME'],
+  ] as const)('%s %s is off until the player ticks it', (goal, stat) => {
+    expect(w[goal]?.[stat]).toBe(0);
+  });
+
+  test.each([
+    ['battle', 'UNIT_POWER'],
+    ['battle', 'UNIT_HEALTH'],
+    ['battle', 'UNIT_CRIT'],
+    ['economy', 'BUILDING_UPGRADE_SPEED'],
+    ['economy', 'FACTORY_TECH_SPEED'],
+    ['economy', 'FACTORY_PRODUCTION_SPEED'],
+    ['economy', 'MINE_PRODUCTION_SPEED'],
+    ['archeology', 'SKLEP_STRIKE_DAMAGE'],
+    ['archeology', 'SKLEP_PRICE_CUT'],
+    ['archeology', 'SKLEP_CRIT_PROBABILITY'],
+  ] as const)('%s %s is on by default', (goal, stat) => {
+    expect(w[goal]?.[stat] ?? 1).toBe(1);
+  });
+
+  test('a saved weight beats the default, in both directions', () => {
+    const saved = withDefaultStatWeights({
+      battle: { UNIT_LOAD_CAPACITY: 1, UNIT_POWER: 0, UNIT_HEALTH: 2.5 },
+    });
+    expect(saved.battle?.UNIT_LOAD_CAPACITY).toBe(1);
+    expect(saved.battle?.UNIT_POWER).toBe(0);
+    expect(saved.battle?.UNIT_HEALTH).toBe(2.5);
+    expect(saved.battle?.MARCH_SPEED).toBe(0);
+  });
+
+  test('with the defaults, a carrying-capacity node loses to a weaker strength node', () => {
+    const t = [
+      node(1, { values: [5], stats: ['UNIT_LOAD_CAPACITY'], unitIds: [6] }),
+      node(2, { values: [2], stats: ['UNIT_POWER'], unitIds: [6] }),
+    ];
+    const run = (weightsByGoal: ReturnType<typeof withDefaultStatWeights>) =>
+      planTalentPriorities({
+        talents: t,
+        heroLevel: 200,
+        points: 1,
+        kinds: ['melee'],
+        priority: DEFAULT_TALENT_PRIORITY,
+        weightsByGoal,
+      });
+    expect(ids(run({}).steps)).toEqual([1]);
+    expect(ids(run(withDefaultStatWeights({})).steps)).toEqual([2]);
+  });
+});
+
+describe('crypt types scope the archeology stats (B-23 b)', () => {
+  // The table tags a crypt bonus with 202 (Common), 17 (Rare), 90 (Epic) or 325 (all crypts).
+  const crypt = (id: number, unitIds: number[], stat = 'SKLEP_STRIKE_DAMAGE') =>
+    node(id, { values: [3], stats: [stat], unitIds, tree: 'archeology' });
+  const run = (t: TalentRecord[], crypts?: ('common' | 'rare' | 'epic')[]) =>
+    ids(
+      planTalents({
+        talents: t,
+        heroLevel: 200,
+        points: 5,
+        goal: 'archeology',
+        kinds: [],
+        crypts,
+      }).steps.filter((s) => !s.filler),
+    );
+
+  test('a bonus for a crypt type counts only when that type is ticked', () => {
+    const t = [crypt(1, [202]), crypt(2, [17]), crypt(3, [90])];
+    expect(run(t, ['rare'])).toEqual([2]);
+    expect(run(t, ['common', 'epic']).sort()).toEqual([1, 3]);
+  });
+
+  test('a general crypt bonus counts when any type is ticked, and not when none is', () => {
+    const t = [crypt(1, [325])];
+    expect(run(t, ['epic'])).toEqual([1]);
+    expect(run(t, [])).toEqual([]);
+  });
+
+  test('without a choice every crypt type counts, as before', () => {
+    expect(run([crypt(1, [202]), crypt(2, [325])], undefined).sort()).toEqual([1, 2]);
+  });
+
+  test('the price cut and the explore-twice chance are scoped the same way', () => {
+    const t = [crypt(1, [17], 'SKLEP_PRICE_CUT'), crypt(2, [17], 'SKLEP_CRIT_PROBABILITY')];
+    expect(run(t, ['common'])).toEqual([]);
   });
 });
