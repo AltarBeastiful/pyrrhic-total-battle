@@ -177,6 +177,23 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
     if ('enemyFormation' in out) out.enemyFormation = order(out.enemyFormation as Json, CATEGORIES);
     return out;
   },
+  'talents.json': (value) => {
+    const out = order(value, [
+      'id',
+      'name',
+      'tree',
+      'maxRank',
+      'layout',
+      'parents',
+      'levelGate',
+      'stats',
+      'unitIds',
+      'values',
+      'costs',
+    ]) as JsonObject;
+    out.layout = order(out.layout as Json, ['x', 'y', 'link', 'place', 'flipped']);
+    return out;
+  },
   'vip.json': (value) => {
     const out = order(value, ['level', 'bonus']) as JsonObject;
     out.bonus = contribution(out.bonus as Json);

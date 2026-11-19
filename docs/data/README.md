@@ -44,12 +44,23 @@ epic-monster calculator and PvP is out of scope.
 | `otherPills.json` | The fixed "+25 %" Personal / Clan / Kingdom bonuses        | Bonus list on the march screen                               |
 | `events.json`     | Event effects the engine models                            | Event screen while the event runs                            |
 | `vip.json`        | VIP level → army health and strength                       | VIP screen                                                   |
+| `talents.json`    | Hero talent nodes of the four hero trees (B-21)            | Hero screen, Talents tabs (rebuilt from the recon dump)      |
 | `temple.json`     | Temple level → revival cost divisor                        | Temple building screen                                       |
 | `orders.json`     | Default kill orders and the captain picker order           | —                                                            |
 | `version.json`    | `dataVersion`, verification date, notes                    | —                                                            |
 
 All percentages are written the way the game shows them: `39.5` means "+39.5 %". All costs, health and
 strength are whole numbers, as displayed, **before** any bonus.
+
+### Talents (`talents.json`)
+
+Built, not hand-edited: `pnpm data:talents [path]` rebuilds it from the owner's recon dump of the game
+(`/home/remi/projects/tb-analyze/recon/work/talents/talents.json`, produced by `tb-analyze/tools/talents.py`),
+keeping only the four hero-ability trees (Battle tactics, Expert battle tactics, Economy, Archeology) and
+only nodes the game places on a tree: 63, 71, 49 and 54 nodes, 4 319 ranks. Ten Economy and six Archeology
+nodes with no place and no effect are left out. `values[r - 1]` is the total bonus in percent at rank `r`
+(a negative figure is a price cut), `costs[r - 1]` the talent points that rank costs, `parents` the nodes that
+must hold a rank first, `levelGate` the hero level the first rank needs.
 
 ## Fields
 
