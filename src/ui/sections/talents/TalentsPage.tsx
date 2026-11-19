@@ -32,6 +32,7 @@ import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
 import { fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
+import { spentPoints } from './spentPoints';
 import { TalentTree } from './TalentTree';
 
 const BY_ID = new Map(TALENTS.map((t) => [t.id, t]));
@@ -297,7 +298,15 @@ export function TalentsPage() {
             fullWidth
             aria-label="Tree"
             value={viewTree}
-            data={TALENT_TREES.map((t) => ({ value: t, label: TREE_SHORT[t] }))}
+            data={TALENT_TREES.map((t) => ({
+              value: t,
+              label: (
+                <span style={{ display: 'grid', lineHeight: 1.2 }}>
+                  <span>{TREE_SHORT[t]}</span>
+                  <span>{plural(spentPoints(TALENTS, t, talentsState.ranks), 'point')}</span>
+                </span>
+              ),
+            }))}
             onChange={(v) => {
               const next = TALENT_TREES.find((t) => t === v);
               if (next === undefined) return;
