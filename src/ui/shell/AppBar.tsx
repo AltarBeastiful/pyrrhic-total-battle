@@ -8,11 +8,12 @@
  * eighty pixels above it is what `v4-desktop.jpg` shows and design rule 5 forbids.
  */
 import { Box, Button, Title } from '@mantine/core';
-import { LogIn } from 'lucide-react';
+import { LogIn, Sparkles, Swords } from 'lucide-react';
 
 import { useAccountStore } from '@/account/state';
 
 import { AppBar as BarSurface } from '../kit';
+import { useUiStore } from '../uiStore';
 import { MainMenu } from './MainMenu';
 import { ProfileMenu } from './ProfileMenu';
 import themeClasses from '../theme.module.css';
@@ -48,6 +49,27 @@ function SignInButton() {
   );
 }
 
+/** Switches between the March calculator and the Hero talents page; it sits left of the profile menu. */
+function PageButton() {
+  const page = useUiStore((state) => state.page);
+  const setPage = useUiStore((state) => state.setPage);
+  const onTalents = page === 'talents';
+  return (
+    <Button
+      variant="default"
+      radius="xl"
+      size="compact-md"
+      h={36}
+      leftSection={onTalents ? <Swords size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
+      onClick={() => {
+        setPage(onTalents ? 'calculator' : 'talents');
+      }}
+    >
+      {onTalents ? 'March calculator' : 'Hero talents'}
+    </Button>
+  );
+}
+
 export function AppBar() {
   return (
     <BarSurface
@@ -61,6 +83,7 @@ export function AppBar() {
       }
       actions={
         <>
+          <PageButton />
           <SignInButton />
           <ProfileMenu />
           <MainMenu />
