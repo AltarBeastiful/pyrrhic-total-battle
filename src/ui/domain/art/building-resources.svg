@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Wood, stone and iron: the game's three building resources in one mark. -->
+  <path d="M17 27 L23 10 L45 10 L51 27 Z" fill="#8ea3b8" stroke="#3f5063" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M25 15 L42 15" stroke="#d7e1ea" stroke-width="3" stroke-linecap="round"/>
+  <rect x="5" y="35" width="29" height="23" rx="4" fill="#a9733c" stroke="#4e3115" stroke-width="3"/>
+  <ellipse cx="10" cy="46.500" rx="6.500" ry="11.500" fill="#dba466" stroke="#4e3115" stroke-width="3"/>
+  <ellipse cx="10" cy="46.500" rx="2" ry="4.500" fill="none" stroke="#4e3115" stroke-width="2"/>
+  <path d="M33 58 L33 44 L41 34 L55 35 L61 47 L58 58 Z" fill="#a3a8ae" stroke="#4a4f55" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M41 40 L50 41" stroke="#dde0e3" stroke-width="3" stroke-linecap="round"/>
+</svg>

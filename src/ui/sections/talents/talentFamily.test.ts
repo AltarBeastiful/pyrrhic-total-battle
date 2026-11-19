@@ -54,3 +54,10 @@ test('tree order follows the game: row by row, left to right', () => {
   ];
   expect(treeOrder(nodes).map((n) => n.id)).toEqual([2, 3, 1]);
 });
+
+test('production of building resources wears the wood, stone and iron mark, not the wheat', () => {
+  expect(talentIcons('Production of building resources in the City I', ['MINE_PRODUCTION_SPEED']).stat).toBe(
+    'buildingResources',
+  );
+  expect(talentIcons('Food production in the City I', ['MINE_PRODUCTION_SPEED']).stat).toBe('production');
+});

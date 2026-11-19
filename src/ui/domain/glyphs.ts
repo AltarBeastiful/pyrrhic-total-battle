@@ -7,6 +7,7 @@
  */
 import type { BonusKey } from '../../data/types';
 
+import buildingResourcesArt from './art/building-resources.svg';
 import dragonCoinArt from './art/dragon-coin.png';
 
 export const GLYPHS = {
@@ -52,6 +53,8 @@ export const GLYPHS = {
   research: '🔬',
   crafting: '🛠️',
   production: '🌾',
+  // Wood, stone and iron together: the emoji is the fallback word, the picture is `GLYPH_ART`
+  buildingResources: '🪵',
   gathering: '⛏️',
   storage: '📦',
   caravanCapacity: '🛒',
@@ -84,6 +87,7 @@ export type GlyphKind = keyof typeof GLYPHS;
  */
 export const GLYPH_ART: Partial<Record<GlyphKind, string>> = {
   dragonCoin: dragonCoinArt,
+  buildingResources: buildingResourcesArt,
 };
 
 /**
