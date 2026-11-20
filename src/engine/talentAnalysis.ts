@@ -39,7 +39,9 @@ function keyOf(node: Pick<TalentRecord, 'name'>): BonusKey | null {
 }
 
 /** The stat a battle talent adds to: strength or health on one key. Crit, fortifications and the rest are not read. */
-function lineOf(node: Pick<TalentRecord, 'name' | 'stats' | 'values'>): { line: 'strength' | 'health'; key: BonusKey } | null {
+function lineOf(
+  node: Pick<TalentRecord, 'name' | 'stats' | 'values'>,
+): { line: 'strength' | 'health'; key: BonusKey } | null {
   const { values } = node;
   const key = keyOf(node);
   if (key === null || values.length === 0) return null;
@@ -71,4 +73,15 @@ export function meanOf(shapes: readonly (readonly number[])[]): number[] {
   const first = shapes[0];
   if (first === undefined) return [];
   return first.map((_, index) => shapes.reduce((sum, shape) => sum + (shape[index] ?? 0), 0) / shapes.length);
+}
+
+/**
+ * Every talent the rating can read, in table order across all trees, and how many it cannot (B-28). The set is
+ * asked of `isAnalyzable`, never listed, so a talent that gains a battle effect joins by itself.
+ */
+export function analyzableTalents<T extends Pick<TalentRecord, 'name' | 'stats' | 'values'>>(
+  table: readonly T[],
+): { rated: T[]; notRated: number } {
+  const rated = table.filter(isAnalyzable);
+  return { rated, notRated: table.length - rated.length };
 }
