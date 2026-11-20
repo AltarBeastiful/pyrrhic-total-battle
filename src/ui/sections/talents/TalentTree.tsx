@@ -586,6 +586,7 @@ function TreeRecap({
   plan: TalentPlan;
   tree: TreeId;
 }) {
+  const [more, setMore] = useState(false);
   const added = plannedByNode(plan);
   const totals = new Map<string, { now: number; after: number; ranks: number }>();
   const maxByFamily = new Map<string, number>();
@@ -610,6 +611,9 @@ function TreeRecap({
   const { shown: top, hidden } = splitRecap(
     [...totals.entries()].map(([label, v]) => ({ label, ...v, maxRanks: maxByFamily.get(label) ?? 0 })),
   );
+  const shown = more
+    ? [...top, ...hidden].sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
+    : top;
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
@@ -621,7 +625,7 @@ function TreeRecap({
         </Text>
       ) : (
         <dl className={classes.recapList}>
-          {top.map((v) => (
+          {shown.map((v) => (
             <div key={v.label} className={classes.recapRow}>
               <dt>{v.label}</dt>
               <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
@@ -630,12 +634,17 @@ function TreeRecap({
         </dl>
       )}
       {hidden.length > 0 && (
-        <Text size="xs" c="dimmed" data-recap="smaller">
-          {`${String(hidden.length)} smaller: ${[...hidden]
-            .sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
-            .map((v) => `${v.label} +${percent(recapSize(v))}`)
-            .join(', ')}`}
-        </Text>
+        <Button
+          size="compact-xs"
+          variant="subtle"
+          style={{ alignSelf: 'flex-start' }}
+          aria-expanded={more}
+          onClick={() => {
+            setMore((open) => !open);
+          }}
+        >
+          {more ? 'Show less' : `Show ${String(hidden.length)} more`}
+        </Button>
       )}
     </section>
   );

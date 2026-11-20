@@ -653,15 +653,20 @@ test('the tree recap sums each stat over the tree', () => {
   expect(recap.textContent).toContain(talentFamily(node.name).family);
 });
 
-test('a family under a quarter complete is grouped into one closing line, every other row shows', () => {
+test('a family under a quarter complete waits behind one small Show more line, and it lists exactly those rows', () => {
   const ranks: Record<string, number> = {};
   for (const t of TALENTS.filter((t) => t.tree === 'economy')) ranks[String(t.id)] = 1;
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 500, ranks });
   renderWithTheme(<TalentsPage />);
   const recap = screen.getByRole('region', { name: 'Economy bonuses' });
-  expect(recap.querySelectorAll('dt').length).toBeGreaterThanOrEqual(4);
-  expect(within(recap).queryByRole('button')).toBeNull();
-  expect(recap.querySelector('[data-recap="smaller"]')?.textContent).toMatch(/^\d+ smaller: /);
+  const rowsNow = () => recap.querySelectorAll('dt').length;
+  const button = within(recap).getByRole('button', { name: /show \d+ more/i });
+  const hidden = Number(/show (\d+) more/i.exec(button.textContent ?? '')![1]);
+  expect(hidden).toBeGreaterThan(0);
+  const before = rowsNow();
+  fireEvent.click(button);
+  expect(rowsNow()).toBe(before + hidden);
+  expect(within(recap).getByRole('button', { name: /show less/i })).toBeTruthy();
 });
 
 test('a 1/N bonus still shows while fewer than four families pass (the floor)', () => {
