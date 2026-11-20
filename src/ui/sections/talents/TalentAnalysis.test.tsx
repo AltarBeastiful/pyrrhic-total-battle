@@ -7,6 +7,7 @@ import { talents as TALENTS } from '@/data';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
+import { useUiStore } from '@/ui/uiStore';
 
 import { useAnalysisStore } from './analysisStore';
 import { TalentsPage } from './TalentsPage';
@@ -18,6 +19,7 @@ beforeEach(() => {
   globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
   useAnalysisStore.setState({ entries: {} });
+  useUiStore.setState({ talentsTree: 'battle' });
 });
 
 afterEach(() => {
@@ -71,6 +73,7 @@ test('a battle talent offers Analyze, and pressing it shows the table of ranks a
 });
 
 test('a talent the battle does not read has no Analyze button', () => {
+  useUiStore.setState({ talentsTree: 'economy' });
   open('Economy', economyNode().name);
   expect(screen.queryByRole('button', { name: 'Analyze' })).toBeNull();
   expect(screen.getByText(/nothing to analyze/i)).toBeTruthy();

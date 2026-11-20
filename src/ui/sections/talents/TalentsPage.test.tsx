@@ -13,6 +13,7 @@ import { migrate } from '@/state/migrations';
 import type { Talents } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
+import { useUiStore } from '@/ui/uiStore';
 
 import { talentFamily } from './talentFamily';
 import { TalentsPage } from './TalentsPage';
@@ -20,6 +21,8 @@ import { TalentsPage } from './TalentsPage';
 beforeEach(() => {
   globalThis.localStorage.clear();
   useStore.getState().replaceDocument(newRoot());
+  // Most of these walk the Economy tree; the Battle default has its own test below.
+  useUiStore.setState({ talentsTree: 'economy' });
 });
 
 afterEach(() => {
@@ -765,4 +768,13 @@ test('when in sync the quiet button opens no confirmation', () => {
   fireEvent.click(screen.getByRole('button', { name: COPY }));
   fireEvent.click(screen.getByRole('button', { name: 'Copied, matches your tree' }));
   expect(screen.queryByRole('alertdialog')).toBeNull();
+});
+
+test('the Talents page opens on Battle whatever the first goal is, and a pick is remembered', () => {
+  useUiStore.setState({ talentsTree: 'battle' });
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 40 });
+  renderWithTheme(<TalentsPage />);
+  expect(screen.getByRole('region', { name: 'Battle tactics tree' })).toBeTruthy();
+  fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Tree' })).getByText('Economy'));
+  expect(useUiStore.getState().talentsTree).toBe('economy');
 });

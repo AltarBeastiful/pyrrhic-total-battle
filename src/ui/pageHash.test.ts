@@ -13,7 +13,7 @@ let unbind: (() => void) | undefined;
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
-  useUiStore.setState({ page: 'calculator' });
+  useUiStore.setState({ page: 'calculator', talentsTree: 'battle' });
 });
 
 afterEach(() => {
@@ -39,13 +39,13 @@ test('opening the address with #talents shows the talents page', () => {
   window.history.replaceState(null, '', '/#talents');
   unbind = bindPageToHash(window);
   expect(useUiStore.getState().page).toBe('talents');
-  expect(window.location.hash).toBe('#talents');
+  expect(window.location.hash).toBe('#talents/battle');
 });
 
 test('changing the page writes the fragment, and going back to the calculator clears it', () => {
   unbind = bindPageToHash(window);
   useUiStore.getState().setPage('talents');
-  expect(window.location.hash).toBe('#talents');
+  expect(window.location.hash).toBe('#talents/battle');
   useUiStore.getState().setPage('calculator');
   expect(window.location.hash).toBe('');
   expect(window.location.pathname + window.location.search).toBe('/');
@@ -72,5 +72,18 @@ test('the query string and path are kept when the fragment changes', () => {
   window.history.replaceState(null, '', '/app/?x=1');
   unbind = bindPageToHash(window);
   useUiStore.getState().setPage('talents');
-  expect(window.location.pathname + window.location.search + window.location.hash).toBe('/app/?x=1#talents');
+  expect(window.location.pathname + window.location.search + window.location.hash).toBe('/app/?x=1#talents/battle');
+});
+
+test('the open tree is in the address, read back on load, and Battle is the default', () => {
+  window.history.replaceState(null, '', '/#talents/economy');
+  unbind = bindPageToHash(window);
+  expect(useUiStore.getState().talentsTree).toBe('economy');
+  useUiStore.getState().setTalentsTree('archeology');
+  expect(window.location.hash).toBe('#talents/archeology');
+  unbind();
+  useUiStore.setState({ talentsTree: 'economy' });
+  window.history.replaceState(null, '', '/#talents/nonsense');
+  unbind = bindPageToHash(window);
+  expect(useUiStore.getState().talentsTree).toBe('battle');
 });

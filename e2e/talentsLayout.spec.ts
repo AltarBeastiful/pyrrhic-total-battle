@@ -92,7 +92,8 @@ for (const { name, width, height } of SIZES) {
     if (width >= 992) expect(detail.pos).toBe(height >= 760 ? 'sticky' : 'static');
 
     // Scrolling: the strip stays at the top and never overlaps a card.
-    await page.mouse.wheel(0, 400);
+    await tiles.last().scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 200);
     await page.waitForTimeout(150);
     const overlap = await page.evaluate(() => {
       const s = document.querySelector<HTMLElement>('[aria-label="Points and trees"]')!.getBoundingClientRect();
@@ -108,7 +109,16 @@ for (const { name, width, height } of SIZES) {
       return { top: s.top, hits: hits.length };
     });
     expect(overlap.hits).toBe(0);
-    expect(overlap.top).toBeLessThan(120);
+    expect(Math.abs(overlap.top)).toBeLessThan(1);
+    if (width >= 992 && height >= 760) {
+      const gap = await page.evaluate(() => {
+        const st = document.querySelector('[aria-label="Points and trees"]')!.getBoundingClientRect();
+        const d = document.querySelector('aside[aria-label="Selected node"]')!.getBoundingClientRect();
+        return { below: d.top - st.bottom, wide: st.width };
+      });
+      expect(gap.below).toBeGreaterThanOrEqual(0);
+      expect(gap.below).toBeLessThan(16);
+    }
   });
 }
 

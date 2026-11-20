@@ -82,6 +82,7 @@ import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT }
 import { spentPoints, stepsUpToNode, treePoints, unlockChain } from './spentPoints';
 import classes from './talents.module.css';
 import { TalentTree } from './TalentTree';
+import { useUiStore } from '@/ui/uiStore';
 
 const BY_ID = new Map(TALENTS.map((t) => [t.id, t]));
 
@@ -140,7 +141,8 @@ const weightWords = (w: number): string => `Weight ${String(Math.round(w * 100) 
 export function TalentsPage() {
   const profile = useStore(selectActiveProfile);
   const updateProfile = useStore((state) => state.updateProfile);
-  const [tree, setTree] = useState<TreeId | null>(null);
+  const viewTree = useUiStore((s) => s.talentsTree);
+  const setTree = useUiStore((s) => s.setTalentsTree);
   const [selected, setSelected] = useState<number | null>(null);
   // A ranking row asked for a talent: the tree opens on it, selects it and scrolls it into view (B-29).
   const [reveal, setReveal] = useState<{ id: number; at: number } | null>(null);
@@ -222,7 +224,6 @@ export function TalentsPage() {
   const stock = talentsState.pointsOverride;
   const left = stock === null ? null : Math.max(0, stock - heldCost);
   const over = stock === null ? 0 : Math.max(0, heldCost - stock);
-  const viewTree = tree ?? first; // the rank 1 goal opens the tree of its own name
   const activeStats = active.flatMap((g) => GOAL_STATS[g]);
   const shownStats = activeStats.filter((s) => (result.before[s] ?? 0) !== 0 || (result.after[s] ?? 0) !== 0);
   const gate = result.nextGate === null ? null : BY_ID.get(result.nextGate.nodeId);
@@ -362,11 +363,26 @@ export function TalentsPage() {
 
   const rankOf = new Map(active.map((g, i) => [g, i + 1]));
 
+  // The detail column sticks right under the strip, whatever height the strip wraps to.
+  const stripRef = (el: HTMLDivElement | null): (() => void) | void => {
+    const host = el?.parentElement;
+    if (el === null || host === null || host === undefined) return;
+    const set = (): void => {
+      host.style.setProperty('--strip-h', `${String(el.getBoundingClientRect().height)}px`);
+    };
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  };
   const strip = (
-    <div className={classes.strip} role="region" aria-label="Points and trees">
+    <div ref={stripRef} className={classes.strip} role="region" aria-label="Points and trees">
       <SegmentedControl
-        size="xs"
-        styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 6, minWidth: 0 } }}
+        size="sm"
+        className={classes.stripTabs}
+        styles={{ root: { maxWidth: '100%' }, label: { minWidth: 0 } }}
         aria-label="Tree"
         value={viewTree}
         data={TALENT_TREES.map((t) => {
@@ -855,8 +871,8 @@ export function TalentsPage() {
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
           <AllTalentsAnalysis onSelect={showTalent} />
+          {strip}
           <TalentTree
-            header={strip}
             talents={TALENTS}
             tree={viewTree}
             ranks={talentsState.ranks}

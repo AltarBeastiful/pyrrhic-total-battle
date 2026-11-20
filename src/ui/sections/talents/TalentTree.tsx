@@ -5,7 +5,6 @@
  * says "Lv 65" or "Parent".
  */
 import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
-import type { ReactNode } from 'react';
 import { Lock, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -41,8 +40,6 @@ export interface TalentTreeProps {
   onSpendPlan: (nodeId: number) => void;
   /** A ranking row asked for this talent: scroll its tile into view once it has rendered (B-29). */
   reveal?: { id: number; at: number } | null;
-  /** The docked strip (tabs, totals, reset): drawn first in the tree column and pinned under the app bar. */
-  header?: ReactNode;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -93,7 +90,6 @@ export function TalentTree({
   onMax,
   onSpendPlan,
   reveal = null,
-  header = null,
 }: TalentTreeProps) {
   const tiles = useRef(new Map<number, HTMLButtonElement>());
   // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
@@ -148,7 +144,6 @@ export function TalentTree({
   return (
     <div className={classes.layout}>
       <Stack gap="md" style={{ minWidth: 0 }}>
-        {header}
         {/*
           Owner request (talents tree shape): the tree keeps the game's shape and, on a phone, pans sideways INSIDE
           this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.

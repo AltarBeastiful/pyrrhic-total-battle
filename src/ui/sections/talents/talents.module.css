@@ -417,8 +417,10 @@
 /* The docked strip (B-30): opaque, pinned under the app bar, the width of the tree column; tabs, then totals. */
 .strip {
   position: sticky;
-  top: 4.5rem;
+  top: 0;
   z-index: 6;
+  box-sizing: border-box;
+  min-height: 4.25rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -429,6 +431,23 @@
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-color-body);
   font-size: 0.8125rem;
+}
+
+.stripTabs {
+  flex: 1 1 min(24rem, 100%);
+  min-width: 0;
+  max-width: 34rem;
+}
+
+.stripTabs :global(.mantine-SegmentedControl-label) {
+  padding-inline: 16px;
+}
+
+@media (max-width: 40em) {
+  .stripTabs :global(.mantine-SegmentedControl-label) {
+    padding-inline: 2px;
+    font-size: 0.75rem;
+  }
 }
 
 .stripTotals {
@@ -570,6 +589,6 @@
 @media (min-width: 62em) and (min-height: 760px) {
   .detail {
     position: sticky;
-    top: 9rem;
+    top: calc(var(--strip-h, 4.25rem) + 8px);
   }
 }
