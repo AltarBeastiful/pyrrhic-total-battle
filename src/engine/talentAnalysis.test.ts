@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { TalentRecord } from '@/data/types';
 
-import { analysisRanks, meanOf, talentSource } from './talentAnalysis';
+import { analysisRanks, analyzableTalents, meanOf, talentSource } from './talentAnalysis';
 
 const node = (name: string, stats: string[], values: number[]): TalentRecord => ({
   id: 1,
@@ -80,5 +80,30 @@ describe('meanOf', () => {
 
   test('no shapes gives no ranks', () => {
     expect(meanOf([])).toEqual([]);
+  });
+});
+
+describe('analyzableTalents (B-28)', () => {
+  const table = (): TalentRecord[] => [
+    { ...node("Melee units' strength", ['UNIT_POWER'], [5, 10]), id: 1 },
+    { ...node("Guardsmen's health", ['UNIT_HEALTH'], [3]), id: 2 },
+    { ...node('Army carrying capacity', ['UNIT_LOAD_CAPACITY'], [5]), id: 3, tree: 'economy' },
+    { ...node('Strength of fortifications', ['UNIT_POWER'], [5]), id: 4 },
+  ];
+
+  test('the set is whatever the rating can read, across trees, and the rest is counted', () => {
+    const { rated, notRated } = analyzableTalents(table());
+    expect(rated.map((t) => t.id)).toEqual([1, 2]);
+    expect(notRated).toBe(2);
+  });
+
+  test('a talent that gains a battle effect joins with no list to edit', () => {
+    const later: TalentRecord[] = [
+      ...table(),
+      { ...node("Mounted units' strength", ['UNIT_POWER'], [1]), id: 5, tree: 'archeology' },
+    ];
+    const { rated, notRated } = analyzableTalents(later);
+    expect(rated.map((t) => t.id)).toEqual([1, 2, 5]);
+    expect(notRated).toBe(2);
   });
 });

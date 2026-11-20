@@ -75,6 +75,7 @@ import {
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
+import { AllTalentsAnalysis } from './AllTalentsAnalysis';
 import { CopyToBattle } from './CopyToBattle';
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
@@ -821,6 +822,7 @@ export function TalentsPage() {
               {`Reset points spent in ${TREE_LABELS[viewTree]}`}
             </Button>
           </Group>
+          <AllTalentsAnalysis />
           <SegmentedControl
             fullWidth
             styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 4, minWidth: 0 } }}
