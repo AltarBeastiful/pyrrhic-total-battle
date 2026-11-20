@@ -23,7 +23,11 @@ for (const { name, width, height } of WIDTHS) {
 
     await page.getByRole('button', { name: 'Analyze all' }).click();
     const ranking = page.getByRole('region', { name: 'Talent ranking' });
-    await expect(ranking).toBeVisible({ timeout: 120_000 });
+    const toggle = page.getByRole('button', { name: /^Show ranking/ });
+    await expect(toggle).toBeVisible({ timeout: 120_000 });
+    await expect(ranking).toHaveCount(0);
+    await toggle.click();
+    await expect(ranking).toBeVisible();
     await expect(page.getByText(/\d+ not rated in battle/)).toBeVisible();
     await expect(ranking.getByRole('columnheader')).toHaveCount(5);
     expect(await pageOverflowsSideways(page)).toBe(false);

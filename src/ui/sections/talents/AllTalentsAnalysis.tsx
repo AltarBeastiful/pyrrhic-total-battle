@@ -1,6 +1,6 @@
 /**
  * **Analyze all, above the tree** (B-28): one button that ranks every talent the battle rating can read, its
- * progress and cancel, and a ranking card that exists only once a run has finished. The state is the store's
+ * progress and cancel, and a ranking card, collapsed until pressed, that exists only once a run has finished (or one kept from an earlier run). The state is the store's
  * (`allAnalysisStore`), so the card holds nothing a later story would have to pull out of it.
  */
 import { Button, Group, Progress, Stack, Text } from '@mantine/core';
@@ -10,7 +10,7 @@ import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store'
 import { allTalentsKey } from '@/state/talentAnalysis';
 import { rankTalents, type RankingRow, type RankingSort } from '@/state/talentRanking';
 
-import { analyzeAll, cancelAll, useAllAnalysisStore } from './allAnalysisStore';
+import { analyzeAll, cancelAll, rankingOf, useAllAnalysisStore } from './allAnalysisStore';
 import classes from './talents.module.css';
 
 const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(2)} %`;
@@ -43,7 +43,6 @@ function Ranking({
       aria-label="Talent ranking"
       tabIndex={0}
       data-stale={stale ? 'true' : undefined}
-      style={stale ? { opacity: 0.55 } : undefined}
     >
       <table className={classes.ranks}>
         <thead>
@@ -111,6 +110,8 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
   const setup = useStore(selectActiveSetup);
   const run = useAllAnalysisStore((state) => state.run);
   const [sort, setSort] = useState<RankingSort>('perPoint');
+  // The card is collapsed until pressed; the ranking itself lives in the store, so closing it loses nothing.
+  const [open, setOpen] = useState(false);
   // The question as it stands now; a kept ranking asked another one is out of date and never shown as current.
   const key = useMemo(
     () => (profile === undefined || setup === undefined ? null : allTalentsKey(profile, setup)),
@@ -118,8 +119,9 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
   );
   if (profile === undefined || setup === undefined) return null;
   const running = run?.status === 'running';
-  const stale = run?.status === 'done' && run.key !== key;
-  const rows = run?.entries == null ? null : rankTalents(run.entries, sort);
+  const ranking = rankingOf(run);
+  const stale = ranking !== null && ranking.key !== key;
+  const rows = ranking === null ? null : rankTalents(ranking.entries, sort);
   return (
     <Stack gap="xs" component="section" aria-label="Analyze all talents">
       <Group gap="xs" align="center">
@@ -143,7 +145,7 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
             {run.total > 0 ? `Analyzing, ${String(run.done)} of ${String(run.total)}` : 'Analyzing'}
           </Text>
         )}
-        {stale && (
+        {stale && run?.status !== 'running' && (
           <Text size="sm" c="dimmed">
             Out of date: your army or bonuses changed since.
           </Text>
@@ -167,10 +169,22 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
       <Text size="sm" c="dimmed">
         Ranks every talent the battle rating reads by what its remaining ranks add to your march.
       </Text>
-      {rows !== null && run !== null && (
+      {rows !== null && ranking !== null && (
         <>
-          <Text size="sm">{`${String(run.notRated)} not rated in battle`}</Text>
-          <Ranking rows={rows} sort={sort} onSort={setSort} stale={stale} onSelect={onSelect} />
+          <Group gap="xs" align="center">
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              aria-expanded={open}
+              onClick={() => {
+                setOpen((now) => !now);
+              }}
+            >
+              {open ? 'Hide ranking' : `Show ranking (${String(rows.length)} talents)`}
+            </Button>
+            <Text size="sm">{`${String(ranking.notRated)} not rated in battle`}</Text>
+          </Group>
+          {open && <Ranking rows={rows} sort={sort} onSort={setSort} stale={stale} onSelect={onSelect} />}
         </>
       )}
     </Stack>

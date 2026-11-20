@@ -18,10 +18,8 @@ import { percent, statLabel, TREE_LABELS } from './labels';
 import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
 import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
-import { splitRecap } from './recap';
+import { recapSize, splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
-
-const rowSize = (r: { now: number; after: number }) => Math.max(r.now, r.after);
 import { TalentAnalysis } from './TalentAnalysis';
 
 /** Rule 10: a stepper only for a short run of values; Army strength has 150 ranks and takes the typed field alone. */
@@ -41,6 +39,8 @@ export interface TalentTreeProps {
   onMax: (id: number) => void;
   /** Spend this tree's plan steps up to the node and its neighbours on the same level. */
   onSpendPlan: (nodeId: number) => void;
+  /** A ranking row asked for this talent: scroll its tile into view once it has rendered (B-29). */
+  reveal?: { id: number; at: number } | null;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -92,7 +92,14 @@ export function TalentTree({
   onSpend,
   onMax,
   onSpendPlan,
+  reveal = null,
 }: TalentTreeProps) {
+  const tiles = useRef(new Map<number, HTMLButtonElement>());
+  // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
+  useEffect(() => {
+    if (reveal === null) return;
+    tiles.current.get(reveal.id)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  }, [reveal, tree]);
   const nodes = talents.filter((t) => t.tree === tree);
   // The pad shows on the selected tile and on the one the pointer or the keyboard is on.
   const [hovered, setHovered] = useState<number | null>(null);
@@ -207,6 +214,10 @@ export function TalentTree({
                   <button
                     type="button"
                     className={classes.tile}
+                    ref={(el) => {
+                      if (el === null) tiles.current.delete(n.id);
+                      else tiles.current.set(n.id, el);
+                    }}
                     data-node-id={n.id}
                     data-state={state}
                     data-full={full}
@@ -492,7 +503,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
   const picks = keyRankPicks({ last, bought, plus });
   const stateOf = (rank: number): RankState =>
     rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
-  const chip = (rank: number, gap: boolean, anchor = false) => {
+  const chip = (rank: number, gap: boolean, anchor = false, tab = true) => {
     const state = stateOf(rank);
     const label = rankChipLabel({ name: node.name, rank, values: node.values, costs: node.costs, state });
     return (
@@ -505,7 +516,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
       >
         {gap && <span aria-hidden>…</span>}
         <span
-          tabIndex={0}
+          tabIndex={tab ? 0 : -1}
           title={label}
           aria-label={label}
         >{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
@@ -537,7 +548,10 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
           tabIndex={0}
         >
           <ul className={classes.rankLine}>
-            {node.values.map((_, i) => chip(i + 1, false, i + 1 === Math.max(bought, 1)))}
+            {node.values.map((_, i) => (() => {
+              const held = i + 1 === Math.max(bought, 1);
+              return chip(i + 1, false, held, held);
+            })())}
           </ul>
         </div>
       )}
@@ -583,9 +597,8 @@ function TreeRecap({
     [...totals.entries()].map(([label, v]) => ({ label, ...v, maxRanks: maxByFamily.get(label) ?? 0 })),
   );
   const shown = more
-    ? [...top, ...hidden].sort((x, y) => rowSize(y) - rowSize(x) || x.label.localeCompare(y.label))
+    ? [...top, ...hidden].sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
     : top;
-  const small = hidden;
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
@@ -605,7 +618,7 @@ function TreeRecap({
           ))}
         </dl>
       )}
-      {small.length > 0 && (
+      {hidden.length > 0 && (
         <Button
           size="compact-xs"
           variant="subtle"
@@ -617,7 +630,7 @@ function TreeRecap({
         >
           {more
             ? 'Show less'
-            : `Show ${String(small.length)} more under ${String(Math.round(CAMPAIGN.talentRecap.minCompletion * 100))} % complete`}
+            : `Show ${String(hidden.length)} more under ${String(Math.round(CAMPAIGN.talentRecap.minCompletion * 100))} % complete`}
         </Button>
       )}
     </section>

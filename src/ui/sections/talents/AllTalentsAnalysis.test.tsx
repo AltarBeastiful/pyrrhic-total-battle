@@ -29,11 +29,18 @@ afterEach(() => {
 
 const { rated, notRated } = analyzableTalents(TALENTS);
 
+const openCard = (): HTMLElement => {
+  fireEvent.click(screen.getByRole('button', { name: /^Show ranking/ }));
+  return screen.getByRole('region', { name: 'Talent ranking' });
+};
+
 test('the ranking is collapsed until pressed, then lists every analysable talent with the not-rated count', async () => {
   renderWithTheme(<TalentsPage />);
   expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Analyze all' }));
-  const card = await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
+  await screen.findByRole('button', { name: /^Show ranking/ }, { timeout: 110_000 });
+  expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
+  const card = openCard();
   const rows = within(card).getAllByRole('row').slice(1);
   expect(rows).toHaveLength(rated.length);
   expect(
@@ -73,7 +80,7 @@ test('a talent row matches the single Analyze of the same talent, to the digit',
   const profile = selectActiveProfile(useStore.getState())!;
   renderWithTheme(<TalentsPage />);
   fireEvent.click(screen.getByRole('button', { name: 'Analyze all' }));
-  await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
+  await screen.findByRole('button', { name: /^Show ranking/ }, { timeout: 110_000 });
   const run = useAllAnalysisStore.getState().run!;
   const entry = run.entries!.find((e) => e.node.name === "Guardsmen's strength I")!;
   const { analyzeTalent } = await import('./analysisStore');
@@ -104,6 +111,7 @@ const seeded = (): void => {
       entries,
       notRated: 2,
       error: null,
+      kept: null,
     },
   });
 };
@@ -122,11 +130,11 @@ const changeArmy = (): void => {
 test('leaving and returning shows the kept ranking at once, with no new run', () => {
   seeded();
   const first = renderWithTheme(<TalentsPage />);
-  expect(screen.getByRole('region', { name: 'Talent ranking' })).toBeTruthy();
+  openCard();
   first.unmount();
   const before = useAllAnalysisStore.getState().run;
   renderWithTheme(<TalentsPage />);
-  expect(screen.getByRole('region', { name: 'Talent ranking' })).toBeTruthy();
+  openCard();
   expect(screen.queryByText(/out of date/i)).toBeNull();
   expect(screen.getByRole('button', { name: 'Analyze all' })).toBeTruthy();
   expect(useAllAnalysisStore.getState().run).toBe(before);
@@ -143,7 +151,7 @@ test('a changed account marks the ranking out of date, and it is not shown as cu
     }));
   });
   expect(screen.getByText(/out of date/i)).toBeTruthy();
-  expect(screen.getByRole('region', { name: 'Talent ranking' }).getAttribute('data-stale')).toBe('true');
+  expect(openCard().getAttribute('data-stale')).toBe('true');
   expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Analyze all' })).toBeNull();
 });
@@ -168,7 +176,7 @@ test('Re-analyze runs again and the fresh ranking is current', async () => {
     },
     { timeout: 110_000 },
   );
-  const card = screen.getByRole('region', { name: 'Talent ranking' });
+  const card = openCard();
   expect(card.getAttribute('data-stale')).toBeNull();
   expect(screen.queryByText(/out of date/i)).toBeNull();
   expect(screen.getByRole('button', { name: 'Analyze all' })).toBeTruthy();
@@ -182,9 +190,37 @@ test('selecting a row selects that talent in its tree and scrolls it into view',
   };
   renderWithTheme(<TalentsPage />);
   const node = useAllAnalysisStore.getState().run!.entries![2]!.node;
-  const card = screen.getByRole('region', { name: 'Talent ranking' });
+  const card = openCard();
   fireEvent.click(within(card).getByRole('button', { name: `Select ${node.name}` }));
   const tile = document.querySelector(`[data-node-id="${String(node.id)}"]`)!;
   expect(tile.getAttribute('aria-pressed')).toBe('true');
   expect(scrolled).toContain(tile);
+});
+
+test('the ranking card is collapsed until pressed, toggles, and keeps the result', () => {
+  seeded();
+  renderWithTheme(<TalentsPage />);
+  expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
+  openCard();
+  fireEvent.click(screen.getByRole('button', { name: 'Hide ranking' }));
+  expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
+  expect(openCard()).toBeTruthy();
+});
+
+test('cancelling a re-run brings the previous ranking back, out of date and never partial', async () => {
+  seeded();
+  renderWithTheme(<TalentsPage />);
+  changeArmy();
+  const previous = useAllAnalysisStore.getState().run!.entries;
+  fireEvent.click(screen.getByRole('button', { name: 'Re-analyze' }));
+  expect(useAllAnalysisStore.getState().run?.status).toBe('running');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => {
+    expect(useAllAnalysisStore.getState().run?.status).toBe('cancelled');
+  });
+  const card = openCard();
+  expect(within(card).getAllByRole('row').slice(1)).toHaveLength(previous!.length);
+  expect(card.getAttribute('data-stale')).toBe('true');
+  expect(screen.getByText(/out of date/i)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeTruthy();
 });

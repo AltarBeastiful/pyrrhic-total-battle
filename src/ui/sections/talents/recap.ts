@@ -9,7 +9,8 @@ export interface RecapRow {
   readonly maxRanks: number;
 }
 
-const size = (r: RecapRow) => Math.max(r.now, r.after);
+/** How large a family is: the larger of its bonus now and after the plan. */
+export const recapSize = (r: RecapRow): number => Math.max(r.now, r.after);
 
 /**
  * Rows ordered by the larger of now and after; a family below the completion threshold is hidden, except the
@@ -17,7 +18,7 @@ const size = (r: RecapRow) => Math.max(r.now, r.after);
  */
 export function splitRecap(rows: readonly RecapRow[]): { shown: RecapRow[]; hidden: RecapRow[] } {
   const { minCompletion, minRows } = CAMPAIGN.talentRecap;
-  const sorted = [...rows].sort((a, b) => size(b) - size(a) || a.label.localeCompare(b.label));
+  const sorted = [...rows].sort((a, b) => recapSize(b) - recapSize(a) || a.label.localeCompare(b.label));
   const shown: RecapRow[] = [];
   const hidden: RecapRow[] = [];
   sorted.forEach((r, i) => {

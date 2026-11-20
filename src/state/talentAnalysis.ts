@@ -80,15 +80,15 @@ export interface TalentAnalysisJob {
 
 /**
  * **Analyze all** (B-28): the input of every talent the rating can read, asked of the engine (`analyzableTalents`)
- * and built by the same `talentAnalysisInput` the single Analyze uses, so the two cannot disagree. The count of
- * talents the rating cannot read comes with it.
+ * and built by the same `talentAnalysisInput` the single Analyze uses, so the two cannot disagree. `notRated` counts
+ * only the talents the engine cannot read; a readable talent whose input could not be built is `skipped`, apart.
  */
 export function allTalentsInputs(
   profile: Profile,
   setup: BattleSetup,
   tables: DeriveTables = DEFAULT_TABLES,
   talentTable: readonly TalentRecord[] = talents,
-): { jobs: TalentAnalysisJob[]; notRated: number } {
+): { jobs: TalentAnalysisJob[]; notRated: number; skipped: number } {
   const { rated, notRated } = analyzableTalents(talentTable);
   const jobs: TalentAnalysisJob[] = [];
   for (const node of rated) {
@@ -96,7 +96,7 @@ export function allTalentsInputs(
     if (input === null) continue;
     jobs.push({ node, baseline: input.baseline ?? 0, input });
   }
-  return { jobs, notRated: notRated + (rated.length - jobs.length) };
+  return { jobs, notRated, skipped: rated.length - jobs.length };
 }
 
 /** The question the ranking answers: every number that moves a rating, once for the whole table. */

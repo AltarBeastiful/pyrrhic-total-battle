@@ -548,3 +548,9 @@
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: 2px;
 }
+
+/* A ranking asked of another army: the text keeps full contrast, the box says so with a dashed warning border. */
+.rankBox[data-stale='true'] {
+  border-style: dashed;
+  border-color: var(--mantine-color-yellow-7);
+}
