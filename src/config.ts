@@ -251,6 +251,11 @@ export const CAMPAIGN = {
    */
   markerRates: MARKER_RATES,
   /**
+   * **The Talents tree recap** (B-27): a talent family shows when its summed ranks (bought plus planned) over its
+   * summed max ranks reach `minCompletion`; the `minRows` largest bonuses always show, so the list is never empty.
+   */
+  talentRecap: { minCompletion: 0.25, minRows: 4 },
+  /**
    * **The leadership shapes the talent analysis prices** (B-24; owner, 2026-11-20: *"just do two settings"*,
    * *"100 80"*): the army sized with the leadership pool at each of these percentages, and the mean of the
    * gains. 80 is below the 90 % floor of `editFills` — under it mercenaries start to go and the damage bends —
