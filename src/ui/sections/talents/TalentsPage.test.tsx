@@ -589,13 +589,26 @@ test('a tile shows its rank on the left and its bonus on the right, and the deta
   expect(tile.textContent).toContain('rank 5');
   expect(tile.textContent).toContain(`+${String(node.values[4])} %`);
   fireEvent.click(tile);
-  // One line of key ranks first; the full table opens on a click.
+  // One line of at most five key chips; the full list is the same chips, wrapped, in a box of its own.
   const line = screen.getByRole('list', { name: `${node.name} key ranks` });
-  expect(within(line).getAllByRole('listitem').length).toBeLessThan(node.maxRank);
+  const keys = within(line).getAllByRole('listitem');
+  expect(keys.length).toBeLessThanOrEqual(5);
+  expect(keys.map((k) => k.getAttribute('data-rank-n'))).toEqual(
+    expect.arrayContaining(['1', '5', String(node.maxRank)]),
+  );
   fireEvent.click(screen.getByRole('button', { name: `Show all ${String(node.maxRank)} ranks` }));
-  const table = screen.getByRole('region', { name: `${node.name} ranks` });
-  expect(within(table).getAllByRole('row')).toHaveLength(node.maxRank + 1);
-  expect(table.querySelector('tr[data-rank="now"]')!.textContent).toMatch(/^5you are here/);
+  const box = screen.getByRole('region', { name: `${node.name} ranks` });
+  expect(box.querySelector('table')).toBeNull();
+  expect(within(box).getAllByRole('listitem')).toHaveLength(node.maxRank);
+  const now = box.querySelector('[data-rank="now"]')!;
+  expect(now.getAttribute('data-rank-n')).toBe('5');
+  const chip = now.querySelector('[aria-label]')!;
+  expect(chip.getAttribute('aria-label')).toBe(chip.getAttribute('title'));
+  expect(chip.getAttribute('aria-label')).toMatch(
+    /rank 5, held: costs \d+ points?, adds \+.* %, total \+.* %/,
+  );
+  expect(chip.textContent).not.toMatch(/cost|adds/);
+  expect(chip.getAttribute('tabindex')).toBe('0');
 });
 
 test('hovering a tile shows its pad with a small max next to +, and leaving hides it', () => {
@@ -730,7 +743,10 @@ test('with no Hero Talents entry the copy creates it and writes the lines', () =
   hold(1);
   const profile = selectActiveProfile(useStore.getState())!;
   useStore.getState().updateProfile(profile.id, {
-    sources: { ...profile.sources, permanent: profile.sources.permanent.filter((e) => e.builtin !== 'heroTalents') },
+    sources: {
+      ...profile.sources,
+      permanent: profile.sources.permanent.filter((e) => e.builtin !== 'heroTalents'),
+    },
   });
   renderWithTheme(<TalentsPage />);
   fireEvent.click(screen.getByRole('button', { name: COPY }));

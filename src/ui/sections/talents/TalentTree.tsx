@@ -14,6 +14,7 @@ import { Glyph } from '@/ui/domain/Glyph';
 import { NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
+import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
 import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
 import { talentFamily, talentIcons } from './talentFamily';
@@ -468,36 +469,48 @@ function NodeEditor({
 }
 
 /**
- * The ranks of a node on one line: the first three, the one held and its neighbours, the middle and the last
- * three, each with its running total. The full table, every rank, is one click away.
+ * The ranks of a node as chips (B-26): about five key ones on a line, a `…` at each gap, and "Show all" opens the same
+ * chips one per rank, wrapped, in a box that scrolls on its own and opens on the held rank. Cost and "adds" live in the
+ * tooltip and the screen-reader label (rules 24, 25), never in the chip.
  */
 function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number; plus: number }) {
   const [all, setAll] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const here = useRef<HTMLTableRowElement>(null);
-  // The full table opens on the held rank (or the first one): it scrolls inside its box, never the page.
+  const here = useRef<HTMLLIElement>(null);
+  // The full list opens on the held rank (or the first one): it scrolls inside its box, never the page.
   useEffect(() => {
     if (all && box.current !== null && here.current !== null) {
       box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
     }
   }, [node.id, all]);
   const last = node.maxRank;
-  const picks = [
-    ...new Set([1, 2, 3, bought - 1, bought, bought + 1, Math.round(last / 2), last - 2, last - 1, last]),
-  ]
-    .filter((r) => r >= 1 && r <= last)
-    .sort((a, b) => a - b);
-  const stateOf = (rank: number): 'now' | 'held' | 'plan' | 'open' =>
+  const picks = keyRankPicks({ last, bought, plus });
+  const stateOf = (rank: number): RankState =>
     rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
+  const chip = (rank: number, gap: boolean, anchor = false) => {
+    const state = stateOf(rank);
+    const label = rankChipLabel({ name: node.name, rank, values: node.values, costs: node.costs, state });
+    return (
+      <li
+        key={rank}
+        ref={anchor ? here : undefined}
+        className={classes.rankChip}
+        data-rank={state}
+        data-rank-n={rank}
+      >
+        {gap && <span aria-hidden>…</span>}
+        <span
+          tabIndex={0}
+          title={label}
+          aria-label={label}
+        >{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
+      </li>
+    );
+  };
   return (
     <Stack gap={4}>
       <ul className={classes.rankLine} aria-label={`${node.name} key ranks`}>
-        {picks.map((rank, i) => (
-          <li key={rank} className={classes.rankChip} data-rank={stateOf(rank)}>
-            {i > 0 && rank - (picks[i - 1] ?? rank) > 1 && <span aria-hidden>…</span>}
-            <span>{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
-          </li>
-        ))}
+        {picks.map((rank, i) => chip(rank, i > 0 && rank - (picks[i - 1] ?? rank) > 1))}
       </ul>
       <Button
         size="compact-xs"
@@ -508,7 +521,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
           setAll((open) => !open);
         }}
       >
-        {all ? 'Hide the full table' : `Show all ${String(last)} ranks`}
+        {all ? 'Hide all ranks' : `Show all ${String(last)} ranks`}
       </Button>
       {all && (
         <div
@@ -518,34 +531,9 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
           aria-label={`${node.name} ranks`}
           tabIndex={0}
         >
-          <table className={classes.ranks}>
-            <thead>
-              <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Cost</th>
-                <th scope="col">Adds</th>
-                <th scope="col">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {node.values.map((value, i) => {
-                const rank = i + 1;
-                const state = stateOf(rank);
-                return (
-                  <tr key={rank} ref={rank === Math.max(bought, 1) ? here : undefined} data-rank={state}>
-                    <td>
-                      {rank}
-                      {state === 'now' && <span className={classes.rankTag}>you are here</span>}
-                      {state === 'plan' && <span className={classes.rankTag}>plan</span>}
-                    </td>
-                    <td>{node.costs[i]}</td>
-                    <td>{`+${percent(rankGain(node.values, rank))}`}</td>
-                    <td>{`+${percent(value)}`}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ul className={classes.rankLine}>
+            {node.values.map((_, i) => chip(i + 1, false, i + 1 === Math.max(bought, 1)))}
+          </ul>
         </div>
       )}
     </Stack>
