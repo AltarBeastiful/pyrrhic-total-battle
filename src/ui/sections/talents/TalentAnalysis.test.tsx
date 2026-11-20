@@ -159,3 +159,17 @@ test('a copy makes a held result stale, and a talent at its maximum says nothing
   expect(await screen.findByText(/nothing left to buy/i)).toBeTruthy();
   expect(screen.queryByRole('button', { name: /analyze/i })).toBeNull();
 });
+
+test('at maximum rank a held result is not shown', async () => {
+  const node = battleNode();
+  holdRank(5);
+  open('Battle tactics', node.name);
+  fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+  await screen.findByTestId('analysis-chart');
+  act(() => {
+    holdRank(node.maxRank);
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Copy to battle bonuses' }));
+  expect(await screen.findByText(/nothing left to buy/i)).toBeTruthy();
+  expect(screen.queryByTestId('analysis-chart')).toBeNull();
+});

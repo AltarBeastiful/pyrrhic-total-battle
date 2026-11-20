@@ -114,3 +114,14 @@ describe('talentAnalysisInput baseline (B-25)', () => {
     );
   });
 });
+
+describe('talentBaseline agrees with talentCopy on float noise (review)', () => {
+  it('a source off by 1e-12 is still in sync, so the baseline is the held rank', () => {
+    const { profile } = held(8, true);
+    const hero = profile.sources.permanent.find((entry) => entry.builtin === 'heroTalents')!;
+    hero.strength = { melee: 16 + 1e-12 };
+    expect(talentBaseline(profile, melee, [melee])).toBe(8);
+    hero.strength = { melee: 16.01 };
+    expect(talentBaseline(profile, melee, [melee])).toBe(0);
+  });
+});

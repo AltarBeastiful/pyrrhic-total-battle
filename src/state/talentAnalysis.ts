@@ -9,7 +9,7 @@ import { talents } from '../data';
 import type { BonusKey, TalentRecord } from '../data/types';
 import { aggregateBonuses } from '../engine/bonuses';
 import { analysisRanks, talentSource } from '../engine/talentAnalysis';
-import { talentCopy } from '../engine/talentCopy';
+import { heldRank, talentCopy } from '../engine/talentCopy';
 import type { ResolvedSource } from '../engine/types';
 import type { TalentAnalysisInput } from '../worker/talentAnalysis';
 import type { DeriveTables } from './derive';
@@ -28,7 +28,7 @@ export function talentBaseline(
   const hero = profile.sources.permanent.find((entry) => entry.builtin === 'heroTalents');
   const copy = talentCopy(talentTable, profile.talents.ranks, hero);
   if (!copy.inSync) return 0;
-  return Math.min(profile.talents.ranks[String(node.id)] ?? 0, node.maxRank);
+  return heldRank(node, profile.talents.ranks);
 }
 
 /** What `rank` adds to a march that already carries the talent at `baseline`: the lines' difference. */

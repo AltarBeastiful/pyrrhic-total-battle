@@ -100,3 +100,17 @@ describe('talentCopy sync', () => {
     ]);
   });
 });
+
+describe('talentCopy tolerance and clamp (review)', () => {
+  const ranks = { '1': 3, '3': 1 };
+
+  test('float noise is in sync, a 0.01 hand edit is not', () => {
+    expect(talentCopy(table, ranks, { strength: { melee: 6 + 1e-12 }, health: { ranged: 5 } }).inSync).toBe(true);
+    expect(talentCopy(table, ranks, { strength: { melee: 6.01 }, health: { ranged: 5 } }).inSync).toBe(false);
+  });
+
+  test('a rank above maxRank reads as maxRank even when the values run longer', () => {
+    const long = { ...node(7, "Melee units' strength III", ['UNIT_POWER'], [1, 2, 3]), maxRank: 2 };
+    expect(talentCopy([long], { '7': 3 }, undefined).lines).toEqual({ strength: { melee: 2 }, health: {} });
+  });
+});

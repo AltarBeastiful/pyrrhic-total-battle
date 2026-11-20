@@ -39,6 +39,16 @@ export interface TalentCopy {
 const MOST_DIFFERENCES = 3;
 const LINES: readonly TalentLine[] = ['strength', 'health'];
 
+/** Two totals closer than this are float noise, never a hand edit (a 0.01 edit is far above it). */
+export const TALENT_TOLERANCE = 1e-9;
+
+/** The one comparison the sync verdict and the analysis baseline share. */
+export const sameTotal = (a: number, b: number): boolean => Math.abs(a - b) <= TALENT_TOLERANCE;
+
+/** The rank a node counts at: held, never below 0 nor above its maximum. */
+export const heldRank = (node: TalentRecord, ranks: Readonly<Record<string, number>>): number =>
+  Math.min(Math.max(ranks[String(node.id)] ?? 0, 0), node.maxRank);
+
 /** What a source holds, as the two maps the schema stores; anything absent reads as zero. */
 export type TalentSourceLines = { [L in TalentLine]?: Partial<Record<BonusKey, number>> | undefined };
 
@@ -51,7 +61,7 @@ export function talentCopy(
   let held = 0;
   let noEffect = 0;
   for (const node of nodes) {
-    const rank = ranks[String(node.id)] ?? 0;
+    const rank = heldRank(node, ranks);
     if (rank <= 0) continue;
     held++;
     const one = talentSource(node, rank);
@@ -77,7 +87,7 @@ export function talentCopy(
     for (const key of keys) {
       const tree = lines[line][key] ?? 0;
       const stored = source?.[line]?.[key] ?? 0;
-      if (tree !== stored) differences.push({ line, key, tree, source: stored });
+      if (!sameTotal(tree, stored)) differences.push({ line, key, tree, source: stored });
     }
   }
   const inSync = differences.length === 0;

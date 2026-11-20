@@ -725,3 +725,23 @@ test('a copy over typed values asks once, and cancelling changes nothing', () =>
   expect(heroSource().strength.melee).toBeUndefined();
   expect(screen.getByRole('button', { name: 'Copied, matches your tree' })).toBeTruthy();
 });
+
+test('with no Hero Talents entry the copy creates it and writes the lines', () => {
+  hold(1);
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore.getState().updateProfile(profile.id, {
+    sources: { ...profile.sources, permanent: profile.sources.permanent.filter((e) => e.builtin !== 'heroTalents') },
+  });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  expect(Object.keys(heroSource().strength).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: 'Copied, matches your tree' })).toBeTruthy();
+});
+
+test('when in sync the quiet button opens no confirmation', () => {
+  hold(1);
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copied, matches your tree' }));
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+});

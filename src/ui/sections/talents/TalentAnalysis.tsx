@@ -224,7 +224,7 @@ export function TalentAnalysis({ node }: { node: TalentRecord }) {
         March rating gained by each rank over the baseline named below, on the army selected in March, added
         to your bonuses as entered.
       </Text>
-      {entry?.analysis != null && <Results node={node} analysis={entry.analysis} />}
+      {entry?.analysis != null && !spent && <Results node={node} analysis={entry.analysis} />}
     </section>
   );
 }

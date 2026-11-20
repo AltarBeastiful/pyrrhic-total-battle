@@ -37,20 +37,26 @@ export function CopyToBattle() {
   if (profile === undefined || copy === null) return null;
 
   const write = (): void => {
-    updateProfile(profile.id, (current) => ({
-      sources: {
-        ...current.sources,
-        permanent: current.sources.permanent.map((entry) => {
-          if (entry.builtin !== 'heroTalents') return entry;
-          const { special: _dropped, ...rest } = entry;
-          return { ...rest, strength: copy.lines.strength, health: copy.lines.health };
-        }),
-      },
-    }));
+    updateProfile(profile.id, (current) => {
+      const lines = { strength: copy.lines.strength, health: copy.lines.health };
+      const has = current.sources.permanent.some((entry) => entry.builtin === 'heroTalents');
+      const permanent = has
+        ? current.sources.permanent.map((entry) => {
+            if (entry.builtin !== 'heroTalents') return entry;
+            const { special: _dropped, ...rest } = entry;
+            return { ...rest, ...lines };
+          })
+        : [
+            ...current.sources.permanent,
+            { id: 'heroTalents', name: 'Hero Talents', builtin: 'heroTalents' as const, ...lines },
+          ];
+      return { sources: { ...current.sources, permanent } };
+    });
     setAsking(false);
   };
   const press = (): void => {
     if (
+      !copy.inSync &&
       hero !== undefined &&
       (holdsValue(hero.strength) || holdsValue(hero.health) || holdsValue(hero.special))
     )
