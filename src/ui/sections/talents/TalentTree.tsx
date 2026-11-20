@@ -67,12 +67,11 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
   return bought > 0 ? `+${percent(now)} → ${percent(after)}` : `→ +${percent(after)}`;
 }
 
-/** The game's grid: six columns, cell size in px. Tiles are 124 x 104 inside a 144 x 128 cell. */
-const CELL_W = 164;
+/** The game's grid: cell size in px, tiles 156 x 128 inside a 176 x 152 cell. */
+const CELL_W = 176;
 const CELL_H = 152;
-const TILE_W = 148;
+const TILE_W = 156;
 const TILE_H = 128;
-const COLS = 6;
 
 export function TalentTree({
   talents,
@@ -95,10 +94,13 @@ export function TalentTree({
   const points = treePoints(talents, tree, ranks, plan.steps);
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const rows = Math.max(...nodes.map((n) => n.layout.y)) + 1;
-  const width = COLS * CELL_W;
+  // Only the columns the tree uses take room: the tiles keep their size and the empty outer columns go.
+  const firstCol = Math.min(...nodes.map((n) => n.layout.x));
+  const lastCol = Math.max(...nodes.map((n) => n.layout.x));
+  const width = (lastCol - firstCol + 1) * CELL_W;
   const height = rows * CELL_H;
   const centre = (n: TalentRecord): [number, number] => [
-    n.layout.x * CELL_W + CELL_W / 2,
+    (n.layout.x - firstCol) * CELL_W + CELL_W / 2,
     n.layout.y * CELL_H + CELL_H / 2,
   ];
   // One line from each node to each of its parents, as the game draws them; a line into a node that is held
@@ -175,7 +177,7 @@ export function TalentTree({
                     if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null);
                   }}
                   style={{
-                    left: n.layout.x * CELL_W + (CELL_W - TILE_W) / 2,
+                    left: (n.layout.x - firstCol) * CELL_W + (CELL_W - TILE_W) / 2,
                     top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
                     width: TILE_W,
                     height: TILE_H,
