@@ -4,9 +4,10 @@
  * (`allAnalysisStore`), so the card holds nothing a later story would have to pull out of it.
  */
 import { Button, Group, Progress, Stack, Text } from '@mantine/core';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { allTalentsKey } from '@/state/talentAnalysis';
 import { rankTalents, type RankingRow, type RankingSort } from '@/state/talentRanking';
 
 import { analyzeAll, cancelAll, useAllAnalysisStore } from './allAnalysisStore';
@@ -26,13 +27,24 @@ function Ranking({
   rows,
   sort,
   onSort,
+  stale,
+  onSelect,
 }: {
   rows: RankingRow[];
   sort: RankingSort;
   onSort: (s: RankingSort) => void;
+  stale: boolean;
+  onSelect: (id: number) => void;
 }) {
   return (
-    <div className={classes.rankBox} role="region" aria-label="Talent ranking" tabIndex={0}>
+    <div
+      className={classes.rankBox}
+      role="region"
+      aria-label="Talent ranking"
+      tabIndex={0}
+      data-stale={stale ? 'true' : undefined}
+      style={stale ? { opacity: 0.55 } : undefined}
+    >
       <table className={classes.ranks}>
         <thead>
           <tr>
@@ -70,7 +82,18 @@ function Ranking({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.name}</td>
+              <td>
+                <button
+                  type="button"
+                  className={classes.sortButton}
+                  aria-label={`Select ${row.name}`}
+                  onClick={() => {
+                    onSelect(row.id);
+                  }}
+                >
+                  {row.name}
+                </button>
+              </td>
               <td>{row.held}</td>
               <td>{row.max}</td>
               <td>{signed(row.gainAtMax)}</td>
@@ -83,13 +106,19 @@ function Ranking({
   );
 }
 
-export function AllTalentsAnalysis() {
+export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => void }) {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const run = useAllAnalysisStore((state) => state.run);
   const [sort, setSort] = useState<RankingSort>('perPoint');
+  // The question as it stands now; a kept ranking asked another one is out of date and never shown as current.
+  const key = useMemo(
+    () => (profile === undefined || setup === undefined ? null : allTalentsKey(profile, setup)),
+    [profile, setup],
+  );
   if (profile === undefined || setup === undefined) return null;
   const running = run?.status === 'running';
+  const stale = run?.status === 'done' && run.key !== key;
   const rows = run?.entries == null ? null : rankTalents(run.entries, sort);
   return (
     <Stack gap="xs" component="section" aria-label="Analyze all talents">
@@ -106,12 +135,17 @@ export function AllTalentsAnalysis() {
               void analyzeAll(profile, setup);
             }}
           >
-            Analyze all
+            {stale ? 'Re-analyze' : 'Analyze all'}
           </Button>
         )}
         {running && (
           <Text size="sm" role="status">
             {run.total > 0 ? `Analyzing, ${String(run.done)} of ${String(run.total)}` : 'Analyzing'}
+          </Text>
+        )}
+        {stale && (
+          <Text size="sm" c="dimmed">
+            Out of date: your army or bonuses changed since.
           </Text>
         )}
         {run?.status === 'cancelled' && (
@@ -136,7 +170,7 @@ export function AllTalentsAnalysis() {
       {rows !== null && run !== null && (
         <>
           <Text size="sm">{`${String(run.notRated)} not rated in battle`}</Text>
-          <Ranking rows={rows} sort={sort} onSort={setSort} />
+          <Ranking rows={rows} sort={sort} onSort={setSort} stale={stale} onSelect={onSelect} />
         </>
       )}
     </Stack>
