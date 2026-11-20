@@ -270,34 +270,13 @@
 
 }
 
-/* B-22 goal cards (redone in B-30): the goals sit side by side as cards, each with its rank, name and weight, the move
-   and ignore buttons, and, on the rank 1 card, the strength cluster on a row of its own. */
-.setup {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 24px;
-}
-
-.goalList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 8px;
-}
-
+/* B-22 goal rows: rank, name and weight, the rank 1 strength cluster, the move and ignore buttons. On a
+   narrow screen the strength cluster wraps under the row (story 37). */
 .goalRow {
   display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr);
-  grid-template-areas:
-    'rank name'
-    'moves moves'
-    'strength strength';
-  gap: 6px 8px;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+  gap: 4px 8px;
   align-items: center;
-  padding: 8px;
 }
 
 .goalRow[data-off='true'] {
@@ -305,24 +284,38 @@
 }
 
 .goalRank {
-  grid-area: rank;
   font-variant-numeric: tabular-nums;
 }
 
 .goalName {
-  grid-area: name;
   min-width: 0;
 }
 
 .goalStrength {
-  grid-area: strength;
-  justify-self: start;
-  max-width: 100%;
+  justify-self: end;
 }
 
 .goalMoves {
-  grid-area: moves;
-  justify-self: start;
+  grid-column: 4;
+  justify-self: end;
+}
+
+@media (max-width: 40em) {
+  .goalRow {
+    grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  }
+
+  .goalMoves {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .goalStrength {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: start;
+    max-width: 100%;
+  }
 }
 
 /* The Next point card stands out from Then (story 24): a heavier border in the accent colour. */
@@ -330,7 +323,8 @@
   border: 2px solid var(--mantine-primary-color-filled);
 }
 
-/* The top of the page: the form, with the Totals panel beside it on a wide screen. */
+/* The top of the page (B-30): two compact columns on a wide screen, the form with Battle bonuses and Totals on the
+   left, what counts and the next points on the right; one column on a phone. */
 .top {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -338,14 +332,13 @@
   align-items: start;
 }
 
-@media (min-width: 62em) {
-  /* The form takes the left column over both rows; Battle bonuses and Totals stack on its right. */
-  .top[data-totals='true'] > :first-child {
-    grid-row: span 2;
-  }
+.topCol {
+  min-width: 0;
+}
 
-  .top[data-totals='true'] {
-    grid-template-columns: minmax(0, 48rem) minmax(0, 1fr);
+@media (min-width: 62em) {
+  .top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 

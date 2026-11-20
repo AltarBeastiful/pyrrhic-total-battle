@@ -434,14 +434,15 @@ export function TalentsPage() {
 
   return (
     <Stack gap="lg">
-      <div className={classes.top} data-totals={shownStats.length > 0}>
+      <div className={classes.top}>
+        <Stack gap="md" className={classes.topCol}>
         <Panel
           component="section"
           title="Hero talents"
           meta={`${GOAL_LABELS[first]} first, level ${String(talentsState.heroLevel)}`}
         >
           <Stack gap="md">
-            <div className={classes.setup}>
+            <Group gap="md" align="flex-start">
               <NumberField
                 w={120}
                 label="Hero level"
@@ -494,7 +495,7 @@ export function TalentsPage() {
                   </Tooltip>
                 </Group>
               </Stack>
-            </div>
+            </Group>
             <div id={modeHelpId} hidden={!modeHelpOpen}>
               {modeHelpOpen && (
                 <Stack gap={4}>
@@ -514,9 +515,9 @@ export function TalentsPage() {
               </Text>
               <Stack
                 component="ul"
-                gap={0}
-                className={classes.goalList}
+                gap={4}
                 aria-label="Goals, most wanted first"
+                style={{ listStyle: 'none', margin: 0, padding: 0 }}
               >
                 {order.map((goal, index) => {
                   const off = ignored.has(goal);
@@ -631,25 +632,75 @@ export function TalentsPage() {
             </Stack>
           </Stack>
         </Panel>
-        <Panel component="section" title="Battle bonuses" meta="Held ranks only">
-          <CopyToBattle />
-        </Panel>
-        {shownStats.length > 0 && (
-          <Panel component="section" title="Totals" meta="Before, then after">
-            <Stack gap={4}>
-              {shownStats.map((stat) => (
-                <Group key={stat} justify="space-between" wrap="nowrap">
-                  <Text size="sm">{statLabel(stat)}</Text>
-                  <Text size="sm">
-                    {percent(result.before[stat] ?? 0)} to {percent(result.after[stat] ?? 0)}
+      <Panel component="section" aria-label="Spend your next points">
+        <Disclosure
+          title="Spend your next points"
+          summary={
+            stock === null || left === null
+              ? 'Type your points first'
+              : `${String(left)} of ${String(stock)} points left`
+          }
+        >
+          <Stack gap="md">
+            {stock === null ? (
+              <Text>
+                Type your whole stock of talent points. The game&apos;s points per hero level are only known
+                from level 86 (10 each), so the page cannot work out your total from the level alone. The
+                ranks you hold, or click on the tree, spend it, and the plan works on what is left.
+              </Text>
+            ) : result.steps.length === 0 ? (
+              <Text>
+                {over > 0
+                  ? `The ranks you hold cost ${plural(over, 'point')} more than your stock. Raise the stock, or take a rank back.`
+                  : left === 0
+                    ? 'No points left to spend, so there is nothing to plan.'
+                    : kinds.size === 0 && unitStats
+                      ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
+                      : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
+              </Text>
+            ) : (
+              <>
+                <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
+                  {result.steps.slice(0, 2).map((step, i) => (
+                    <StepCard
+                      key={`${String(step.nodeId)}-${String(step.rank)}`}
+                      step={step}
+                      next={i === 0}
+                      onSpend={i === 0 ? spend : undefined}
+                      onSpendUpToHere={
+                        i > 0
+                          ? () => {
+                              spendPlanTo(i);
+                            }
+                          : undefined
+                      }
+                    />
+                  ))}
+                </SimpleGrid>
+                <Text size="sm">
+                  Plan spends {String(result.pointsSpent)} of {String(left ?? 0)} points
+                  {result.pointsLeft > 0 ? `, ${String(result.pointsLeft)} left.` : '.'} The tree below shows
+                  every step in order.
+                </Text>
+                {result.pointsLeft > 0 && (
+                  <Text size="sm" c="dimmed">
+                    {plural(result.pointsLeft, 'point')} left over: less than the cheapest rank still open
+                    {ignored.size > 0 ? ', or only in a goal you ignore' : ''}.
                   </Text>
-                </Group>
-              ))}
-            </Stack>
-          </Panel>
-        )}
-      </div>
-
+                )}
+              </>
+            )}
+            {gate !== null && gate !== undefined && result.nextGate !== null && (
+              <Text size="sm">
+                At level {String(result.nextGate.level)}, {gate.name} opens, worth{' '}
+                {percent(result.nextGate.value)} for {plural(result.nextGate.points, 'point')}.
+              </Text>
+            )}
+          </Stack>
+        </Disclosure>
+      </Panel>
+        </Stack>
+        <Stack gap="md" className={classes.topCol}>
       <Panel component="section" title="Bonuses selected" meta="What counts toward the plan">
         <Stack gap="xs">
           <Disclosure title="Weights" summary="Tick the stats you want; each counts 1 unless you change it">
@@ -801,73 +852,25 @@ export function TalentsPage() {
         </Stack>
       </Panel>
 
-      <Panel component="section" aria-label="Spend your next points">
-        <Disclosure
-          title="Spend your next points"
-          summary={
-            stock === null || left === null
-              ? 'Type your points first'
-              : `${String(left)} of ${String(stock)} points left`
-          }
-        >
-          <Stack gap="md">
-            {stock === null ? (
-              <Text>
-                Type your whole stock of talent points. The game&apos;s points per hero level are only known
-                from level 86 (10 each), so the page cannot work out your total from the level alone. The
-                ranks you hold, or click on the tree, spend it, and the plan works on what is left.
-              </Text>
-            ) : result.steps.length === 0 ? (
-              <Text>
-                {over > 0
-                  ? `The ranks you hold cost ${plural(over, 'point')} more than your stock. Raise the stock, or take a rank back.`
-                  : left === 0
-                    ? 'No points left to spend, so there is nothing to plan.'
-                    : kinds.size === 0 && unitStats
-                      ? 'Nothing to plan: no unit counts yet. Set your troops, or tick a kind of unit under Units that count.'
-                      : 'No node open at this hero level adds anything for your goals and army, so nothing is planned.'}
-              </Text>
-            ) : (
-              <>
-                <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
-                  {result.steps.slice(0, 2).map((step, i) => (
-                    <StepCard
-                      key={`${String(step.nodeId)}-${String(step.rank)}`}
-                      step={step}
-                      next={i === 0}
-                      onSpend={i === 0 ? spend : undefined}
-                      onSpendUpToHere={
-                        i > 0
-                          ? () => {
-                              spendPlanTo(i);
-                            }
-                          : undefined
-                      }
-                    />
-                  ))}
-                </SimpleGrid>
-                <Text size="sm">
-                  Plan spends {String(result.pointsSpent)} of {String(left ?? 0)} points
-                  {result.pointsLeft > 0 ? `, ${String(result.pointsLeft)} left.` : '.'} The tree below shows
-                  every step in order.
-                </Text>
-                {result.pointsLeft > 0 && (
-                  <Text size="sm" c="dimmed">
-                    {plural(result.pointsLeft, 'point')} left over: less than the cheapest rank still open
-                    {ignored.size > 0 ? ', or only in a goal you ignore' : ''}.
+        <Panel component="section" title="Battle bonuses" meta="Held ranks only">
+          <CopyToBattle />
+        </Panel>
+        {shownStats.length > 0 && (
+          <Panel component="section" title="Totals" meta="Before, then after">
+            <Stack gap={4}>
+              {shownStats.map((stat) => (
+                <Group key={stat} justify="space-between" wrap="nowrap">
+                  <Text size="sm">{statLabel(stat)}</Text>
+                  <Text size="sm">
+                    {percent(result.before[stat] ?? 0)} to {percent(result.after[stat] ?? 0)}
                   </Text>
-                )}
-              </>
-            )}
-            {gate !== null && gate !== undefined && result.nextGate !== null && (
-              <Text size="sm">
-                At level {String(result.nextGate.level)}, {gate.name} opens, worth{' '}
-                {percent(result.nextGate.value)} for {plural(result.nextGate.points, 'point')}.
-              </Text>
-            )}
-          </Stack>
-        </Disclosure>
-      </Panel>
+                </Group>
+              ))}
+            </Stack>
+          </Panel>
+        )}
+        </Stack>
+      </div>
 
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
