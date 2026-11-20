@@ -528,11 +528,9 @@ test('the tree head and the tab count held ranks and planned steps apart, and ti
     ranks: { [String(node.id)]: 1 },
   });
   renderWithTheme(<TalentsPage />);
-  const head = screen.getByText(/ · \d+ spent \+ \d+ planned$/);
-  expect(head.textContent).toMatch(/^Economy · 1 spent \+ [1-9]\d* planned$/);
-  expect(
-    within(screen.getByRole('radiogroup', { name: 'Tree' })).getAllByText(/^\d+ planned$/).length,
-  ).toBeGreaterThan(0);
+  const tabs = within(screen.getByRole('radiogroup', { name: 'Tree' }));
+  expect(tabs.getAllByText('1 spent').length).toBeGreaterThan(0);
+  expect(tabs.getAllByText(/^[1-9]\d* planned$/).length).toBeGreaterThan(0);
   const tree = screen.getByRole('region', { name: 'Economy tree' });
   expect(within(tree).getAllByRole('button', { name: /step \d+ of the plan/ }).length).toBeGreaterThan(0);
 });
@@ -597,7 +595,7 @@ test('a tile shows its rank on the left and its bonus on the right, and the deta
     expect.arrayContaining(['1', '5', String(node.maxRank)]),
   );
   fireEvent.click(screen.getByRole('button', { name: `Show all ${String(node.maxRank)} ranks` }));
-  const box = screen.getByRole('region', { name: `${node.name} ranks` });
+  const box = within(screen.getByRole('dialog')).getByRole('region', { name: `${node.name} ranks` });
   expect(box.querySelector('table')).toBeNull();
   expect(within(box).getAllByRole('listitem')).toHaveLength(node.maxRank);
   const now = box.querySelector('[data-rank="now"]')!;
@@ -624,7 +622,7 @@ test('hovering a tile shows its pad with a small max next to +, and leaving hide
   expect(screen.queryByRole('button', { name: `Add one rank to ${node.name}` })).toBeNull();
 });
 
-test('the points banner says what this tree and all trees hold, planned and spent, and what is left', () => {
+test('the points strip says what all trees hold, planned and spent, and what is left', () => {
   const node = rootNode();
   setTalents({
     goals: ['economy', 'battle', 'archeology'],
@@ -634,7 +632,6 @@ test('the points banner says what this tree and all trees hold, planned and spen
   });
   renderWithTheme(<TalentsPage />);
   const banner = screen.getByRole('group', { name: 'Points' });
-  expect(banner.textContent).toMatch(/This tree\s*2 spent/);
   expect(banner.textContent).toMatch(/All trees\s*2 spent.*of 40 in all/);
   expect(banner.textContent).toMatch(/38 left/);
 });
@@ -653,21 +650,15 @@ test('the tree recap sums each stat over the tree', () => {
   expect(recap.textContent).toContain(talentFamily(node.name).family);
 });
 
-test('a family under a quarter complete waits under Show more, and the button counts exactly those rows', () => {
+test('a family under a quarter complete is grouped into one closing line, every other row shows', () => {
   const ranks: Record<string, number> = {};
   for (const t of TALENTS.filter((t) => t.tree === 'economy')) ranks[String(t.id)] = 1;
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 500, ranks });
   renderWithTheme(<TalentsPage />);
   const recap = screen.getByRole('region', { name: 'Economy bonuses' });
-  const rowsNow = () => recap.querySelectorAll('dt').length;
-  const button = within(recap).getByRole('button', { name: /show \d+ more/i });
-  const hidden = Number(/show (\d+) more/i.exec(button.textContent ?? '')![1]);
-  expect(hidden).toBeGreaterThan(0);
-  expect(rowsNow()).toBeGreaterThanOrEqual(4);
-  const before = rowsNow();
-  fireEvent.click(button);
-  expect(rowsNow()).toBe(before + hidden);
-  expect(within(recap).getByRole('button', { name: /show less/i })).toBeTruthy();
+  expect(recap.querySelectorAll('dt').length).toBeGreaterThanOrEqual(4);
+  expect(within(recap).queryByRole('button')).toBeNull();
+  expect(recap.querySelector('[data-recap="smaller"]')?.textContent).toMatch(/^\d+ smaller: /);
 });
 
 test('a 1/N bonus still shows while fewer than four families pass (the floor)', () => {

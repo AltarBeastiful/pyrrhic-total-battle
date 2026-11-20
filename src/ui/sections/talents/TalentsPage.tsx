@@ -360,8 +360,60 @@ export function TalentsPage() {
     buy(id, 1);
   };
 
-  const treePlanned = treePoints(TALENTS, viewTree, talentsState.ranks, result.steps).planned;
   const rankOf = new Map(active.map((g, i) => [g, i + 1]));
+
+  const strip = (
+    <div className={classes.strip} role="region" aria-label="Points and trees">
+      <SegmentedControl
+        size="xs"
+        styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 6, minWidth: 0 } }}
+        aria-label="Tree"
+        value={viewTree}
+        data={TALENT_TREES.map((t) => {
+          const counts = treePoints(TALENTS, t, talentsState.ranks, result.steps);
+          return {
+            value: t,
+            label: (
+              <span style={{ display: 'grid', lineHeight: 1.2 }}>
+                <span>{TREE_SHORT[t]}</span>
+                <span>{`${String(counts.spent)} spent`}</span>
+                {counts.planned > 0 && <span>{`${String(counts.planned)} planned`}</span>}
+              </span>
+            ),
+          };
+        })}
+        onChange={(v) => {
+          const next = TALENT_TREES.find((t) => t === v);
+          if (next === undefined) return;
+          setTree(next);
+          setSelected(null);
+        }}
+      />
+      <div className={classes.stripTotals} role="group" aria-label="Points">
+        <span className={classes.bannerSeg}>
+          <small>All trees</small>
+          <b>{String(heldCost)} spent</b>
+          {result.pointsSpent > 0 && <span>{`+ ${String(result.pointsSpent)} planned`}</span>}
+          {stock !== null && <span>{`of ${String(stock)} in all`}</span>}
+        </span>
+        <span className={classes.bannerSeg} data-empty={left === 0}>
+          <small>Remaining</small>
+          <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
+        </span>
+        <Button
+          size="compact-sm"
+          variant="default"
+          leftSection={<RotateCcw size={14} aria-hidden />}
+          disabled={spentPoints(TALENTS, viewTree, talentsState.ranks) === 0}
+          onClick={() => {
+            resetTree(viewTree);
+          }}
+        >
+          {`Reset points spent in ${TREE_LABELS[viewTree]}`}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <Stack gap="lg">
@@ -802,63 +854,9 @@ export function TalentsPage() {
 
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
-          <div className={classes.banner} role="group" aria-label="Points">
-            <span className={classes.bannerSeg}>
-              <small>This tree</small>
-              <b>{String(spentPoints(TALENTS, viewTree, talentsState.ranks))} spent</b>
-              {treePlanned > 0 && <span>{`+ ${String(treePlanned)} planned`}</span>}
-            </span>
-            <span className={classes.bannerSeg}>
-              <small>All trees</small>
-              <b>{String(heldCost)} spent</b>
-              {result.pointsSpent > 0 && <span>{`+ ${String(result.pointsSpent)} planned`}</span>}
-              {stock !== null && <span>{`of ${String(stock)} in all`}</span>}
-            </span>
-            <span className={classes.bannerSeg}>
-              <small>Remaining</small>
-              <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
-            </span>
-          </div>
-          <Group justify="flex-end">
-            <Button
-              size="compact-sm"
-              variant="default"
-              leftSection={<RotateCcw size={14} aria-hidden />}
-              disabled={spentPoints(TALENTS, viewTree, talentsState.ranks) === 0}
-              onClick={() => {
-                resetTree(viewTree);
-              }}
-            >
-              {`Reset points spent in ${TREE_LABELS[viewTree]}`}
-            </Button>
-          </Group>
           <AllTalentsAnalysis onSelect={showTalent} />
-          <SegmentedControl
-            fullWidth
-            styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 4, minWidth: 0 } }}
-            aria-label="Tree"
-            value={viewTree}
-            data={TALENT_TREES.map((t) => {
-              const counts = treePoints(TALENTS, t, talentsState.ranks, result.steps);
-              return {
-                value: t,
-                label: (
-                  <span style={{ display: 'grid', lineHeight: 1.2 }}>
-                    <span>{TREE_SHORT[t]}</span>
-                    <span>{`${String(counts.spent)} spent`}</span>
-                    {counts.planned > 0 && <span>{`${String(counts.planned)} planned`}</span>}
-                  </span>
-                ),
-              };
-            })}
-            onChange={(v) => {
-              const next = TALENT_TREES.find((t) => t === v);
-              if (next === undefined) return;
-              setTree(next);
-              setSelected(null);
-            }}
-          />
           <TalentTree
+            header={strip}
             talents={TALENTS}
             tree={viewTree}
             ranks={talentsState.ranks}

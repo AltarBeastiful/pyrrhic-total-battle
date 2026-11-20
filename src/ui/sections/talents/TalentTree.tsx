@@ -5,18 +5,18 @@
  * says "Lv 65" or "Parent".
  */
 import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
+import type { ReactNode } from 'react';
 import { Lock, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { CAMPAIGN } from '@/config';
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
 import { Glyph } from '@/ui/domain/Glyph';
-import { NumberField } from '@/ui/kit';
+import { Dialog, NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
 import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
-import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
+import { stepsUpToNode } from './spentPoints';
 import classes from './talents.module.css';
 import { recapSize, splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
@@ -41,6 +41,8 @@ export interface TalentTreeProps {
   onSpendPlan: (nodeId: number) => void;
   /** A ranking row asked for this talent: scroll its tile into view once it has rendered (B-29). */
   reveal?: { id: number; at: number } | null;
+  /** The docked strip (tabs, totals, reset): drawn first in the tree column and pinned under the app bar. */
+  header?: ReactNode;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -73,13 +75,11 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
   return bought > 0 ? `+${percent(now)} → ${percent(after)}` : `→ +${percent(after)}`;
 }
 
-/** The game's grid: cell size in px, tiles 156 x 128 inside a 176 x 152 cell. */
+/** The game's grid: every card is 156 x 128 in a 176 x 152 cell, so the gaps are 20 px across and 24 px down. */
 const CELL_W = 176;
 const CELL_H = 152;
 const TILE_W = 156;
 const TILE_H = 128;
-/** The narrowest a column gets before the canvas pans sideways instead (tile names stay readable). */
-const MIN_CELL_W = 132;
 
 export function TalentTree({
   talents,
@@ -93,6 +93,7 @@ export function TalentTree({
   onMax,
   onSpendPlan,
   reveal = null,
+  header = null,
 }: TalentTreeProps) {
   const tiles = useRef(new Map<number, HTMLButtonElement>());
   // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
@@ -106,7 +107,6 @@ export function TalentTree({
   const added = plannedByNode(plan);
   const firstStep = firstStepByNode(plan);
   const node = nodes.find((n) => n.id === selected) ?? null;
-  const points = treePoints(talents, tree, ranks, plan.steps);
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const rows = Math.max(...nodes.map((n) => n.layout.y)) + 1;
   // Only the columns the tree uses take room: the tiles keep their size and the empty outer columns go.
@@ -116,10 +116,23 @@ export function TalentTree({
   // The plane is relative: it takes the room it has up to the full grid, and the tiles narrow with it.
   const width = cols * CELL_W;
   const height = rows * CELL_H;
-  const centre = (n: TalentRecord): [number, number] => [
-    (n.layout.x - firstCol) * CELL_W + CELL_W / 2,
-    n.layout.y * CELL_H + CELL_H / 2,
-  ];
+  // A card's box in the plane: lines run from the middle of one card edge to the middle of the next.
+  const box = (n: TalentRecord) => ({
+    left: (n.layout.x - firstCol) * CELL_W + (CELL_W - TILE_W) / 2,
+    top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
+  });
+  const join = (p: TalentRecord, c: TalentRecord): { from: [number, number]; to: [number, number] } => {
+    const a = box(p);
+    const b = box(c);
+    if (c.layout.y > p.layout.y) {
+      return { from: [a.left + TILE_W / 2, a.top + TILE_H], to: [b.left + TILE_W / 2, b.top] };
+    }
+    const right = c.layout.x > p.layout.x;
+    return {
+      from: [a.left + (right ? TILE_W : 0), a.top + TILE_H / 2],
+      to: [b.left + (right ? 0 : TILE_W), b.top + TILE_H / 2],
+    };
+  };
   // One line from each node to each of its parents, as the game draws them; a line into a node that is held
   // is firm, and a line into a node the plan spends on is bold and in the accent colour.
   const lines = nodes.flatMap((n) =>
@@ -128,16 +141,14 @@ export function TalentTree({
       if (p === undefined) return [];
       const planned = (added.get(n.id) ?? 0) > 0;
       const lit = (ranks[String(n.id)] ?? 0) > 0 || planned;
-      return [{ key: `${String(pid)}-${String(n.id)}`, from: centre(p), to: centre(n), lit, planned }];
+      return [{ key: `${String(pid)}-${String(n.id)}`, ...join(p, n), lit, planned }];
     }),
   );
 
   return (
     <div className={classes.layout}>
       <Stack gap="md" style={{ minWidth: 0 }}>
-        <Text fw={600}>
-          {TREE_LABELS[tree]} · {pointsWords(points)}
-        </Text>
+        {header}
         {/*
           Owner request (talents tree shape): the tree keeps the game's shape and, on a phone, pans sideways INSIDE
           this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.
@@ -145,14 +156,12 @@ export function TalentTree({
         <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
           <div
             className={classes.plane}
-            style={{ width: '100%', maxWidth: width, minWidth: cols * MIN_CELL_W, height }}
+            style={{ width, height }}
           >
             <svg
               className={classes.lines}
-              width="100%"
+              width={width}
               height={height}
-              viewBox={`0 0 ${String(width)} ${String(height)}`}
-              preserveAspectRatio="none"
               aria-hidden
             >
               {lines.map((l) => (
@@ -204,10 +213,9 @@ export function TalentTree({
                     if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null);
                   }}
                   style={{
-                    left: `${String(((n.layout.x - firstCol + 0.5) / cols) * 100)}%`,
-                    transform: 'translateX(-50%)',
-                    top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
-                    width: `min(${String(TILE_W)}px, calc(${String(100 / cols)}% - 12px))`,
+                    left: box(n).left,
+                    top: box(n).top,
+                    width: TILE_W,
                     height: TILE_H,
                   }}
                 >
@@ -235,46 +243,55 @@ export function TalentTree({
                       {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
                     </span>
                     <span className={classes.name}>{fam.family}</span>
-                    {n.maxRank > 1 && lock === null && (
-                      <span className={classes.bar} data-bar-state={barState} aria-hidden>
-                        <span
-                          className={classes.barBought}
-                          data-bar="bought"
-                          style={{ width: `${String((bought / n.maxRank) * 100)}%` }}
-                        />
-                        <span
-                          className={classes.barPlanned}
-                          data-bar="planned"
-                          style={{
-                            width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
-                          }}
-                        />
-                      </span>
-                    )}
-                    {(bought > 0 || plus > 0) && (
-                      <span className={classes.split}>
-                        <span>
-                          {[
-                            full ? 'max' : bought > 0 ? `rank ${String(bought)}` : '',
-                            plus > 0 ? `+${String(plus)}` : '',
-                          ]
-                            .filter((x) => x !== '')
-                            .join(' ')}
+                    <span className={classes.foot}>
+                      {lock !== null ? (
+                        <span className={classes.marks}>
+                          <span
+                            className={classes.lock}
+                            data-lock={plan.locked[n.id]?.reason === 'level' ? 'level' : 'parent'}
+                          >
+                            <Lock size={12} aria-hidden />
+                            {lock}
+                          </span>
                         </span>
-                        <b className={classes.bonus}>{bonusWords(n, bought, plus)}</b>
-                      </span>
-                    )}
-                    {lock !== null && bought === 0 && plus === 0 && (
-                      <span className={classes.marks}>
-                        <span
-                          className={classes.lock}
-                          data-lock={plan.locked[n.id]?.reason === 'level' ? 'level' : 'parent'}
-                        >
-                          <Lock size={12} aria-hidden />
-                          {lock}
-                        </span>
-                      </span>
-                    )}
+                      ) : (
+                        <>
+                          {n.maxRank > 1 ? (
+                            <span className={classes.bar} data-bar-state={barState} aria-hidden>
+                              <span
+                                className={classes.barBought}
+                                data-bar="bought"
+                                style={{ width: `${String((bought / n.maxRank) * 100)}%` }}
+                              />
+                              <span
+                                className={classes.barPlanned}
+                                data-bar="planned"
+                                style={{
+                                  width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
+                                }}
+                              />
+                            </span>
+                          ) : (
+                            <span className={classes.barGap} aria-hidden />
+                          )}
+                          <span className={classes.split}>
+                            <span>
+                              {bought > 0 || plus > 0
+                                ? [
+                                    full ? 'max' : bought > 0 ? `rank ${String(bought)}` : '',
+                                    plus > 0 ? `+${String(plus)}` : '',
+                                  ]
+                                    .filter((x) => x !== '')
+                                    .join(' ')
+                                : 'rank 0'}
+                            </span>
+                            <b className={classes.bonus}>
+                              {bought > 0 || plus > 0 ? bonusWords(n, bought, plus) : '—'}
+                            </b>
+                          </span>
+                        </>
+                      )}
+                    </span>
                   </button>
                   {(selected === n.id || hovered === n.id) && (
                     <div
@@ -495,9 +512,16 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
   const here = useRef<HTMLLIElement>(null);
   // The full list opens on the held rank (or the first one): it scrolls inside its box, never the page.
   useEffect(() => {
-    if (all && box.current !== null && here.current !== null) {
-      box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
-    }
+    if (!all) return;
+    // The dialog mounts its body behind a transition, so look once the frame has painted.
+    const frame = requestAnimationFrame(() => {
+      if (box.current !== null && here.current !== null) {
+        box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   }, [node.id, all]);
   const last = node.maxRank;
   const picks = keyRankPicks({ last, bought, plus });
@@ -532,21 +556,17 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
         size="compact-xs"
         variant="subtle"
         style={{ alignSelf: 'flex-start' }}
-        aria-expanded={all}
+        aria-haspopup="dialog"
         onClick={() => {
-          setAll((open) => !open);
+          setAll(true);
         }}
       >
-        {all ? 'Hide all ranks' : `Show all ${String(last)} ranks`}
+        {`Show all ${String(last)} ranks`}
       </Button>
-      {all && (
-        <div
-          ref={box}
-          className={classes.rankBox}
-          role="region"
-          aria-label={`${node.name} ranks`}
-          tabIndex={0}
-        >
+      <Dialog opened={all} onClose={() => {
+        setAll(false);
+      }} title={`${node.name}: all ${String(last)} ranks`} size="lg">
+        <div ref={box} className={classes.rankBox} role="region" aria-label={`${node.name} ranks`} tabIndex={0}>
           <ul className={classes.rankLine}>
             {node.values.map((_, i) => (() => {
               const held = i + 1 === Math.max(bought, 1);
@@ -554,7 +574,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
             })())}
           </ul>
         </div>
-      )}
+      </Dialog>
     </Stack>
   );
 }
@@ -571,7 +591,6 @@ function TreeRecap({
   plan: TalentPlan;
   tree: TreeId;
 }) {
-  const [more, setMore] = useState(false);
   const added = plannedByNode(plan);
   const totals = new Map<string, { now: number; after: number; ranks: number }>();
   const maxByFamily = new Map<string, number>();
@@ -596,9 +615,6 @@ function TreeRecap({
   const { shown: top, hidden } = splitRecap(
     [...totals.entries()].map(([label, v]) => ({ label, ...v, maxRanks: maxByFamily.get(label) ?? 0 })),
   );
-  const shown = more
-    ? [...top, ...hidden].sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
-    : top;
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
@@ -610,7 +626,7 @@ function TreeRecap({
         </Text>
       ) : (
         <dl className={classes.recapList}>
-          {shown.map((v) => (
+          {top.map((v) => (
             <div key={v.label} className={classes.recapRow}>
               <dt>{v.label}</dt>
               <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
@@ -619,19 +635,12 @@ function TreeRecap({
         </dl>
       )}
       {hidden.length > 0 && (
-        <Button
-          size="compact-xs"
-          variant="subtle"
-          style={{ alignSelf: 'flex-start' }}
-          aria-expanded={more}
-          onClick={() => {
-            setMore((open) => !open);
-          }}
-        >
-          {more
-            ? 'Show less'
-            : `Show ${String(hidden.length)} more under ${String(Math.round(CAMPAIGN.talentRecap.minCompletion * 100))} % complete`}
-        </Button>
+        <Text size="xs" c="dimmed" data-recap="smaller">
+          {`${String(hidden.length)} smaller: ${[...hidden]
+            .sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
+            .map((v) => `${v.label} +${percent(recapSize(v))}`)
+            .join(', ')}`}
+        </Text>
       )}
     </section>
   );

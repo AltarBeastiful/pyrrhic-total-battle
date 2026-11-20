@@ -5,12 +5,13 @@
   overflow-y: hidden;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
-  padding: 8px 0 28px;
+  padding: 8px 12px 28px;
 }
 
 .plane {
   position: relative;
   margin: 0 auto;
+  flex: none;
 }
 
 .lines {
@@ -46,9 +47,9 @@
   overflow: hidden;
   box-sizing: border-box;
   min-width: 0;
-  padding: 8px;
+  padding: 7px 7px 5px;
   gap: 4px;
-  border: 1px solid var(--mantine-color-default-border);
+  border: 2px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-color-body);
   color: var(--mantine-color-text);
@@ -71,7 +72,6 @@
 
 .tile[data-state='locked'] {
   border-style: dashed;
-  border-width: 2px;
   border-color: var(--mantine-color-dimmed);
   color: var(--mantine-color-dimmed);
   /* Diagonal stripes read as "closed" at a glance, in either colour scheme, without hiding the name. */
@@ -119,6 +119,27 @@
 
 .name {
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* The fixed footer row at the bottom of every card: bar, rank and gain, or the lock pill. */
+.foot {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 100%;
+  height: 40px;
+  margin-top: auto;
+}
+
+.barGap {
+  height: 8px;
+  flex: none;
 }
 
 .bar {
@@ -234,17 +255,12 @@
 }
 
 .detail {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
+  /* No scroll of its own (B-30): it sticks under the strip when the window is tall, else scrolls with the page. */
+  position: static;
   padding: 12px;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-color-body);
-}
-
-.detail[data-empty='true'] {
-  display: none;
 }
 
 @media (min-width: 62em) {
@@ -252,14 +268,6 @@
     grid-template-columns: minmax(0, 1fr) 20rem;
   }
 
-  .detail {
-    bottom: auto;
-    top: 8rem;
-  }
-
-  .detail[data-empty='true'] {
-    display: block;
-  }
 }
 
 /* B-22 goal rows: rank, name and weight, the rank 1 strength cluster, the move and ignore buttons. On a
@@ -385,8 +393,6 @@
   display: grid;
   gap: 2px;
   margin: 0;
-  max-height: 18rem;
-  overflow: auto;
   font-size: 0.875rem;
 }
 
@@ -408,36 +414,39 @@
   color: var(--mantine-color-teal-6);
 }
 
-/* The floating points banner: a compact pill under the app bar, never the width of the tree. */
-.banner {
+/* The docked strip (B-30): opaque, pinned under the app bar, the width of the tree column; tabs, then totals. */
+.strip {
   position: sticky;
   top: 4.5rem;
   z-index: 6;
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--mantine-color-body) 92%, transparent);
-  backdrop-filter: blur(6px);
-  box-shadow: var(--mantine-shadow-md);
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-body);
   font-size: 0.8125rem;
-  overflow: hidden;
+}
+
+.stripTotals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.bannerSeg[data-empty='true'] b {
+  color: var(--mantine-color-teal-6);
 }
 
 .bannerSeg {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 6px 14px;
   white-space: nowrap;
-}
-
-.bannerSeg + .bannerSeg {
-  border-left: 1px solid var(--mantine-color-default-border);
 }
 
 .bannerSeg small {
@@ -458,6 +467,8 @@
   justify-content: space-between;
   gap: 0 8px;
   width: 100%;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -553,4 +564,12 @@
 .rankBox[data-stale='true'] {
   border-style: dashed;
   border-color: var(--mantine-color-yellow-7);
+}
+
+/* A tall wide window holds the detail column under the strip; a short one lets it scroll with the page. */
+@media (min-width: 62em) and (min-height: 760px) {
+  .detail {
+    position: sticky;
+    top: 9rem;
+  }
 }
