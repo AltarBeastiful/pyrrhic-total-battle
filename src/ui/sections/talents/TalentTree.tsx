@@ -493,7 +493,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
   );
 }
 
-/** Every bonus the tree gives, by talent family: what the held ranks add, and where the plan takes it. */
+/** Every bonus the tree gives, by talent family, the largest first: what the held ranks add, and where the plan takes it. */
 function TreeRecap({
   nodes,
   ranks,
@@ -520,7 +520,9 @@ function TreeRecap({
     row.after += after;
     totals.set(label, row);
   }
-  const rows = [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const rows = [...totals.entries()].sort(
+    ([a, x], [b, y]) => Math.max(y.now, y.after) - Math.max(x.now, x.after) || a.localeCompare(b),
+  );
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
