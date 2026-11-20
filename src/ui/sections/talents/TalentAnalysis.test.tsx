@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** B-24 Seam 2 — **Analyze in the talent detail**: the button, the table, the chart, stale, cancel. */
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
 import { newRoot } from '@/state/defaults';
@@ -10,6 +10,9 @@ import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { useAnalysisStore } from './analysisStore';
 import { TalentsPage } from './TalentsPage';
+
+// The first render of the page is slow under a full run; the default 5 s is for small tests.
+vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   globalThis.localStorage.clear();
@@ -24,14 +27,14 @@ afterEach(() => {
 const battleNode = () => TALENTS.find((t) => t.tree === 'battle' && t.name === "Guardsmen's strength I")!;
 const economyNode = () => TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0)!;
 
-function open(tree: 'Battle' | 'Economy', name: string): void {
+function open(tree: 'Battle tactics' | 'Economy', name: string): void {
   const profile = selectActiveProfile(useStore.getState())!;
   useStore.getState().updateProfile(profile.id, {
     talents: {
       ...profile.talents,
       heroLevel: 150,
       pointsOverride: 50,
-      goals: tree === 'Battle' ? ['battle', 'economy', 'archeology'] : ['economy', 'battle', 'archeology'],
+      goals: tree === 'Battle tactics' ? ['battle', 'economy', 'archeology'] : ['economy', 'battle', 'archeology'],
     },
   });
   renderWithTheme(<TalentsPage />);
@@ -44,7 +47,7 @@ function open(tree: 'Battle' | 'Economy', name: string): void {
 
 test('a battle talent offers Analyze, and pressing it shows the table of ranks and then the chart', async () => {
   const node = battleNode();
-  open('Battle', node.name);
+  open('Battle tactics', node.name);
   expect(screen.queryByTestId('analysis-chart')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
   const table = await screen.findByRole('region', { name: `${node.name} rating by rank` });
@@ -65,7 +68,7 @@ test('a talent the battle does not read has no Analyze button', () => {
 });
 
 test('a result goes stale when the army changes, and Re-analyze asks again', async () => {
-  open('Battle', battleNode().name);
+  open('Battle tactics', battleNode().name);
   fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
   await screen.findByTestId('analysis-chart');
   expect(screen.queryByText(/out of date/i)).toBeNull();
@@ -87,12 +90,12 @@ test('a result goes stale when the army changes, and Re-analyze asks again', asy
 
 test('selecting another tile while it runs cancels the analysis', () => {
   const node = battleNode();
-  open('Battle', node.name);
+  open('Battle tactics', node.name);
   fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
   const other = TALENTS.find((t) => t.tree === 'battle' && t.name === "Guardsmen's strength II")!;
   fireEvent.click(
-    within(screen.getByRole('region', { name: 'Battle tree' })).getByRole('button', {
+    within(screen.getByRole('region', { name: 'Battle tactics tree' })).getByRole('button', {
       name: new RegExp(`^${other.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, rank`),
     }),
   );

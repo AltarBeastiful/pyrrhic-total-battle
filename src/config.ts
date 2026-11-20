@@ -251,6 +251,13 @@ export const CAMPAIGN = {
    */
   markerRates: MARKER_RATES,
   /**
+   * **The leadership shapes the talent analysis prices** (B-24; owner, 2026-11-20: *"just do two settings"*,
+   * *"100 80"*): the army sized with the leadership pool at each of these percentages, and the mean of the
+   * gains. 80 is below the 90 % floor of `editFills` — under it mercenaries start to go and the damage bends —
+   * so the chart names each shape instead of hiding the bend.
+   */
+  talentFills: [100, 80],
+  /**
    * **The fills of the leadership pool a March edit re-sizes at** (S-117; owner, 2026-09-20: *"I'm not that
    * sure any more that when removing or adding a troop … we should not compute again the best possible
    * outcome, checking if less leadership buys us something"*).
