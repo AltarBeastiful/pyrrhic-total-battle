@@ -180,18 +180,25 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
 
 /** The strip's button and the dialog it opens; picking a row closes the dialog and shows that talent in the tree. */
 export function AnalyzeAllDialog({ onSelect }: { onSelect: (id: number) => void }) {
+  const profile = useStore(selectActiveProfile);
+  const setup = useStore(selectActiveSetup);
   const [open, setOpen] = useState(false);
   const run = useAllAnalysisStore((state) => state.run);
   const running = run?.status === 'running';
+  // Pressing the button asks the question at once, unless a run is going or a ranking for this very account is held.
+  const start = (): void => {
+    setOpen(true);
+    if (running || profile === undefined || setup === undefined) return;
+    const held = rankingOf(run);
+    if (held === null || held.key !== allTalentsKey(profile, setup)) void analyzeAll(profile, setup);
+  };
   return (
     <>
       <Button
         size="compact-sm"
         variant="light"
         aria-haspopup="dialog"
-        onClick={() => {
-          setOpen(true);
-        }}
+        onClick={start}
       >
         {running ? `Ranking talents, ${String(run.done)} of ${String(run.total)}` : 'Rank all talents'}
       </Button>

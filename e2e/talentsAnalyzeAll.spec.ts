@@ -22,7 +22,6 @@ for (const { name, width, height } of WIDTHS) {
     await expect(page.getByRole('region', { name: 'Talent ranking' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Rank all talents' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Analyze all' }).click();
     const ranking = page.getByRole('region', { name: 'Talent ranking' });
     await expect(ranking).toBeVisible({ timeout: 120_000 });
     await expect(page.getByText(/\d+ not rated in battle/)).toBeVisible();

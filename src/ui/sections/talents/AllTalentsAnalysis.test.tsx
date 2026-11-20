@@ -35,11 +35,10 @@ const openDialog = (): void => {
 };
 const openCard = (): HTMLElement => screen.getByRole('region', { name: 'Talent ranking' });
 
-test('the ranking shows in the dialog once a run is done, listing every analysable talent with the not-rated count', async () => {
+test('pressing the button opens the dialog and runs; the ranking shows once done, listing every analysable talent with the not-rated count', async () => {
   renderWithTheme(<TalentsPage />);
   openDialog();
   expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Analyze all' }));
   await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
   const card = openCard();
   const rows = within(card).getAllByRole('row').slice(1);
@@ -64,7 +63,6 @@ test('the ranking shows in the dialog once a run is done, listing every analysab
 test('progress is shown while it runs, and cancel stops it without a partial ranking', async () => {
   renderWithTheme(<TalentsPage />);
   openDialog();
-  fireEvent.click(screen.getByRole('button', { name: 'Analyze all' }));
   expect(screen.getByText(/^Analyzing/)).toBeTruthy();
   expect(screen.getByRole('progressbar')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -82,7 +80,6 @@ test('a talent row matches the single Analyze of the same talent, to the digit',
   const profile = selectActiveProfile(useStore.getState())!;
   renderWithTheme(<TalentsPage />);
   openDialog();
-  fireEvent.click(screen.getByRole('button', { name: 'Analyze all' }));
   await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
   const run = useAllAnalysisStore.getState().run!;
   const entry = run.entries!.find((e) => e.node.name === "Guardsmen's strength I")!;
