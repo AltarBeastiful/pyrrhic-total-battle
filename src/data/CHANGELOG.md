@@ -6,6 +6,10 @@ a renamed or removed `id` must be called out explicitly.
 
 How to read a line: **what changed** — how it was verified.
 
+## v1, amended 2026-11-20 (no bump)
+
+- **Schema 15 → 16 (B-25)** — the "Hero Talents" permanent source keeps only strength and health on the nine keys the talent tree can touch (army, melee, ranged, mounted, flying, monster, guardsmen, specialist, engineers); values saved in any other field of that source are deleted on load. No table changed, so `dataVersion` stays 1. Verified by `migrations.test.ts`.
+
 ## v1, amended 2026-11-19 (no bump)
 
 - **Hero talents** — new table `talents.json` (B-21): 237 nodes of the four hero-ability trees (63 Battle
