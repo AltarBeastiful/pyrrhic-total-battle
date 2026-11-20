@@ -1,6 +1,6 @@
 /**
  * **The talent analysis** (B-24): what each rank of one talent is worth to the selected army, under a few
- * leadership shapes. One captain-screen job per shape (`client.captains`): the lineups are the ranks, rank 0 is the
+ * leadership shapes. One captain-screen job per shape (`client.captains`): the lineups are the ranks, the first rank (the baseline) is the
  * current lineup, and each rank's own sizing is rated against it (`LineupScreen.sized`), so a rank rates 0 against
  * itself and a talent that adds nothing is a flat zero. The totals of each rank are built on the main thread
  * (`src/state/talentAnalysis.ts`). Results are merged by position, so one worker and six give one answer.
@@ -16,7 +16,9 @@ import type { CaptainScreenAnswer } from './protocol';
 export interface TalentAnalysisInput {
   /** The selected march's request; its `totals` are not read, every rank brings its own. */
   request: StackRequest;
-  /** The ranks to price, rank 0 first, each with the totals the march carries at that rank. */
+  /** The rank the march already carries the talent at (B-25); 0 when it carries none of it. */
+  baseline?: number | undefined;
+  /** The ranks to price, the baseline first, each with the totals the march carries at that rank. */
   ranks: { rank: number; totals: BonusTotals }[];
   /** Pool shapes in percent of the leadership pool; `CAMPAIGN.talentFills` by default. */
   fills?: readonly number[] | undefined;
@@ -60,13 +62,18 @@ export async function runTalentAnalysis(
   const fills = input.fills ?? CAMPAIGN.talentFills;
   const rates = options.rates ?? CAMPAIGN.markerRates;
   if (fills.length === 0) throw new Error('The analysis needs at least one pool shape.');
-  if (input.ranks[0]?.rank !== 0) throw new Error('The analysis reads every rank against rank 0, which must come first.');
+  if (input.ranks[0]?.rank !== (input.baseline ?? 0)) {
+    throw new Error('The analysis reads every rank against the baseline, which must come first.');
+  }
   const lineups = input.ranks.map(({ rank, totals }) => ({ key: String(rank), totals }));
   const currentKey = lineups[0]?.key ?? '0';
   const jobs = fills.map(
     (fill): PoolJob<CaptainScreenAnswer> =>
       (client, signal) =>
-        client.captains({ request: filled(input.request, fill), lineups, currentKey, stops: [], rates }, signal),
+        client.captains(
+          { request: filled(input.request, fill), lineups, currentKey, stops: [], rates },
+          signal,
+        ),
   );
   const outcomes = await pool.map(jobs, {
     budgetMs: options.budgetMs ?? CAMPAIGN.budgets.heroReport,

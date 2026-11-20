@@ -5,7 +5,7 @@ import { aggregateBonuses } from '../engine/bonuses';
 import { newProfile } from './defaults';
 import { resolveSources } from './derive';
 import type { BattleSetup } from './schema';
-import { talentAnalysisInput, talentAnalysisKey } from './talentAnalysis';
+import { talentAnalysisInput, talentAnalysisKey, talentBaseline } from './talentAnalysis';
 
 const melee: TalentRecord = {
   id: 25100,
@@ -41,7 +41,13 @@ describe('talentAnalysisInput', () => {
 
   it('is null for a talent the battle does not read', () => {
     const { profile, setup } = account();
-    expect(talentAnalysisInput(profile, setup, { ...melee, name: 'Army carrying capacity', stats: ['UNIT_LOAD_CAPACITY'] })).toBeNull();
+    expect(
+      talentAnalysisInput(profile, setup, {
+        ...melee,
+        name: 'Army carrying capacity',
+        stats: ['UNIT_LOAD_CAPACITY'],
+      }),
+    ).toBeNull();
   });
 });
 
@@ -54,5 +60,57 @@ describe('talentAnalysisKey', () => {
     richer.housing.leadership += 100;
     expect(talentAnalysisKey(profile, richer, melee)).not.toBe(same);
     expect(talentAnalysisKey(profile, setup, { ...melee, id: 25101 })).not.toBe(same);
+  });
+});
+
+/** The account holds `rank` of the melee talent and, when `copied`, its "Hero Talents" source carries the lines. */
+function held(rank: number, copied: boolean) {
+  const { profile, setup } = account();
+  profile.talents.ranks[String(melee.id)] = rank;
+  const hero = profile.sources.permanent.find((entry) => entry.builtin === 'heroTalents');
+  if (!hero) throw new Error('every account has the Hero Talents source');
+  hero.strength = copied ? { melee: rank * 2 } : { melee: rank * 2 + 1 };
+  return { profile, setup };
+}
+
+describe('talentAnalysisInput baseline (B-25)', () => {
+  it('starts at the held rank when the source matches the tree, and prices the ranks above it', () => {
+    const { profile, setup } = held(8, true);
+    expect(talentBaseline(profile, melee, [melee])).toBe(8);
+    const input = talentAnalysisInput(profile, setup, melee, undefined, [melee]);
+    expect(input!.baseline).toBe(8);
+    expect(input!.ranks.map((r) => r.rank)).toEqual([8, 11, 14, 17, 20]);
+  });
+
+  it('reads the baseline as the march as it stands and a rank as only the ranks added to it', () => {
+    const { profile, setup } = held(8, true);
+    const input = talentAnalysisInput(profile, setup, melee, undefined, [melee])!;
+    const base = aggregateBonuses(resolveSources(profile, setup));
+    expect(input.ranks[0]!.totals).toEqual(base);
+    expect(base.strength.melee).toBeGreaterThanOrEqual(16);
+    // rank 14 gives 28 in all; 16 are already in the march, so the march gains 12, never 28.
+    expect(input.ranks[2]!.totals.strength.melee).toBe(base.strength.melee + 12);
+  });
+
+  it('prices from rank 0 when the source does not match the tree', () => {
+    const { profile, setup } = held(8, false);
+    expect(talentBaseline(profile, melee, [melee])).toBe(0);
+    const input = talentAnalysisInput(profile, setup, melee, undefined, [melee])!;
+    expect(input.baseline).toBe(0);
+    expect(input.ranks.map((r) => r.rank)).toEqual([0, 5, 10, 15, 20]);
+  });
+
+  it('a talent at its maximum leaves only the baseline row', () => {
+    const { profile, setup } = held(20, true);
+    const input = talentAnalysisInput(profile, setup, melee, undefined, [melee])!;
+    expect(input.ranks.map((r) => r.rank)).toEqual([20]);
+  });
+
+  it('the question moves when the held rank moves', () => {
+    const a = held(8, true);
+    const b = held(9, true);
+    expect(talentAnalysisKey(a.profile, a.setup, melee, undefined, [melee])).not.toBe(
+      talentAnalysisKey(b.profile, b.setup, melee, undefined, [melee]),
+    );
   });
 });

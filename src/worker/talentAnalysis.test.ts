@@ -118,4 +118,23 @@ describe('runTalentAnalysis', () => {
     pool.dispose();
     expect(seen.at(-1)).toEqual([2, 2]);
   });
+
+  test('a baseline above 0 is the 0 % row, and the rows above it never rate lower', async () => {
+    const pool = poolOf(1);
+    const above = [8, 20, 40].map((rank) => ({ rank, totals: withArmy(rank * 4) }));
+    const analysis = await runTalentAnalysis({ request: request(), baseline: 8, ranks: above }, pool);
+    pool.dispose();
+    expect(analysis.ranks).toEqual([8, 20, 40]);
+    for (const shape of analysis.shapes) {
+      expect(shape.gains[0]).toBe(0);
+      expect(shape.gains[1]!).toBeGreaterThan(0);
+      expect(shape.gains[2]!).toBeGreaterThanOrEqual(shape.gains[1]!);
+    }
+  });
+
+  test('a first row that is not the baseline is refused', async () => {
+    const pool = poolOf(1);
+    await expect(runTalentAnalysis({ request: request(), baseline: 3, ranks }, pool)).rejects.toThrow();
+    pool.dispose();
+  });
 });
