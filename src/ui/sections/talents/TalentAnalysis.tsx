@@ -95,9 +95,36 @@ function Chart({ analysis }: { analysis: Analysis }) {
   );
 }
 
+/** The points a talent costs up to a rank. */
+const costTo = (node: TalentRecord, rank: number): number =>
+  node.costs.slice(0, rank).reduce((sum, c) => sum + c, 0);
+
 function Results({ node, analysis }: { node: TalentRecord; analysis: Analysis }) {
+  // The highest rank comes first: that is where the win is. Rank 0 is the baseline and says nothing.
+  const rows = analysis.ranks
+    .map((rank, i) => ({ rank, i, gain: analysis.mean[i] ?? 0, points: costTo(node, rank) }))
+    .filter((row) => row.rank > 0)
+    .reverse();
+  const top = rows[0];
+  const bestPerPoint = rows.reduce<(typeof rows)[number] | undefined>(
+    (best, row) => (best === undefined || row.gain / row.points > best.gain / best.points ? row : best),
+    undefined,
+  );
   return (
     <>
+      {top !== undefined && (
+        <div className={classes.win} aria-label={`What ${node.name} can win`}>
+          <Text fw={700} size="lg" className={classes.winFigure}>
+            {`${signed(top.gain)} rating`}
+          </Text>
+          <Text size="sm">{`at rank ${String(top.rank)}, for ${String(top.points)} ${top.points === 1 ? 'point' : 'points'}.`}</Text>
+          {bestPerPoint !== undefined && bestPerPoint.rank !== top.rank && (
+            <Text size="sm" c="dimmed">
+              {`Best value per point: rank ${String(bestPerPoint.rank)}, ${signed(bestPerPoint.gain)} for ${String(bestPerPoint.points)} points.`}
+            </Text>
+          )}
+        </div>
+      )}
       <div className={classes.rankBox} role="region" aria-label={`${node.name} rating by rank`} tabIndex={0}>
         <table className={classes.ranks}>
           <thead>
@@ -110,13 +137,15 @@ function Results({ node, analysis }: { node: TalentRecord; analysis: Analysis })
             </tr>
           </thead>
           <tbody>
-            {analysis.ranks.map((rank, i) => (
-              <tr key={rank}>
-                <td>{rank}</td>
+            {rows.map((row) => (
+              <tr key={row.rank}>
+                <td>{row.rank}</td>
                 {analysis.shapes.map((shape) => (
-                  <td key={shape.fill}>{signed(shape.gains[i] ?? 0)}</td>
+                  <td key={shape.fill}>{signed(shape.gains[row.i] ?? 0)}</td>
                 ))}
-                <td>{signed(analysis.mean[i] ?? 0)}</td>
+                <td>
+                  <b>{signed(row.gain)}</b>
+                </td>
               </tr>
             ))}
           </tbody>

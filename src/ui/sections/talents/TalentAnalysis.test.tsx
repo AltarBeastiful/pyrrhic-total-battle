@@ -34,7 +34,8 @@ function open(tree: 'Battle tactics' | 'Economy', name: string): void {
       ...profile.talents,
       heroLevel: 150,
       pointsOverride: 50,
-      goals: tree === 'Battle tactics' ? ['battle', 'economy', 'archeology'] : ['economy', 'battle', 'archeology'],
+      goals:
+        tree === 'Battle tactics' ? ['battle', 'economy', 'archeology'] : ['economy', 'battle', 'archeology'],
     },
   });
   renderWithTheme(<TalentsPage />);
@@ -51,11 +52,19 @@ test('a battle talent offers Analyze, and pressing it shows the table of ranks a
   expect(screen.queryByTestId('analysis-chart')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
   const table = await screen.findByRole('region', { name: `${node.name} rating by rank` });
-  const head = within(table).getAllByRole('columnheader').map((h) => h.textContent);
+  const head = within(table)
+    .getAllByRole('columnheader')
+    .map((h) => h.textContent);
   expect(head).toEqual(['Rank', 'Pool 100 %', 'Pool 80 %', 'Average']);
   const rows = within(table).getAllByRole('row').slice(1);
-  expect(rows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual(['0', '5', '10', '15', '20']);
-  expect(within(rows[0]!).getAllByRole('cell')[3]?.textContent).toBe('+0.00 %');
+  // The highest rank first, and no baseline row.
+  expect(rows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual([
+    '20',
+    '15',
+    '10',
+    '5',
+  ]);
+  expect(screen.getByLabelText(/can win/i).textContent).toMatch(/rating.*at rank 20/);
   // The table comes first, the chart after it.
   const chart = screen.getByTestId('analysis-chart');
   expect(table.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -467,52 +467,92 @@ function NodeEditor({
   );
 }
 
-/** Every rank of a node: its cost, what it adds and the total bonus, the held rank marked and the plan's ranks hatched. */
+/**
+ * The ranks of a node on one line: the first three, the one held and its neighbours, the middle and the last
+ * three, each with its running total. The full table, every rank, is one click away.
+ */
 function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number; plus: number }) {
+  const [all, setAll] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const here = useRef<HTMLTableRowElement>(null);
-  // Open on the held rank (or the first one): the table scrolls inside the panel, never the page.
+  // The full table opens on the held rank (or the first one): it scrolls inside its box, never the page.
   useEffect(() => {
-    if (box.current !== null && here.current !== null) {
+    if (all && box.current !== null && here.current !== null) {
       box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
     }
-  }, [node.id]);
+  }, [node.id, all]);
+  const last = node.maxRank;
+  const picks = [
+    ...new Set([1, 2, 3, bought - 1, bought, bought + 1, Math.round(last / 2), last - 2, last - 1, last]),
+  ]
+    .filter((r) => r >= 1 && r <= last)
+    .sort((a, b) => a - b);
+  const stateOf = (rank: number): 'now' | 'held' | 'plan' | 'open' =>
+    rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
   return (
-    <div ref={box} className={classes.rankBox} role="region" aria-label={`${node.name} ranks`} tabIndex={0}>
-      <table className={classes.ranks}>
-        <thead>
-          <tr>
-            <th scope="col">Rank</th>
-            <th scope="col">Cost</th>
-            <th scope="col">Adds</th>
-            <th scope="col">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {node.values.map((value, i) => {
-            const rank = i + 1;
-            const state =
-              rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
-            return (
-              <tr key={rank} ref={rank === Math.max(bought, 1) ? here : undefined} data-rank={state}>
-                <td>
-                  {rank}
-                  {state === 'now' && <span className={classes.rankTag}>you are here</span>}
-                  {state === 'plan' && <span className={classes.rankTag}>plan</span>}
-                </td>
-                <td>{node.costs[i]}</td>
-                <td>{`+${percent(rankGain(node.values, rank))}`}</td>
-                <td>{`+${percent(value)}`}</td>
+    <Stack gap={4}>
+      <ul className={classes.rankLine} aria-label={`${node.name} key ranks`}>
+        {picks.map((rank, i) => (
+          <li key={rank} className={classes.rankChip} data-rank={stateOf(rank)}>
+            {i > 0 && rank - (picks[i - 1] ?? rank) > 1 && <span aria-hidden>…</span>}
+            <span>{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
+          </li>
+        ))}
+      </ul>
+      <Button
+        size="compact-xs"
+        variant="subtle"
+        style={{ alignSelf: 'flex-start' }}
+        aria-expanded={all}
+        onClick={() => {
+          setAll((open) => !open);
+        }}
+      >
+        {all ? 'Hide the full table' : `Show all ${String(last)} ranks`}
+      </Button>
+      {all && (
+        <div
+          ref={box}
+          className={classes.rankBox}
+          role="region"
+          aria-label={`${node.name} ranks`}
+          tabIndex={0}
+        >
+          <table className={classes.ranks}>
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Cost</th>
+                <th scope="col">Adds</th>
+                <th scope="col">Total</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            </thead>
+            <tbody>
+              {node.values.map((value, i) => {
+                const rank = i + 1;
+                const state = stateOf(rank);
+                return (
+                  <tr key={rank} ref={rank === Math.max(bought, 1) ? here : undefined} data-rank={state}>
+                    <td>
+                      {rank}
+                      {state === 'now' && <span className={classes.rankTag}>you are here</span>}
+                      {state === 'plan' && <span className={classes.rankTag}>plan</span>}
+                    </td>
+                    <td>{node.costs[i]}</td>
+                    <td>{`+${percent(rankGain(node.values, rank))}`}</td>
+                    <td>{`+${percent(value)}`}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Stack>
   );
 }
 
-/** Every bonus the tree gives, by talent family, the largest first: what the held ranks add, and where the plan takes it. */
+/** Every bonus the tree gives, by talent family, the largest first; the ones with only a rank or two wait under "Show more". */
 function TreeRecap({
   nodes,
   ranks,
@@ -524,8 +564,9 @@ function TreeRecap({
   plan: TalentPlan;
   tree: TreeId;
 }) {
+  const [more, setMore] = useState(false);
   const added = plannedByNode(plan);
-  const totals = new Map<string, { now: number; after: number }>();
+  const totals = new Map<string, { now: number; after: number; ranks: number }>();
   for (const n of nodes) {
     const bought = ranks[String(n.id)] ?? 0;
     const upTo = Math.min(n.maxRank, bought + (added.get(n.id) ?? 0));
@@ -534,14 +575,17 @@ function TreeRecap({
     if (now === 0 && after === 0) continue;
     // By talent family, not by stat: "Mounted units' strength", not just "Strength", tiers added together.
     const label = talentFamily(n.name).family;
-    const row = totals.get(label) ?? { now: 0, after: 0 };
+    const row = totals.get(label) ?? { now: 0, after: 0, ranks: 0 };
     row.now += now;
     row.after += after;
+    row.ranks += upTo;
     totals.set(label, row);
   }
   const rows = [...totals.entries()].sort(
     ([a, x], [b, y]) => Math.max(y.now, y.after) - Math.max(x.now, x.after) || a.localeCompare(b),
   );
+  const small = rows.filter(([, v]) => v.ranks <= 2);
+  const shown = more ? rows : rows.filter(([, v]) => v.ranks > 2);
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
@@ -553,13 +597,26 @@ function TreeRecap({
         </Text>
       ) : (
         <dl className={classes.recapList}>
-          {rows.map(([label, v]) => (
+          {shown.map(([label, v]) => (
             <div key={label} className={classes.recapRow}>
               <dt>{label}</dt>
               <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
             </div>
           ))}
         </dl>
+      )}
+      {small.length > 0 && (
+        <Button
+          size="compact-xs"
+          variant="subtle"
+          style={{ alignSelf: 'flex-start' }}
+          aria-expanded={more}
+          onClick={() => {
+            setMore((open) => !open);
+          }}
+        >
+          {more ? 'Show less' : `Show ${String(small.length)} more with one or two ranks`}
+        </Button>
       )}
     </section>
   );

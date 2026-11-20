@@ -589,6 +589,10 @@ test('a tile shows its rank on the left and its bonus on the right, and the deta
   expect(tile.textContent).toContain('rank 5');
   expect(tile.textContent).toContain(`+${String(node.values[4])} %`);
   fireEvent.click(tile);
+  // One line of key ranks first; the full table opens on a click.
+  const line = screen.getByRole('list', { name: `${node.name} key ranks` });
+  expect(within(line).getAllByRole('listitem').length).toBeLessThan(node.maxRank);
+  fireEvent.click(screen.getByRole('button', { name: `Show all ${String(node.maxRank)} ranks` }));
   const table = screen.getByRole('region', { name: `${node.name} ranks` });
   expect(within(table).getAllByRole('row')).toHaveLength(node.maxRank + 1);
   expect(table.querySelector('tr[data-rank="now"]')!.textContent).toMatch(/^5you are here/);
@@ -628,10 +632,26 @@ test('the tree recap sums each stat over the tree', () => {
     goals: ['economy', 'battle', 'archeology'],
     heroLevel: 150,
     pointsOverride: 40,
+    ranks: { [String(node.id)]: 3 },
+  });
+  renderWithTheme(<TalentsPage />);
+  const recap = screen.getByRole('region', { name: 'Economy bonuses' });
+  expect(recap.textContent).toContain(`+${String(node.values[2])} %`);
+  expect(recap.textContent).toContain(talentFamily(node.name).family);
+});
+
+test('a bonus with only one or two ranks waits under Show more', () => {
+  const node = rootNode();
+  setTalents({
+    goals: ['economy', 'battle', 'archeology'],
+    heroLevel: 150,
+    pointsOverride: 40,
     ranks: { [String(node.id)]: 2 },
   });
   renderWithTheme(<TalentsPage />);
   const recap = screen.getByRole('region', { name: 'Economy bonuses' });
-  expect(recap.textContent).toContain(`+${String(node.values[1])} %`);
-  expect(recap.textContent).toContain(talentFamily(node.name).family);
+  const family = talentFamily(node.name).family;
+  expect(recap.textContent).not.toContain(family);
+  fireEvent.click(within(recap).getByRole('button', { name: /show 1 more/i }));
+  expect(recap.textContent).toContain(family);
 });

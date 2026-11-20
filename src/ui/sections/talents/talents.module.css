@@ -249,7 +249,7 @@
 
 @media (min-width: 62em) {
   .layout {
-    grid-template-columns: minmax(0, 1fr) 27rem;
+    grid-template-columns: minmax(0, 1fr) 20rem;
   }
 
   .detail {
@@ -524,4 +524,58 @@
   color: var(--mantine-color-body);
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+/* The ranks of a node on one line: wraps when the pane is narrow. */
+.rankLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rankChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mantine-color-dimmed);
+}
+
+.rankChip > span:last-child {
+  padding: 1px 6px;
+  border-radius: var(--mantine-radius-sm);
+  background: var(--mantine-color-default-hover);
+}
+
+.rankChip[data-rank='now'] > span:last-child {
+  background: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-body);
+  font-weight: 700;
+}
+
+.rankChip[data-rank='plan'] > span:last-child {
+  background: var(--mantine-primary-color-light);
+  color: var(--mantine-color-text);
+}
+
+.rankChip[data-rank='held'] > span:last-child {
+  color: var(--mantine-color-text);
+}
+
+/* What an analysis can win: the headline figure first, in the colour of a gain. */
+.win {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--mantine-color-teal-6);
+  background: var(--mantine-color-default-hover);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.winFigure {
+  color: var(--mantine-color-teal-6);
 }
