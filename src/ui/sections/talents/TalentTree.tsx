@@ -72,10 +72,10 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
   return bought > 0 ? `+${percent(now)} → ${percent(after)}` : `→ +${percent(after)}`;
 }
 
-/** The game's grid: every card is 156 x 128 in a 176 x 152 cell, so the gaps are 20 px across and 24 px down. */
-const CELL_W = 176;
+/** The game's grid: every card is 180 x 128 in a 204 x 152 cell, so the gaps are 24 px across and 24 px down. */
+const CELL_W = 204;
 const CELL_H = 152;
-const TILE_W = 156;
+const TILE_W = 180;
 const TILE_H = 128;
 
 export function TalentTree({
