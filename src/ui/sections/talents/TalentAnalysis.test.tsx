@@ -157,7 +157,7 @@ test('a copy makes a held result stale, and a talent at its maximum says nothing
   fireEvent.click(screen.getByRole('button', { name: 'Copy to battle bonuses' }));
   fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: /replace/i }));
   expect(await screen.findByText(/nothing left to buy/i)).toBeTruthy();
-  expect(screen.queryByRole('button', { name: /analyze/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^(re-)?analyze$/i })).toBeNull();
 });
 
 test('at maximum rank a held result is not shown', async () => {

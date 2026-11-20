@@ -8,14 +8,17 @@ import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
 import { Lock, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { CAMPAIGN } from '@/config';
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
 import { Glyph } from '@/ui/domain/Glyph';
 import { NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
+import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
 import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
+import { recapSize, splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
 import { TalentAnalysis } from './TalentAnalysis';
 
@@ -36,6 +39,8 @@ export interface TalentTreeProps {
   onMax: (id: number) => void;
   /** Spend this tree's plan steps up to the node and its neighbours on the same level. */
   onSpendPlan: (nodeId: number) => void;
+  /** A ranking row asked for this talent: scroll its tile into view once it has rendered (B-29). */
+  reveal?: { id: number; at: number } | null;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -87,7 +92,14 @@ export function TalentTree({
   onSpend,
   onMax,
   onSpendPlan,
+  reveal = null,
 }: TalentTreeProps) {
+  const tiles = useRef(new Map<number, HTMLButtonElement>());
+  // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
+  useEffect(() => {
+    if (reveal === null) return;
+    tiles.current.get(reveal.id)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  }, [reveal, tree]);
   const nodes = talents.filter((t) => t.tree === tree);
   // The pad shows on the selected tile and on the one the pointer or the keyboard is on.
   const [hovered, setHovered] = useState<number | null>(null);
@@ -202,6 +214,11 @@ export function TalentTree({
                   <button
                     type="button"
                     className={classes.tile}
+                    ref={(el) => {
+                      if (el === null) tiles.current.delete(n.id);
+                      else tiles.current.set(n.id, el);
+                    }}
+                    data-node-id={n.id}
                     data-state={state}
                     data-full={full}
                     aria-pressed={selected === n.id}
@@ -468,36 +485,48 @@ function NodeEditor({
 }
 
 /**
- * The ranks of a node on one line: the first three, the one held and its neighbours, the middle and the last
- * three, each with its running total. The full table, every rank, is one click away.
+ * The ranks of a node as chips (B-26): about five key ones on a line, a `…` at each gap, and "Show all" opens the same
+ * chips one per rank, wrapped, in a box that scrolls on its own and opens on the held rank. Cost and "adds" live in the
+ * tooltip and the screen-reader label (rules 24, 25), never in the chip.
  */
 function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number; plus: number }) {
   const [all, setAll] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const here = useRef<HTMLTableRowElement>(null);
-  // The full table opens on the held rank (or the first one): it scrolls inside its box, never the page.
+  const here = useRef<HTMLLIElement>(null);
+  // The full list opens on the held rank (or the first one): it scrolls inside its box, never the page.
   useEffect(() => {
     if (all && box.current !== null && here.current !== null) {
       box.current.scrollTop = Math.max(0, here.current.offsetTop - 60);
     }
   }, [node.id, all]);
   const last = node.maxRank;
-  const picks = [
-    ...new Set([1, 2, 3, bought - 1, bought, bought + 1, Math.round(last / 2), last - 2, last - 1, last]),
-  ]
-    .filter((r) => r >= 1 && r <= last)
-    .sort((a, b) => a - b);
-  const stateOf = (rank: number): 'now' | 'held' | 'plan' | 'open' =>
+  const picks = keyRankPicks({ last, bought, plus });
+  const stateOf = (rank: number): RankState =>
     rank === bought ? 'now' : rank < bought ? 'held' : rank <= bought + plus ? 'plan' : 'open';
+  const chip = (rank: number, gap: boolean, anchor = false, tab = true) => {
+    const state = stateOf(rank);
+    const label = rankChipLabel({ name: node.name, rank, values: node.values, costs: node.costs, state });
+    return (
+      <li
+        key={rank}
+        ref={anchor ? here : undefined}
+        className={classes.rankChip}
+        data-rank={state}
+        data-rank-n={rank}
+      >
+        {gap && <span aria-hidden>…</span>}
+        <span
+          tabIndex={tab ? 0 : -1}
+          title={label}
+          aria-label={label}
+        >{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
+      </li>
+    );
+  };
   return (
     <Stack gap={4}>
       <ul className={classes.rankLine} aria-label={`${node.name} key ranks`}>
-        {picks.map((rank, i) => (
-          <li key={rank} className={classes.rankChip} data-rank={stateOf(rank)}>
-            {i > 0 && rank - (picks[i - 1] ?? rank) > 1 && <span aria-hidden>…</span>}
-            <span>{`${String(rank)}: +${percent(node.values[rank - 1] ?? 0)}`}</span>
-          </li>
-        ))}
+        {picks.map((rank, i) => chip(rank, i > 0 && rank - (picks[i - 1] ?? rank) > 1))}
       </ul>
       <Button
         size="compact-xs"
@@ -508,7 +537,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
           setAll((open) => !open);
         }}
       >
-        {all ? 'Hide the full table' : `Show all ${String(last)} ranks`}
+        {all ? 'Hide all ranks' : `Show all ${String(last)} ranks`}
       </Button>
       {all && (
         <div
@@ -518,41 +547,19 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
           aria-label={`${node.name} ranks`}
           tabIndex={0}
         >
-          <table className={classes.ranks}>
-            <thead>
-              <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Cost</th>
-                <th scope="col">Adds</th>
-                <th scope="col">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {node.values.map((value, i) => {
-                const rank = i + 1;
-                const state = stateOf(rank);
-                return (
-                  <tr key={rank} ref={rank === Math.max(bought, 1) ? here : undefined} data-rank={state}>
-                    <td>
-                      {rank}
-                      {state === 'now' && <span className={classes.rankTag}>you are here</span>}
-                      {state === 'plan' && <span className={classes.rankTag}>plan</span>}
-                    </td>
-                    <td>{node.costs[i]}</td>
-                    <td>{`+${percent(rankGain(node.values, rank))}`}</td>
-                    <td>{`+${percent(value)}`}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ul className={classes.rankLine}>
+            {node.values.map((_, i) => (() => {
+              const held = i + 1 === Math.max(bought, 1);
+              return chip(i + 1, false, held, held);
+            })())}
+          </ul>
         </div>
       )}
     </Stack>
   );
 }
 
-/** Every bonus the tree gives, by talent family, the largest first; the ones with only a rank or two wait under "Show more". */
+/** Every bonus the tree gives, by talent family, the largest first; the families under a quarter complete wait under "Show more". */
 function TreeRecap({
   nodes,
   ranks,
@@ -567,6 +574,11 @@ function TreeRecap({
   const [more, setMore] = useState(false);
   const added = plannedByNode(plan);
   const totals = new Map<string, { now: number; after: number; ranks: number }>();
+  const maxByFamily = new Map<string, number>();
+  for (const n of nodes) {
+    const f = talentFamily(n.name).family;
+    maxByFamily.set(f, (maxByFamily.get(f) ?? 0) + n.maxRank);
+  }
   for (const n of nodes) {
     const bought = ranks[String(n.id)] ?? 0;
     const upTo = Math.min(n.maxRank, bought + (added.get(n.id) ?? 0));
@@ -581,31 +593,32 @@ function TreeRecap({
     row.ranks += upTo;
     totals.set(label, row);
   }
-  const rows = [...totals.entries()].sort(
-    ([a, x], [b, y]) => Math.max(y.now, y.after) - Math.max(x.now, x.after) || a.localeCompare(b),
+  const { shown: top, hidden } = splitRecap(
+    [...totals.entries()].map(([label, v]) => ({ label, ...v, maxRanks: maxByFamily.get(label) ?? 0 })),
   );
-  const small = rows.filter(([, v]) => v.ranks <= 2);
-  const shown = more ? rows : rows.filter(([, v]) => v.ranks > 2);
+  const shown = more
+    ? [...top, ...hidden].sort((x, y) => recapSize(y) - recapSize(x) || x.label.localeCompare(y.label))
+    : top;
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
         {`${TREE_LABELS[tree]} bonuses`}
       </Text>
-      {rows.length === 0 ? (
+      {top.length === 0 ? (
         <Text size="sm" c="dimmed">
           No bonus yet in this tree.
         </Text>
       ) : (
         <dl className={classes.recapList}>
-          {shown.map(([label, v]) => (
-            <div key={label} className={classes.recapRow}>
-              <dt>{label}</dt>
+          {shown.map((v) => (
+            <div key={v.label} className={classes.recapRow}>
+              <dt>{v.label}</dt>
               <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
             </div>
           ))}
         </dl>
       )}
-      {small.length > 0 && (
+      {hidden.length > 0 && (
         <Button
           size="compact-xs"
           variant="subtle"
@@ -615,7 +628,9 @@ function TreeRecap({
             setMore((open) => !open);
           }}
         >
-          {more ? 'Show less' : `Show ${String(small.length)} more with one or two ranks`}
+          {more
+            ? 'Show less'
+            : `Show ${String(hidden.length)} more under ${String(Math.round(CAMPAIGN.talentRecap.minCompletion * 100))} % complete`}
         </Button>
       )}
     </section>

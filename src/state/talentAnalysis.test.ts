@@ -5,7 +5,13 @@ import { aggregateBonuses } from '../engine/bonuses';
 import { newProfile } from './defaults';
 import { resolveSources } from './derive';
 import type { BattleSetup } from './schema';
-import { talentAnalysisInput, talentAnalysisKey, talentBaseline } from './talentAnalysis';
+import {
+  allTalentsInputs,
+  allTalentsKey,
+  talentAnalysisInput,
+  talentAnalysisKey,
+  talentBaseline,
+} from './talentAnalysis';
 
 const melee: TalentRecord = {
   id: 25100,
@@ -123,5 +129,37 @@ describe('talentBaseline agrees with talentCopy on float noise (review)', () => 
     expect(talentBaseline(profile, melee, [melee])).toBe(8);
     hero.strength = { melee: 16.01 };
     expect(talentBaseline(profile, melee, [melee])).toBe(0);
+  });
+});
+
+describe('allTalentsInputs (B-28)', () => {
+  const other: TalentRecord = { ...melee, id: 25101, name: "Guardsmen's health", stats: ['UNIT_HEALTH'] };
+  const dead: TalentRecord = {
+    ...melee,
+    id: 25102,
+    name: 'Army carrying capacity',
+    stats: ['UNIT_LOAD_CAPACITY'],
+  };
+
+  it('prices every talent the engine can read, each as the single Analyze does, and counts the rest', () => {
+    const { profile, setup } = account();
+    const table = [melee, dead, other];
+    const { jobs, notRated } = allTalentsInputs(profile, setup, undefined, table);
+    expect(jobs.map((job) => job.node.id)).toEqual([25100, 25101]);
+    expect(notRated).toBe(1);
+    expect(jobs[0]!.input).toEqual(talentAnalysisInput(profile, setup, melee, undefined, table));
+  });
+
+  it('the ranking key moves with the army and the held ranks, and not otherwise', () => {
+    const { profile, setup } = account();
+    const same = allTalentsKey(profile, setup, undefined, [melee]);
+    expect(allTalentsKey(structuredClone(profile), structuredClone(setup), undefined, [melee])).toBe(same);
+    const richer = structuredClone(setup);
+    richer.housing.leadership += 100;
+    expect(allTalentsKey(profile, richer, undefined, [melee])).not.toBe(same);
+    const synced = held(8, true);
+    expect(allTalentsKey(synced.profile, synced.setup, undefined, [melee])).not.toBe(
+      allTalentsKey(held(8, false).profile, synced.setup, undefined, [melee]),
+    );
   });
 });

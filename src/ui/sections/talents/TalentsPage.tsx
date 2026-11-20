@@ -75,6 +75,7 @@ import {
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
+import { AllTalentsAnalysis } from './AllTalentsAnalysis';
 import { CopyToBattle } from './CopyToBattle';
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
@@ -141,6 +142,8 @@ export function TalentsPage() {
   const updateProfile = useStore((state) => state.updateProfile);
   const [tree, setTree] = useState<TreeId | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  // A ranking row asked for a talent: the tree opens on it, selects it and scrolls it into view (B-29).
+  const [reveal, setReveal] = useState<{ id: number; at: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
   const modeHelpId = useId();
@@ -224,6 +227,14 @@ export function TalentsPage() {
   const shownStats = activeStats.filter((s) => (result.before[s] ?? 0) !== 0 || (result.after[s] ?? 0) !== 0);
   const gate = result.nextGate === null ? null : BY_ID.get(result.nextGate.nodeId);
   const unitStats = active.some((g) => goalHasUnitStats(g));
+
+  const showTalent = (id: number): void => {
+    const node = BY_ID.get(id);
+    if (node === undefined) return;
+    setTree(node.tree);
+    setSelected(id);
+    setReveal({ id, at: Date.now() });
+  };
 
   const move = (goal: TalentGoal, delta: -1 | 1): void => {
     const i = order.indexOf(goal);
@@ -821,6 +832,7 @@ export function TalentsPage() {
               {`Reset points spent in ${TREE_LABELS[viewTree]}`}
             </Button>
           </Group>
+          <AllTalentsAnalysis onSelect={showTalent} />
           <SegmentedControl
             fullWidth
             styles={{ root: { maxWidth: '100%' }, label: { paddingInline: 4, minWidth: 0 } }}
@@ -859,6 +871,7 @@ export function TalentsPage() {
               buy(id, Infinity);
             }}
             onSpendPlan={spendPlanToNode}
+            reveal={reveal}
           />
         </Stack>
       </Panel>

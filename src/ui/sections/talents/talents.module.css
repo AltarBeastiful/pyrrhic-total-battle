@@ -467,63 +467,14 @@
   color: var(--mantine-color-teal-6);
 }
 
-/* The detail's rank table: scrolls inside its box, the held rank marked. */
+/* The detail's full rank list: the same chips, wrapped, scrolling inside its own box (B-26). */
 .rankBox {
-  max-height: 14rem;
+  position: relative;
+  max-height: 10rem;
   overflow: auto;
+  padding: 6px;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
-}
-
-.ranks {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
-}
-
-.ranks th {
-  position: sticky;
-  top: 0;
-  padding: 4px 8px;
-  background: var(--mantine-color-body);
-  border-bottom: 1px solid var(--mantine-color-default-border);
-  font-size: 0.75rem;
-  text-align: right;
-}
-
-.ranks td {
-  padding: 3px 8px;
-  text-align: right;
-  border-bottom: 1px solid var(--mantine-color-default-border);
-}
-
-.ranks th:first-child,
-.ranks td:first-child {
-  text-align: left;
-}
-
-.ranks tr[data-rank='held'] td {
-  color: var(--mantine-color-dimmed);
-}
-
-.ranks tr[data-rank='now'] td {
-  background: var(--mantine-primary-color-light);
-  font-weight: 700;
-}
-
-.ranks tr[data-rank='plan'] td {
-  background: repeating-linear-gradient(45deg, var(--mantine-primary-color-light) 0 4px, transparent 4px 8px);
-}
-
-.rankTag {
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--mantine-primary-color-filled);
-  color: var(--mantine-color-body);
-  font-size: 0.7rem;
-  font-weight: 700;
 }
 
 /* The ranks of a node on one line: wraps when the pane is narrow. */
@@ -547,6 +498,7 @@
 
 .rankChip > span:last-child {
   padding: 1px 6px;
+  border: 1px solid transparent;
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-color-default-hover);
 }
@@ -558,6 +510,7 @@
 }
 
 .rankChip[data-rank='plan'] > span:last-child {
+  border: 1px dashed var(--mantine-primary-color-filled);
   background: var(--mantine-primary-color-light);
   color: var(--mantine-color-text);
 }
@@ -578,4 +531,26 @@
 
 .winFigure {
   color: var(--mantine-color-teal-6);
+}
+
+/* A sortable column head: plain text that is a button, never lower than the table's own text. */
+.sortButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.sortButton:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+/* A ranking asked of another army: the text keeps full contrast, the box says so with a dashed warning border. */
+.rankBox[data-stale='true'] {
+  border-style: dashed;
+  border-color: var(--mantine-color-yellow-7);
 }
