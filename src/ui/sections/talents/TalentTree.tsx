@@ -8,6 +8,7 @@ import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
 import { Lock, Minus, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { CAMPAIGN } from '@/config';
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
 import { Glyph } from '@/ui/domain/Glyph';
@@ -17,7 +18,10 @@ import { percent, statLabel, TREE_LABELS } from './labels';
 import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
 import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
+import { splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
+
+const rowSize = (r: { now: number; after: number }) => Math.max(r.now, r.after);
 import { TalentAnalysis } from './TalentAnalysis';
 
 /** Rule 10: a stepper only for a short run of values; Army strength has 150 ranks and takes the typed field alone. */
@@ -540,7 +544,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
   );
 }
 
-/** Every bonus the tree gives, by talent family, the largest first; the ones with only a rank or two wait under "Show more". */
+/** Every bonus the tree gives, by talent family, the largest first; the families under a quarter complete wait under "Show more". */
 function TreeRecap({
   nodes,
   ranks,
@@ -555,6 +559,11 @@ function TreeRecap({
   const [more, setMore] = useState(false);
   const added = plannedByNode(plan);
   const totals = new Map<string, { now: number; after: number; ranks: number }>();
+  const maxByFamily = new Map<string, number>();
+  for (const n of nodes) {
+    const f = talentFamily(n.name).family;
+    maxByFamily.set(f, (maxByFamily.get(f) ?? 0) + n.maxRank);
+  }
   for (const n of nodes) {
     const bought = ranks[String(n.id)] ?? 0;
     const upTo = Math.min(n.maxRank, bought + (added.get(n.id) ?? 0));
@@ -569,25 +578,27 @@ function TreeRecap({
     row.ranks += upTo;
     totals.set(label, row);
   }
-  const rows = [...totals.entries()].sort(
-    ([a, x], [b, y]) => Math.max(y.now, y.after) - Math.max(x.now, x.after) || a.localeCompare(b),
+  const { shown: top, hidden } = splitRecap(
+    [...totals.entries()].map(([label, v]) => ({ label, ...v, maxRanks: maxByFamily.get(label) ?? 0 })),
   );
-  const small = rows.filter(([, v]) => v.ranks <= 2);
-  const shown = more ? rows : rows.filter(([, v]) => v.ranks > 2);
+  const shown = more
+    ? [...top, ...hidden].sort((x, y) => rowSize(y) - rowSize(x) || x.label.localeCompare(y.label))
+    : top;
+  const small = hidden;
   return (
     <section className={classes.recap} aria-label={`${TREE_LABELS[tree]} bonuses`}>
       <Text fw={600} size="sm">
         {`${TREE_LABELS[tree]} bonuses`}
       </Text>
-      {rows.length === 0 ? (
+      {top.length === 0 ? (
         <Text size="sm" c="dimmed">
           No bonus yet in this tree.
         </Text>
       ) : (
         <dl className={classes.recapList}>
-          {shown.map(([label, v]) => (
-            <div key={label} className={classes.recapRow}>
-              <dt>{label}</dt>
+          {shown.map((v) => (
+            <div key={v.label} className={classes.recapRow}>
+              <dt>{v.label}</dt>
               <dd>{v.after > v.now ? `+${percent(v.now)} → ${percent(v.after)}` : `+${percent(v.now)}`}</dd>
             </div>
           ))}
@@ -603,7 +614,9 @@ function TreeRecap({
             setMore((open) => !open);
           }}
         >
-          {more ? 'Show less' : `Show ${String(small.length)} more with one or two ranks`}
+          {more
+            ? 'Show less'
+            : `Show ${String(small.length)} more under ${String(Math.round(CAMPAIGN.talentRecap.minCompletion * 100))} % complete`}
         </Button>
       )}
     </section>

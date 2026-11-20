@@ -653,20 +653,34 @@ test('the tree recap sums each stat over the tree', () => {
   expect(recap.textContent).toContain(talentFamily(node.name).family);
 });
 
-test('a bonus with only one or two ranks waits under Show more', () => {
+test('a family under a quarter complete waits under Show more, and the button counts exactly those rows', () => {
+  const ranks: Record<string, number> = {};
+  for (const t of TALENTS.filter((t) => t.tree === 'economy')) ranks[String(t.id)] = 1;
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 500, ranks });
+  renderWithTheme(<TalentsPage />);
+  const recap = screen.getByRole('region', { name: 'Economy bonuses' });
+  const rowsNow = () => recap.querySelectorAll('dt').length;
+  const button = within(recap).getByRole('button', { name: /show \d+ more/i });
+  const hidden = Number(/show (\d+) more/i.exec(button.textContent ?? '')![1]);
+  expect(hidden).toBeGreaterThan(0);
+  expect(rowsNow()).toBeGreaterThanOrEqual(4);
+  const before = rowsNow();
+  fireEvent.click(button);
+  expect(rowsNow()).toBe(before + hidden);
+  expect(within(recap).getByRole('button', { name: /show less/i })).toBeTruthy();
+});
+
+test('a 1/N bonus still shows while fewer than four families pass (the floor)', () => {
   const node = rootNode();
   setTalents({
     goals: ['economy', 'battle', 'archeology'],
     heroLevel: 150,
     pointsOverride: 40,
-    ranks: { [String(node.id)]: 2 },
+    ranks: { [String(node.id)]: 1 },
   });
   renderWithTheme(<TalentsPage />);
   const recap = screen.getByRole('region', { name: 'Economy bonuses' });
-  const family = talentFamily(node.name).family;
-  expect(recap.textContent).not.toContain(family);
-  fireEvent.click(within(recap).getByRole('button', { name: /show 1 more/i }));
-  expect(recap.textContent).toContain(family);
+  expect(recap.textContent).toContain(talentFamily(node.name).family);
 });
 
 // ---- B-25 Seam 2: copy the held ranks to the Hero Talents bonus ----
