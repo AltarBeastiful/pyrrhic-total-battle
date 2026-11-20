@@ -4,7 +4,7 @@
  * the goals, and read the next two points on cards; the tree carries the whole plan. What the player types or
  * chooses is saved on the account. Sideways overflow is left to the end-to-end journey.
  */
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
@@ -654,4 +654,74 @@ test('a bonus with only one or two ranks waits under Show more', () => {
   expect(recap.textContent).not.toContain(family);
   fireEvent.click(within(recap).getByRole('button', { name: /show 1 more/i }));
   expect(recap.textContent).toContain(family);
+});
+
+// ---- B-25 Seam 2: copy the held ranks to the Hero Talents bonus ----
+
+const meleeNode = () => TALENTS.find((t) => t.tree === 'battle' && t.name === "Guardsmen's strength I")!;
+const COPY = 'Copy to battle bonuses';
+const heroSource = () =>
+  selectActiveProfile(useStore.getState())!.sources.permanent.find((e) => e.builtin === 'heroTalents')!;
+
+function hold(rank: number): void {
+  const node = meleeNode();
+  setTalents({ ranks: { ...talentsOf().ranks, [String(node.id)]: rank } });
+}
+function setHero(strength: Record<string, number>): void {
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore.getState().updateProfile(profile.id, {
+    sources: {
+      ...profile.sources,
+      permanent: profile.sources.permanent.map((e) => (e.builtin === 'heroTalents' ? { ...e, strength } : e)),
+    },
+  });
+}
+const describedBy = (button: HTMLElement): string =>
+  (button.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ');
+
+test('with no rank held the copy button is disabled and says why', () => {
+  renderWithTheme(<TalentsPage />);
+  const button = screen.getByRole('button', { name: COPY }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  expect(screen.getByText(/hold a rank to copy/i)).toBeTruthy();
+});
+
+test('a first copy asks nothing, writes the lines, and the button turns quiet', () => {
+  hold(1);
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  const lines = heroSource().strength;
+  expect(Object.keys(lines).length).toBeGreaterThan(0);
+  expect(Object.values(lines).every((v) => v !== 0)).toBe(true);
+  expect(heroSource().health).toEqual({});
+  expect(screen.getByRole('button', { name: 'Copied, matches your tree' })).toBeTruthy();
+});
+
+test('changing a rank turns the button emphasised and the hover names the difference', () => {
+  hold(1);
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  act(() => {
+    hold(2);
+  });
+  const button = screen.getByRole('button', { name: COPY });
+  expect(describedBy(button)).toMatch(/strength .* in your tree, .* in Hero Talents/);
+});
+
+test('a copy over typed values asks once, and cancelling changes nothing', () => {
+  hold(1);
+  setHero({ melee: 9 });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  const dialog = screen.getByRole('alertdialog');
+  fireEvent.click(within(dialog).getByRole('button', { name: /cancel/i }));
+  expect(heroSource().strength).toEqual({ melee: 9 });
+  fireEvent.click(screen.getByRole('button', { name: COPY }));
+  fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: /replace/i }));
+  expect(heroSource().strength.melee).toBeUndefined();
+  expect(screen.getByRole('button', { name: 'Copied, matches your tree' })).toBeTruthy();
 });

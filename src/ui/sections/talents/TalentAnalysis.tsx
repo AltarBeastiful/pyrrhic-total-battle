@@ -10,7 +10,7 @@ import type { TalentRecord } from '@/data/types';
 import { isAnalyzable } from '@/engine/talentAnalysis';
 import type { TalentAnalysis as Analysis } from '@/worker/talentAnalysis';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { talentAnalysisKey } from '@/state/talentAnalysis';
+import { talentAnalysisKey, talentBaseline } from '@/state/talentAnalysis';
 
 import { analyzeTalent, cancelAnalysis, useAnalysisStore } from './analysisStore';
 import classes from './talents.module.css';
@@ -96,14 +96,15 @@ function Chart({ analysis }: { analysis: Analysis }) {
 }
 
 /** The points a talent costs up to a rank. */
-const costTo = (node: TalentRecord, rank: number): number =>
-  node.costs.slice(0, rank).reduce((sum, c) => sum + c, 0);
+const costTo = (node: TalentRecord, rank: number, from = 0): number =>
+  node.costs.slice(from, rank).reduce((sum, c) => sum + c, 0);
 
 function Results({ node, analysis }: { node: TalentRecord; analysis: Analysis }) {
-  // The highest rank comes first: that is where the win is. Rank 0 is the baseline and says nothing.
+  // The highest rank comes first: that is where the win is. The first rank is the baseline and says nothing.
+  const baseline = analysis.ranks[0] ?? 0;
   const rows = analysis.ranks
-    .map((rank, i) => ({ rank, i, gain: analysis.mean[i] ?? 0, points: costTo(node, rank) }))
-    .filter((row) => row.rank > 0)
+    .map((rank, i) => ({ rank, i, gain: analysis.mean[i] ?? 0, points: costTo(node, rank, baseline) }))
+    .filter((row) => row.rank > baseline)
     .reverse();
   const top = rows[0];
   const bestPerPoint = rows.reduce<(typeof rows)[number] | undefined>(
@@ -125,6 +126,9 @@ function Results({ node, analysis }: { node: TalentRecord; analysis: Analysis })
           )}
         </div>
       )}
+      <Text size="xs" c="dimmed">
+        {baseline > 0 ? `Gains are from your rank ${String(baseline)}.` : 'Gains are from rank 0.'}
+      </Text>
       <div className={classes.rankBox} role="region" aria-label={`${node.name} rating by rank`} tabIndex={0}>
         <table className={classes.ranks}>
           <thead>
@@ -174,6 +178,7 @@ export function TalentAnalysis({ node }: { node: TalentRecord }) {
     );
   }
   if (profile === undefined || setup === undefined || key === null) return null;
+  const spent = talentBaseline(profile, node) >= node.maxRank;
   const running = entry?.status === 'running';
   const stale = entry !== undefined && entry.analysis !== null && entry.key !== key;
   return (
@@ -183,6 +188,8 @@ export function TalentAnalysis({ node }: { node: TalentRecord }) {
           <Button size="xs" variant="default" onClick={cancelAnalysis}>
             Cancel
           </Button>
+        ) : spent ? (
+          <Text size="sm">Nothing left to buy: this talent is at its maximum rank.</Text>
         ) : (
           <Button
             size="xs"
@@ -214,8 +221,8 @@ export function TalentAnalysis({ node }: { node: TalentRecord }) {
         )}
       </Group>
       <Text size="xs" c="dimmed">
-        March rating gained by each rank over none, on the army selected in March, added to your bonuses as
-        entered.
+        March rating gained by each rank over the baseline named below, on the army selected in March, added
+        to your bonuses as entered.
       </Text>
       {entry?.analysis != null && <Results node={node} analysis={entry.analysis} />}
     </section>

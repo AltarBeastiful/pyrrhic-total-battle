@@ -110,3 +110,52 @@ test('selecting another tile while it runs cancels the analysis', () => {
   );
   expect(useAnalysisStore.getState().entries[node.id]?.status).toBe('cancelled');
 });
+
+// ---- B-25: the baseline ----
+
+function holdRank(rank: number): void {
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore.getState().updateProfile(profile.id, {
+    talents: { ...profile.talents, ranks: { [String(battleNode().id)]: rank } },
+  });
+}
+
+test('after a copy Analyze says "from your rank N" and lists only the ranks above it', async () => {
+  const node = battleNode();
+  holdRank(5);
+  open('Battle tactics', node.name);
+  fireEvent.click(screen.getByRole('button', { name: 'Copy to battle bonuses' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+  const table = await screen.findByRole('region', { name: `${node.name} rating by rank` });
+  expect(screen.getByText(/from your rank 5/i)).toBeTruthy();
+  const rows = within(table).getAllByRole('row').slice(1);
+  const shown = rows.map((row) => Number(within(row).getAllByRole('cell')[0]?.textContent));
+  expect(shown[0]).toBe(20);
+  expect(shown.every((rank) => rank > 5)).toBe(true);
+});
+
+test('without a copy Analyze says "from rank 0"', async () => {
+  const node = battleNode();
+  holdRank(5);
+  open('Battle tactics', node.name);
+  fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+  await screen.findByRole('region', { name: `${node.name} rating by rank` });
+  expect(screen.getByText(/from rank 0/i)).toBeTruthy();
+});
+
+test('a copy makes a held result stale, and a talent at its maximum says nothing is left to buy', async () => {
+  const node = battleNode();
+  holdRank(5);
+  open('Battle tactics', node.name);
+  fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+  await screen.findByTestId('analysis-chart');
+  fireEvent.click(screen.getByRole('button', { name: 'Copy to battle bonuses' }));
+  expect(await screen.findByText(/out of date/i)).toBeTruthy();
+  act(() => {
+    holdRank(node.maxRank);
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Copy to battle bonuses' }));
+  fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: /replace/i }));
+  expect(await screen.findByText(/nothing left to buy/i)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /analyze/i })).toBeNull();
+});

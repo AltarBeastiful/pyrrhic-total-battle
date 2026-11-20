@@ -75,6 +75,7 @@ import {
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
+import { CopyToBattle } from './CopyToBattle';
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
 import { spentPoints, stepsUpToNode, treePoints, unlockChain } from './spentPoints';
@@ -549,6 +550,9 @@ export function TalentsPage() {
               </div>
             </Stack>
           </Stack>
+        </Panel>
+        <Panel component="section" title="Battle bonuses" meta="Held ranks only">
+          <CopyToBattle />
         </Panel>
         {shownStats.length > 0 && (
           <Panel component="section" title="Totals" meta="Before, then after">
