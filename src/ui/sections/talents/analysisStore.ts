@@ -80,7 +80,11 @@ export async function analyzeTalent(node: TalentRecord, profile: Profile, setup:
     if (entry !== null)
       useAnalysisStore
         .getState()
-        .set(node.id, { ...entry, status: 'failed', error: error instanceof Error ? error.message : String(error) });
+        .set(node.id, {
+          ...entry,
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
   } finally {
     if (controller === own) {
       controller = null;

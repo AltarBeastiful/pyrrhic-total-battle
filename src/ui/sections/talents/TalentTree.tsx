@@ -17,6 +17,7 @@ import { percent, statLabel, TREE_LABELS } from './labels';
 import { pointsWords, stepsUpToNode, treePoints } from './spentPoints';
 import classes from './talents.module.css';
 import { talentFamily, talentIcons } from './talentFamily';
+import { TalentAnalysis } from './TalentAnalysis';
 
 /** Rule 10: a stepper only for a short run of values; Army strength has 150 ranks and takes the typed field alone. */
 const STEPPER_MAX = 100;
@@ -72,6 +73,8 @@ const CELL_W = 176;
 const CELL_H = 152;
 const TILE_W = 156;
 const TILE_H = 128;
+/** The narrowest a column gets before the canvas pans sideways instead (tile names stay readable). */
+const MIN_CELL_W = 132;
 
 export function TalentTree({
   talents,
@@ -97,7 +100,9 @@ export function TalentTree({
   // Only the columns the tree uses take room: the tiles keep their size and the empty outer columns go.
   const firstCol = Math.min(...nodes.map((n) => n.layout.x));
   const lastCol = Math.max(...nodes.map((n) => n.layout.x));
-  const width = (lastCol - firstCol + 1) * CELL_W;
+  const cols = lastCol - firstCol + 1;
+  // The plane is relative: it takes the room it has up to the full grid, and the tiles narrow with it.
+  const width = cols * CELL_W;
   const height = rows * CELL_H;
   const centre = (n: TalentRecord): [number, number] => [
     (n.layout.x - firstCol) * CELL_W + CELL_W / 2,
@@ -126,8 +131,18 @@ export function TalentTree({
           this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.
         */}
         <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
-          <div className={classes.plane} style={{ width, height }}>
-            <svg className={classes.lines} width={width} height={height} aria-hidden>
+          <div
+            className={classes.plane}
+            style={{ width: '100%', maxWidth: width, minWidth: cols * MIN_CELL_W, height }}
+          >
+            <svg
+              className={classes.lines}
+              width="100%"
+              height={height}
+              viewBox={`0 0 ${String(width)} ${String(height)}`}
+              preserveAspectRatio="none"
+              aria-hidden
+            >
               {lines.map((l) => (
                 <line
                   key={l.key}
@@ -177,9 +192,10 @@ export function TalentTree({
                     if (!event.currentTarget.contains(event.relatedTarget)) setHovered(null);
                   }}
                   style={{
-                    left: (n.layout.x - firstCol) * CELL_W + (CELL_W - TILE_W) / 2,
+                    left: `${String(((n.layout.x - firstCol + 0.5) / cols) * 100)}%`,
+                    transform: 'translateX(-50%)',
                     top: n.layout.y * CELL_H + (CELL_H - TILE_H) / 2,
-                    width: TILE_W,
+                    width: `min(${String(TILE_W)}px, calc(${String(100 / cols)}% - 12px))`,
                     height: TILE_H,
                   }}
                 >
@@ -363,6 +379,7 @@ function NodeEditor({
           : '. Fully ranked.'}
       </Text>
       <RankTable node={node} bought={bought} plus={plan.steps.filter((st) => st.nodeId === node.id).length} />
+      <TalentAnalysis node={node} />
       {lock !== undefined && bought === 0 && (
         <Text size="sm">
           {lock.reason === 'level'

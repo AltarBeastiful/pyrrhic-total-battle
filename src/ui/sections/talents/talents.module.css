@@ -20,6 +20,7 @@
 }
 
 .line {
+  vector-effect: non-scaling-stroke;
   stroke: var(--mantine-color-default-border);
   stroke-width: 2;
 }
