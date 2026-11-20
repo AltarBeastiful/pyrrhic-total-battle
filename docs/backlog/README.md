@@ -46,6 +46,7 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 15 | [[B-18-menu-dropdown]] | Menu dropdown on the left of the bar | M | second half of the bar split | B-17 |
 | 16 | [[B-19-equipment-sets]] | Equipment sets, grade badges, tighter pills | L | the 2026-10-20 grilling, design settled | none |
 | 17 | [[B-20-equipment-drag-and-drop]] | Drag a piece onto a set | M | needs B-19 and a library decision | B-19, owner call on a drag library |
+| 18 | [[B-25-copy-talents-to-battle]] | Copy held talents into the Hero Talents bonus; Analyze prices from the held rank | M | 2026-11-20 grilling, design settled; amends B-24 | none |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 
