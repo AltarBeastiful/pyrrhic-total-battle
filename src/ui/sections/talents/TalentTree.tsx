@@ -493,7 +493,7 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
   );
 }
 
-/** Every bonus the tree gives, by stat: what the held ranks add, and where the plan takes it. */
+/** Every bonus the tree gives, by talent family: what the held ranks add, and where the plan takes it. */
 function TreeRecap({
   nodes,
   ranks,
@@ -513,13 +513,12 @@ function TreeRecap({
     const now = bought > 0 ? (n.values[bought - 1] ?? 0) : 0;
     const after = upTo > 0 ? (n.values[upTo - 1] ?? 0) : 0;
     if (now === 0 && after === 0) continue;
-    for (const stat of n.stats) {
-      const label = statLabel(stat);
-      const row = totals.get(label) ?? { now: 0, after: 0 };
-      row.now += now;
-      row.after += after;
-      totals.set(label, row);
-    }
+    // By talent family, not by stat: "Mounted units' strength", not just "Strength", tiers added together.
+    const label = talentFamily(n.name).family;
+    const row = totals.get(label) ?? { now: 0, after: 0 };
+    row.now += now;
+    row.after += after;
+    totals.set(label, row);
   }
   const rows = [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
   return (

@@ -14,6 +14,7 @@ import type { Talents } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
+import { talentFamily } from './talentFamily';
 import { TalentsPage } from './TalentsPage';
 
 beforeEach(() => {
@@ -617,7 +618,7 @@ test('the points banner says what this tree and all trees hold, planned and spen
   renderWithTheme(<TalentsPage />);
   const banner = screen.getByRole('group', { name: 'Points' });
   expect(banner.textContent).toMatch(/This tree\s*2 spent/);
-  expect(banner.textContent).toMatch(/All trees\s*2 spent.* of 40 in all/);
+  expect(banner.textContent).toMatch(/All trees\s*2 spent.*of 40 in all/);
   expect(banner.textContent).toMatch(/38 left/);
 });
 
@@ -632,4 +633,5 @@ test('the tree recap sums each stat over the tree', () => {
   renderWithTheme(<TalentsPage />);
   const recap = screen.getByRole('region', { name: 'Economy bonuses' });
   expect(recap.textContent).toContain(`+${String(node.values[1])} %`);
+  expect(recap.textContent).toContain(talentFamily(node.name).family);
 });

@@ -788,16 +788,19 @@ export function TalentsPage() {
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
           <div className={classes.banner} role="group" aria-label="Points">
-            <span>
-              <b>This tree</b> {String(spentPoints(TALENTS, viewTree, talentsState.ranks))} spent
-              {treePlanned > 0 ? ` + ${String(treePlanned)} planned` : ''}
+            <span className={classes.bannerSeg}>
+              <small>This tree</small>
+              <b>{String(spentPoints(TALENTS, viewTree, talentsState.ranks))} spent</b>
+              {treePlanned > 0 && <span>{`+ ${String(treePlanned)} planned`}</span>}
             </span>
-            <span>
-              <b>All trees</b> {String(heldCost)} spent
-              {result.pointsSpent > 0 ? ` + ${String(result.pointsSpent)} planned` : ''}
-              {stock === null ? '' : ` of ${String(stock)} in all`}
+            <span className={classes.bannerSeg}>
+              <small>All trees</small>
+              <b>{String(heldCost)} spent</b>
+              {result.pointsSpent > 0 && <span>{`+ ${String(result.pointsSpent)} planned`}</span>}
+              {stock !== null && <span>{`of ${String(stock)} in all`}</span>}
             </span>
-            <span>
+            <span className={classes.bannerSeg}>
+              <small>Remaining</small>
               <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
             </span>
           </div>

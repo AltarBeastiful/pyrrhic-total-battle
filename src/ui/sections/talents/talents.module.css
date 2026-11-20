@@ -384,7 +384,7 @@
   display: grid;
   gap: 2px;
   margin: 0;
-  max-height: 11rem;
+  max-height: 18rem;
   overflow: auto;
   font-size: 0.875rem;
 }
@@ -407,20 +407,47 @@
   color: var(--mantine-color-teal-6);
 }
 
-/* The floating points banner: stays under the app bar while the tree scrolls. */
+/* The floating points banner: a compact pill under the app bar, never the width of the tree. */
 .banner {
   position: sticky;
   top: 4.5rem;
   z-index: 6;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 16px;
-  padding: 6px 12px;
+  align-items: stretch;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-sm);
-  background: var(--mantine-color-body);
-  box-shadow: var(--mantine-shadow-sm);
-  font-size: 0.875rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mantine-color-body) 92%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--mantine-shadow-md);
+  font-size: 0.8125rem;
+  overflow: hidden;
+}
+
+.bannerSeg {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 14px;
+  white-space: nowrap;
+}
+
+.bannerSeg + .bannerSeg {
+  border-left: 1px solid var(--mantine-color-default-border);
+}
+
+.bannerSeg small {
+  color: var(--mantine-color-dimmed);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bannerSeg b {
+  font-variant-numeric: tabular-nums;
 }
 
 /* The tile's bottom line: rank on the left, the bonus it gives on the right. */
