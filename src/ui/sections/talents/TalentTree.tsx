@@ -68,9 +68,9 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
 }
 
 /** The game's grid: six columns, cell size in px. Tiles are 124 x 104 inside a 144 x 128 cell. */
-const CELL_W = 176;
+const CELL_W = 164;
 const CELL_H = 152;
-const TILE_W = 156;
+const TILE_W = 148;
 const TILE_H = 128;
 const COLS = 6;
 

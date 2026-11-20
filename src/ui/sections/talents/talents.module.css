@@ -248,7 +248,7 @@
 
 @media (min-width: 62em) {
   .layout {
-    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-columns: minmax(0, 1fr) 27rem;
   }
 
   .detail {
