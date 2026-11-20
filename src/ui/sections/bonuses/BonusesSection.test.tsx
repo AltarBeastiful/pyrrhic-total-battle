@@ -471,6 +471,23 @@ test('Customization takes a negative figure, to correct a total the game screens
   expect(custom?.health).toEqual({ flying: -1, mounted: 5 });
 });
 
+test('the Hero Talents form asks only for strength and health on the nine keys a talent can touch', () => {
+  renderWithTheme(<BonusesSection />);
+  fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hero Talents' }));
+  const sheet = screen.getByRole('dialog');
+  for (const kind of ['Army', 'Melee', 'Ranged', 'Mounted', 'Flying', 'Monsters', 'Guardsmen', 'Specialists', 'Engineers']) {
+    expect(within(sheet).getByLabelText(`${kind} health`)).toBeTruthy();
+    expect(within(sheet).getByLabelText(`${kind} strength`)).toBeTruthy();
+  }
+  for (const race of ['Beasts', 'Giants', 'Elementals', 'Dragons']) {
+    expect(within(sheet).queryByLabelText(`${race} health`)).toBeNull();
+    expect(within(sheet).queryByLabelText(`${race} strength`)).toBeNull();
+  }
+  expect(within(sheet).queryByLabelText(/double damage/i)).toBeNull();
+  expect(within(sheet).getAllByRole('textbox')).toHaveLength(18);
+  done(sheet);
+});
+
 test('a hover over a source chip raises every line it is worth', async () => {
   renderWithTheme(<BonusesSection />);
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Army Modernization' }));

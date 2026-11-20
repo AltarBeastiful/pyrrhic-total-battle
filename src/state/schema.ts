@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -119,6 +119,22 @@ export const BUILTIN_PERMANENT_SOURCES = [
   'unionOfTriumph',
 ] as const;
 export type BuiltinPermanentSource = (typeof BUILTIN_PERMANENT_SOURCES)[number];
+
+/**
+ * The nine keys the hero talent tree can touch (B-25). The "Hero Talents" source carries strength and
+ * health on these and nothing else; its form is limited to them and the 15 → 16 migration deletes the rest.
+ */
+export const HERO_TALENT_KEYS = [
+  'army',
+  'melee',
+  'ranged',
+  'mounted',
+  'flying',
+  'monster',
+  'guardsmen',
+  'specialist',
+  'engineers',
+] as const;
 
 /** Free-form 13-key editors (PLAN §3.1). The eight builtin ones always exist; extra rows are custom. */
 export const permanentSourceSchema = z.object({

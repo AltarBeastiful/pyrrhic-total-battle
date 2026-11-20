@@ -11,8 +11,12 @@
  * - Hall of Fame: Army strength and Army health. Its third line, health against players, is not
  *   modelled: battles here are against monsters and crypts.
  *
+ * - Hero Talents (B-25): strength and health on the nine keys the talent tree can touch.
+ *
  * Sources not listed here keep the full grid.
  */
+import { HERO_TALENT_KEYS } from '@/state/schema';
+
 import type { BonusKeyScope } from './BonusKeyGrid';
 
 /** The Dragon screen grants Army health and Army strength only; the runes add to those same two lines. */
@@ -22,6 +26,7 @@ const ARMY_MODERNIZATION_KEYS = ['army', 'melee', 'ranged', 'mounted', 'flying',
 const RACE_KEYS = ['beast', 'giant', 'elemental', 'dragon'] as const;
 
 export const PERMANENT_SCOPE: Record<string, BonusKeyScope | undefined> = {
+  heroTalents: { health: HERO_TALENT_KEYS, strength: HERO_TALENT_KEYS, special: [] },
   hallOfFame: { health: ['army'], strength: ['army'], special: [] },
   armyModernization: { health: ARMY_MODERNIZATION_KEYS, strength: ARMY_MODERNIZATION_KEYS, special: [] },
   monstersBoost: {

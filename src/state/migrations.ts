@@ -13,6 +13,7 @@ import {
   profileSchema,
   rootDocumentSchema,
   savedStackSchema,
+  HERO_TALENT_KEYS,
   SCHEMA_VERSION,
   TALENT_GOALS,
 } from './schema';
@@ -272,6 +273,25 @@ export function pointsBecomeStock(profile: Record<string, unknown>): Record<stri
   return { ...profile, talents: { ...t, pointsOverride: t.pointsOverride + spent } };
 }
 
+/**
+ * `15 → 16` for one profile (B-25): the "Hero Talents" source is restricted to strength and health on the
+ * nine keys a talent can touch, so values typed in any other field are deleted (the form no longer shows
+ * them, and the battle must stop counting numbers nobody can see). Every other source is untouched.
+ */
+export function restrictHeroTalentsSource(profile: Record<string, unknown>): Record<string, unknown> {
+  const sources = profile.sources;
+  if (!isPlainObject(sources) || !Array.isArray(sources.permanent)) return profile;
+  const allowed: readonly string[] = HERO_TALENT_KEYS;
+  const only = (map: unknown): unknown =>
+    isPlainObject(map) ? Object.fromEntries(Object.entries(map).filter(([key]) => allowed.includes(key))) : map;
+  const permanent = sources.permanent.map((entry) => {
+    if (!isPlainObject(entry) || entry.builtin !== 'heroTalents') return entry;
+    const { special: _special, ...rest } = entry;
+    return { ...rest, health: only(entry.health), strength: only(entry.strength) };
+  });
+  return { ...profile, sources: { ...sources, permanent } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -294,6 +314,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `12 → 13`: the talents gain the crypt types that count, all three (B-23).
  * `13 → 14`: the talents gain the troop-group overrides, none (B-23).
  * `14 → 15`: the typed talent points become the whole stock, which held ranks spend (B-23).
+ * `15 → 16`: the Hero Talents source keeps only strength and health on the nine talent keys (B-25).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -311,6 +332,7 @@ export const migrations: MigrationTable = {
   12: (doc) => ({ ...doc, schemaVersion: 13, profiles: migrateProfiles(doc, addTalentCrypts) }),
   13: (doc) => ({ ...doc, schemaVersion: 14, profiles: migrateProfiles(doc, addTalentGroupOverrides) }),
   14: (doc) => ({ ...doc, schemaVersion: 15, profiles: migrateProfiles(doc, pointsBecomeStock) }),
+  15: (doc) => ({ ...doc, schemaVersion: 16, profiles: migrateProfiles(doc, restrictHeroTalentsSource) }),
 };
 
 /**
@@ -337,6 +359,7 @@ export const profileMigrations: MigrationTable = {
   12: addTalentCrypts,
   13: addTalentGroupOverrides,
   14: pointsBecomeStock,
+  15: restrictHeroTalentsSource,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -362,6 +385,7 @@ export const savedStackMigrations: MigrationTable = {
   12: identity,
   13: identity,
   14: identity,
+  15: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

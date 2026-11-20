@@ -630,6 +630,63 @@ describe('migrate', () => {
     expect(talents?.ranks).toEqual({ '25000': 3 });
   });
 
+  describe('v15 → v16 (B-25) keeps only the lines a talent can give in Hero Talents', () => {
+    const v15Doc = (): Record<string, unknown> => {
+      const doc = newRoot('device');
+      const profile = doc.profiles[0]!;
+      const permanent = profile.sources.permanent.map((entry) => {
+        if (entry.builtin === 'heroTalents') {
+          return {
+            ...entry,
+            health: { army: 5, melee: 2, beast: 9, dragon: 1 },
+            strength: { monster: 3, giant: 4, flying: 6 },
+            special: { doubleDamageChance: 7 },
+          };
+        }
+        if (entry.builtin === 'hallOfFame') {
+          return { ...entry, health: { beast: 8 }, strength: { army: 1 }, special: { doubleDamageChance: 2 } };
+        }
+        return entry;
+      });
+      return JSON.parse(
+        JSON.stringify({ ...doc, schemaVersion: 15, profiles: [{ ...profile, sources: { ...profile.sources, permanent } }] }),
+      ) as Record<string, unknown>;
+    };
+
+    it('deletes the values outside the nine keys, strength and health only, and nothing else', () => {
+      const fixture = v15Doc();
+      expect(migrations[15]?.(fixture).schemaVersion).toBe(16);
+      const permanent = migrate(fixture).profiles[0]!.sources.permanent;
+      const talents = permanent.find((entry) => entry.builtin === 'heroTalents')!;
+      expect(talents.health).toEqual({ army: 5, melee: 2 });
+      expect(talents.strength).toEqual({ monster: 3, flying: 6 });
+      expect(talents.special ?? {}).toEqual({});
+    });
+
+    it('leaves every other source and all other data as it was', () => {
+      const fixture = v15Doc();
+      const before = migrate({ ...fixture, schemaVersion: 16 });
+      const after = migrate(fixture);
+      const strip = (doc: typeof after) => ({
+        ...doc,
+        profiles: doc.profiles.map((p) => ({
+          ...p,
+          sources: { ...p.sources, permanent: p.sources.permanent.filter((e) => e.builtin !== 'heroTalents') },
+        })),
+      });
+      expect(strip(after)).toEqual(strip(before));
+      const hall = after.profiles[0]!.sources.permanent.find((e) => e.builtin === 'hallOfFame')!;
+      expect(hall.health).toEqual({ beast: 8 });
+      expect(hall.special).toEqual({ doubleDamageChance: 2 });
+    });
+
+    it('a clean account is unchanged apart from the version', () => {
+      const doc = newRoot('device');
+      const fixture = JSON.parse(JSON.stringify({ ...doc, schemaVersion: 15 })) as Record<string, unknown>;
+      expect(migrate(fixture)).toEqual(doc);
+    });
+  });
+
   it('v14 → v15 leaves an empty points field empty', () => {
     const doc = newRoot('device');
     const profile = doc.profiles[0]!;
