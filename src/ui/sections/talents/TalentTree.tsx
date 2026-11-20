@@ -207,6 +207,7 @@ export function TalentTree({
                   <button
                     type="button"
                     className={classes.tile}
+                    data-node-id={n.id}
                     data-state={state}
                     data-full={full}
                     aria-pressed={selected === n.id}
