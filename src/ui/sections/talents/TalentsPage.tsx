@@ -75,7 +75,7 @@ import {
 import { selectActiveProfile, useStore } from '@/state/store';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
 
-import { AllTalentsAnalysis } from './AllTalentsAnalysis';
+import { AnalyzeAllDialog } from './AllTalentsAnalysis';
 import { CopyToBattle } from './CopyToBattle';
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
@@ -416,6 +416,7 @@ export function TalentsPage() {
           <small>Remaining</small>
           <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
         </span>
+        <AnalyzeAllDialog onSelect={showTalent} />
         <Button
           size="compact-sm"
           variant="default"
@@ -440,7 +441,7 @@ export function TalentsPage() {
           meta={`${GOAL_LABELS[first]} first, level ${String(talentsState.heroLevel)}`}
         >
           <Stack gap="md">
-            <Group gap="md" align="flex-start">
+            <div className={classes.setup}>
               <NumberField
                 w={120}
                 label="Hero level"
@@ -493,7 +494,7 @@ export function TalentsPage() {
                   </Tooltip>
                 </Group>
               </Stack>
-            </Group>
+            </div>
             <div id={modeHelpId} hidden={!modeHelpOpen}>
               {modeHelpOpen && (
                 <Stack gap={4}>
@@ -513,9 +514,9 @@ export function TalentsPage() {
               </Text>
               <Stack
                 component="ul"
-                gap={4}
+                gap={0}
+                className={classes.goalList}
                 aria-label="Goals, most wanted first"
-                style={{ listStyle: 'none', margin: 0, padding: 0 }}
               >
                 {order.map((goal, index) => {
                   const off = ignored.has(goal);
@@ -870,7 +871,6 @@ export function TalentsPage() {
 
       <Panel component="section" title="Tree" meta={TREE_LABELS[viewTree]}>
         <Stack gap="md">
-          <AllTalentsAnalysis onSelect={showTalent} />
           {strip}
           <TalentTree
             talents={TALENTS}
