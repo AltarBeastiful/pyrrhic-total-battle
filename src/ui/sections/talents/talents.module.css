@@ -122,8 +122,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   overflow: hidden;
   border-radius: 12px;
   background: color-mix(in srgb, var(--tint) 44%, #000);
@@ -148,12 +148,12 @@
 .name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   flex: 1;
   align-items: center;
   width: 100%;
-  min-height: 42px;
+  min-height: 30px;
   overflow: hidden;
   overflow-wrap: anywhere;
   font-size: 12px;

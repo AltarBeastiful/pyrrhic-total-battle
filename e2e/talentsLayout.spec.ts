@@ -153,21 +153,34 @@ test('the detail column scrolls with the page in a short window', async ({ page 
   expect(pos).toBe('static');
 });
 
-test('B-31 tiles: picture, name on three lines, bonus; the pad hangs under the tile and a click away closes the selection', async ({
+test('B-31 tiles: picture, name on two lines, bonus; the pad hangs under the tile and a click away closes the selection', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openTalents(page);
   const tile = page.getByRole('button', { name: /^.+, rank 0 of \d+$/ }).first();
   await expect(tile.locator('img, [class*="icons"]').first()).toBeVisible();
-  // No name is cut: every name's text fits inside its box.
-  const clipped = await page.evaluate(
-    () =>
-      [...document.querySelectorAll<HTMLElement>('button[data-node-id] [class*="name"]')].filter(
-        (n) => n.scrollHeight > n.clientHeight + 1,
-      ).length,
+  // Sizes follow the mockup: a 150 x 146 card, a 70 px picture, and nothing spilling out of the card.
+  const sizes = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('button[data-node-id]')].map((b) => {
+      const r = b.getBoundingClientRect();
+      const pic = b.querySelector<HTMLElement>('[class*="pic"]')!.getBoundingClientRect();
+      const foot = b.querySelector<HTMLElement>('[class*="foot"]')!.getBoundingClientRect();
+      const name = b.querySelector<HTMLElement>('[class*="name"]')!.getBoundingClientRect();
+      return {
+        w: r.width,
+        h: r.height,
+        pic: pic.width,
+        inside: foot.bottom <= r.bottom && name.bottom <= foot.top + 1,
+      };
+    }),
   );
-  expect(clipped).toBe(0);
+  for (const z of sizes) {
+    expect(z.w).toBe(150);
+    expect(z.h).toBe(146);
+    expect(z.pic).toBe(70);
+    expect(z.inside).toBe(true);
+  }
 
   await tile.hover();
   const pad = page.getByRole('group', { name: /^Ranks of / });

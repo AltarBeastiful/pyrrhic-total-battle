@@ -76,10 +76,29 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
 }
 
 /** Every card is 150 x 146 in a 184 x 182 cell, so the gaps are 34 px across and 36 px down: the rank pad hangs in the row gap (B-31). */
-const CELL_W = 184;
-const CELL_H = 182;
+const GAP_X = 34;
+const GAP_Y = 36;
+/** On a phone the cards sit closer, so less of the tree is empty between them; the pad still fits in the row gap. */
+const GAP_X_PHONE = 12;
+const GAP_Y_PHONE = 32;
 const TILE_W = 150;
 const TILE_H = 146;
+
+function usePhone(): boolean {
+  const query = '(max-width: 40em)';
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = (): void => {
+      setPhone(mq.matches);
+    };
+    mq.addEventListener('change', on);
+    return () => {
+      mq.removeEventListener('change', on);
+    };
+  }, []);
+  return phone;
+}
 
 export function TalentTree({
   talents,
@@ -96,6 +115,10 @@ export function TalentTree({
   reveal = null,
 }: TalentTreeProps) {
   const tiles = useRef(new Map<number, HTMLButtonElement>());
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const phone = usePhone();
+  const CELL_W = TILE_W + (phone ? GAP_X_PHONE : GAP_X);
+  const CELL_H = TILE_H + (phone ? GAP_Y_PHONE : GAP_Y);
   // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
   useEffect(() => {
     if (reveal === null) return;
@@ -131,6 +154,17 @@ export function TalentTree({
     };
   }, [selected, onClear]);
   const nodes = talents.filter((t) => t.tree === tree);
+  // A tree wider than the screen opens centred on its first card, so a phone never starts on empty space.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const root = nodes.find((n) => n.parents.length === 0) ?? nodes[0];
+    const tile = root === undefined ? undefined : tiles.current.get(root.id);
+    if (canvas === null || tile === undefined) return;
+    const c = canvas.getBoundingClientRect();
+    const t = tile.getBoundingClientRect();
+    canvas.scrollLeft += t.left + t.width / 2 - (c.left + c.width / 2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the tree or the spacing changes
+  }, [tree, phone]);
   // The pad shows on the selected tile and on the one the pointer or the keyboard is on.
   const [hovered, setHovered] = useState<number | null>(null);
   const added = plannedByNode(plan);
@@ -181,7 +215,13 @@ export function TalentTree({
           Owner request (talents tree shape): the tree keeps the game's shape and, on a phone, pans sideways INSIDE
           this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.
         */}
-        <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
+        <div
+          ref={canvasRef}
+          className={classes.canvas}
+          role="region"
+          aria-label={`${TREE_LABELS[tree]} tree`}
+          tabIndex={0}
+        >
           <div className={classes.plane} style={{ width, height }}>
             <svg className={classes.lines} width={width} height={height} aria-hidden>
               <defs>
@@ -290,7 +330,9 @@ export function TalentTree({
                         </span>
                       )}
                     </span>
-                    <span className={classes.name}>{fam.family}</span>
+                    <span className={classes.name} title={fam.family}>
+                      {fam.family}
+                    </span>
                     <span className={classes.foot}>
                       {lock !== null ? (
                         <span className={classes.marks}>
