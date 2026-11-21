@@ -294,7 +294,6 @@
   .layout {
     grid-template-columns: minmax(0, 1fr) 20rem;
   }
-
 }
 
 /* B-22 goal rows: rank, name and weight, the rank 1 strength cluster, the move and ignore buttons. On a

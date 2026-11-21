@@ -432,7 +432,9 @@ test('a full rank reads differently from an empty one, on the bar and in the lab
   const full = tileOf(node.name);
   expect(full.querySelector('[data-bar-state="full"]')).not.toBeNull();
   expect(full.getAttribute('data-full')).toBe('true');
-  expect(full.getAttribute('aria-label')).toContain(`rank ${String(node.maxRank)} of ${String(node.maxRank)}`);
+  expect(full.getAttribute('aria-label')).toContain(
+    `rank ${String(node.maxRank)} of ${String(node.maxRank)}`,
+  );
   const other = TALENTS.find((t) => t.tree === 'economy' && t.parents.includes(node.id) && t.maxRank >= 3)!;
   const empty = tileOf(other.name);
   expect(empty.querySelector('[data-bar-state="empty"]')).not.toBeNull();

@@ -97,7 +97,9 @@ for (const { name, width, height } of SIZES) {
     await page.mouse.wheel(0, 200);
     await page.waitForTimeout(150);
     const overlap = await page.evaluate(() => {
-      const s = document.querySelector<HTMLElement>('[aria-label="Points and trees"]')!.getBoundingClientRect();
+      const s = document
+        .querySelector<HTMLElement>('[aria-label="Points and trees"]')!
+        .getBoundingClientRect();
       const hits = [...document.querySelectorAll<HTMLElement>('button[data-node-id]')].filter((b) => {
         const r = b.getBoundingClientRect();
         // A card scrolled behind an opaque strip is hidden by it; what must not happen is a card drawn over it.
@@ -105,7 +107,9 @@ for (const { name, width, height } of SIZES) {
           Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1),
           Math.min(Math.max(s.top + s.height / 2, 0), innerHeight - 1),
         );
-        return r.top < s.bottom && r.bottom > s.top && r.left < s.right && r.right > s.left && b.contains(top);
+        return (
+          r.top < s.bottom && r.bottom > s.top && r.left < s.right && r.right > s.left && b.contains(top)
+        );
       });
       return { top: s.top, hits: hits.length };
     });
@@ -126,7 +130,10 @@ for (const { name, width, height } of SIZES) {
 test('the rank table opens in a dialog, closes on Escape and returns focus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openTalents(page);
-  await page.getByRole('button', { name: /^.+, rank 0 of \d+$/ }).first().click();
+  await page
+    .getByRole('button', { name: /^.+, rank 0 of \d+$/ })
+    .first()
+    .click();
   const open = page.getByRole('button', { name: /^Show all \d+ ranks$/ });
   await open.click();
   const dialog = page.getByRole('dialog');
@@ -154,10 +161,11 @@ test('B-31 tiles: picture, name on three lines, bonus; the pad hangs under the t
   const tile = page.getByRole('button', { name: /^.+, rank 0 of \d+$/ }).first();
   await expect(tile.locator('img, [class*="icons"]').first()).toBeVisible();
   // No name is cut: every name's text fits inside its box.
-  const clipped = await page.evaluate(() =>
-    [...document.querySelectorAll<HTMLElement>('button[data-node-id] [class*="name"]')].filter(
-      (n) => n.scrollHeight > n.clientHeight + 1,
-    ).length,
+  const clipped = await page.evaluate(
+    () =>
+      [...document.querySelectorAll<HTMLElement>('button[data-node-id] [class*="name"]')].filter(
+        (n) => n.scrollHeight > n.clientHeight + 1,
+      ).length,
   );
   expect(clipped).toBe(0);
 
@@ -166,7 +174,9 @@ test('B-31 tiles: picture, name on three lines, bonus; the pad hangs under the t
   await expect(pad).toBeVisible();
   const geo = await page.evaluate(() => {
     const t = document.querySelector<HTMLElement>('button[data-node-id]:hover')!.getBoundingClientRect();
-    const p = document.querySelector<HTMLElement>('[role="group"][aria-label^="Ranks of"]')!.getBoundingClientRect();
+    const p = document
+      .querySelector<HTMLElement>('[role="group"][aria-label^="Ranks of"]')!
+      .getBoundingClientRect();
     return { tb: t.bottom, tc: t.left + t.width / 2, pt: p.top, pc: p.left + p.width / 2 };
   });
   expect(geo.pt).toBeGreaterThanOrEqual(geo.tb - 1);
@@ -175,7 +185,10 @@ test('B-31 tiles: picture, name on three lines, bonus; the pad hangs under the t
 
   // + raises the rank: the tile now shows a bonus and − comes alive.
   await pad.getByRole('button', { name: /^Add one rank/ }).click();
-  await page.getByRole('button', { name: /^.+, rank 1 of \d+/ }).first().click();
+  await page
+    .getByRole('button', { name: /^.+, rank 1 of \d+/ })
+    .first()
+    .click();
   await expect(page.getByRole('button', { name: /^.+, rank 1 of \d+/ }).first()).toContainText('+');
   await expect(pad.getByRole('button', { name: /^Take one rank back/ })).toBeEnabled();
 

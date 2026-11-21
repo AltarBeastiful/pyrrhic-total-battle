@@ -7,8 +7,15 @@ interface ArtRow {
   tint: string;
 }
 
-const indexes = import.meta.glob<ArtRow | Record<string, ArtRow>>('./art/index.json', { eager: true, import: 'default' });
-const urls = import.meta.glob<string>('./art/*.webp', { eager: true, import: 'default', query: '?no-inline' });
+const indexes = import.meta.glob<ArtRow | Record<string, ArtRow>>('./art/index.json', {
+  eager: true,
+  import: 'default',
+});
+const urls = import.meta.glob<string>('./art/*.webp', {
+  eager: true,
+  import: 'default',
+  query: '?no-inline',
+});
 
 const index = (Object.values(indexes)[0] ?? {}) as Record<string, ArtRow>;
 

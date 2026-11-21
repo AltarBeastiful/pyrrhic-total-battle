@@ -107,12 +107,21 @@ export function TalentTree({
     const away = (event: MouseEvent): void => {
       const t = event.target;
       if (!(t instanceof Element)) return;
-      if (t.closest('[data-tile-box], [aria-label="Points and trees"], aside[aria-label="Selected node"], [role="dialog"], [role="listbox"], [role="menu"], [class*="Popover"], [class*="Modal"], [data-portal]') === null) {
+      if (
+        t.closest(
+          '[data-tile-box], [aria-label="Points and trees"], aside[aria-label="Selected node"], [role="dialog"], [role="listbox"], [role="menu"], [class*="Popover"], [class*="Modal"], [data-portal]',
+        ) === null
+      ) {
         onClear();
       }
     };
     const key = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented && document.querySelector('[role="dialog"]') === null) onClear();
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        document.querySelector('[role="dialog"]') === null
+      )
+        onClear();
     };
     document.addEventListener('click', away);
     document.addEventListener('keydown', key);
@@ -173,16 +182,8 @@ export function TalentTree({
           this canvas (tile names stay at the 13 px floor). The page itself never scrolls sideways.
         */}
         <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
-          <div
-            className={classes.plane}
-            style={{ width, height }}
-          >
-            <svg
-              className={classes.lines}
-              width={width}
-              height={height}
-              aria-hidden
-            >
+          <div className={classes.plane} style={{ width, height }}>
+            <svg className={classes.lines} width={width} height={height} aria-hidden>
               {lines.map((l) => (
                 <line
                   key={l.key}
@@ -306,11 +307,7 @@ export function TalentTree({
                     </span>
                   </button>
                   {lock === null && (selected === n.id || hovered === n.id) && (
-                    <div
-                      className={classes.pad}
-                      role="group"
-                      aria-label={`Ranks of ${n.name}`}
-                    >
+                    <div className={classes.pad} role="group" aria-label={`Ranks of ${n.name}`}>
                       <button
                         type="button"
                         className={classes.padButton}
@@ -372,7 +369,8 @@ export function TalentTree({
           />
         ) : (
           <Text size="sm" c="dimmed">
-            Tap a node to see what it adds; its − + and Max buttons then appear under it. Click away to close it.
+            Tap a node to see what it adds; its − + and Max buttons then appear under it. Click away to close
+            it.
           </Text>
         )}
       </aside>
@@ -586,15 +584,28 @@ function RankTable({ node, bought, plus }: { node: TalentRecord; bought: number;
       >
         {`Show all ${String(last)} ranks`}
       </Button>
-      <Dialog opened={all} onClose={() => {
-        setAll(false);
-      }} title={`${node.name}: all ${String(last)} ranks`} size="lg">
-        <div ref={box} className={classes.rankBox} role="region" aria-label={`${node.name} ranks`} tabIndex={0}>
+      <Dialog
+        opened={all}
+        onClose={() => {
+          setAll(false);
+        }}
+        title={`${node.name}: all ${String(last)} ranks`}
+        size="lg"
+      >
+        <div
+          ref={box}
+          className={classes.rankBox}
+          role="region"
+          aria-label={`${node.name} ranks`}
+          tabIndex={0}
+        >
           <ul className={classes.rankLine}>
-            {node.values.map((_, i) => (() => {
-              const held = i + 1 === Math.max(bought, 1);
-              return chip(i + 1, false, held, held);
-            })())}
+            {node.values.map((_, i) =>
+              (() => {
+                const held = i + 1 === Math.max(bought, 1);
+                return chip(i + 1, false, held, held);
+              })(),
+            )}
           </ul>
         </div>
       </Dialog>
