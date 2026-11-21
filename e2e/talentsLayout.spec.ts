@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /**
  * B-30 Talents page layout, measured with real boxes: the docked strip never covers a card, every card has one size and
  * one footer offset, connectors meet card edge midpoints, the recap and detail column never scroll on their own, the
