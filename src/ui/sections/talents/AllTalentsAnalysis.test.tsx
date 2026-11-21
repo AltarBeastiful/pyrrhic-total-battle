@@ -121,7 +121,9 @@ const changeArmy = (): void => {
   act(() => {
     useStore.getState().updateProfile(profile.id, (p) => ({
       setups: p.setups.map((s) =>
-        s.id === p.activeSetupId ? { ...s, housing: { ...s.housing, leadership: s.housing.leadership + 777 } } : s,
+        s.id === p.activeSetupId
+          ? { ...s, housing: { ...s.housing, leadership: s.housing.leadership + 777 } }
+          : s,
       ),
     }));
   });

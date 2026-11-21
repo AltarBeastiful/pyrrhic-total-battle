@@ -475,7 +475,17 @@ test('the Hero Talents form asks only for strength and health on the nine keys a
   renderWithTheme(<BonusesSection />);
   fireEvent.click(within(card()).getByRole('button', { name: 'Edit Hero Talents' }));
   const sheet = screen.getByRole('dialog');
-  for (const kind of ['Army', 'Melee', 'Ranged', 'Mounted', 'Flying', 'Monsters', 'Guardsmen', 'Specialists', 'Engineers']) {
+  for (const kind of [
+    'Army',
+    'Melee',
+    'Ranged',
+    'Mounted',
+    'Flying',
+    'Monsters',
+    'Guardsmen',
+    'Specialists',
+    'Engineers',
+  ]) {
     expect(within(sheet).getByLabelText(`${kind} health`)).toBeTruthy();
     expect(within(sheet).getByLabelText(`${kind} strength`)).toBeTruthy();
   }

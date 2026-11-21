@@ -644,12 +644,21 @@ describe('migrate', () => {
           };
         }
         if (entry.builtin === 'hallOfFame') {
-          return { ...entry, health: { beast: 8 }, strength: { army: 1 }, special: { doubleDamageChance: 2 } };
+          return {
+            ...entry,
+            health: { beast: 8 },
+            strength: { army: 1 },
+            special: { doubleDamageChance: 2 },
+          };
         }
         return entry;
       });
       return JSON.parse(
-        JSON.stringify({ ...doc, schemaVersion: 15, profiles: [{ ...profile, sources: { ...profile.sources, permanent } }] }),
+        JSON.stringify({
+          ...doc,
+          schemaVersion: 15,
+          profiles: [{ ...profile, sources: { ...profile.sources, permanent } }],
+        }),
       ) as Record<string, unknown>;
     };
 
@@ -671,7 +680,10 @@ describe('migrate', () => {
         ...doc,
         profiles: doc.profiles.map((p) => ({
           ...p,
-          sources: { ...p.sources, permanent: p.sources.permanent.filter((e) => e.builtin !== 'heroTalents') },
+          sources: {
+            ...p.sources,
+            permanent: p.sources.permanent.filter((e) => e.builtin !== 'heroTalents'),
+          },
         })),
       });
       expect(strip(after)).toEqual(strip(before));

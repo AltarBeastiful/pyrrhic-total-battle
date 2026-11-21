@@ -39,7 +39,9 @@ function keyOf(node: Pick<TalentRecord, 'name'>): BonusKey | null {
 }
 
 /** The stat a battle talent adds to: strength or health on one key. Crit, fortifications and the rest are not read. */
-function lineOf(node: Pick<TalentRecord, 'name' | 'stats' | 'values'>): { line: 'strength' | 'health'; key: BonusKey } | null {
+function lineOf(
+  node: Pick<TalentRecord, 'name' | 'stats' | 'values'>,
+): { line: 'strength' | 'health'; key: BonusKey } | null {
   const { values } = node;
   const key = keyOf(node);
   if (key === null || values.length === 0) return null;

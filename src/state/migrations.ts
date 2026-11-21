@@ -283,7 +283,9 @@ export function restrictHeroTalentsSource(profile: Record<string, unknown>): Rec
   if (!isPlainObject(sources) || !Array.isArray(sources.permanent)) return profile;
   const allowed: readonly string[] = HERO_TALENT_KEYS;
   const only = (map: unknown): unknown =>
-    isPlainObject(map) ? Object.fromEntries(Object.entries(map).filter(([key]) => allowed.includes(key))) : map;
+    isPlainObject(map)
+      ? Object.fromEntries(Object.entries(map).filter(([key]) => allowed.includes(key)))
+      : map;
   const permanent = sources.permanent.map((entry) => {
     if (!isPlainObject(entry) || entry.builtin !== 'heroTalents') return entry;
     const { special: _special, ...rest } = entry;

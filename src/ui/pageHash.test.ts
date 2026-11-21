@@ -72,7 +72,9 @@ test('the query string and path are kept when the fragment changes', () => {
   window.history.replaceState(null, '', '/app/?x=1');
   unbind = bindPageToHash(window);
   useUiStore.getState().setPage('talents');
-  expect(window.location.pathname + window.location.search + window.location.hash).toBe('/app/?x=1#talents/battle');
+  expect(window.location.pathname + window.location.search + window.location.hash).toBe(
+    '/app/?x=1#talents/battle',
+  );
 });
 
 test('the open tree is in the address, read back on load, and Battle is the default', () => {

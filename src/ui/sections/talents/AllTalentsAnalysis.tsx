@@ -194,12 +194,7 @@ export function AnalyzeAllDialog({ onSelect }: { onSelect: (id: number) => void 
   };
   return (
     <>
-      <Button
-        size="compact-sm"
-        variant="light"
-        aria-haspopup="dialog"
-        onClick={start}
-      >
+      <Button size="compact-sm" variant="light" aria-haspopup="dialog" onClick={start}>
         {running ? `Ranking talents, ${String(run.done)} of ${String(run.total)}` : 'Rank all talents'}
       </Button>
       <Dialog
