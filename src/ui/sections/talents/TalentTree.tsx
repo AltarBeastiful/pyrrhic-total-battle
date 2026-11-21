@@ -109,7 +109,7 @@ export function TalentTree({
       if (!(t instanceof Element)) return;
       if (
         t.closest(
-          '[data-tile-box], [aria-label="Points and trees"], aside[aria-label="Selected node"], [role="dialog"], [role="listbox"], [role="menu"], [class*="Popover"], [class*="Modal"], [data-portal]',
+          '[data-tile-box], button, a, input, select, textarea, label, [role="button"], [aria-label="Points and trees"], aside[aria-label="Selected node"], [role="dialog"], [role="listbox"], [role="menu"], [class*="Popover"], [class*="Modal"], [data-portal]',
         ) === null
       ) {
         onClear();
