@@ -169,7 +169,7 @@ export function TalentTree({
       const p = byId.get(pid);
       if (p === undefined) return [];
       const planned = (added.get(n.id) ?? 0) > 0;
-      const lit = (ranks[String(n.id)] ?? 0) > 0 || planned;
+      const lit = (ranks[String(pid)] ?? 0) > 0;
       return [{ key: `${String(pid)}-${String(n.id)}`, ...join(p, n), lit, planned }];
     }),
   );
@@ -184,6 +184,23 @@ export function TalentTree({
         <div className={classes.canvas} role="region" aria-label={`${TREE_LABELS[tree]} tree`} tabIndex={0}>
           <div className={classes.plane} style={{ width, height }}>
             <svg className={classes.lines} width={width} height={height} aria-hidden>
+              <defs>
+                {[false, true].map((lit) => (
+                  <marker
+                    key={String(lit)}
+                    id={`arrow-${tree}-${String(lit)}`}
+                    viewBox="0 0 10 10"
+                    refX="10"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    markerUnits="userSpaceOnUse"
+                    orient="auto"
+                  >
+                    <path d="M0 0L10 5L0 10z" className={classes.arrow} data-lit={lit} />
+                  </marker>
+                ))}
+              </defs>
               {lines.map((l) => (
                 <line
                   key={l.key}
@@ -194,6 +211,7 @@ export function TalentTree({
                   className={classes.line}
                   data-lit={l.lit}
                   data-planned={l.planned}
+                  markerEnd={`url(#arrow-${tree}-${String(l.lit)})`}
                 />
               ))}
             </svg>
@@ -249,6 +267,7 @@ export function TalentTree({
                       else tiles.current.set(n.id, el);
                     }}
                     data-node-id={n.id}
+                    style={art !== null ? ({ '--a': art.tint } as CSSProperties) : undefined}
                     data-state={state}
                     data-full={full}
                     aria-pressed={selected === n.id}
