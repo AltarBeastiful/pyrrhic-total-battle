@@ -40,7 +40,7 @@ import {
   VisuallyHidden,
 } from '@mantine/core';
 import { ArrowDown, ArrowUp, CircleHelp, RotateCcw } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 
 import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentRecord, type TalentTree as TreeId } from '@/data/types';
@@ -144,6 +144,9 @@ export function TalentsPage() {
   const viewTree = useUiStore((s) => s.talentsTree);
   const setTree = useUiStore((s) => s.setTalentsTree);
   const [selected, setSelected] = useState<number | null>(null);
+  const clearSelected = useCallback(() => {
+    setSelected(null);
+  }, []);
   // A ranking row asked for a talent: the tree opens on it, selects it and scrolls it into view (B-29).
   const [reveal, setReveal] = useState<{ id: number; at: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -882,6 +885,7 @@ export function TalentsPage() {
             plan={result}
             selected={selected}
             onSelect={setSelected}
+            onClear={clearSelected}
             onRank={setRank}
             onSpend={spend}
             onMax={(id) => {

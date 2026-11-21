@@ -6,7 +6,7 @@
  */
 import { ActionIcon, Button, Group, Stack, Text } from '@mantine/core';
 import { Lock, Minus, Plus } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import type { TalentRecord, TalentTree as TreeId } from '@/data/types';
 import { rankGain, type TalentPlan } from '@/engine/talents';
@@ -19,6 +19,7 @@ import { stepsUpToNode } from './spentPoints';
 import classes from './talents.module.css';
 import { recapSize, splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
+import { talentArt } from './talentArt';
 import { TalentAnalysis } from './TalentAnalysis';
 
 /** Rule 10: a stepper only for a short run of values; Army strength has 150 ranks and takes the typed field alone. */
@@ -31,6 +32,8 @@ export interface TalentTreeProps {
   plan: TalentPlan;
   selected: number | null;
   onSelect: (id: number) => void;
+  /** A click outside the tiles, the pad, the strip and the right column, or Escape, closes the selected talent. */
+  onClear: () => void;
   onRank: (id: number, rank: number) => void;
   /** The + on the selected tile spends one rank on it, as in the game; the page checks the lock and the stock. */
   onSpend: (id: number) => void;
@@ -72,11 +75,11 @@ function bonusWords(n: TalentRecord, bought: number, plus: number): string {
   return bought > 0 ? `+${percent(now)} → ${percent(after)}` : `→ +${percent(after)}`;
 }
 
-/** The game's grid: every card is 166 x 128 in a 176 x 152 cell, so the gaps are 10 px across and 24 px down. */
-const CELL_W = 176;
-const CELL_H = 152;
-const TILE_W = 166;
-const TILE_H = 128;
+/** Every card is 150 x 146 in a 184 x 182 cell, so the gaps are 34 px across and 36 px down: the rank pad hangs in the row gap (B-31). */
+const CELL_W = 184;
+const CELL_H = 182;
+const TILE_W = 150;
+const TILE_H = 146;
 
 export function TalentTree({
   talents,
@@ -85,6 +88,7 @@ export function TalentTree({
   plan,
   selected,
   onSelect,
+  onClear,
   onRank,
   onSpend,
   onMax,
@@ -97,6 +101,26 @@ export function TalentTree({
     if (reveal === null) return;
     tiles.current.get(reveal.id)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
   }, [reveal, tree]);
+  // B-31: a click outside any tile, its pad, the strip or the right column closes the selection; so does Escape.
+  useEffect(() => {
+    if (selected === null) return;
+    const away = (event: MouseEvent): void => {
+      const t = event.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest('[data-tile-box], [aria-label="Points and trees"], aside[aria-label="Selected node"], [role="dialog"], [role="listbox"], [role="menu"], [class*="Popover"], [class*="Modal"], [data-portal]') === null) {
+        onClear();
+      }
+    };
+    const key = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && !event.defaultPrevented && document.querySelector('[role="dialog"]') === null) onClear();
+    };
+    document.addEventListener('click', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('click', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [selected, onClear]);
   const nodes = talents.filter((t) => t.tree === tree);
   // The pad shows on the selected tile and on the one the pointer or the keyboard is on.
   const [hovered, setHovered] = useState<number | null>(null);
@@ -179,6 +203,7 @@ export function TalentTree({
               const lock = bought === 0 && plus === 0 ? lockWords(plan, n.id) : null;
               const fam = talentFamily(n.name);
               const icons = talentIcons(n.name, n.stats);
+              const art = talentArt(n.id);
               const state = plus > 0 ? 'planned' : lock !== null ? 'locked' : 'open';
               const spoken =
                 `${n.name}, rank ${String(bought)} of ${String(n.maxRank)}` +
@@ -195,6 +220,7 @@ export function TalentTree({
                 <div
                   key={n.id}
                   className={classes.tileBox}
+                  data-tile-box
                   onMouseEnter={() => {
                     setHovered(n.id);
                   }}
@@ -230,12 +256,19 @@ export function TalentTree({
                       onSelect(n.id);
                     }}
                   >
-                    <span className={classes.head}>
-                      <span className={classes.icons}>
-                        {icons.subject !== null && <Glyph kind={icons.subject} />}
-                        <Glyph kind={icons.stat} />
-                      </span>
-                      {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}
+                    <span
+                      className={classes.pic}
+                      aria-hidden
+                      style={art !== null ? ({ '--tint': art.tint } as CSSProperties) : undefined}
+                    >
+                      {art !== null ? (
+                        <img src={art.url} alt="" width={48} height={48} draggable={false} />
+                      ) : (
+                        <span className={classes.icons}>
+                          {icons.subject !== null && <Glyph kind={icons.subject} />}
+                          <Glyph kind={icons.stat} />
+                        </span>
+                      )}
                     </span>
                     <span className={classes.name}>{fam.family}</span>
                     <span className={classes.foot}>
@@ -251,47 +284,30 @@ export function TalentTree({
                         </span>
                       ) : (
                         <>
-                          {n.maxRank > 1 ? (
-                            <span className={classes.bar} data-bar-state={barState} aria-hidden>
-                              <span
-                                className={classes.barBought}
-                                data-bar="bought"
-                                style={{ width: `${String((bought / n.maxRank) * 100)}%` }}
-                              />
-                              <span
-                                className={classes.barPlanned}
-                                data-bar="planned"
-                                style={{
-                                  width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
-                                }}
-                              />
-                            </span>
-                          ) : (
-                            <span className={classes.barGap} aria-hidden />
-                          )}
-                          <span className={classes.split}>
-                            <span>
-                              {bought > 0 || plus > 0
-                                ? [
-                                    full ? 'max' : bought > 0 ? `rank ${String(bought)}` : '',
-                                    plus > 0 ? `+${String(plus)}` : '',
-                                  ]
-                                    .filter((x) => x !== '')
-                                    .join(' ')
-                                : 'rank 0'}
-                            </span>
-                            <b className={classes.bonus}>
-                              {bought > 0 || plus > 0 ? bonusWords(n, bought, plus) : '—'}
-                            </b>
+                          <span className={classes.bar} data-bar-state={barState} aria-hidden>
+                            <span
+                              className={classes.barBought}
+                              data-bar="bought"
+                              style={{ width: `${String((bought / n.maxRank) * 100)}%` }}
+                            />
+                            <span
+                              className={classes.barPlanned}
+                              data-bar="planned"
+                              style={{
+                                width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
+                              }}
+                            />
                           </span>
+                          <b className={classes.bonus}>
+                            {bought > 0 || plus > 0 ? bonusWords(n, bought, plus) : '—'}
+                          </b>
                         </>
                       )}
                     </span>
                   </button>
-                  {(selected === n.id || hovered === n.id) && (
+                  {lock === null && (selected === n.id || hovered === n.id) && (
                     <div
                       className={classes.pad}
-                      data-above={n.layout.y === rows - 1}
                       role="group"
                       aria-label={`Ranks of ${n.name}`}
                     >
@@ -304,17 +320,18 @@ export function TalentTree({
                           onRank(n.id, bought - 1);
                         }}
                       >
-                        <Minus size={16} aria-hidden />
+                        <Minus size={14} aria-hidden />
                       </button>
                       <button
                         type="button"
                         className={classes.padButton}
                         aria-label={`Add one rank to ${n.name}`}
+                        disabled={full}
                         onClick={() => {
                           onSpend(n.id);
                         }}
                       >
-                        <Plus size={16} aria-hidden />
+                        <Plus size={14} aria-hidden />
                       </button>
                       <button
                         type="button"
@@ -325,7 +342,7 @@ export function TalentTree({
                           onMax(n.id);
                         }}
                       >
-                        max
+                        Max
                       </button>
                     </div>
                   )}
@@ -355,7 +372,7 @@ export function TalentTree({
           />
         ) : (
           <Text size="sm" c="dimmed">
-            Tap a node to see what it adds; its + and - buttons then appear under it.
+            Tap a node to see what it adds; its − + and Max buttons then appear under it. Click away to close it.
           </Text>
         )}
       </aside>
@@ -385,6 +402,7 @@ function NodeEditor({
   const toHere = upTo.reduce((sum, s) => sum + s.cost, 0);
   const fam = talentFamily(node.name);
   const icons = talentIcons(node.name, node.stats);
+  const art = talentArt(node.id);
   const lock = plan.locked[node.id];
   const next = bought < node.maxRank ? rankGain(node.values, bought + 1) : null;
   const set = (rank: number): void => {
@@ -393,9 +411,19 @@ function NodeEditor({
   return (
     <Stack gap="xs" aria-label={`${node.name}`} role="group">
       <Group gap="xs" align="center">
-        <span className={classes.icons} aria-hidden>
-          {icons.subject !== null && <Glyph kind={icons.subject} />}
-          <Glyph kind={icons.stat} />
+        <span
+          className={classes.pic}
+          aria-hidden
+          style={art !== null ? ({ '--tint': art.tint } as CSSProperties) : undefined}
+        >
+          {art !== null ? (
+            <img src={art.url} alt="" width={48} height={48} draggable={false} />
+          ) : (
+            <span className={classes.icons}>
+              {icons.subject !== null && <Glyph kind={icons.subject} />}
+              <Glyph kind={icons.stat} />
+            </span>
+          )}
         </span>
         <Text fw={600}>{fam.family}</Text>
         {fam.numeral !== null && <span className={classes.tier}>{fam.numeral}</span>}

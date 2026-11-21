@@ -5,7 +5,7 @@
   overflow-y: hidden;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
-  padding: 8px 12px 28px;
+  padding: 8px 12px 36px;
 }
 
 .plane {
@@ -47,8 +47,8 @@
   overflow: hidden;
   box-sizing: border-box;
   min-width: 0;
-  padding: 7px 7px 5px;
-  gap: 4px;
+  padding: 8px 8px 8px;
+  gap: 5px;
   border: 2px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-sm);
   background: var(--mantine-color-body);
@@ -56,11 +56,11 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.25;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
 }
 
@@ -96,12 +96,32 @@
   outline-offset: 2px;
 }
 
-.head {
-  display: flex;
+.pic {
+  --tint: var(--mantine-color-dimmed);
+  display: inline-flex;
+  flex: none;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-sm);
+  background: color-mix(in srgb, var(--tint) 28%, var(--mantine-color-body));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tint) 55%, transparent);
+  font-size: 1.25rem;
+}
+
+.pic img {
+  display: block;
   width: 100%;
-  font-size: 1.125rem;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile[data-state='locked'] .pic {
+  filter: grayscale(1);
+  opacity: 0.55;
+  box-shadow: none;
 }
 
 .icons {
@@ -121,46 +141,52 @@
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  min-height: 3.75em;
+  font-size: 0.8125rem;
+  line-height: 1.25;
   overflow: hidden;
 }
 
 /* The fixed footer row at the bottom of every card: bar, rank and gain, or the lock pill. */
 .foot {
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
-  height: 40px;
+  height: 20px;
   margin-top: auto;
-}
-
-.barGap {
-  height: 8px;
-  flex: none;
 }
 
 .bar {
   display: flex;
-  flex: none;
-  width: 100%;
-  height: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 6px;
   overflow: hidden;
-  border: 1px solid var(--mantine-color-dimmed);
-  border-radius: 4px;
-  background: var(--mantine-color-body);
+  border-radius: 3px;
+  background: var(--mantine-color-default-hover);
+}
+
+.bonus {
+  flex: none;
+  min-width: 2.6em;
+  text-align: right;
+  font-size: 0.8125rem;
+  color: var(--mantine-color-teal-6);
+}
+
+.tile[data-state='locked'] .bonus {
+  color: var(--mantine-color-dimmed);
 }
 
 /* Empty, part and full read by the fill alone: an empty bar is the plain track, a full one turns green. */
 .barBought {
   flex: none;
   background: var(--mantine-primary-color-filled);
-}
-
-.bar[data-bar-state='full'] {
-  border-color: var(--mantine-color-teal-6);
 }
 
 .bar[data-bar-state='full'] .barBought {
@@ -190,14 +216,15 @@
 .pad {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  top: 100%;
   z-index: 3;
-  transform: translate(-50%, 50%);
+  transform: translateX(-50%);
   display: inline-flex;
-  gap: 2px;
+  gap: 1px;
   padding: 2px;
   border: 1px solid var(--mantine-color-default-border);
-  border-radius: var(--mantine-radius-md);
+  border-top: 0;
+  border-radius: 0 0 var(--mantine-radius-sm) var(--mantine-radius-sm);
   background: var(--mantine-color-body);
   box-shadow: var(--mantine-shadow-sm);
 }
@@ -206,11 +233,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 28px;
+  width: 24px;
+  height: 20px;
   padding: 0;
   border: 0;
-  border-radius: var(--mantine-radius-sm);
+  border-radius: 3px;
   background: transparent;
   color: var(--mantine-color-text);
   cursor: pointer;
@@ -219,9 +246,9 @@
 .padMax {
   composes: padButton;
   width: auto;
-  padding: 0 8px;
+  padding: 0 6px;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
 }
 
@@ -379,12 +406,6 @@
 }
 
 /* A tile on the last row has its pad above it, so the canvas edge never cuts it. */
-.pad[data-above='true'] {
-  bottom: auto;
-  top: 0;
-  transform: translate(-50%, -50%);
-}
-
 /* The tree recap above the detail. */
 .recap {
   display: grid;
@@ -485,18 +506,6 @@
 }
 
 /* The tile's bottom line: rank on the left, the bonus it gives on the right. */
-.split {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0 8px;
-  width: 100%;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
 .bonus {
   margin-left: auto;
   color: var(--mantine-color-teal-6);

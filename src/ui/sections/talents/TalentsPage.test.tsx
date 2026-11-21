@@ -387,11 +387,11 @@ test('a click does not spend on a locked tile, past the maximum, or beyond the s
   const gated = TALENTS.find((t) => t.tree === 'economy' && (t.levelGate ?? 0) > 1)!;
   setTalents({ pointsOverride: 50, heroLevel: 1, ranks: {} });
   fireEvent.click(tileOf(gated.name));
-  fireEvent.click(plusOf(gated.name));
+  expect(screen.queryByRole('button', { name: `Add one rank to ${gated.name}` })).toBeNull();
   expect(talentsOf().ranks[String(gated.id)]).toBeUndefined();
 });
 
-test('a + on a tile locked only by a parent opens the parent with one rank first', () => {
+test('a tile locked by a parent has no pad, and opens once the parent holds a rank (B-31)', () => {
   const node = rootNode();
   const child = TALENTS.find(
     (t) => t.tree === 'economy' && t.parents.length === 1 && t.parents[0] === node.id,
@@ -399,8 +399,12 @@ test('a + on a tile locked only by a parent opens the parent with one rank first
   setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 50 });
   renderWithTheme(<TalentsPage />);
   fireEvent.click(tileOf(child.name));
-  fireEvent.click(plusOf(child.name));
+  expect(screen.queryByRole('button', { name: `Add one rank to ${child.name}` })).toBeNull();
+  fireEvent.click(tileOf(node.name));
+  fireEvent.click(plusOf(node.name));
   expect(talentsOf().ranks[String(node.id)]).toBe(1);
+  fireEvent.click(tileOf(child.name));
+  fireEvent.click(plusOf(child.name));
   expect(talentsOf().ranks[String(child.id)]).toBe(1);
 });
 
@@ -427,9 +431,8 @@ test('a full rank reads differently from an empty one, on the bar and in the lab
   renderWithTheme(<TalentsPage />);
   const full = tileOf(node.name);
   expect(full.querySelector('[data-bar-state="full"]')).not.toBeNull();
-  expect(full.textContent).toMatch(
-    new RegExp(`${String(node.maxRank)}\\s*/\\s*${String(node.maxRank)}|max`, 'i'),
-  );
+  expect(full.getAttribute('data-full')).toBe('true');
+  expect(full.getAttribute('aria-label')).toContain(`rank ${String(node.maxRank)} of ${String(node.maxRank)}`);
   const other = TALENTS.find((t) => t.tree === 'economy' && t.parents.includes(node.id) && t.maxRank >= 3)!;
   const empty = tileOf(other.name);
   expect(empty.querySelector('[data-bar-state="empty"]')).not.toBeNull();
@@ -518,7 +521,7 @@ test('a tile shows its rank as a bar over the number, and no #step number', () =
   const bought = tile.querySelector('[data-bar="bought"]') as HTMLElement;
   expect(bought).not.toBeNull();
   expect(bought.style.width).toBe(`${String((5 / node.maxRank) * 100)}%`);
-  expect(tile.textContent).toMatch(/rank 5/);
+  expect(tile.textContent).toContain(`+${String(node.values[4])} %`);
   for (const t of within(tree).getAllByRole('button')) expect(t.textContent).not.toMatch(/#\d/);
 });
 
@@ -577,7 +580,7 @@ test('Spend the plan up to here takes only the open tree, up to the tile and its
   expect(held.every((t) => t.tree === 'economy')).toBe(true);
 });
 
-test('a tile shows its rank on the left and its bonus on the right, and the detail lists every rank with the held one marked', () => {
+test('a tile shows its bonus at the held rank, and the detail lists every rank with the held one marked', () => {
   const node = TALENTS.find((t) => t.tree === 'economy' && t.parents.length === 0 && t.maxRank >= 10)!;
   setTalents({
     goals: ['economy', 'battle', 'archeology'],
@@ -587,7 +590,6 @@ test('a tile shows its rank on the left and its bonus on the right, and the deta
   });
   renderWithTheme(<TalentsPage />);
   const tile = tileOf(node.name);
-  expect(tile.textContent).toContain('rank 5');
   expect(tile.textContent).toContain(`+${String(node.values[4])} %`);
   fireEvent.click(tile);
   // One line of at most five key chips; the full list is the same chips, wrapped, in a box of its own.
@@ -782,4 +784,20 @@ test('the Talents page opens on Battle whatever the first goal is, and a pick is
   expect(screen.getByRole('region', { name: 'Battle tactics tree' })).toBeTruthy();
   fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Tree' })).getByText('Economy'));
   expect(useUiStore.getState().talentsTree).toBe('economy');
+});
+
+test('a click outside the tiles closes the selected talent; the right column and a pad do not (B-31)', () => {
+  const node = rootNode();
+  setTalents({ goals: ['economy', 'battle', 'archeology'], heroLevel: 150, pointsOverride: 10 });
+  renderWithTheme(<TalentsPage />);
+  fireEvent.click(tileOf(node.name));
+  expect(screen.queryByText(/tap a node to see/i)).toBeNull();
+  fireEvent.click(plusOf(node.name));
+  fireEvent.click(screen.getByRole('complementary', { name: 'Selected node' }));
+  expect(screen.queryByText(/tap a node to see/i)).toBeNull();
+  fireEvent.click(document.body);
+  expect(screen.getByText(/tap a node to see/i)).toBeTruthy();
+  fireEvent.click(tileOf(node.name));
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.getByText(/tap a node to see/i)).toBeTruthy();
 });

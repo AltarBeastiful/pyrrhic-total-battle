@@ -125,7 +125,7 @@ for (const { name, width, height } of SIZES) {
 test('the rank table opens in a dialog, closes on Escape and returns focus', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openTalents(page);
-  await page.locator('button[data-node-id]').filter({ hasText: /rank 0/ }).first().click();
+  await page.getByRole('button', { name: /^.+, rank 0 of \d+$/ }).first().click();
   const open = page.getByRole('button', { name: /^Show all \d+ ranks$/ });
   await open.click();
   const dialog = page.getByRole('dialog');
@@ -143,4 +143,46 @@ test('the detail column scrolls with the page in a short window', async ({ page 
     () => getComputedStyle(document.querySelector('aside[aria-label="Selected node"]')!).position,
   );
   expect(pos).toBe('static');
+});
+
+test('B-31 tiles: picture, name on three lines, bonus; the pad hangs under the tile and a click away closes the selection', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openTalents(page);
+  const tile = page.getByRole('button', { name: /^.+, rank 0 of \d+$/ }).first();
+  await expect(tile.locator('img, [class*="icons"]').first()).toBeVisible();
+  // No name is cut: every name's text fits inside its box.
+  const clipped = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('button[data-node-id] [class*="name"]')].filter(
+      (n) => n.scrollHeight > n.clientHeight + 1,
+    ).length,
+  );
+  expect(clipped).toBe(0);
+
+  await tile.hover();
+  const pad = page.getByRole('group', { name: /^Ranks of / });
+  await expect(pad).toBeVisible();
+  const geo = await page.evaluate(() => {
+    const t = document.querySelector<HTMLElement>('button[data-node-id]:hover')!.getBoundingClientRect();
+    const p = document.querySelector<HTMLElement>('[role="group"][aria-label^="Ranks of"]')!.getBoundingClientRect();
+    return { tb: t.bottom, tc: t.left + t.width / 2, pt: p.top, pc: p.left + p.width / 2 };
+  });
+  expect(geo.pt).toBeGreaterThanOrEqual(geo.tb - 1);
+  expect(geo.pt - geo.tb).toBeLessThan(4);
+  expect(Math.abs(geo.pc - geo.tc)).toBeLessThan(2);
+
+  // + raises the rank: the tile now shows a bonus and − comes alive.
+  await pad.getByRole('button', { name: /^Add one rank/ }).click();
+  await page.getByRole('button', { name: /^.+, rank 1 of \d+/ }).first().click();
+  await expect(page.getByRole('button', { name: /^.+, rank 1 of \d+/ }).first()).toContainText('+');
+  await expect(pad.getByRole('button', { name: /^Take one rank back/ })).toBeEnabled();
+
+  // A click on the right column keeps the selection; a click away closes it.
+  const hint = page.getByText(/tap a node to see/i);
+  await page.locator('aside[aria-label="Selected node"]').click({ position: { x: 4, y: 4 } });
+  await expect(hint).toBeHidden();
+  await page.mouse.click(5, 450);
+  await expect(hint).toBeVisible();
+  expect(await pageOverflowsSideways(page)).toBe(false);
 });
