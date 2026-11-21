@@ -240,6 +240,13 @@
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
 }
 
+.pad[data-selected='true'] {
+  border-color: #e3b04b;
+  box-shadow:
+    0 1px 0 1px #e3b04b,
+    0 6px 16px -2px #e3b04b;
+}
+
 .padButton {
   display: inline-flex;
   align-items: center;

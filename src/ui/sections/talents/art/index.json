@@ -1,0 +1,950 @@
+{
+ "25000": {
+  "file": "tech_hero_guard_speed_72.webp",
+  "tint": "#b6560c"
+ },
+ "25001": {
+  "file": "tech_specialists_speed_72.webp",
+  "tint": "#bb7b0e"
+ },
+ "25002": {
+  "file": "tech_hero_spec_speed_72.webp",
+  "tint": "#b65608"
+ },
+ "25003": {
+  "file": "tech_hero_spec_health.webp",
+  "tint": "#b84f07"
+ },
+ "25004": {
+  "file": "tech_training_speed_monsters_72.webp",
+  "tint": "#329772"
+ },
+ "25005": {
+  "file": "tech_monsters_speed_72.webp",
+  "tint": "#c4850e"
+ },
+ "25006": {
+  "file": "tech_guards_speed_72.webp",
+  "tint": "#c4840d"
+ },
+ "25007": {
+  "file": "tech_health_monsters_72.webp",
+  "tint": "#38916e"
+ },
+ "25008": {
+  "file": "tech_army_bag_72.webp",
+  "tint": "#369170"
+ },
+ "25009": {
+  "file": "tech_hero_guards_health.webp",
+  "tint": "#ba5207"
+ },
+ "25010": {
+  "file": "tech_hero_guard_force_72.webp",
+  "tint": "#b8550a"
+ },
+ "25011": {
+  "file": "tech_hero_guard_atack_72.webp",
+  "tint": "#b95709"
+ },
+ "25012": {
+  "file": "tech_hero_spec_atack_72.webp",
+  "tint": "#ba5606"
+ },
+ "25013": {
+  "file": "tech_hero_spec_force_72.webp",
+  "tint": "#b55006"
+ },
+ "25014": {
+  "file": "tech_strength_monsters_72.webp",
+  "tint": "#36926c"
+ },
+ "25015": {
+  "file": "tech_double_strike_monsters_72.webp",
+  "tint": "#329972"
+ },
+ "25016": {
+  "file": "tech_hero_guard_speed_72.webp",
+  "tint": "#b6560c"
+ },
+ "25017": {
+  "file": "tech_specialists_speed_72.webp",
+  "tint": "#bb7b0e"
+ },
+ "25018": {
+  "file": "tech_hero_spec_speed_72.webp",
+  "tint": "#b65608"
+ },
+ "25019": {
+  "file": "tech_hero_spec_health.webp",
+  "tint": "#b84f07"
+ },
+ "25020": {
+  "file": "tech_training_speed_monsters_72.webp",
+  "tint": "#329772"
+ },
+ "25021": {
+  "file": "tech_monsters_speed_72.webp",
+  "tint": "#c4850e"
+ },
+ "25022": {
+  "file": "tech_guards_speed_72.webp",
+  "tint": "#c4840d"
+ },
+ "25023": {
+  "file": "tech_health_monsters_72.webp",
+  "tint": "#38916e"
+ },
+ "25024": {
+  "file": "tech_army_bag_72.webp",
+  "tint": "#369170"
+ },
+ "25025": {
+  "file": "tech_hero_guards_health.webp",
+  "tint": "#ba5207"
+ },
+ "25026": {
+  "file": "tech_hero_guard_force_72.webp",
+  "tint": "#b8550a"
+ },
+ "25027": {
+  "file": "tech_hero_guard_atack_72.webp",
+  "tint": "#b95709"
+ },
+ "25028": {
+  "file": "tech_hero_spec_atack_72.webp",
+  "tint": "#ba5606"
+ },
+ "25029": {
+  "file": "tech_hero_spec_force_72.webp",
+  "tint": "#b55006"
+ },
+ "25030": {
+  "file": "tech_strength_monsters_72.webp",
+  "tint": "#36926c"
+ },
+ "25031": {
+  "file": "tech_double_strike_monsters_72.webp",
+  "tint": "#329972"
+ },
+ "25032": {
+  "file": "tech_hero_guard_speed_72.webp",
+  "tint": "#b6560c"
+ },
+ "25033": {
+  "file": "tech_specialists_speed_72.webp",
+  "tint": "#bb7b0e"
+ },
+ "25034": {
+  "file": "tech_hero_spec_speed_72.webp",
+  "tint": "#b65608"
+ },
+ "25035": {
+  "file": "tech_hero_spec_health.webp",
+  "tint": "#b84f07"
+ },
+ "25036": {
+  "file": "tech_training_speed_monsters_72.webp",
+  "tint": "#329772"
+ },
+ "25037": {
+  "file": "tech_monsters_speed_72.webp",
+  "tint": "#c4850e"
+ },
+ "25038": {
+  "file": "tech_guards_speed_72.webp",
+  "tint": "#c4840d"
+ },
+ "25039": {
+  "file": "tech_health_monsters_72.webp",
+  "tint": "#38916e"
+ },
+ "25040": {
+  "file": "tech_army_bag_72.webp",
+  "tint": "#369170"
+ },
+ "25041": {
+  "file": "tech_hero_guards_health.webp",
+  "tint": "#ba5207"
+ },
+ "25042": {
+  "file": "tech_hero_guard_force_72.webp",
+  "tint": "#b8550a"
+ },
+ "25043": {
+  "file": "tech_hero_guard_atack_72.webp",
+  "tint": "#b95709"
+ },
+ "25044": {
+  "file": "tech_hero_spec_atack_72.webp",
+  "tint": "#ba5606"
+ },
+ "25045": {
+  "file": "tech_hero_spec_force_72.webp",
+  "tint": "#b55006"
+ },
+ "25046": {
+  "file": "tech_strength_monsters_72.webp",
+  "tint": "#36926c"
+ },
+ "25047": {
+  "file": "tech_double_strike_monsters_72.webp",
+  "tint": "#329972"
+ },
+ "25048": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "25049": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "25050": {
+  "file": "tech_engine_health_72.webp",
+  "tint": "#a34109"
+ },
+ "25051": {
+  "file": "tech_engine_strength_72.webp",
+  "tint": "#a14309"
+ },
+ "25052": {
+  "file": "tech_engine_crit_72.webp",
+  "tint": "#a44908"
+ },
+ "25053": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "25054": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "25055": {
+  "file": "tech_engine_health_72.webp",
+  "tint": "#a34109"
+ },
+ "25056": {
+  "file": "tech_engine_crit_72.webp",
+  "tint": "#a44908"
+ },
+ "25057": {
+  "file": "tech_engine_strength_72.webp",
+  "tint": "#a14309"
+ },
+ "25058": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "25059": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "25060": {
+  "file": "tech_engine_health_72.webp",
+  "tint": "#a34109"
+ },
+ "25061": {
+  "file": "tech_engine_crit_72.webp",
+  "tint": "#a44908"
+ },
+ "25062": {
+  "file": "tech_engine_strength_72.webp",
+  "tint": "#a14309"
+ },
+ "26000": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "26001": {
+  "file": "tech_training_speed_melee_72.webp",
+  "tint": "#b2550d"
+ },
+ "26002": {
+  "file": "tech_training_speed_ranged_72.webp",
+  "tint": "#2074a1"
+ },
+ "26003": {
+  "file": "tech_training_speed_rider_72.webp",
+  "tint": "#989c34"
+ },
+ "26004": {
+  "file": "tech_march_speed_flying_72.webp",
+  "tint": "#27a8be"
+ },
+ "26005": {
+  "file": "tech_training_speed_flying_72.webp",
+  "tint": "#24aac4"
+ },
+ "26006": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "26007": {
+  "file": "tech_siege_strength_72.webp",
+  "tint": "#c28611"
+ },
+ "26008": {
+  "file": "tech_siege_health_72.webp",
+  "tint": "#c48312"
+ },
+ "26009": {
+  "file": "tech_march_speed_melee_72.webp",
+  "tint": "#b04e08"
+ },
+ "26010": {
+  "file": "tech_march_speed_ranged_72.webp",
+  "tint": "#22719e"
+ },
+ "26011": {
+  "file": "tech_march_speed_rider_72.webp",
+  "tint": "#989830"
+ },
+ "26012": {
+  "file": "tech_melee_health_72.webp",
+  "tint": "#b24b07"
+ },
+ "26013": {
+  "file": "tech_ranged_health_72.webp",
+  "tint": "#207f98"
+ },
+ "26014": {
+  "file": "tech_cavalry_health_72.webp",
+  "tint": "#9a9530"
+ },
+ "26015": {
+  "file": "tech_melee_strength_72.webp",
+  "tint": "#b04d07"
+ },
+ "26016": {
+  "file": "tech_ranged_strength_72.webp",
+  "tint": "#1f8299"
+ },
+ "26017": {
+  "file": "tech_cavalry_strength_72.webp",
+  "tint": "#9a9930"
+ },
+ "26019": {
+  "file": "tech_flying_strength_72.webp",
+  "tint": "#27a5bb"
+ },
+ "26020": {
+  "file": "tech_flying_health_72.webp",
+  "tint": "#28a2bb"
+ },
+ "26021": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "26022": {
+  "file": "tech_training_speed_melee_72.webp",
+  "tint": "#b2550d"
+ },
+ "26023": {
+  "file": "tech_training_speed_ranged_72.webp",
+  "tint": "#2074a1"
+ },
+ "26024": {
+  "file": "tech_training_speed_rider_72.webp",
+  "tint": "#989c34"
+ },
+ "26025": {
+  "file": "tech_march_speed_flying_72.webp",
+  "tint": "#27a8be"
+ },
+ "26026": {
+  "file": "tech_training_speed_flying_72.webp",
+  "tint": "#24aac4"
+ },
+ "26027": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "26028": {
+  "file": "tech_siege_strength_72.webp",
+  "tint": "#c28611"
+ },
+ "26029": {
+  "file": "tech_siege_health_72.webp",
+  "tint": "#c48312"
+ },
+ "26030": {
+  "file": "tech_march_speed_melee_72.webp",
+  "tint": "#b04e08"
+ },
+ "26031": {
+  "file": "tech_march_speed_ranged_72.webp",
+  "tint": "#22719e"
+ },
+ "26032": {
+  "file": "tech_march_speed_rider_72.webp",
+  "tint": "#989830"
+ },
+ "26033": {
+  "file": "tech_melee_health_72.webp",
+  "tint": "#b24b07"
+ },
+ "26034": {
+  "file": "tech_ranged_health_72.webp",
+  "tint": "#207f98"
+ },
+ "26035": {
+  "file": "tech_cavalry_health_72.webp",
+  "tint": "#9a9530"
+ },
+ "26036": {
+  "file": "tech_melee_strength_72.webp",
+  "tint": "#b04d07"
+ },
+ "26037": {
+  "file": "tech_ranged_strength_72.webp",
+  "tint": "#1f8299"
+ },
+ "26038": {
+  "file": "tech_cavalry_strength_72.webp",
+  "tint": "#9a9930"
+ },
+ "26039": {
+  "file": "tech_army_bag_72.webp",
+  "tint": "#369170"
+ },
+ "26040": {
+  "file": "tech_flying_strength_72.webp",
+  "tint": "#27a5bb"
+ },
+ "26041": {
+  "file": "tech_flying_health_72.webp",
+  "tint": "#28a2bb"
+ },
+ "26042": {
+  "file": "tech_training_speed_siege_72.webp",
+  "tint": "#c18814"
+ },
+ "26043": {
+  "file": "tech_training_speed_melee_72.webp",
+  "tint": "#b2550d"
+ },
+ "26044": {
+  "file": "tech_training_speed_ranged_72.webp",
+  "tint": "#2074a1"
+ },
+ "26045": {
+  "file": "tech_training_speed_rider_72.webp",
+  "tint": "#989c34"
+ },
+ "26046": {
+  "file": "tech_march_speed_flying_72.webp",
+  "tint": "#27a8be"
+ },
+ "26047": {
+  "file": "tech_training_speed_flying_72.webp",
+  "tint": "#24aac4"
+ },
+ "26048": {
+  "file": "tech_march_speed_siege_72.webp",
+  "tint": "#c28711"
+ },
+ "26049": {
+  "file": "tech_siege_strength_72.webp",
+  "tint": "#c28611"
+ },
+ "26050": {
+  "file": "tech_siege_health_72.webp",
+  "tint": "#c48312"
+ },
+ "26051": {
+  "file": "tech_march_speed_melee_72.webp",
+  "tint": "#b04e08"
+ },
+ "26052": {
+  "file": "tech_march_speed_ranged_72.webp",
+  "tint": "#22719e"
+ },
+ "26053": {
+  "file": "tech_march_speed_rider_72.webp",
+  "tint": "#989830"
+ },
+ "26054": {
+  "file": "tech_melee_health_72.webp",
+  "tint": "#b24b07"
+ },
+ "26055": {
+  "file": "tech_ranged_health_72.webp",
+  "tint": "#207f98"
+ },
+ "26056": {
+  "file": "tech_cavalry_health_72.webp",
+  "tint": "#9a9530"
+ },
+ "26057": {
+  "file": "tech_melee_strength_72.webp",
+  "tint": "#b04d07"
+ },
+ "26058": {
+  "file": "tech_ranged_strength_72.webp",
+  "tint": "#1f8299"
+ },
+ "26059": {
+  "file": "tech_cavalry_strength_72.webp",
+  "tint": "#9a9930"
+ },
+ "26060": {
+  "file": "tech_army_bag_72.webp",
+  "tint": "#369170"
+ },
+ "26061": {
+  "file": "tech_flying_strength_72.webp",
+  "tint": "#27a5bb"
+ },
+ "26062": {
+  "file": "tech_flying_health_72.webp",
+  "tint": "#28a2bb"
+ },
+ "26063": {
+  "file": "tech_wall_heart_72.webp",
+  "tint": "#249672"
+ },
+ "26064": {
+  "file": "tech_wall_hand_72.webp",
+  "tint": "#239570"
+ },
+ "26065": {
+  "file": "tech_wall_heart_72.webp",
+  "tint": "#249672"
+ },
+ "26066": {
+  "file": "tech_wall_hand_72.webp",
+  "tint": "#239570"
+ },
+ "26067": {
+  "file": "tech_wall_heart_72.webp",
+  "tint": "#249672"
+ },
+ "26068": {
+  "file": "tech_wall_hand_72.webp",
+  "tint": "#239570"
+ },
+ "26069": {
+  "file": "tech_march_speed_army_pvp_72.webp",
+  "tint": "#2d9d79"
+ },
+ "26070": {
+  "file": "tech_march_speed_army_pvp_72.webp",
+  "tint": "#2d9d79"
+ },
+ "26071": {
+  "file": "tech_army_strength_72.webp",
+  "tint": "#368f6e"
+ },
+ "28000": {
+  "file": "booster_production_iron_stone_wood_72.webp",
+  "tint": "#7f774a"
+ },
+ "28001": {
+  "file": "tech_caravan_speed_72.webp",
+  "tint": "#778062"
+ },
+ "28002": {
+  "file": "silver_mining.webp",
+  "tint": "#ad7a41"
+ },
+ "28003": {
+  "file": "tech_caravan_weight_72.webp",
+  "tint": "#7b7c65"
+ },
+ "28004": {
+  "file": "tech_storage_capacity_72.webp",
+  "tint": "#9f7b42"
+ },
+ "28006": {
+  "file": "tech_construction_clock_blue_72.webp",
+  "tint": "#917358"
+ },
+ "28007": {
+  "file": "booster_gather_red_72.webp",
+  "tint": "#bb7238"
+ },
+ "28009": {
+  "file": "tech_research_clock_violet_72.webp",
+  "tint": "#7b5374"
+ },
+ "28010": {
+  "file": "food_production.webp",
+  "tint": "#5d958f"
+ },
+ "28011": {
+  "file": "tech_hero_land.webp",
+  "tint": "#568577"
+ },
+ "28012": {
+  "file": "booster_production_iron_stone_wood_72.webp",
+  "tint": "#7f774a"
+ },
+ "28013": {
+  "file": "silver_mining.webp",
+  "tint": "#ad7a41"
+ },
+ "28014": {
+  "file": "tech_caravan_speed_72.webp",
+  "tint": "#778062"
+ },
+ "28016": {
+  "file": "tech_storage_capacity_72.webp",
+  "tint": "#9f7b42"
+ },
+ "28017": {
+  "file": "tech_caravan_weight_72.webp",
+  "tint": "#7b7c65"
+ },
+ "28019": {
+  "file": "booster_gather_red_72.webp",
+  "tint": "#bb7238"
+ },
+ "28020": {
+  "file": "tech_construction_clock_blue_72.webp",
+  "tint": "#917358"
+ },
+ "28021": {
+  "file": "food_production.webp",
+  "tint": "#5d958f"
+ },
+ "28022": {
+  "file": "tech_research_clock_violet_72.webp",
+  "tint": "#7b5374"
+ },
+ "28023": {
+  "file": "booster_production_iron_stone_wood_72.webp",
+  "tint": "#7f774a"
+ },
+ "28024": {
+  "file": "tech_hero_land.webp",
+  "tint": "#568577"
+ },
+ "28025": {
+  "file": "tech_caravan_speed_72.webp",
+  "tint": "#778062"
+ },
+ "28026": {
+  "file": "silver_mining.webp",
+  "tint": "#ad7a41"
+ },
+ "28027": {
+  "file": "tech_caravan_weight_72.webp",
+  "tint": "#7b7c65"
+ },
+ "28028": {
+  "file": "tech_storage_capacity_72.webp",
+  "tint": "#9f7b42"
+ },
+ "28030": {
+  "file": "tech_construction_clock_blue_72.webp",
+  "tint": "#917358"
+ },
+ "28031": {
+  "file": "booster_gather_red_72.webp",
+  "tint": "#bb7238"
+ },
+ "28033": {
+  "file": "tech_research_clock_violet_72.webp",
+  "tint": "#7b5374"
+ },
+ "28034": {
+  "file": "food_production.webp",
+  "tint": "#5d958f"
+ },
+ "28035": {
+  "file": "tech_hero_land.webp",
+  "tint": "#568577"
+ },
+ "28036": {
+  "file": "booster_production_iron_stone_wood_72.webp",
+  "tint": "#7f774a"
+ },
+ "28037": {
+  "file": "silver_mining.webp",
+  "tint": "#ad7a41"
+ },
+ "28038": {
+  "file": "tech_caravan_speed_72.webp",
+  "tint": "#778062"
+ },
+ "28040": {
+  "file": "tech_storage_capacity_72.webp",
+  "tint": "#9f7b42"
+ },
+ "28041": {
+  "file": "tech_caravan_weight_72.webp",
+  "tint": "#7b7c65"
+ },
+ "28043": {
+  "file": "booster_gather_red_72.webp",
+  "tint": "#bb7238"
+ },
+ "28044": {
+  "file": "tech_construction_clock_blue_72.webp",
+  "tint": "#917358"
+ },
+ "28045": {
+  "file": "food_production.webp",
+  "tint": "#5d958f"
+ },
+ "28046": {
+  "file": "tech_research_clock_violet_72.webp",
+  "tint": "#7b5374"
+ },
+ "28047": {
+  "file": "booster_production_iron_stone_wood_72.webp",
+  "tint": "#7f774a"
+ },
+ "28048": {
+  "file": "tech_hero_land.webp",
+  "tint": "#568577"
+ },
+ "28049": {
+  "file": "tech_caravan_speed_72.webp",
+  "tint": "#778062"
+ },
+ "28050": {
+  "file": "silver_mining.webp",
+  "tint": "#ad7a41"
+ },
+ "28051": {
+  "file": "tech_caravan_weight_72.webp",
+  "tint": "#7b7c65"
+ },
+ "28052": {
+  "file": "tech_storage_capacity_72.webp",
+  "tint": "#9f7b42"
+ },
+ "28054": {
+  "file": "tech_construction_clock_blue_72.webp",
+  "tint": "#917358"
+ },
+ "28055": {
+  "file": "booster_gather_red_72.webp",
+  "tint": "#bb7238"
+ },
+ "28057": {
+  "file": "tech_research_clock_violet_72.webp",
+  "tint": "#7b5374"
+ },
+ "28058": {
+  "file": "food_production.webp",
+  "tint": "#5d958f"
+ },
+ "29000": {
+  "file": "tech_oil_production_speed_72.webp",
+  "tint": "#607f30"
+ },
+ "29001": {
+  "file": "tech_crypt_unlock.webp",
+  "tint": "#826d54"
+ },
+ "29002": {
+  "file": "tech_oil_production_amount_72.webp",
+  "tint": "#8f6f40"
+ },
+ "29003": {
+  "file": "tech_captain_speed_72.webp",
+  "tint": "#a73c21"
+ },
+ "29004": {
+  "file": "tech_craft_time_72.webp",
+  "tint": "#a25b2c"
+ },
+ "29005": {
+  "file": "tech_crypt_luck_72.webp",
+  "tint": "#9c7654"
+ },
+ "29006": {
+  "file": "tech_exploration_effectiveness_72.webp",
+  "tint": "#8d421d"
+ },
+ "29007": {
+  "file": "tech_exploration_cost_all_72.webp",
+  "tint": "#7b6b55"
+ },
+ "29008": {
+  "file": "tech_crypt_unlock.webp",
+  "tint": "#826d54"
+ },
+ "29009": {
+  "file": "tech_oil_production_speed_72.webp",
+  "tint": "#607f30"
+ },
+ "29010": {
+  "file": "tech_captain_speed_72.webp",
+  "tint": "#a73c21"
+ },
+ "29011": {
+  "file": "tech_oil_production_amount_72.webp",
+  "tint": "#8f6f40"
+ },
+ "29012": {
+  "file": "tech_crypt_luck_72.webp",
+  "tint": "#9c7654"
+ },
+ "29013": {
+  "file": "tech_craft_time_72.webp",
+  "tint": "#a25b2c"
+ },
+ "29014": {
+  "file": "tech_exploration_cost_all_72.webp",
+  "tint": "#7b6b55"
+ },
+ "29015": {
+  "file": "tech_exploration_effectiveness_72.webp",
+  "tint": "#8d421d"
+ },
+ "29016": {
+  "file": "tech_oil_production_speed_72.webp",
+  "tint": "#607f30"
+ },
+ "29017": {
+  "file": "tech_crypt_unlock.webp",
+  "tint": "#826d54"
+ },
+ "29018": {
+  "file": "tech_oil_production_amount_72.webp",
+  "tint": "#8f6f40"
+ },
+ "29019": {
+  "file": "tech_captain_speed_72.webp",
+  "tint": "#a73c21"
+ },
+ "29020": {
+  "file": "tech_exploration_cost_green_72.webp",
+  "tint": "#878331"
+ },
+ "29021": {
+  "file": "tech_exploration_efficiency_green_72.webp",
+  "tint": "#7c6a1c"
+ },
+ "29022": {
+  "file": "tech_exploration_efficiency_blue_72.webp",
+  "tint": "#615b62"
+ },
+ "29023": {
+  "file": "tech_exploration_cost_blue_72.webp",
+  "tint": "#616877"
+ },
+ "29024": {
+  "file": "tech_exploration_cost_violet_72.webp",
+  "tint": "#824e78"
+ },
+ "29025": {
+  "file": "tech_exploration_efficiency_violet_72.webp",
+  "tint": "#7d356b"
+ },
+ "29028": {
+  "file": "tech_crypt_luck_72.webp",
+  "tint": "#9c7654"
+ },
+ "29029": {
+  "file": "tech_exploration_effectiveness_72.webp",
+  "tint": "#8d421d"
+ },
+ "29030": {
+  "file": "tech_exploration_cost_all_72.webp",
+  "tint": "#7b6b55"
+ },
+ "29031": {
+  "file": "tech_craft_time_72.webp",
+  "tint": "#a25b2c"
+ },
+ "29032": {
+  "file": "tech_crypt_unlock.webp",
+  "tint": "#826d54"
+ },
+ "29033": {
+  "file": "tech_oil_production_speed_72.webp",
+  "tint": "#607f30"
+ },
+ "29034": {
+  "file": "tech_oil_production_amount_72.webp",
+  "tint": "#8f6f40"
+ },
+ "29035": {
+  "file": "tech_captain_speed_72.webp",
+  "tint": "#a73c21"
+ },
+ "29036": {
+  "file": "tech_exploration_cost_green_72.webp",
+  "tint": "#878331"
+ },
+ "29037": {
+  "file": "tech_exploration_efficiency_green_72.webp",
+  "tint": "#7c6a1c"
+ },
+ "29038": {
+  "file": "tech_exploration_efficiency_blue_72.webp",
+  "tint": "#615b62"
+ },
+ "29039": {
+  "file": "tech_exploration_cost_blue_72.webp",
+  "tint": "#616877"
+ },
+ "29040": {
+  "file": "tech_exploration_cost_violet_72.webp",
+  "tint": "#824e78"
+ },
+ "29041": {
+  "file": "tech_exploration_efficiency_violet_72.webp",
+  "tint": "#7d356b"
+ },
+ "29044": {
+  "file": "tech_craft_time_72.webp",
+  "tint": "#a25b2c"
+ },
+ "29045": {
+  "file": "tech_crypt_luck_72.webp",
+  "tint": "#9c7654"
+ },
+ "29046": {
+  "file": "tech_crypt_unlock.webp",
+  "tint": "#826d54"
+ },
+ "29047": {
+  "file": "tech_oil_production_speed_72.webp",
+  "tint": "#607f30"
+ },
+ "29048": {
+  "file": "tech_oil_production_amount_72.webp",
+  "tint": "#8f6f40"
+ },
+ "29049": {
+  "file": "tech_captain_speed_72.webp",
+  "tint": "#a73c21"
+ },
+ "29050": {
+  "file": "tech_exploration_cost_green_72.webp",
+  "tint": "#878331"
+ },
+ "29051": {
+  "file": "tech_exploration_efficiency_green_72.webp",
+  "tint": "#7c6a1c"
+ },
+ "29052": {
+  "file": "tech_exploration_efficiency_blue_72.webp",
+  "tint": "#615b62"
+ },
+ "29053": {
+  "file": "tech_exploration_cost_blue_72.webp",
+  "tint": "#616877"
+ },
+ "29054": {
+  "file": "tech_exploration_cost_violet_72.webp",
+  "tint": "#824e78"
+ },
+ "29055": {
+  "file": "tech_exploration_efficiency_violet_72.webp",
+  "tint": "#7d356b"
+ },
+ "29058": {
+  "file": "tech_crypt_luck_72.webp",
+  "tint": "#9c7654"
+ },
+ "29059": {
+  "file": "tech_craft_time_72.webp",
+  "tint": "#a25b2c"
+ }
+}

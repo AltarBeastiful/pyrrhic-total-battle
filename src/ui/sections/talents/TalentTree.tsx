@@ -326,7 +326,12 @@ export function TalentTree({
                     </span>
                   </button>
                   {lock === null && (selected === n.id || hovered === n.id) && (
-                    <div className={classes.pad} role="group" aria-label={`Ranks of ${n.name}`}>
+                    <div
+                      className={classes.pad}
+                      data-selected={selected === n.id}
+                      role="group"
+                      aria-label={`Ranks of ${n.name}`}
+                    >
                       <button
                         type="button"
                         className={classes.padButton}
