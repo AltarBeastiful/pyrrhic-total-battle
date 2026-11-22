@@ -242,12 +242,15 @@ export function TalentTree({
                 ))}
               </defs>
               {lines.map((l) => (
-                <line
+                <path
                   key={l.key}
-                  x1={l.from[0]}
-                  y1={l.from[1]}
-                  x2={l.to[0]}
-                  y2={l.to[1]}
+                  d={
+                    l.from[0] === l.to[0] || l.from[1] === l.to[1]
+                      ? `M${String(l.from[0])} ${String(l.from[1])}L${String(l.to[0])} ${String(l.to[1])}`
+                      : // Down, across, down: a child in another column never gets a diagonal.
+                        `M${String(l.from[0])} ${String(l.from[1])}V${String((l.from[1] + l.to[1]) / 2)}H${String(l.to[0])}V${String(l.to[1])}`
+                  }
+                  fill="none"
                   className={classes.line}
                   data-lit={l.lit}
                   data-planned={l.planned}
