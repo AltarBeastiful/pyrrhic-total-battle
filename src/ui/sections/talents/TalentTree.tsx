@@ -208,6 +208,13 @@ export function TalentTree({
     }),
   );
 
+  const setFromBar = (e: React.PointerEvent<HTMLElement>, n: TalentRecord, bought: number): void => {
+    const r = e.currentTarget.getBoundingClientRect();
+    if (r.width <= 9) return;
+    const rank = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left - 4.5) / (r.width - 9))) * n.maxRank);
+    if (rank !== bought) onRank(n.id, rank);
+  };
+
   return (
     <div className={classes.layout}>
       <Stack gap="md" style={{ minWidth: 0 }}>
@@ -349,7 +356,19 @@ export function TalentTree({
                         </span>
                       ) : (
                         <>
-                          <span className={classes.bar} data-bar-state={barState} aria-hidden>
+                          <span
+                            className={classes.bar}
+                            data-bar-state={barState}
+                            aria-hidden
+                            // Click or drag along the bar to set the rank bought; the keyboard keeps the pad and the panel.
+                            onPointerDown={(e) => {
+                              e.currentTarget.setPointerCapture(e.pointerId);
+                              setFromBar(e, n, bought);
+                            }}
+                            onPointerMove={(e) => {
+                              if (e.buttons === 1) setFromBar(e, n, bought);
+                            }}
+                          >
                             <span
                               className={classes.barBought}
                               data-bar="bought"
