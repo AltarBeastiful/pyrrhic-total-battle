@@ -178,9 +178,8 @@
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
-  height: 5px;
-  overflow: hidden;
-  border-radius: 3px;
+  height: 2px;
+  border-radius: 2px;
   background: #3a3d3f;
 }
 
@@ -195,7 +194,30 @@
 
 .barPlanned {
   flex: none;
-  background: repeating-linear-gradient(45deg, var(--a) 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(90deg, var(--a) 0 3px, transparent 3px 6px);
+}
+
+/* The knob rides the end of the rank: a hollow ring while nothing is taken, filled from the first rank. */
+.barKnob {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #6b7173;
+  background: #2a2d2f;
+}
+
+.bar:not([data-bar-state='empty']) .barKnob {
+  border-color: var(--a);
+  background: var(--a);
+}
+
+.bar[data-bar-state='full'] .barKnob {
+  border-color: #7dd6ad;
+  background: #7dd6ad;
 }
 
 .bonus {

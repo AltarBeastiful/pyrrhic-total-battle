@@ -362,6 +362,12 @@ export function TalentTree({
                                 width: `${String((Math.min(plus, n.maxRank - bought) / n.maxRank) * 100)}%`,
                               }}
                             />
+                            <span
+                              className={classes.barKnob}
+                              style={{
+                                left: `calc((100% - 9px) * ${String(Math.min(bought + plus, n.maxRank) / n.maxRank)})`,
+                              }}
+                            />
                           </span>
                           <b className={classes.bonus}>
                             {bought > 0 || plus > 0 ? bonusWords(n, bought, plus) : '—'}
