@@ -6,6 +6,7 @@
  * (`src/state/talentAnalysis.ts`). Results are merged by position, so one worker and six give one answer.
  */
 import { CAMPAIGN } from '@/config';
+import { sizeStacks } from '@/engine/stacker';
 import { meanOf } from '@/engine/talentAnalysis';
 import type { MarkerRates } from '@/engine/rating';
 import type { BonusTotals, StackRequest } from '@/engine/types';
@@ -20,6 +21,11 @@ export interface TalentAnalysisInput {
   baseline?: number | undefined;
   /** The ranks to price, the baseline first, each with the totals the march carries at that rank. */
   ranks: { rank: number; totals: BonusTotals }[];
+  /**
+   * What the gain is read from: `sized` (the default) re-sizes the march at each rank; `fixed` battles the counts of
+   * the baseline sizing under each rank, so no re-sizing noise enters (experiment 365).
+   */
+  reading?: 'sized' | 'fixed' | undefined;
   /** Pool shapes in percent of the leadership pool; `CAMPAIGN.talentFills` by default. */
   fills?: readonly number[] | undefined;
 }
@@ -54,25 +60,45 @@ function filled(request: StackRequest, fill: number): StackRequest {
   };
 }
 
+/**
+ * The counts a `fixed` reading holds: the baseline's own sizing at `fill`. Every talent of one pass shares the
+ * baseline totals, so `cache` (one per pass, keyed by the shape's request) sizes each shape once.
+ */
+function fixedCounts(
+  request: StackRequest,
+  totals: BonusTotals,
+  cache: Map<string, Record<string, number>>,
+): Record<string, number> {
+  const key = JSON.stringify([request.housing, request.enemy]);
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const counts: Record<string, number> = {};
+  const sized = sizeStacks({ ...request, totals, options: { ...request.options, method: 'elite' } });
+  for (const stack of sized.stacks) counts[stack.unitId] = stack.count;
+  cache.set(key, counts);
+  return counts;
+}
+
 /** The jobs of one talent: one captain-screen per pool shape, in the order of the shapes. */
 function jobsOf(
   input: TalentAnalysisInput,
   fills: readonly number[],
   rates: MarkerRates,
+  counts: Map<string, Record<string, number>> = new Map(),
 ): PoolJob<CaptainScreenAnswer>[] {
   if (input.ranks[0]?.rank !== (input.baseline ?? 0)) {
     throw new Error('The analysis reads every rank against the baseline, which must come first.');
   }
   const lineups = input.ranks.map(({ rank, totals }) => ({ key: String(rank), totals }));
   const currentKey = lineups[0]?.key ?? '0';
-  return fills.map(
-    (fill): PoolJob<CaptainScreenAnswer> =>
-      (client, signal) =>
-        client.captains(
-          { request: filled(input.request, fill), lineups, currentKey, stops: [], rates },
-          signal,
-        ),
-  );
+  return fills.map((fill): PoolJob<CaptainScreenAnswer> => {
+    const request = filled(input.request, fill);
+    const stops =
+      input.reading === 'fixed' && lineups[0] !== undefined
+        ? [{ pick: 'fixed', counts: fixedCounts(request, lineups[0].totals, counts) }]
+        : [];
+    return (client, signal) => client.captains({ request, lineups, currentKey, stops, rates }, signal);
+  });
 }
 
 /** One talent's answer from the outcomes of its shapes' jobs. */
@@ -87,7 +113,10 @@ function assemble(
     if (outcome.kind === 'cut') throw new Error('The analysis ran out of time.');
     const { screens } = outcome.value;
     if (screens.length !== input.ranks.length) throw new Error('The analysis was cut short.');
-    return { fill, gains: screens.map((screen) => screen.sized) };
+    return {
+      fill,
+      gains: screens.map((screen) => (input.reading === 'fixed' ? (screen.repriced[0] ?? 0) : screen.sized)),
+    };
   });
   return { ranks: input.ranks.map(({ rank }) => rank), shapes, mean: meanOf(shapes.map((s) => s.gains)) };
 }
@@ -126,9 +155,10 @@ export async function runAllTalentsAnalysis(
   options: TalentAnalysisOptions = {},
 ): Promise<TalentAnalysis[]> {
   const rates = options.rates ?? CAMPAIGN.markerRates;
+  const counts = new Map<string, Record<string, number>>();
   const plans = inputs.map((input) => {
     const fills = fillsOf(input);
-    return { input, fills, jobs: jobsOf(input, fills, rates) };
+    return { input, fills, jobs: jobsOf(input, fills, rates, counts) };
   });
   const outcomes = await pool.map(
     plans.flatMap((plan) => plan.jobs),

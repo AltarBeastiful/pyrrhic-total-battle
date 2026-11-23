@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 import type { TalentRecord } from '@/data/types';
 import type { TalentAnalysis } from '@/worker/talentAnalysis';
 
-import { rankTalents } from './talentRanking';
+import { combineAnalyses, rankTalents } from './talentRanking';
 
 const node = (id: number, costs: number[]): TalentRecord => ({
   id,
@@ -55,5 +55,22 @@ describe('rankTalents', () => {
   test('another sort can be asked for', () => {
     expect(rankTalents(entries, 'gainAtMax').map((row) => row.id)).toEqual([4, 2, 1, 3]);
     expect(rankTalents(entries, 'name').map((row) => row.id)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('the slope score and the combination of contexts', () => {
+  test('a slope fits every priced rank: a noisy endpoint no longer decides', () => {
+    // Gains 0, 1, 2, 3, 12 over 4 points: the endpoint says 3 per point, the fit says 2.3 (the 12 is noise).
+    const noisy = [{ node: node(1, [1, 1, 1, 1]), held: 0, analysis: analysis([0, 1, 2, 3, 4], [0, 1, 2, 3, 12]) }];
+    expect(rankTalents(noisy)[0]?.perPoint).toBe(3);
+    const fitted = rankTalents(noisy.map((entry) => ({ ...entry, score: 'slope' as const })))[0]?.perPoint;
+    expect(fitted).toBeCloseTo((1 * 1 + 2 * 2 + 3 * 3 + 4 * 12) / (1 + 4 + 9 + 16), 10);
+  });
+
+  test('combining contexts is the mean of their gains, rank by rank, on the same ranks', () => {
+    const one = analysis([0, 2, 4], [0, 2, 4]);
+    const two = analysis([0, 2, 4], [0, 4, 8]);
+    expect(combineAnalyses([one, two])).toMatchObject({ ranks: [0, 2, 4], mean: [0, 3, 6] });
+    expect(combineAnalyses([one])).toBe(one);
   });
 });

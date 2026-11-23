@@ -7,10 +7,12 @@
  */
 import { create } from 'zustand';
 
+import { RANKING_PLANS, type RankingMethod } from '@/engine/talentAnalysis';
 import { heldRank } from '@/engine/talentCopy';
+import { CAMPAIGN } from '@/config';
 import type { BattleSetup, Profile } from '@/state/schema';
 import { allTalentsInputs, allTalentsKey } from '@/state/talentAnalysis';
-import type { RankingEntry } from '@/state/talentRanking';
+import { combineAnalyses, type RankingEntry } from '@/state/talentRanking';
 import { isAbortError } from '@/worker/client';
 import { runAllTalentsAnalysis } from '@/worker/talentAnalysis';
 
@@ -47,10 +49,17 @@ export function rankingOf(run: AllRun | null): KeptRanking | null {
 interface AllState {
   run: AllRun | null;
   set: (run: AllRun | null) => void;
+  /** How the list is read (experiment 365); a choice of the dialog, kept while the page is open. */
+  method: RankingMethod;
+  setMethod: (method: RankingMethod) => void;
 }
 
 export const useAllAnalysisStore = create<AllState>()((set) => ({
   run: null,
+  method: CAMPAIGN.talentRanking,
+  setMethod: (method) => {
+    set({ method });
+  },
   set: (run) => {
     set({ run });
   },
@@ -67,10 +76,14 @@ export function cancelAll(): void {
 }
 
 /** Rank every talent the rating can read on the march `setup` selects. A run already out is cancelled first. */
-export async function analyzeAll(profile: Profile, setup: BattleSetup): Promise<void> {
+export async function analyzeAll(
+  profile: Profile,
+  setup: BattleSetup,
+  method: RankingMethod = useAllAnalysisStore.getState().method,
+): Promise<void> {
   cancelAll();
-  const { jobs, notRated } = allTalentsInputs(profile, setup);
-  const key = allTalentsKey(profile, setup);
+  const { jobs, notRated } = allTalentsInputs(profile, setup, undefined, undefined, method);
+  const key = allTalentsKey(profile, setup, undefined, undefined, method);
   const own = new AbortController();
   controller = own;
   const { set, run: before } = useAllAnalysisStore.getState();
@@ -82,7 +95,7 @@ export async function analyzeAll(profile: Profile, setup: BattleSetup): Promise<
   };
   try {
     const analyses = await runAllTalentsAnalysis(
-      jobs.map((job) => job.input),
+      jobs.flatMap((job) => job.inputs),
       advisorPool(),
       {
         signal: own.signal,
@@ -94,10 +107,17 @@ export async function analyzeAll(profile: Profile, setup: BattleSetup): Promise<
     );
     const run = live();
     if (run !== null) {
-      const entries = jobs.map((job, index): RankingEntry => {
-        const analysis = analyses[index];
-        if (analysis === undefined) throw new Error('The analysis was cut short.');
-        return { node: job.node, held: heldRank(job.node, profile.talents.ranks), analysis };
+      let at = 0;
+      const entries = jobs.map((job): RankingEntry => {
+        const own = analyses.slice(at, at + job.inputs.length);
+        at += job.inputs.length;
+        if (own.length !== job.inputs.length) throw new Error('The analysis was cut short.');
+        return {
+          node: job.node,
+          held: heldRank(job.node, profile.talents.ranks),
+          analysis: combineAnalyses(own),
+          score: RANKING_PLANS[method].score,
+        };
       });
       set({ ...run, status: 'done', entries });
     }

@@ -4,6 +4,7 @@
  * single Analyze shows it; the points are what the ranks above the baseline cost.
  */
 import type { TalentRecord } from '../data/types';
+import { meanOf, slopeOf } from '../engine/talentAnalysis';
 import type { TalentAnalysis } from '../worker/talentAnalysis';
 
 export interface RankingEntry {
@@ -11,6 +12,22 @@ export interface RankingEntry {
   /** The rank the account holds. */
   held: number;
   analysis: TalentAnalysis;
+  /** What the per-point figure is: the endpoint over the points (the plain list) or the fitted slope (the grid methods). */
+  score?: 'endpoint' | 'slope';
+}
+
+/** One talent's analyses in several contexts as one: the same ranks, every gain the mean over the contexts. */
+export function combineAnalyses(analyses: readonly TalentAnalysis[]): TalentAnalysis {
+  const [first] = analyses;
+  if (first === undefined) throw new Error('There is nothing to combine.');
+  if (analyses.length === 1) return first;
+  return { ranks: first.ranks, shapes: first.shapes, mean: meanOf(analyses.map((one) => one.mean)) };
+}
+
+/** What each priced rank costs in talent points from the baseline (the baseline itself 0). */
+function pointsAt(node: TalentRecord, ranks: readonly number[]): number[] {
+  const base = ranks[0] ?? 0;
+  return ranks.map((rank) => node.costs.slice(base, rank).reduce((sum, cost) => sum + cost, 0));
 }
 
 export interface RankingRow {
@@ -30,7 +47,7 @@ export interface RankingRow {
 export type RankingSort = 'perPoint' | 'gainAtMax' | 'name';
 
 export function rankTalents(entries: readonly RankingEntry[], sort: RankingSort = 'perPoint'): RankingRow[] {
-  const rows = entries.map(({ node, held, analysis }): RankingRow => {
+  const rows = entries.map(({ node, held, analysis, score }): RankingRow => {
     const baseline = analysis.ranks[0] ?? held;
     const points = node.costs.slice(baseline, node.maxRank).reduce((sum, cost) => sum + cost, 0);
     const gainAtMax = analysis.mean.at(-1) ?? 0;
@@ -42,7 +59,8 @@ export function rankTalents(entries: readonly RankingEntry[], sort: RankingSort 
       max: node.maxRank,
       gainAtMax,
       points,
-      perPoint: points > 0 ? gainAtMax / points : null,
+      perPoint:
+        points === 0 ? null : score === 'slope' ? slopeOf(pointsAt(node, analysis.ranks), analysis.mean) : gainAtMax / points,
     };
   });
   const measure = (row: RankingRow): number => (sort === 'gainAtMax' ? row.gainAtMax : (row.perPoint ?? 0));

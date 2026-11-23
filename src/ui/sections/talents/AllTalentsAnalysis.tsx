@@ -3,9 +3,10 @@
  * rating can read: its progress and cancel, and the ranking, shown at once once a run has finished (or one kept from an earlier run). The state is the store's
  * (`allAnalysisStore`), so the card holds nothing a later story would have to pull out of it.
  */
-import { Button, Group, Progress, Stack, Text } from '@mantine/core';
+import { Button, Group, Progress, SegmentedControl, Stack, Text } from '@mantine/core';
 import { useMemo, useState } from 'react';
 
+import type { RankingMethod } from '@/engine/talentAnalysis';
 import { Dialog } from '@/ui/kit';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { allTalentsKey } from '@/state/talentAnalysis';
@@ -13,6 +14,29 @@ import { rankTalents, type RankingRow, type RankingSort } from '@/state/talentRa
 
 import { analyzeAll, cancelAll, rankingOf, useAllAnalysisStore } from './allAnalysisStore';
 import classes from './talents.module.css';
+
+/** What each reading does, in the words the dialog shows under the selector. */
+const METHOD_LABELS: Record<RankingMethod, { label: string; words: string }> = {
+  current: {
+    label: 'Plain',
+    words: 'Re-sizes this march at each rank and reads the gain on this army and this enemy alone.',
+  },
+  march: {
+    label: 'This march',
+    words: 'Keeps this march’s troop counts and reads what each rank adds to them, on this army and this enemy alone.',
+  },
+  balanced: {
+    label: 'Balanced',
+    words:
+      'Re-sizes the march at army sizes from half to one and a half times yours, against four enemy mixes, and averages. Steadier than plain.',
+  },
+  steady: {
+    label: 'Steady',
+    words:
+      'Keeps the troop counts, averages over the same sizes and enemy mixes. The steadiest: your army size and enemy hardly move it.',
+  },
+};
+const METHOD_ORDER: RankingMethod[] = ['current', 'march', 'balanced', 'steady'];
 
 const signed = (value: number): string => `${value >= 0 ? '+' : ''}${value.toFixed(2)} %`;
 
@@ -39,7 +63,7 @@ function Ranking({
 }) {
   return (
     <div
-      className={`${classes.rankBox} ${classes.rankBoxTall}`}
+      className={classes.rankBoxTall}
       role="region"
       aria-label="Talent ranking"
       tabIndex={0}
@@ -110,11 +134,16 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
   const run = useAllAnalysisStore((state) => state.run);
+  const method = useAllAnalysisStore((state) => state.method);
+  const setMethod = useAllAnalysisStore((state) => state.setMethod);
   const [sort, setSort] = useState<RankingSort>('perPoint');
   // The question as it stands now; a kept ranking asked another one is out of date and never shown as current.
   const key = useMemo(
-    () => (profile === undefined || setup === undefined ? null : allTalentsKey(profile, setup)),
-    [profile, setup],
+    () =>
+      profile === undefined || setup === undefined
+        ? null
+        : allTalentsKey(profile, setup, undefined, undefined, method),
+    [profile, setup, method],
   );
   if (profile === undefined || setup === undefined) return null;
   const running = run?.status === 'running';
@@ -123,6 +152,23 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
   const rows = ranking === null ? null : rankTalents(ranking.entries, sort);
   return (
     <Stack gap="xs" component="section" aria-label="Analyze all talents">
+      <SegmentedControl
+        size="xs"
+        aria-label="How the talents are ranked"
+        value={method}
+        data={METHOD_ORDER.map((one) => ({ value: one, label: METHOD_LABELS[one].label }))}
+        onChange={(value) => {
+          const next = METHOD_ORDER.find((one) => one === value);
+          if (next === undefined) return;
+          setMethod(next);
+          const key = allTalentsKey(profile, setup, undefined, undefined, next);
+          const held = rankingOf(run);
+          if (held === null || held.key !== key || running) void analyzeAll(profile, setup, next);
+        }}
+      />
+      <Text size="sm" c="dimmed">
+        {METHOD_LABELS[method].words}
+      </Text>
       <Group gap="xs" align="center">
         {running ? (
           <Button size="xs" variant="default" onClick={cancelAll}>
@@ -133,7 +179,7 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
             size="xs"
             variant="light"
             onClick={() => {
-              void analyzeAll(profile, setup);
+              void analyzeAll(profile, setup, method);
             }}
           >
             {stale ? 'Re-analyze' : 'Analyze all'}
@@ -169,7 +215,9 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
         Ranks every talent the battle rating reads by what its remaining ranks add to your march.
       </Text>
       <Text size="sm" c="dimmed">
-        {`Priced on this march: ${setup.housing.leadership.toLocaleString('en')} leadership, ${setup.housing.authority.toLocaleString('en')} authority, ${setup.housing.dominance.toLocaleString('en')} dominance, and its enemy formation. A smaller or larger army, or another enemy, can rank the talents differently.`}
+        {method === 'balanced' || method === 'steady'
+          ? `Centred on this march: ${setup.housing.leadership.toLocaleString('en')} leadership, ${setup.housing.authority.toLocaleString('en')} authority, ${setup.housing.dominance.toLocaleString('en')} dominance. Per point is the fitted gain over every priced rank.`
+          : `Priced on this march: ${setup.housing.leadership.toLocaleString('en')} leadership, ${setup.housing.authority.toLocaleString('en')} authority, ${setup.housing.dominance.toLocaleString('en')} dominance, and its enemy formation. A smaller or larger army, or another enemy, can rank the talents differently; Balanced and Steady do not.`}
       </Text>
       {rows !== null && ranking !== null && (
         <>
@@ -187,13 +235,15 @@ export function AnalyzeAllDialog({ onSelect }: { onSelect: (id: number) => void 
   const setup = useStore(selectActiveSetup);
   const [open, setOpen] = useState(false);
   const run = useAllAnalysisStore((state) => state.run);
+  const method = useAllAnalysisStore((state) => state.method);
   const running = run?.status === 'running';
   // Pressing the button asks the question at once, unless a run is going or a ranking for this very account is held.
   const start = (): void => {
     setOpen(true);
     if (running || profile === undefined || setup === undefined) return;
     const held = rankingOf(run);
-    if (held === null || held.key !== allTalentsKey(profile, setup)) void analyzeAll(profile, setup);
+    if (held === null || held.key !== allTalentsKey(profile, setup, undefined, undefined, method))
+      void analyzeAll(profile, setup, method);
   };
   return (
     <>

@@ -8,7 +8,14 @@ import { CAMPAIGN } from '../config';
 import { talents } from '../data';
 import type { BonusKey, TalentRecord } from '../data/types';
 import { aggregateBonuses } from '../engine/bonuses';
-import { analysisRanks, analyzableTalents, talentSource } from '../engine/talentAnalysis';
+import {
+  analysisRanks,
+  analyzableTalents,
+  ENEMY_MIXES,
+  RANKING_PLANS,
+  talentSource,
+  type RankingMethod,
+} from '../engine/talentAnalysis';
 import { heldRank, talentCopy } from '../engine/talentCopy';
 import type { ResolvedSource } from '../engine/types';
 import type { TalentAnalysisInput } from '../worker/talentAnalysis';
@@ -75,7 +82,34 @@ export interface TalentAnalysisJob {
   node: TalentRecord;
   /** The rank the analysis starts from (the single Analyze's baseline). */
   baseline: number;
+  /** The input on the march as it stands (the first of `inputs`). */
   input: TalentAnalysisInput;
+  /** One input per context the method reads: one for the plain list, a size x enemy grid for the steadier ones. */
+  inputs: TalentAnalysisInput[];
+}
+
+/** The contexts a ranking method reads one talent in: the march's housing scaled, the enemy swapped, the reading chosen. */
+function contextsOf(input: TalentAnalysisInput, method: RankingMethod): TalentAnalysisInput[] {
+  const plan = RANKING_PLANS[method];
+  const enemies = plan.enemies ? ENEMY_MIXES : [null];
+  return plan.sizes.flatMap((size) =>
+    enemies.map((enemy): TalentAnalysisInput => {
+      const { housing } = input.request;
+      return {
+        ...input,
+        reading: plan.reading,
+        request: {
+          ...input.request,
+          housing: {
+            leadership: Math.round(housing.leadership * size),
+            authority: Math.round(housing.authority * size),
+            dominance: Math.round(housing.dominance * size),
+          },
+          ...(enemy === null ? {} : { enemy: { ...enemy } }),
+        },
+      };
+    }),
+  );
 }
 
 /**
@@ -88,13 +122,15 @@ export function allTalentsInputs(
   setup: BattleSetup,
   tables: DeriveTables = DEFAULT_TABLES,
   talentTable: readonly TalentRecord[] = talents,
+  method: RankingMethod = 'current',
 ): { jobs: TalentAnalysisJob[]; notRated: number; skipped: number } {
   const { rated, notRated } = analyzableTalents(talentTable);
   const jobs: TalentAnalysisJob[] = [];
   for (const node of rated) {
     const input = talentAnalysisInput(profile, setup, node, tables, talentTable);
     if (input === null) continue;
-    jobs.push({ node, baseline: input.baseline ?? 0, input });
+    const inputs = method === 'current' ? [input] : contextsOf(input, method);
+    jobs.push({ node, baseline: input.baseline ?? 0, input: inputs[0] ?? input, inputs });
   }
   return { jobs, notRated, skipped: rated.length - jobs.length };
 }
@@ -105,8 +141,10 @@ export function allTalentsKey(
   setup: BattleSetup,
   tables: DeriveTables = DEFAULT_TABLES,
   talentTable: readonly TalentRecord[] = talents,
+  method: RankingMethod = 'current',
 ): string {
   return JSON.stringify([
+    method,
     talentTable.map((node) => [node.id, talentBaseline(profile, node, talentTable)]),
     CAMPAIGN.talentFills,
     CAMPAIGN.markerRates,

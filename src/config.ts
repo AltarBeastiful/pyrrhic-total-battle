@@ -263,6 +263,11 @@ export const CAMPAIGN = {
    */
   talentFills: [100, 80],
   /**
+   * **How Analyze all reads the list when the player has not chosen** (experiment 365): `current` is the plain list;
+   * `march`, `balanced` and `steady` are the steadier ones (`RANKING_PLANS`). Left at `current` until the owner picks.
+   */
+  talentRanking: 'current' as 'current' | 'march' | 'balanced' | 'steady',
+  /**
    * **The fills of the leadership pool a March edit re-sizes at** (S-117; owner, 2026-09-20: *"I'm not that
    * sure any more that when removing or adding a troop … we should not compute again the best possible
    * outcome, checking if less leadership buys us something"*).

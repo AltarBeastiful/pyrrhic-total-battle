@@ -122,4 +122,32 @@ describe.each(PATHS)('Analyze all, %s path', (_name, kernel) => {
     await expect(running).rejects.toMatchObject({ name: 'AbortError' });
     pool.dispose();
   });
+
+  test('a fixed reading keeps the baseline counts: a talent that adds nothing is 0, a bonus gains, and it is lane-independent', async () => {
+    const fixed = inputs().map((input) => ({ ...input, reading: 'fixed' as const }));
+    const one = poolOf(1);
+    const three = poolOf(3);
+    const a = await runAllTalentsAnalysis(fixed, one);
+    const b = await runAllTalentsAnalysis(fixed, three);
+    one.dispose();
+    three.dispose();
+    expect(b).toEqual(a);
+    expect(a[2]!.mean.every((gain) => gain === 0)).toBe(true);
+    expect(a[0]!.mean.at(-1)!).toBeGreaterThan(0);
+    // The screen is asked to re-price the baseline's own counts (one stop), not to re-size.
+    const stops: number[] = [];
+    const spy = poolOf(1, (inline) => ({
+      captains: (input, signal) => {
+        stops.push(input.stops.length);
+        if (input.stops.length > 0) expect(Object.keys(input.stops[0]!.counts).length).toBeGreaterThan(0);
+        return inline.captains(input, signal);
+      },
+    }));
+    await runAllTalentsAnalysis(fixed, spy);
+    const sized: number[] = stops.splice(0);
+    await runAllTalentsAnalysis(inputs(), spy);
+    spy.dispose();
+    expect(sized.every((n) => n === 1)).toBe(true);
+    expect(stops.every((n) => n === 0)).toBe(true);
+  });
 });

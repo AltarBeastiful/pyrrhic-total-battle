@@ -223,3 +223,19 @@ test('cancelling a re-run brings the previous ranking back, out of date and neve
   expect(screen.getByText(/out of date/i)).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Re-analyze' })).toBeTruthy();
 });
+
+test('the reading is chosen in the dialog: another one starts a run under another key, and the words follow it', async () => {
+  renderWithTheme(<TalentsPage />);
+  openDialog();
+  await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
+  const before = useAllAnalysisStore.getState().run?.key;
+  const group = screen.getByRole('radiogroup', { name: 'How the talents are ranked' });
+  fireEvent.click(within(group).getByLabelText('Steady'));
+  expect(useAllAnalysisStore.getState().method).toBe('steady');
+  await waitFor(() => {
+    expect(useAllAnalysisStore.getState().run?.key).not.toBe(before);
+  });
+  expect(screen.getByText(/The steadiest/)).toBeTruthy();
+  screen.queryByRole('button', { name: 'Cancel' })?.click();
+  useAllAnalysisStore.setState({ method: 'current' });
+});

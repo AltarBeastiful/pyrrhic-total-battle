@@ -150,6 +150,35 @@ describe('allTalentsInputs (B-28)', () => {
     expect(jobs[0]!.input).toEqual(talentAnalysisInput(profile, setup, melee, undefined, table));
   });
 
+  it('the grid methods read a talent in sixteen contexts, the others in one; sizes scale the housing and the enemy is swapped', () => {
+    const { profile, setup } = account();
+    const plain = allTalentsInputs(profile, setup, undefined, [melee], 'current').jobs[0]!;
+    expect(plain.inputs).toHaveLength(1);
+    expect(plain.inputs[0]!.reading).toBeUndefined();
+    const march = allTalentsInputs(profile, setup, undefined, [melee], 'march').jobs[0]!;
+    expect(march.inputs).toHaveLength(1);
+    expect(march.inputs[0]!.reading).toBe('fixed');
+    expect(march.inputs[0]!.request.housing).toEqual(setup.housing);
+    const steady = allTalentsInputs(profile, setup, undefined, [melee], 'steady').jobs[0]!;
+    expect(steady.inputs).toHaveLength(16);
+    expect(steady.inputs.every((one) => one.reading === 'fixed')).toBe(true);
+    const sizes = new Set(steady.inputs.map((one) => one.request.housing.leadership));
+    expect(sizes).toEqual(
+      new Set([0.5, 0.75, 1, 1.5].map((share) => Math.round(setup.housing.leadership * share))),
+    );
+    expect(new Set(steady.inputs.map((one) => JSON.stringify(one.request.enemy))).size).toBe(4);
+    const balanced = allTalentsInputs(profile, setup, undefined, [melee], 'balanced').jobs[0]!;
+    expect(balanced.inputs.every((one) => one.reading === 'sized')).toBe(true);
+  });
+
+  it('the key names the method', () => {
+    const { profile, setup } = account();
+    const keys = (['current', 'march', 'balanced', 'steady'] as const).map((method) =>
+      allTalentsKey(profile, setup, undefined, [melee], method),
+    );
+    expect(new Set(keys).size).toBe(4);
+  });
+
   it('the ranking key moves with the army and the held ranks, and not otherwise', () => {
     const { profile, setup } = account();
     const same = allTalentsKey(profile, setup, undefined, [melee]);
