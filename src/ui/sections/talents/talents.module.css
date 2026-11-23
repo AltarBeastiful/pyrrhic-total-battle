@@ -194,16 +194,12 @@
 
 .barBought {
   flex: none;
-  background: var(--a);
-}
-
-.bar[data-bar-state='full'] .barBought {
-  background: #7dd6ad;
+  background: #e3b04b;
 }
 
 .barPlanned {
   flex: none;
-  background: repeating-linear-gradient(90deg, var(--a) 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(90deg, #e3b04b 0 3px, transparent 3px 6px);
 }
 
 /* The knob rides the end of the rank: a hollow ring while nothing is taken, filled from the first rank. */
@@ -220,13 +216,8 @@
 }
 
 .bar:not([data-bar-state='empty']) .barKnob {
-  border-color: var(--a);
-  background: var(--a);
-}
-
-.bar[data-bar-state='full'] .barKnob {
-  border-color: #7dd6ad;
-  background: #7dd6ad;
+  border-color: #e3b04b;
+  background: #e3b04b;
 }
 
 .bonus[data-empty='true'] {
