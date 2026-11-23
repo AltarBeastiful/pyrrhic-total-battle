@@ -197,6 +197,10 @@
   background: #e3b04b;
 }
 
+.bar[data-bar-state='full'] .barBought {
+  background: #7dd6ad;
+}
+
 .barPlanned {
   flex: none;
   background: repeating-linear-gradient(90deg, #e3b04b 0 3px, transparent 3px 6px);
@@ -218,6 +222,11 @@
 .bar:not([data-bar-state='empty']) .barKnob {
   border-color: #e3b04b;
   background: #e3b04b;
+}
+
+.bar[data-bar-state='full'] .barKnob {
+  border-color: #7dd6ad;
+  background: #7dd6ad;
 }
 
 .bonus[data-empty='true'] {
