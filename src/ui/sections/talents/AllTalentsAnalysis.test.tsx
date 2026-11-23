@@ -7,7 +7,7 @@ import { talents as TALENTS } from '@/data';
 import { analyzableTalents } from '@/engine/talentAnalysis';
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
-import { allTalentsKey } from '@/state/talentAnalysis';
+import { allTalentsInputs, allTalentsKey } from '@/state/talentAnalysis';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { useAllAnalysisStore } from './allAnalysisStore';
@@ -15,6 +15,15 @@ import { useAnalysisStore } from './analysisStore';
 import { TalentsPage } from './TalentsPage';
 
 vi.setConfig({ testTimeout: 120_000 });
+
+/** Set the hero level of the active account (a fresh one is low, and most talents are gated). */
+const setHeroLevel = (level: number): void => {
+  const profile = selectActiveProfile(useStore.getState());
+  if (profile === undefined) throw new Error('no active profile');
+  useStore.getState().updateProfile(profile.id, (current) => ({
+    talents: { ...current.talents, heroLevel: level },
+  }));
+};
 
 beforeEach(() => {
   globalThis.localStorage.clear();
@@ -36,6 +45,7 @@ const openDialog = (): void => {
 const openCard = (): HTMLElement => screen.getByRole('region', { name: 'Talent ranking' });
 
 test('pressing the button opens the dialog and runs; the ranking shows once done, listing every analysable talent with the not-rated count', async () => {
+  setHeroLevel(1000);
   renderWithTheme(<TalentsPage />);
   openDialog();
   expect(screen.queryByRole('region', { name: 'Talent ranking' })).toBeNull();
@@ -49,6 +59,8 @@ test('pressing the button opens the dialog and runs; the ranking shows once done
       .map((h) => h.textContent),
   ).toEqual(['Talent', 'Held', 'Max', 'Gain at max', 'Per point']);
   expect(screen.getByText(`${String(notRated)} not rated in battle`)).toBeTruthy();
+  // With nothing bought, the nodes under a root say what it takes to reach them.
+  expect(within(card).getAllByText(/\d+ pts? to reach/).length).toBeGreaterThan(0);
   // Default sort is gain per point, best first.
   const perPoint = rows.map((row) => within(row).getAllByRole('cell')[4]?.textContent ?? '');
   const numbers = perPoint.map((text) => Number.parseFloat(text)).filter((n) => !Number.isNaN(n));
@@ -238,4 +250,19 @@ test('the reading is chosen in the dialog: another one starts a run under anothe
   expect(screen.getByText(/The steadiest/)).toBeTruthy();
   screen.queryByRole('button', { name: 'Cancel' })?.click();
   useAllAnalysisStore.setState({ method: 'current' });
+});
+
+test('talents the hero level does not open are left out and counted; a node under an unbought parent says what it takes to reach it', async () => {
+  setHeroLevel(1);
+  renderWithTheme(<TalentsPage />);
+  openDialog();
+  await screen.findByRole('region', { name: 'Talent ranking' }, { timeout: 110_000 });
+  const rows = within(openCard()).getAllByRole('row').slice(1);
+  const profile = selectActiveProfile(useStore.getState())!;
+  const { levelLocked } = allTalentsInputs(profile, selectActiveSetup(useStore.getState())!);
+  expect(levelLocked).toBeGreaterThan(0);
+  expect(rows).toHaveLength(rated.length - levelLocked);
+  expect(screen.getByText(new RegExp(`${String(levelLocked)} locked by hero level and left out`))).toBeTruthy();
+  // Every pill names points and is on a row that is not open.
+  for (const pill of within(openCard()).queryAllByText(/\d+ pts? to reach/)) expect(pill.closest('tr')).not.toBeNull();
 });

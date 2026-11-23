@@ -17,6 +17,7 @@ import {
   type RankingMethod,
 } from '../engine/talentAnalysis';
 import { heldRank, talentCopy } from '../engine/talentCopy';
+import { talentReach } from '../engine/talents';
 import type { ResolvedSource } from '../engine/types';
 import type { TalentAnalysisInput } from '../worker/talentAnalysis';
 import type { DeriveTables } from './derive';
@@ -84,6 +85,8 @@ export interface TalentAnalysisJob {
   baseline: number;
   /** The input on the march as it stands (the first of `inputs`). */
   input: TalentAnalysisInput;
+  /** Talent points to buy first so that the node can be bought: its missing ancestors' first ranks; 0 when open. */
+  toReach: number;
   /** One input per context the method reads: one for the plain list, a size x enemy grid for the steadier ones. */
   inputs: TalentAnalysisInput[];
 }
@@ -123,16 +126,30 @@ export function allTalentsInputs(
   tables: DeriveTables = DEFAULT_TABLES,
   talentTable: readonly TalentRecord[] = talents,
   method: RankingMethod = 'current',
-): { jobs: TalentAnalysisJob[]; notRated: number; skipped: number } {
+): { jobs: TalentAnalysisJob[]; notRated: number; skipped: number; levelLocked: number } {
   const { rated, notRated } = analyzableTalents(talentTable);
+  const reach = talentReach(talentTable, profile.talents.ranks);
   const jobs: TalentAnalysisJob[] = [];
+  let levelLocked = 0;
   for (const node of rated) {
+    const own = reach.get(node.id);
+    // A talent the hero's level does not open yet (its own gate or an ancestor's) is not a choice: it is left out.
+    if ((own?.levelGate ?? 0) > profile.talents.heroLevel) {
+      levelLocked++;
+      continue;
+    }
     const input = talentAnalysisInput(profile, setup, node, tables, talentTable);
     if (input === null) continue;
     const inputs = method === 'current' ? [input] : contextsOf(input, method);
-    jobs.push({ node, baseline: input.baseline ?? 0, input: inputs[0] ?? input, inputs });
+    jobs.push({
+      node,
+      baseline: input.baseline ?? 0,
+      toReach: own?.pointsToReach ?? 0,
+      input: inputs[0] ?? input,
+      inputs,
+    });
   }
-  return { jobs, notRated, skipped: rated.length - jobs.length };
+  return { jobs, notRated, skipped: rated.length - jobs.length - levelLocked, levelLocked };
 }
 
 /** The question the ranking answers: every number that moves a rating, once for the whole table. */
@@ -145,6 +162,8 @@ export function allTalentsKey(
 ): string {
   return JSON.stringify([
     method,
+    profile.talents.heroLevel,
+    profile.talents.ranks,
     talentTable.map((node) => [node.id, talentBaseline(profile, node, talentTable)]),
     CAMPAIGN.talentFills,
     CAMPAIGN.markerRates,

@@ -13,6 +13,7 @@ import {
   planTalentPriorities,
   planTalents,
   rankGain,
+  talentReach,
   talentGoalWeights,
   unitKindOf,
   type TalentGoal,
@@ -1296,5 +1297,40 @@ describe('troop groups the player does not use (B-23 d)', () => {
     // A rank on such a node is only ever the one a path to a stronger node has to pass through.
     expect([...deepest.values()].filter((rank) => rank > 1)).toEqual([]);
     expect(plan.steps.length).toBeGreaterThan(0);
+  });
+});
+
+
+describe('talentReach: what it takes to buy a node that holds nothing yet', () => {
+  const node = (id: number, parents: number[], levelGate?: number): TalentRecord => ({
+    id,
+    name: `N${String(id)}`,
+    tree: 'battle',
+    maxRank: 3,
+    layout: { x: 0, y: 0, link: null, place: null, flipped: false },
+    parents,
+    ...(levelGate === undefined ? {} : { levelGate }),
+    stats: ['UNIT_POWER'],
+    unitIds: [],
+    values: [1, 2, 3],
+    costs: [2, 3, 4],
+  });
+  // 1 -> 2 -> 3 (gate 30); 4 is a root.
+  const table = [node(1, []), node(2, [1]), node(3, [2], 30), node(4, [])];
+
+  test('a root and a held node cost nothing; each missing ancestor adds its first rank', () => {
+    const none = talentReach(table, {});
+    expect(none.get(1)).toEqual({ levelGate: 0, pointsToReach: 0 });
+    expect(none.get(2)?.pointsToReach).toBe(2);
+    expect(none.get(3)).toEqual({ levelGate: 30, pointsToReach: 4 });
+    expect(talentReach(table, { '1': 1 }).get(3)?.pointsToReach).toBe(2);
+    expect(talentReach(table, { '1': 1, '2': 2 }).get(3)?.pointsToReach).toBe(0);
+    expect(talentReach(table, { '3': 1 }).get(3)).toEqual({ levelGate: 0, pointsToReach: 0 });
+  });
+
+  test('an ancestor still to buy carries its level gate to the node under it', () => {
+    const gated = [node(1, [], 40), node(2, [1])];
+    expect(talentReach(gated, {}).get(2)?.levelGate).toBe(40);
+    expect(talentReach(gated, { '1': 1 }).get(2)?.levelGate).toBe(0);
   });
 });

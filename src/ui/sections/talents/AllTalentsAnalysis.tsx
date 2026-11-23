@@ -3,7 +3,7 @@
  * rating can read: its progress and cancel, and the ranking, shown at once once a run has finished (or one kept from an earlier run). The state is the store's
  * (`allAnalysisStore`), so the card holds nothing a later story would have to pull out of it.
  */
-import { Button, Group, Progress, SegmentedControl, Stack, Text } from '@mantine/core';
+import { Badge, Button, Group, Progress, SegmentedControl, Stack, Text } from '@mantine/core';
 import { useMemo, useState } from 'react';
 
 import type { RankingMethod } from '@/engine/talentAnalysis';
@@ -117,6 +117,11 @@ function Ranking({
                 >
                   {row.name}
                 </button>
+                {row.toReach > 0 && (
+                  <Badge size="xs" variant="light" color="gray" ml={6} title="Talent points to spend on the nodes above it before it opens">
+                    {`${String(row.toReach)} pt${row.toReach === 1 ? '' : 's'} to reach`}
+                  </Badge>
+                )}
               </td>
               <td>{row.held}</td>
               <td>{row.max}</td>
@@ -221,7 +226,10 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
       </Text>
       {rows !== null && ranking !== null && (
         <>
-          <Text size="sm">{`${String(ranking.notRated)} not rated in battle`}</Text>
+          <Text size="sm">
+            {`${String(ranking.notRated)} not rated in battle`}
+            {ranking.levelLocked > 0 && `, ${String(ranking.levelLocked)} locked by hero level and left out`}
+          </Text>
           <Ranking rows={rows} sort={sort} onSort={setSort} stale={stale} onSelect={onSelect} />
         </>
       )}

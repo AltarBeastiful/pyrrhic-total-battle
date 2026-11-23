@@ -14,6 +14,8 @@ export interface RankingEntry {
   analysis: TalentAnalysis;
   /** What the per-point figure is: the endpoint over the points (the plain list) or the fitted slope (the grid methods). */
   score?: 'endpoint' | 'slope';
+  /** Talent points to buy first to reach the node; 0 when it is open. */
+  toReach?: number;
 }
 
 /** One talent's analyses in several contexts as one: the same ranks, every gain the mean over the contexts. */
@@ -42,12 +44,14 @@ export interface RankingRow {
   points: number;
   /** Gain at max over points; null when nothing is left to buy. */
   perPoint: number | null;
+  /** Talent points to buy first to reach the node (its missing ancestors); 0 when it is open. */
+  toReach: number;
 }
 
 export type RankingSort = 'perPoint' | 'gainAtMax' | 'name';
 
 export function rankTalents(entries: readonly RankingEntry[], sort: RankingSort = 'perPoint'): RankingRow[] {
-  const rows = entries.map(({ node, held, analysis, score }): RankingRow => {
+  const rows = entries.map(({ node, held, analysis, score, toReach }): RankingRow => {
     const baseline = analysis.ranks[0] ?? held;
     const points = node.costs.slice(baseline, node.maxRank).reduce((sum, cost) => sum + cost, 0);
     const gainAtMax = analysis.mean.at(-1) ?? 0;
@@ -59,6 +63,7 @@ export function rankTalents(entries: readonly RankingEntry[], sort: RankingSort 
       max: node.maxRank,
       gainAtMax,
       points,
+      toReach: toReach ?? 0,
       perPoint:
         points === 0 ? null : score === 'slope' ? slopeOf(pointsAt(node, analysis.ranks), analysis.mean) : gainAtMax / points,
     };

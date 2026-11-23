@@ -683,3 +683,48 @@ function planCore(
     nextGate,
   };
 }
+
+
+/** What it takes to buy the first rank of a node that holds none yet. */
+export interface TalentReach {
+  /** The highest hero-level gate on the way (the node's own and every ancestor still to buy). 0 when none. */
+  levelGate: number;
+  /** Talent points of the first rank of each ancestor still to buy: what it costs to *reach* the node. */
+  pointsToReach: number;
+}
+
+/**
+ * The reach of every node of `table` given the ranks held: the ancestors with no rank yet must each get one (their first
+ * rank's cost) and the highest hero-level gate among them and the node decides whether it is open at `heroLevel`. A
+ * node already held is open and costs nothing to reach. The same closure the plan uses to lock a tile.
+ */
+export function talentReach(
+  table: readonly TalentRecord[],
+  ranks: Readonly<Record<string, number>>,
+): Map<number, TalentReach> {
+  const byId = new Map(table.map((node) => [node.id, node]));
+  const heldOf = (id: number): number => ranks[String(id)] ?? 0;
+  const out = new Map<number, TalentReach>();
+  for (const node of table) {
+    if (heldOf(node.id) > 0) {
+      out.set(node.id, { levelGate: 0, pointsToReach: 0 });
+      continue;
+    }
+    const seen = new Set<number>();
+    let gate = 0;
+    let points = 0;
+    const visit = (id: number, isTarget: boolean): void => {
+      if (seen.has(id)) return;
+      seen.add(id);
+      const one = byId.get(id);
+      if (one === undefined) return;
+      if (!isTarget && heldOf(id) >= 1) return;
+      for (const parent of one.parents) visit(parent, false);
+      gate = Math.max(gate, one.levelGate ?? 0);
+      if (!isTarget) points += one.costs[0] ?? 0;
+    };
+    visit(node.id, true);
+    out.set(node.id, { levelGate: gate, pointsToReach: points });
+  }
+  return out;
+}

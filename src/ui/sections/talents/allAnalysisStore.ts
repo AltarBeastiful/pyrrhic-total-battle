@@ -23,6 +23,8 @@ export interface KeptRanking {
   key: string;
   entries: RankingEntry[];
   notRated: number;
+  /** How many the hero's level does not open yet, left out. */
+  levelLocked: number;
 }
 
 export interface AllRun {
@@ -34,6 +36,8 @@ export interface AllRun {
   entries: RankingEntry[] | null;
   /** How many talents the rating cannot read. */
   notRated: number;
+  /** How many the hero's level does not open yet. */
+  levelLocked: number;
   error: string | null;
   /** The last finished ranking before this run began; null when there was none. */
   kept: KeptRanking | null;
@@ -42,7 +46,7 @@ export interface AllRun {
 /** The ranking a run stands on: its own once done, else the one it kept. Never partial. */
 export function rankingOf(run: AllRun | null): KeptRanking | null {
   if (run === null) return null;
-  if (run.entries !== null) return { key: run.key, entries: run.entries, notRated: run.notRated };
+  if (run.entries !== null) return { key: run.key, entries: run.entries, notRated: run.notRated, levelLocked: run.levelLocked };
   return run.kept;
 }
 
@@ -82,13 +86,13 @@ export async function analyzeAll(
   method: RankingMethod = useAllAnalysisStore.getState().method,
 ): Promise<void> {
   cancelAll();
-  const { jobs, notRated } = allTalentsInputs(profile, setup, undefined, undefined, method);
+  const { jobs, notRated, levelLocked } = allTalentsInputs(profile, setup, undefined, undefined, method);
   const key = allTalentsKey(profile, setup, undefined, undefined, method);
   const own = new AbortController();
   controller = own;
   const { set, run: before } = useAllAnalysisStore.getState();
   const kept = rankingOf(before);
-  set({ key, status: 'running', done: 0, total: 0, entries: null, notRated, error: null, kept });
+  set({ key, status: 'running', done: 0, total: 0, entries: null, notRated, levelLocked, error: null, kept });
   const live = (): AllRun | null => {
     const run = useAllAnalysisStore.getState().run;
     return run !== null && run.key === key && run.status === 'running' && controller === own ? run : null;
@@ -117,6 +121,7 @@ export async function analyzeAll(
           held: heldRank(job.node, profile.talents.ranks),
           analysis: combineAnalyses(own),
           score: RANKING_PLANS[method].score,
+          toReach: job.toReach,
         };
       });
       set({ ...run, status: 'done', entries });

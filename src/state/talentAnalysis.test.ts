@@ -171,6 +171,33 @@ describe('allTalentsInputs (B-28)', () => {
     expect(balanced.inputs.every((one) => one.reading === 'sized')).toBe(true);
   });
 
+  it('a talent the hero level does not open is left out and counted; a held ancestor opens it', () => {
+    const { profile, setup } = account();
+    const gated: TalentRecord = { ...other, levelGate: 40 };
+    const child: TalentRecord = { ...melee, id: 25200, parents: [gated.id] };
+    const table = [melee, gated, child];
+    profile.talents.heroLevel = 20;
+    const low = allTalentsInputs(profile, setup, undefined, table);
+    expect(low.jobs.map((job) => job.node.id)).toEqual([25100]);
+    expect(low.levelLocked).toBe(2);
+    expect(low.skipped).toBe(0);
+    profile.talents.heroLevel = 40;
+    const high = allTalentsInputs(profile, setup, undefined, table);
+    expect(high.jobs.map((job) => job.node.id)).toEqual([25100, 25101, 25200]);
+    expect(high.levelLocked).toBe(0);
+    // The child needs its parent's first rank (1 point) before it opens.
+    expect(high.jobs.map((job) => job.toReach)).toEqual([0, 0, 1]);
+    profile.talents.ranks = { [String(gated.id)]: 1 };
+    expect(allTalentsInputs(profile, setup, undefined, table).jobs.map((job) => job.toReach)).toEqual([0, 0, 0]);
+  });
+
+  it('the key moves with the hero level and the held ranks', () => {
+    const { profile, setup } = account();
+    const same = allTalentsKey(profile, setup, undefined, [melee]);
+    profile.talents.heroLevel += 5;
+    expect(allTalentsKey(profile, setup, undefined, [melee])).not.toBe(same);
+  });
+
   it('the key names the method', () => {
     const { profile, setup } = account();
     const keys = (['current', 'march', 'balanced', 'steady'] as const).map((method) =>

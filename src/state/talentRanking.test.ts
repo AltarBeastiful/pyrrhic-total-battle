@@ -74,3 +74,12 @@ describe('the slope score and the combination of contexts', () => {
     expect(combineAnalyses([one])).toBe(one);
   });
 });
+
+test('a row carries the points still to buy above it, 0 when it is open', () => {
+  const rows = rankTalents([
+    { node: node(1, [1, 1]), held: 0, analysis: analysis([0, 1, 2], [0, 1, 2]), toReach: 3 },
+    { node: node(2, [1, 1]), held: 0, analysis: analysis([0, 1, 2], [0, 1, 2]) },
+  ]);
+  expect(rows.find((row) => row.id === 1)?.toReach).toBe(3);
+  expect(rows.find((row) => row.id === 2)?.toReach).toBe(0);
+});
