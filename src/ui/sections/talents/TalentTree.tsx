@@ -388,7 +388,7 @@ export function TalentTree({
                               }}
                             />
                           </span>
-                          <b className={classes.bonus}>
+                          <b className={classes.bonus} data-empty={bought === 0 && plus === 0}>
                             {bought > 0 || plus > 0 ? bonusWords(n, bought, plus) : '—'}
                           </b>
                         </>

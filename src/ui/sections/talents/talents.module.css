@@ -229,6 +229,10 @@
   background: #7dd6ad;
 }
 
+.bonus[data-empty='true'] {
+  color: #6b7173;
+}
+
 .bonus {
   flex: none;
   min-width: 42px;
