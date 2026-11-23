@@ -39,7 +39,7 @@ function Ranking({
 }) {
   return (
     <div
-      className={classes.rankBox}
+      className={`${classes.rankBox} ${classes.rankBoxTall}`}
       role="region"
       aria-label="Talent ranking"
       tabIndex={0}
@@ -167,6 +167,9 @@ export function AllTalentsAnalysis({ onSelect }: { onSelect: (id: number) => voi
       )}
       <Text size="sm" c="dimmed">
         Ranks every talent the battle rating reads by what its remaining ranks add to your march.
+      </Text>
+      <Text size="sm" c="dimmed">
+        {`Priced on this march: ${setup.housing.leadership.toLocaleString('en')} leadership, ${setup.housing.authority.toLocaleString('en')} authority, ${setup.housing.dominance.toLocaleString('en')} dominance, and its enemy formation. A smaller or larger army, or another enemy, can rank the talents differently.`}
       </Text>
       {rows !== null && ranking !== null && (
         <>

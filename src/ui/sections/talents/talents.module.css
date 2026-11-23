@@ -573,6 +573,11 @@
   border-radius: var(--mantine-radius-sm);
 }
 
+/* The Analyze all dialog's ranking: tall, so most of the 55 rows are in view (B-28). */
+.rankBoxTall {
+  max-height: min(65vh, 40rem);
+}
+
 /* The ranks of a node on one line: wraps when the pane is narrow. */
 .rankLine {
   display: flex;
