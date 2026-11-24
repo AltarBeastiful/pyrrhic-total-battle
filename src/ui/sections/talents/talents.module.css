@@ -573,10 +573,19 @@
   border-radius: var(--mantine-radius-sm);
 }
 
-/* The Analyze all dialog's ranking: tall, so most of the 55 rows are in view (B-28). */
+/* The Analyze all dialog's ranking: tall, so most of the 55 rows are in view (B-28). It takes what the dialog
+   leaves under its title and controls (the dialog is 90 % of the screen), so the dialog never scrolls too. */
 .rankBoxTall {
   composes: rankBox;
-  max-height: min(65vh, 40rem);
+  max-height: max(12rem, calc(90dvh - 21rem));
+}
+
+/* On a short screen the table gives up its own scroll and the dialog scrolls alone: never two at once. */
+@media (max-height: 36rem) {
+  .rankBoxTall {
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 /* The ranks of a node on one line: wraps when the pane is narrow. */
