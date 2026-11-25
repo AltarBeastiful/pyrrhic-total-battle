@@ -61,7 +61,11 @@ function armies(): Army[] {
     const profile = structuredClone(parsed.payload) as Profile;
     const setup = profile.setups.find((one) => one.id === profile.activeSetupId) ?? profile.setups[0];
     if (setup !== undefined) {
-      out.push({ label: `${file.replace('pyrrhic-my-account-', '').replace('.json', '')} (${String(setup.housing.leadership)})`, profile, setup });
+      out.push({
+        label: `${file.replace('pyrrhic-my-account-', '').replace('.json', '')} (${String(setup.housing.leadership)})`,
+        profile,
+        setup,
+      });
     }
   }
   // a small first-run army
@@ -79,8 +83,12 @@ function armies(): Army[] {
 /** Hold `share` of the battle trees' points, bought in layout order, a node only once its parents hold a rank. */
 function withPoints(army: Army, share: number): Army {
   const profile = structuredClone(army.profile);
-  const trees = new Set(talents.filter((n) => n.stats.some((s) => s === 'UNIT_POWER' || s === 'UNIT_HEALTH')).map((n) => n.tree));
-  const nodes = talents.filter((n) => trees.has(n.tree)).sort((a, b) => a.layout.y - b.layout.y || a.layout.x - b.layout.x);
+  const trees = new Set(
+    talents.filter((n) => n.stats.some((s) => s === 'UNIT_POWER' || s === 'UNIT_HEALTH')).map((n) => n.tree),
+  );
+  const nodes = talents
+    .filter((n) => trees.has(n.tree))
+    .sort((a, b) => a.layout.y - b.layout.y || a.layout.x - b.layout.x);
   const cost = (n: TalentRecord): number => n.costs.reduce((a, b) => a + b, 0);
   let budget = nodes.reduce((sum, n) => sum + cost(n), 0) * share;
   const ranks: Record<string, number> = {};
@@ -99,7 +107,10 @@ function withPoints(army: Army, share: number): Army {
   const has = profile.sources.permanent.some((e) => e.builtin === 'heroTalents');
   profile.sources.permanent = has
     ? profile.sources.permanent.map((e) => (e.builtin === 'heroTalents' ? { ...e, ...lines } : e))
-    : [...profile.sources.permanent, { id: 'heroTalents', name: 'Hero Talents', builtin: 'heroTalents' as const, ...lines }];
+    : [
+        ...profile.sources.permanent,
+        { id: 'heroTalents', name: 'Hero Talents', builtin: 'heroTalents' as const, ...lines },
+      ];
   return { label: `${army.label} @${String(Math.round(share * 100))} %`, profile, setup: army.setup };
 }
 
@@ -125,7 +136,10 @@ const ENEMIES: Record<string, Record<string, number>> = {
   rangedHeavy: { melee: 0.1, ranged: 0.7, mounted: 0.1, flying: 0.1 },
   mountedHeavy: { melee: 0.1, ranged: 0.1, mounted: 0.7, flying: 0.1 },
 };
-const withEnemy = (setup: BattleSetup, name: string): BattleSetup => ({ ...setup, enemy: ENEMIES[name] as BattleSetup['enemy'] });
+const withEnemy = (setup: BattleSetup, name: string): BattleSetup => ({
+  ...setup,
+  enemy: ENEMIES[name] as BattleSetup['enemy'],
+});
 
 const cache = new Map<string, Priced[]>();
 function price(army: Army, setup: BattleSetup, mode: Mode, tag: string): Priced[] {
@@ -139,25 +153,40 @@ function price(army: Army, setup: BattleSetup, mode: Mode, tag: string): Priced[
     const perFill = CAMPAIGN.talentFills.map((fill) => {
       const request: StackRequest = {
         ...input.request,
-        housing: { ...input.request.housing, leadership: Math.floor((input.request.housing.leadership * fill) / 100) },
+        housing: {
+          ...input.request.housing,
+          leadership: Math.floor((input.request.housing.leadership * fill) / 100),
+        },
       };
       const stops =
         mode === 'fixed'
           ? [
               {
                 pick: 'fixed',
-                counts: countsOf(sizeStacks({ ...request, totals: lineups[0]!.totals, options: { ...request.options, method: 'elite' } })),
+                counts: countsOf(
+                  sizeStacks({
+                    ...request,
+                    totals: lineups[0]!.totals,
+                    options: { ...request.options, method: 'elite' },
+                  }),
+                ),
               },
             ]
           : [];
-      const screens = screenLineups(lineups, lineups[0]!.key, stops, lineupPricer(request), CAMPAIGN.markerRates);
+      const screens = screenLineups(
+        lineups,
+        lineups[0]!.key,
+        stops,
+        lineupPricer(request),
+        CAMPAIGN.markerRates,
+      );
       return screens.map((s) => (mode === 'sized' ? s.sized : (s.repriced[0] ?? 0)));
     });
     const gains = lineups.map((_, i) => perFill.reduce((s, g) => s + (g[i] ?? 0), 0) / perFill.length);
     let acc = 0;
     const points = input.ranks.map(({ rank }, i) => {
       if (i === 0) return 0;
-      for (let r = (input.ranks[i - 1]?.rank ?? baseline); r < rank; r++) acc += node.costs[r] ?? 0;
+      for (let r = input.ranks[i - 1]?.rank ?? baseline; r < rank; r++) acc += node.costs[r] ?? 0;
       return acc;
     });
     return { id: node.id, points, gains };
@@ -197,7 +226,8 @@ const ranksOf = (s: Score): Map<number, number> => {
 };
 const meanScores = (list: Score[]): Score => {
   const out: Score = new Map();
-  for (const id of list[0]?.keys() ?? []) out.set(id, list.reduce((s, m) => s + (m.get(id) ?? 0), 0) / list.length);
+  for (const id of list[0]?.keys() ?? [])
+    out.set(id, list.reduce((s, m) => s + (m.get(id) ?? 0), 0) / list.length);
   return out;
 };
 
@@ -207,9 +237,18 @@ interface Method {
   score: (army: Army, setup: BattleSetup) => Score;
 }
 const METHODS: Method[] = [
-  { name: 'M0 current (endpoint, sized, own setup)', score: (a, s) => scoreOf(price(a, s, 'sized', 'x'), endpoint) },
-  { name: 'M1 slope through all ranks (sized, own setup)', score: (a, s) => scoreOf(price(a, s, 'sized', 'x'), slope) },
-  { name: 'M2 fixed counts (re-priced, own setup)', score: (a, s) => scoreOf(price(a, s, 'fixed', 'x'), endpoint) },
+  {
+    name: 'M0 current (endpoint, sized, own setup)',
+    score: (a, s) => scoreOf(price(a, s, 'sized', 'x'), endpoint),
+  },
+  {
+    name: 'M1 slope through all ranks (sized, own setup)',
+    score: (a, s) => scoreOf(price(a, s, 'sized', 'x'), slope),
+  },
+  {
+    name: 'M2 fixed counts (re-priced, own setup)',
+    score: (a, s) => scoreOf(price(a, s, 'fixed', 'x'), endpoint),
+  },
   {
     name: 'M3 size mean (endpoint, x0.5 x0.75 x1 x1.5)',
     score: (a, s) => meanScores(SIZES.map((f) => scoreOf(price(a, scaled(s, f), 'sized', 'x'), endpoint))),
@@ -226,24 +265,33 @@ const METHODS: Method[] = [
     name: 'M6 size x enemy mean of slopes (16 contexts)',
     score: (a, s) =>
       meanScores(
-        SIZES.flatMap((f) => Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(scaled(s, f), e), 'sized', 'x'), slope))),
+        SIZES.flatMap((f) =>
+          Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(scaled(s, f), e), 'sized', 'x'), slope)),
+        ),
       ),
   },
   {
     name: 'M9 size x enemy mean, fixed counts, slope',
     score: (a, s) =>
       meanScores(
-        SIZES.flatMap((f) => Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(scaled(s, f), e), 'fixed', 'x'), slope))),
+        SIZES.flatMap((f) =>
+          Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(scaled(s, f), e), 'fixed', 'x'), slope)),
+        ),
       ),
   },
   {
     name: 'M10 enemy mean only (own size, sized, slope)',
-    score: (a, s) => meanScores(Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(s, e), 'sized', 'x'), slope))),
+    score: (a, s) =>
+      meanScores(Object.keys(ENEMIES).map((e) => scoreOf(price(a, withEnemy(s, e), 'sized', 'x'), slope))),
   },
   {
     name: 'M11 size mean only over 8 sizes (sized, slope)',
     score: (a, s) =>
-      meanScores([0.25, 0.4, 0.55, 0.7, 0.85, 1, 1.25, 1.5].map((f) => scoreOf(price(a, scaled(s, f), 'sized', 'x'), slope))),
+      meanScores(
+        [0.25, 0.4, 0.55, 0.7, 0.85, 1, 1.25, 1.5].map((f) =>
+          scoreOf(price(a, scaled(s, f), 'sized', 'x'), slope),
+        ),
+      ),
   },
   {
     name: 'M12 naive: bonus points per talent point (no battle)',
@@ -252,7 +300,8 @@ const METHODS: Method[] = [
       for (const job of allTalentsInputs(a.profile, a.setup).jobs) {
         const node = job.node;
         const points = node.costs.slice(job.baseline, node.maxRank).reduce((x, y) => x + y, 0);
-        if (points > 0) out.set(node.id, ((node.values.at(-1) ?? 0) - (node.values[job.baseline - 1] ?? 0)) / points);
+        if (points > 0)
+          out.set(node.id, ((node.values.at(-1) ?? 0) - (node.values[job.baseline - 1] ?? 0)) / points);
       }
       return out;
     },
@@ -262,7 +311,8 @@ const METHODS: Method[] = [
     score: (a, s) => {
       const ranked = SIZES.map((f) => ranksOf(scoreOf(price(a, scaled(s, f), 'sized', 'x'), slope)));
       const out: Score = new Map();
-      for (const id of ranked[0]?.keys() ?? []) out.set(id, -ranked.reduce((sum, r) => sum + (r.get(id) ?? 0), 0) / ranked.length);
+      for (const id of ranked[0]?.keys() ?? [])
+        out.set(id, -ranked.reduce((sum, r) => sum + (r.get(id) ?? 0), 0) / ranked.length);
       return out;
     },
   },
@@ -286,8 +336,10 @@ function spearman(a: Score, b: Score): number {
   for (const id of ids) d2 += ((sa.get(id) ?? 0) - (sb.get(id) ?? 0)) ** 2;
   return 1 - (6 * d2) / (n * (n * n - 1));
 }
-const top = (s: Score, n: number): Set<number> => new Set([...ranksOf(s).entries()].filter(([, r]) => r <= n).map(([id]) => id));
-const overlap = (a: Score, b: Score, n = 10): number => [...top(a, n)].filter((id) => top(b, n).has(id)).length;
+const top = (s: Score, n: number): Set<number> =>
+  new Set([...ranksOf(s).entries()].filter(([, r]) => r <= n).map(([id]) => id));
+const overlap = (a: Score, b: Score, n = 10): number =>
+  [...top(a, n)].filter((id) => top(b, n).has(id)).length;
 
 describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
   it('scores each method on stability and agreement', async () => {
@@ -298,7 +350,10 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
       sizes.flatMap((f) => Object.keys(ENEMIES).map((e) => withEnemy(scaled(army.setup, f), e)));
     const stab: Record<string, { sp: number[]; top: number[]; agree: number[] }> = {};
     for (const m of METHODS) stab[m.name] = { sp: [], top: [], agree: [] };
-    const perState: string[] = ['| state | ' + METHODS.map((m) => `${m.name.split(' ')[0] ?? ''} sp / top10`).join(' | ') + ' |', '|---|' + METHODS.map(() => '---|').join('')];
+    const perState: string[] = [
+      '| state | ' + METHODS.map((m) => `${m.name.split(' ')[0] ?? ''} sp / top10`).join(' | ') + ' |',
+      '|---|' + METHODS.map(() => '---|').join(''),
+    ];
     for (const army of states) {
       const setups = mkSetups(army);
       void perturb;
@@ -332,7 +387,10 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
       '',
       '| method | stability (mean pairwise Spearman) | stability (top-10 shared of 10) | agreement with consensus |',
       '|---|---|---|---|',
-      ...METHODS.map((m) => `| ${m.name} | ${mean(stab[m.name]!.sp).toFixed(3)} | ${mean(stab[m.name]!.top).toFixed(2)} | ${mean(stab[m.name]!.agree).toFixed(3)} |`),
+      ...METHODS.map(
+        (m) =>
+          `| ${m.name} | ${mean(stab[m.name]!.sp).toFixed(3)} | ${mean(stab[m.name]!.top).toFixed(2)} | ${mean(stab[m.name]!.agree).toFixed(3)} |`,
+      ),
       '',
       '## Per army and tree state (Spearman / top-10)',
       '',
@@ -348,16 +406,28 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
     const only = process.env.THEORY_STATE === undefined ? undefined : Number(process.env.THEORY_STATE);
     const all = armies().flatMap((army) => [0, 0.5, 1].map((share) => withPoints(army, share)));
     const states = only === undefined ? all : all.filter((_, i) => i === only);
-    const pool = createCalcPool({ size: 1, createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }) });
+    const pool = createCalcPool({
+      size: 1,
+      createClient: () => ({ ...createInlineClient(), mode: 'worker' as const }),
+    });
     const shipped = async (army: Army, setup: BattleSetup, method: RankingMethod): Promise<Score> => {
       const { jobs } = allTalentsInputs(army.profile, setup, undefined, undefined, method);
-      const analyses = await runAllTalentsAnalysis(jobs.flatMap((job) => job.inputs), pool, { budgetMs: Number.MAX_SAFE_INTEGER });
+      const analyses = await runAllTalentsAnalysis(
+        jobs.flatMap((job) => job.inputs),
+        pool,
+        { budgetMs: Number.MAX_SAFE_INTEGER },
+      );
       let at = 0;
       const rows = rankTalents(
         jobs.map((job) => {
           const own = analyses.slice(at, at + job.inputs.length);
           at += job.inputs.length;
-          return { node: job.node, held: heldRank(job.node, army.profile.talents.ranks), analysis: combineAnalyses(own), score: RANKING_PLANS[method].score };
+          return {
+            node: job.node,
+            held: heldRank(job.node, army.profile.talents.ranks),
+            analysis: combineAnalyses(own),
+            score: RANKING_PLANS[method].score,
+          };
         }),
         'perPoint',
       );
@@ -369,7 +439,9 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
     for (const m of RANKING_METHODS) acc[m] = { sp: [], top: [], agree: [] };
     const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
     for (const army of states) {
-      const setups = [0.5, 1, 1.5].flatMap((f) => Object.keys(ENEMIES).map((e) => withEnemy(scaled(army.setup, f), e)));
+      const setups = [0.5, 1, 1.5].flatMap((f) =>
+        Object.keys(ENEMIES).map((e) => withEnemy(scaled(army.setup, f), e)),
+      );
       const reference = meanScores(setups.map((s) => scoreOf(price(army, s, 'sized', 'x'), slope)));
       for (const method of RANKING_METHODS) {
         const scores: Score[] = [];
@@ -389,7 +461,10 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
     pool.dispose();
     if (only !== undefined) {
       mkdirSync('tools/theorycraft/out/366', { recursive: true });
-      writeFileSync(`tools/theorycraft/out/366/${String(only)}.json`, JSON.stringify({ label: states[0]?.label, acc }));
+      writeFileSync(
+        `tools/theorycraft/out/366/${String(only)}.json`,
+        JSON.stringify({ label: states[0]?.label, acc }),
+      );
       return;
     }
     const md = [
@@ -399,7 +474,10 @@ describe.skipIf(!process.env.THEORY)('365 — a steadier Analyze all', () => {
       '',
       '| reading | stability (Spearman) | stability (top-10 of 10) | agreement with consensus |',
       '|---|---|---|---|',
-      ...RANKING_METHODS.map((m) => `| ${m} | ${mean(acc[m]!.sp).toFixed(3)} | ${mean(acc[m]!.top).toFixed(2)} | ${mean(acc[m]!.agree).toFixed(3)} |`),
+      ...RANKING_METHODS.map(
+        (m) =>
+          `| ${m} | ${mean(acc[m]!.sp).toFixed(3)} | ${mean(acc[m]!.top).toFixed(2)} | ${mean(acc[m]!.agree).toFixed(3)} |`,
+      ),
     ];
     writeFileSync('tools/theorycraft/out/366-shipped-rankings.md', `${md.join('\n')}\n`);
     expect(mean(acc.steady!.sp)).toBeGreaterThan(mean(acc.current!.sp));

@@ -1300,7 +1300,6 @@ describe('troop groups the player does not use (B-23 d)', () => {
   });
 });
 
-
 describe('talentReach: what it takes to buy a node that holds nothing yet', () => {
   const node = (id: number, parents: number[], levelGate?: number): TalentRecord => ({
     id,

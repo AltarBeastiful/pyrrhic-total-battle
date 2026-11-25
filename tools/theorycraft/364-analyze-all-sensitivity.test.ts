@@ -64,8 +64,14 @@ describe.skipIf(!process.env.THEORY)('364 — Analyze all sensitivity to the set
       { label: 'housing ×1.5', setup: scaled(setup, 1.5) },
       { label: 'method elite', setup: { ...setup, options: { ...setup.options, method: 'elite' } } },
       { label: 'method ms', setup: { ...setup, options: { ...setup.options, method: 'ms' } } },
-      { label: 'enemy all melee', setup: { ...setup, enemy: { ...setup.enemy, melee: 1, ranged: 0, mounted: 0, flying: 0 } } },
-      { label: 'enemy all ranged', setup: { ...setup, enemy: { ...setup.enemy, melee: 0, ranged: 1, mounted: 0, flying: 0 } } },
+      {
+        label: 'enemy all melee',
+        setup: { ...setup, enemy: { ...setup.enemy, melee: 1, ranged: 0, mounted: 0, flying: 0 } },
+      },
+      {
+        label: 'enemy all ranged',
+        setup: { ...setup, enemy: { ...setup.enemy, melee: 0, ranged: 1, mounted: 0, flying: 0 } },
+      },
     ];
     const pool = createCalcPool({
       size: 1,
