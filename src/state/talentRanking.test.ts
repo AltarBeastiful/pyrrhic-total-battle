@@ -61,7 +61,9 @@ describe('rankTalents', () => {
 describe('the slope score and the combination of contexts', () => {
   test('a slope fits every priced rank: a noisy endpoint no longer decides', () => {
     // Gains 0, 1, 2, 3, 12 over 4 points: the endpoint says 3 per point, the fit says 2.3 (the 12 is noise).
-    const noisy = [{ node: node(1, [1, 1, 1, 1]), held: 0, analysis: analysis([0, 1, 2, 3, 4], [0, 1, 2, 3, 12]) }];
+    const noisy = [
+      { node: node(1, [1, 1, 1, 1]), held: 0, analysis: analysis([0, 1, 2, 3, 4], [0, 1, 2, 3, 12]) },
+    ];
     expect(rankTalents(noisy)[0]?.perPoint).toBe(3);
     const fitted = rankTalents(noisy.map((entry) => ({ ...entry, score: 'slope' as const })))[0]?.perPoint;
     expect(fitted).toBeCloseTo((1 * 1 + 2 * 2 + 3 * 3 + 4 * 12) / (1 + 4 + 9 + 16), 10);

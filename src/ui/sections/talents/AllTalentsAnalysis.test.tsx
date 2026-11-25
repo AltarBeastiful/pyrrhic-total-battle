@@ -263,7 +263,10 @@ test('talents the hero level does not open are left out and counted; a node unde
   const { levelLocked } = allTalentsInputs(profile, selectActiveSetup(useStore.getState())!);
   expect(levelLocked).toBeGreaterThan(0);
   expect(rows).toHaveLength(rated.length - levelLocked);
-  expect(screen.getByText(new RegExp(`${String(levelLocked)} locked by hero level and left out`))).toBeTruthy();
+  expect(
+    screen.getByText(new RegExp(`${String(levelLocked)} locked by hero level and left out`)),
+  ).toBeTruthy();
   // Every pill names points and is on a row that is not open.
-  for (const pill of within(openCard()).queryAllByText(/\d+ pts? to reach/)) expect(pill.closest('tr')).not.toBeNull();
+  for (const pill of within(openCard()).queryAllByText(/\d+ pts? to reach/))
+    expect(pill.closest('tr')).not.toBeNull();
 });

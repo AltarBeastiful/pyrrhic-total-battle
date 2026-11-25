@@ -46,7 +46,8 @@ export interface AllRun {
 /** The ranking a run stands on: its own once done, else the one it kept. Never partial. */
 export function rankingOf(run: AllRun | null): KeptRanking | null {
   if (run === null) return null;
-  if (run.entries !== null) return { key: run.key, entries: run.entries, notRated: run.notRated, levelLocked: run.levelLocked };
+  if (run.entries !== null)
+    return { key: run.key, entries: run.entries, notRated: run.notRated, levelLocked: run.levelLocked };
   return run.kept;
 }
 

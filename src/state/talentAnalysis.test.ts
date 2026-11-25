@@ -188,7 +188,9 @@ describe('allTalentsInputs (B-28)', () => {
     // The child needs its parent's first rank (1 point) before it opens.
     expect(high.jobs.map((job) => job.toReach)).toEqual([0, 0, 1]);
     profile.talents.ranks = { [String(gated.id)]: 1 };
-    expect(allTalentsInputs(profile, setup, undefined, table).jobs.map((job) => job.toReach)).toEqual([0, 0, 0]);
+    expect(allTalentsInputs(profile, setup, undefined, table).jobs.map((job) => job.toReach)).toEqual([
+      0, 0, 0,
+    ]);
   });
 
   it('the key moves with the hero level and the held ranks', () => {

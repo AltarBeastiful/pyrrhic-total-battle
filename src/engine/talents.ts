@@ -684,7 +684,6 @@ function planCore(
   };
 }
 
-
 /** What it takes to buy the first rank of a node that holds none yet. */
 export interface TalentReach {
   /** The highest hero-level gate on the way (the node's own and every ancestor still to buy). 0 when none. */

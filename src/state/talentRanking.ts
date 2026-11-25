@@ -65,7 +65,11 @@ export function rankTalents(entries: readonly RankingEntry[], sort: RankingSort 
       points,
       toReach: toReach ?? 0,
       perPoint:
-        points === 0 ? null : score === 'slope' ? slopeOf(pointsAt(node, analysis.ranks), analysis.mean) : gainAtMax / points,
+        points === 0
+          ? null
+          : score === 'slope'
+            ? slopeOf(pointsAt(node, analysis.ranks), analysis.mean)
+            : gainAtMax / points,
     };
   });
   const measure = (row: RankingRow): number => (sort === 'gainAtMax' ? row.gainAtMax : (row.perPoint ?? 0));

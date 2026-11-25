@@ -23,7 +23,8 @@ const METHOD_LABELS: Record<RankingMethod, { label: string; words: string }> = {
   },
   march: {
     label: 'This march',
-    words: 'Keeps this march’s troop counts and reads what each rank adds to them, on this army and this enemy alone.',
+    words:
+      'Keeps this march’s troop counts and reads what each rank adds to them, on this army and this enemy alone.',
   },
   balanced: {
     label: 'Balanced',
@@ -118,7 +119,13 @@ function Ranking({
                   {row.name}
                 </button>
                 {row.toReach > 0 && (
-                  <Badge size="xs" variant="light" color="gray" ml={6} title="Talent points to spend on the nodes above it before it opens">
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color="gray"
+                    ml={6}
+                    title="Talent points to spend on the nodes above it before it opens"
+                  >
                     {`${String(row.toReach)} pt${row.toReach === 1 ? '' : 's'} to reach`}
                   </Badge>
                 )}
