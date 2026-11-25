@@ -122,6 +122,7 @@ const seeded = (): void => {
       total: 1,
       entries,
       notRated: 2,
+      levelLocked: 0,
       error: null,
       kept: null,
     },

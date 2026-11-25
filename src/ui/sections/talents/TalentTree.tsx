@@ -80,6 +80,8 @@ const GAP_X = 34;
 const GAP_Y = 36;
 /** On a phone the cards sit closer, so less of the tree is empty between them; the pad still fits in the row gap. */
 const GAP_X_PHONE = 12;
+/** The column gap never closes below this, however narrow the screen: the lines between cards stay readable. */
+const GAP_X_MIN = 8;
 const GAP_Y_PHONE = 32;
 const TILE_W = 150;
 const TILE_H = 146;
@@ -117,7 +119,19 @@ export function TalentTree({
   const tiles = useRef(new Map<number, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
   const phone = usePhone();
-  const CELL_W = TILE_W + (phone ? GAP_X_PHONE : GAP_X);
+  // The canvas's own width (less its padding) sets the column gap: wide screens keep the game's gap, narrower ones close it up.
+  const [avail, setAvail] = useState<number | null>(null);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (el === null || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      setAvail(el.clientWidth - 24);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
   const CELL_H = TILE_H + (phone ? GAP_Y_PHONE : GAP_Y);
   // An effect runs after the commit that drew this tree, so a tile on a tree just switched to is already there.
   useEffect(() => {
@@ -176,6 +190,13 @@ export function TalentTree({
   const firstCol = Math.min(...nodes.map((n) => n.layout.x));
   const lastCol = Math.max(...nodes.map((n) => n.layout.x));
   const cols = lastCol - firstCol + 1;
+  const gapX =
+    cols > 1 && avail !== null
+      ? Math.max(GAP_X_MIN, Math.min(GAP_X, Math.floor((avail - cols * TILE_W) / (cols - 1))))
+      : phone
+        ? GAP_X_PHONE
+        : GAP_X;
+  const CELL_W = TILE_W + gapX;
   // The plane is relative: it takes the room it has up to the full grid, and the tiles narrow with it.
   const width = cols * CELL_W;
   const height = rows * CELL_H;
