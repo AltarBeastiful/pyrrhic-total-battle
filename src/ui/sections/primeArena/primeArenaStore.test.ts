@@ -52,7 +52,7 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   expect(Object.keys(toggles)).not.toContain('clanTechnologies');
   expect(toggles.talents).toBe(false);
   expect(toggles.hallOfFame).toBe(false);
-  expect(toggles.customization).toBe(true);
+  expect(toggles.monuments).toBe(true);
   expect(seeded).toBe(true);
 });
 

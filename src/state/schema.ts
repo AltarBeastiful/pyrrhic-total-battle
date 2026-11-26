@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -117,6 +117,8 @@ export const BUILTIN_PERMANENT_SOURCES = [
   'clanTechnologies',
   'clanCapitalAppearance',
   'unionOfTriumph',
+  'monuments',
+  'personalTechnologies',
 ] as const;
 export type BuiltinPermanentSource = (typeof BUILTIN_PERMANENT_SOURCES)[number];
 
@@ -306,9 +308,11 @@ export type ActiveSources = z.infer<typeof activeSourcesSchema>;
  * What kind of march this is (schema v8, W17 C5-0), for the captains the game limits to one kind
  * (`onlyOn` in `captains.json`: Amanitore on group marches, Hercules against epic monsters).
  * `'unspecified'` is the default and changes nothing: every captain switched on counts and each
- * restriction is only a caveat, exactly as before the field existed. Naming a type applies them.
+ * restriction is only a caveat, exactly as before the field existed. Naming a type applies them. `'arena'`
+ * (schema v20) is the Prime Arena's own: no `onlyOn` kind is met there, so only the unconditional captains count.
+ * The calculator's march-type control never offers it; the arena's inputs set it.
  */
-export const SETUP_MARCH_TYPES = ['unspecified', ...MARCH_TYPES] as const;
+export const SETUP_MARCH_TYPES = ['unspecified', ...MARCH_TYPES, 'arena'] as const;
 export type SetupMarchType = (typeof SETUP_MARCH_TYPES)[number];
 
 export const battleSetupSchema = syncMetaSchema.extend({

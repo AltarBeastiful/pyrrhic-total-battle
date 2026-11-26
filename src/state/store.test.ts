@@ -33,7 +33,7 @@ describe('first run', () => {
     expect(profile.troops.guardsmen).toEqual({ min: 1, max: 3 });
     expect(profile.troops.specialists).toEqual({ min: 1, max: 1 });
     expect(profile.troops.engineers).toBeNull();
-    expect(profile.sources.permanent).toHaveLength(8);
+    expect(profile.sources.permanent).toHaveLength(10);
     expect(profile.setups).toHaveLength(1);
     expect(selectActiveSetup(store.getState())?.id).toBe(profile.activeSetupId);
   });

@@ -196,7 +196,8 @@ const captainLabel = (
  * `onlyOn` names: Amanitore on a group march, Hercules against epic monsters (W17 C5-0).
  */
 export function captainCounts(record: CaptainRecord | undefined, marchType: SetupMarchType): boolean {
-  return marchType === 'unspecified' || record?.onlyOn === undefined || record.onlyOn === marchType;
+  if (marchType === 'unspecified' || record?.onlyOn === undefined) return true;
+  return marchType !== 'arena' && record.onlyOn === marchType;
 }
 
 /** The kind of march, as the caveat names it. */
@@ -204,6 +205,7 @@ const MARCH_TYPE_PHRASES: Record<Exclude<SetupMarchType, 'unspecified'>, string>
   solo: 'a solo march',
   group: 'a group march',
   epic: 'a march against epic monsters',
+  arena: 'the Prime Arena',
 };
 
 // ---- Artifacts -------------------------------------------------------------------------------------
