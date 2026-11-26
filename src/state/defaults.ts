@@ -76,6 +76,8 @@ export const SOURCE_LABELS: Record<BuiltinPermanentSource | 'talents' | 'dragon'
   clanTechnologies: 'Clan Technologies',
   clanCapitalAppearance: 'Clan Capital Appearance',
   unionOfTriumph: 'Union of Triumph',
+  monuments: 'Monuments',
+  personalTechnologies: 'Personal Technologies',
   talents: 'Talents',
   dragon: 'Dragon',
 };

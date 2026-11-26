@@ -1023,4 +1023,56 @@ describe('migrateProfile', () => {
       expect(migrateProfile(profile, 18).primeArena.troops?.guardsmen).toEqual({ min: 1, max: 5 });
     });
   });
+  describe('v19 → v20 adds the Monuments and Personal Technologies rows and drops the arena switches that vanished', () => {
+    const v19Doc = (): Record<string, unknown> => {
+      const doc = newRoot('device');
+      const profile = JSON.parse(JSON.stringify(doc.profiles[0])) as {
+        sources: { permanent: { id: string; builtin?: string; strength: Record<string, number> }[] };
+        primeArena: { toggles: Record<string, boolean> };
+      };
+      profile.sources.permanent = profile.sources.permanent.filter(
+        (row) => row.builtin !== 'monuments' && row.builtin !== 'personalTechnologies',
+      );
+      const hall = profile.sources.permanent.find((row) => row.builtin === 'hallOfFame');
+      if (hall !== undefined) hall.strength = { army: 4 };
+      profile.primeArena.toggles = {
+        hallOfFame: false,
+        customization: false,
+        monstersBoost: true,
+        talents: false,
+      };
+      return { ...JSON.parse(JSON.stringify(doc)), schemaVersion: 19, profiles: [profile] };
+    };
+
+    it('appends two empty named rows and leaves the typed ones alone', () => {
+      const permanent = migrate(v19Doc()).profiles[0]!.sources.permanent;
+      const row = (builtin: string) => permanent.find((entry) => entry.builtin === builtin);
+      expect(row('monuments')).toMatchObject({
+        id: 'monuments',
+        name: 'Monuments',
+        health: {},
+        strength: {},
+      });
+      expect(row('personalTechnologies')).toMatchObject({
+        id: 'personalTechnologies',
+        name: 'Personal Technologies',
+      });
+      expect(row('hallOfFame')?.strength).toEqual({ army: 4 });
+      expect(permanent.filter((entry) => entry.builtin === 'monuments')).toHaveLength(1);
+    });
+
+    it('keeps only the arena switches that still exist', () => {
+      expect(migrate(v19Doc()).profiles[0]!.primeArena.toggles).toEqual({
+        hallOfFame: false,
+        talents: false,
+      });
+    });
+
+    it('upgrades an exported v19 profile on import, once', () => {
+      const profile = (v19Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 19);
+      expect(once.sources.permanent.some((entry) => entry.builtin === 'monuments')).toBe(true);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 19)).toEqual(once);
+    });
+  });
 });

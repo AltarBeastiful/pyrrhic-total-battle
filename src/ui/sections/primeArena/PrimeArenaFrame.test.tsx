@@ -130,10 +130,9 @@ test('the permanent sources and the talents are the calculator’s chips, under 
     .getAllByRole('checkbox')
     .map((box) => box.getAttribute('aria-label'));
   expect(names).toEqual([
-    'Army Modernization, counted',
-    'Customization, counted',
     'Hall of Fame, counted',
-    'Monsters Boost, counted',
+    'Monuments, counted',
+    'Personal Technologies, counted',
     'Talents, counted',
     'Dragon, not counted', // the squad is seeded from the march, whose dragon is off
   ]);

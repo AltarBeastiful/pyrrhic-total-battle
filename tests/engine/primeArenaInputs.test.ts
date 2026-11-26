@@ -174,6 +174,71 @@ describe('primeArenaInputs', () => {
     expect(out.totals.strength.army).toBe(11);
   });
 
+  it('counts no captain limited to a march kind, only the unconditional ones', () => {
+    const profile = account();
+    profile.sources.captains = [
+      { id: 'c1', captainId: 'alexander', level: 10, star: 2 },
+      { id: 'h', captainId: 'hercules', level: 10, star: 2 }, // onlyOn: epic
+      { id: 'a', captainId: 'amanitore', level: 10, star: 2 }, // onlyOn: group
+    ];
+    const withBoth = primeArenaInputs(base({ profile, setup: squad({ captains: ['c1', 'h', 'a'] }) }));
+    const without = primeArenaInputs(base({ profile, setup: squad({ captains: ['c1'] }) }));
+    expect(withBoth.totals).toEqual(without.totals);
+    // a setup that names another march type cannot bring them back
+    const named = squad({ captains: ['c1', 'h', 'a'] });
+    named.marchType = 'group';
+    expect(primeArenaInputs(base({ profile, setup: named })).totals).toEqual(without.totals);
+  });
+
+  it('counts the typed Monuments and Personal Technologies, and not the stand-ins the arena used to read', () => {
+    expect(PRIME_ARENA_SOURCES).toEqual(expect.arrayContaining(['monuments', 'personalTechnologies']));
+    for (const gone of ['customization', 'armyModernization', 'monstersBoost']) {
+      expect(PRIME_ARENA_SOURCES).not.toContain(gone);
+    }
+    const profile = account();
+    profile.sources.permanent.push(
+      {
+        id: 'monuments',
+        name: 'Monuments',
+        builtin: 'monuments',
+        health: { army: 2 },
+        strength: { melee: 5 },
+      },
+      {
+        id: 'personalTechnologies',
+        name: 'Personal Technologies',
+        builtin: 'personalTechnologies',
+        health: { mounted: 6 },
+        strength: { army: 3 },
+      },
+      {
+        id: 'p-cu',
+        name: 'Customization',
+        builtin: 'customization',
+        health: { army: 50 },
+        strength: { army: 50 },
+      },
+      {
+        id: 'p-am',
+        name: 'Army Modernization',
+        builtin: 'armyModernization',
+        health: { army: 50 },
+        strength: { army: 50 },
+      },
+    );
+    const { totals } = primeArenaInputs(base({ profile }));
+    expect(totals.strength.melee).toBe(60 + 5); // equipment + Monuments
+    expect(totals.health.army).toBe(8 + 2); // dragon + Hall of Fame + Monuments
+    expect(totals.health.mounted).toBe(50 + 6); // captain + Personal Technologies
+    expect(totals.strength.army).toBe(11 + 3);
+    const off = primeArenaInputs(
+      base({ profile, toggles: { monuments: false, personalTechnologies: false } }),
+    );
+    expect(off.totals.strength.melee).toBe(60);
+    expect(off.totals.health.mounted).toBe(50);
+    expect(off.totals.strength.army).toBe(11);
+  });
+
   it('accepts five captains', () => {
     const profile = account();
     profile.sources.captains = ['a', 'b', 'c', 'd', 'e'].map((id) => ({

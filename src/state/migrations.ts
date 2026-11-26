@@ -383,6 +383,38 @@ export function restrictHeroTalentsSource(profile: Record<string, unknown>): Rec
   return { ...profile, sources: { ...sources, permanent } };
 }
 
+/** The switches the arena no longer has (v20): its stand-ins for Monuments and Personal Technologies. */
+const ARENA_V20_DROPPED = ['customization', 'armyModernization', 'monstersBoost'];
+
+/**
+ * `19 → 20` for one profile: the permanent sources gain empty Monuments and Personal Technologies rows (real,
+ * typed sources the arena counts), and the arena's switches for Customization, Army Modernization and Monsters
+ * Boost, which stood in for them, are dropped. A row already present is kept as typed.
+ */
+export function addArenaSources(profile: Record<string, unknown>): Record<string, unknown> {
+  let next = profile;
+  const sources = profile.sources;
+  if (isPlainObject(sources) && Array.isArray(sources.permanent)) {
+    const have = new Set(sources.permanent.map((row) => (isPlainObject(row) ? row.builtin : undefined)));
+    const add = (builtin: string, name: string) =>
+      have.has(builtin) ? [] : [{ id: builtin, name, builtin, health: {}, strength: {} }];
+    const permanent = [
+      ...sources.permanent,
+      ...add('monuments', 'Monuments'),
+      ...add('personalTechnologies', 'Personal Technologies'),
+    ];
+    next = { ...next, sources: { ...sources, permanent } };
+  }
+  const arena = next.primeArena;
+  if (isPlainObject(arena) && isPlainObject(arena.toggles)) {
+    const toggles = Object.fromEntries(
+      Object.entries(arena.toggles).filter(([key]) => !ARENA_V20_DROPPED.includes(key)),
+    );
+    next = { ...next, primeArena: { ...arena, toggles } };
+  }
+  return next;
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -427,6 +459,7 @@ export const migrations: MigrationTable = {
   16: (doc) => ({ ...doc, schemaVersion: 17, profiles: migrateProfiles(doc, addPrimeArena) }),
   17: (doc) => ({ ...doc, schemaVersion: 18, profiles: migrateProfiles(doc, arenaBecomesSetup) }),
   18: (doc) => ({ ...doc, schemaVersion: 19, profiles: migrateProfiles(doc, arenaDivisionBecomesTroops) }),
+  19: (doc) => ({ ...doc, schemaVersion: 20, profiles: migrateProfiles(doc, addArenaSources) }),
 };
 
 /**
@@ -457,6 +490,7 @@ export const profileMigrations: MigrationTable = {
   16: addPrimeArena,
   17: arenaBecomesSetup,
   18: arenaDivisionBecomesTroops,
+  19: addArenaSources,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -486,6 +520,7 @@ export const savedStackMigrations: MigrationTable = {
   16: identity,
   17: identity,
   18: identity,
+  19: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

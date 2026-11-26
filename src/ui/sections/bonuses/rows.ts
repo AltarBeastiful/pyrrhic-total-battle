@@ -557,7 +557,7 @@ export const WHERE: Record<EditorTarget['kind'], string> = {
   recovery: 'the Temple for its level; the cost and speed bonuses sit on your barracks and workshops.',
 };
 
-/** Where each of the eight builtin permanent editors is read in game. One line each, our words. */
+/** Where each of the builtin permanent editors is read in game. One line each, our words. */
 export const PERMANENT_WHERE: Record<string, string> = {
   heroTalents: 'Hero → Talents: add up the health and strength lines of the talents you unlocked.',
   hallOfFame: 'City → Hall of Fame: the army bonuses the building lists on its info panel.',
@@ -568,6 +568,10 @@ export const PERMANENT_WHERE: Record<string, string> = {
   clanTechnologies: 'Clan → Technologies: the army lines your clan has already researched.',
   clanCapitalAppearance: 'Clan → Capital: the bonuses the capital appearance grants every member.',
   unionOfTriumph: 'Union of Triumph: the bonus for the number of Golden Passes on the account.',
+  monuments:
+    'Your Monuments, the Minerva Monument from the arena included: the army bonuses they grant. Type the totals the game lists; the Prime Arena counts them.',
+  personalTechnologies:
+    'Your Personal Technologies: the army bonuses they grant. Type the totals the game lists; the Prime Arena counts them.',
 };
 
 export { artifactRecord, captainRecord, equipmentRecord, isEmptyBonus };

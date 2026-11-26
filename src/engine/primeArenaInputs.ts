@@ -23,14 +23,13 @@ export const PRIME_ARENA_CAPTAINS = 5;
 
 /**
  * The switches left once captains, equipment, artifacts and the dragon are the setup's own lists: the talents
- * (read from the rank table) and the four permanent sources the rules count. Titles, clan, kingdom, events,
+ * (read from the rank table) and the permanent sources the rules count (Hall of Fame, Monuments, Personal Technologies: typed by hand). Titles, clan, kingdom, events,
  * temporary bonuses, the hero and VIP have no switch; they never count.
  */
 export const PRIME_ARENA_PERMANENT = [
   'hallOfFame',
-  'customization',
-  'armyModernization',
-  'monstersBoost',
+  'monuments',
+  'personalTechnologies',
 ] as const satisfies readonly BuiltinPermanentSource[];
 export const PRIME_ARENA_SOURCES = ['talents', ...PRIME_ARENA_PERMANENT] as const;
 export type PrimeArenaSource = (typeof PRIME_ARENA_SOURCES)[number];
@@ -40,9 +39,8 @@ export type PrimeArenaToggles = Record<PrimeArenaSource, boolean>;
 export const DEFAULT_PRIME_ARENA_TOGGLES: Readonly<PrimeArenaToggles> = {
   talents: true,
   hallOfFame: true,
-  customization: true,
-  armyModernization: true,
-  monstersBoost: true,
+  monuments: true,
+  personalTechnologies: true,
 };
 
 export interface PrimeArenaInput {
@@ -131,7 +129,8 @@ export function primeArenaInputs(input: PrimeArenaInput): PrimeArenaInputs {
   // Only the squad's own lists count; the sources the rules leave out are cleared whatever the setup holds.
   const setup: BattleSetup = {
     ...given,
-    marchType: 'unspecified',
+    // The arena meets no march kind: captains limited to one (Amanitore, Hercules) do not count.
+    marchType: 'arena',
     active: {
       ...given.active,
       titles: [],
