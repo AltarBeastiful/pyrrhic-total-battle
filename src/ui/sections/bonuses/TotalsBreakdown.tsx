@@ -10,6 +10,7 @@
 import { Group, Stack, Text } from '@mantine/core';
 
 import { aggregateBonuses } from '@/engine/bonuses';
+import type { ResolvedSource } from '@/engine/types';
 import { describeTotals, resolveSources } from '@/state/derive';
 import type { TotalRow } from '@/state/derive';
 import type { BattleSetup, Profile } from '@/state/schema';
@@ -96,8 +97,12 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-export function TotalsBreakdown({ profile, setup }: { profile: Profile; setup: BattleSetup }) {
-  const sources = resolveSources(profile, setup);
+export type TotalsBreakdownProps =
+  | { profile: Profile; setup: BattleSetup; sources?: undefined }
+  | { sources: ResolvedSource[]; profile?: undefined; setup?: undefined };
+
+export function TotalsBreakdown(props: TotalsBreakdownProps) {
+  const sources = props.sources ?? resolveSources(props.profile, props.setup);
   const totals = describeTotals(aggregateBonuses(sources), sources);
 
   return (

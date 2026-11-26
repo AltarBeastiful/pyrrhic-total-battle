@@ -24,7 +24,12 @@ import {
 } from '@mantine/core';
 import { useEffect, useMemo } from 'react';
 
-import { PRIME_ARENA_CAPTAINS, PRIME_ARENA_SOURCES, type PrimeArenaSource } from '@/engine/primeArenaInputs';
+import {
+  PRIME_ARENA_CAPTAINS,
+  PRIME_ARENA_SOURCES,
+  primeArenaInputs,
+  type PrimeArenaSource,
+} from '@/engine/primeArenaInputs';
 import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
 import type { PrimeArenaRound, PrimeArenaSideOutcome } from '@/engine/primeArena';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
@@ -32,6 +37,8 @@ import { TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
 import { romanTier } from '@/ui/domain/unitGroup';
 import { Disclosure, NumberField, Panel, SwitchRow } from '@/ui/kit';
+import { TotalsBreakdown } from '@/ui/sections/bonuses/TotalsBreakdown';
+import { TotalsFigures } from '@/ui/sections/bonuses/TotalsFigures';
 import { artifactRecord, captainRecord, equipmentRecord } from '@/ui/sections/bonuses/rows';
 
 import { topTier, usePrimeArenaStore, type PlanBudget } from './primeArenaStore';
@@ -53,6 +60,25 @@ const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 
 function toggled(list: readonly string[], id: string, on: boolean): string[] {
   return on ? [...list.filter((x) => x !== id), id] : list.filter((x) => x !== id);
+}
+
+/** The bonuses the switches above add up to, shown before Generate: figures, and the audit one fold down. */
+function ArenaTotals({
+  profile,
+  inputs,
+}: {
+  profile: NonNullable<ReturnType<typeof selectActiveProfile>>;
+  inputs: ReturnType<typeof usePrimeArenaStore.getState>['inputs'];
+}) {
+  const sources = useMemo(() => primeArenaInputs({ ...inputs, profile }).sources, [inputs, profile]);
+  return (
+    <Stack gap="xs">
+      <TotalsFigures sources={sources} size="sm" />
+      <Disclosure title="Summary">
+        <TotalsBreakdown sources={sources} />
+      </Disclosure>
+    </Stack>
+  );
 }
 
 export interface PrimeArenaPageProps {
@@ -193,6 +219,8 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
               ))}
             </SimpleGrid>
           </Disclosure>
+
+          {profile !== undefined && <ArenaTotals profile={profile} inputs={inputs} />}
 
           <Group>
             <Button

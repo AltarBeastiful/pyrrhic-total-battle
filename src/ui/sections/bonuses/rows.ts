@@ -37,6 +37,7 @@ import type {
   Quality,
 } from '@/data/types';
 import { aggregateBonuses } from '@/engine/bonuses';
+import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
 import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
@@ -523,6 +524,21 @@ export function totalsSummary(profile: Profile, setup: BattleSetup): TotalsSumma
     special: totals.special.doubleDamageChance,
     on,
     empty,
+  };
+}
+
+/**
+ * The same header figures for sources somebody else already resolved (the Prime Arena page, which injects
+ * talents and filters the permanent rows). Every source given counts as on, none is empty.
+ */
+export function totalsSummaryFromSources(sources: ResolvedSource[]): TotalsSummary {
+  const totals = aggregateBonuses(sources);
+  return {
+    health: totals.health.army,
+    strength: totals.strength.army,
+    special: totals.special.doubleDamageChance,
+    on: sources.length,
+    empty: 0,
   };
 }
 

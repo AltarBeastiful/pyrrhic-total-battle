@@ -61,6 +61,11 @@ test('shows the inputs of the arena and no result before a run', () => {
   expect(screen.queryByRole('region', { name: /result/i })).toBeNull();
 });
 
+test('shows the bonus totals the switches produce before any run', () => {
+  renderWithTheme(<PrimeArenaPage budget={BUDGET} />);
+  expect(screen.getByText('Sources on')).toBeTruthy();
+});
+
 test('Generate waits for a Leadership or Dominance budget', () => {
   renderWithTheme(<PrimeArenaPage budget={BUDGET} />);
   expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(true);

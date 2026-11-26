@@ -12,14 +12,21 @@
  */
 import { Box } from '@mantine/core';
 
+import type { ResolvedSource } from '@/engine/types';
 import { Figures } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import { formatPercent } from './labels';
-import type { TotalsSummary } from './rows';
+import { totalsSummaryFromSources, type TotalsSummary } from './rows';
 
-export interface TotalsFiguresProps {
-  summary: TotalsSummary;
+export type TotalsFiguresProps = (
+  | { summary: TotalsSummary; sources?: undefined }
+  /** Already-resolved sources (the Prime Arena page) instead of a summary computed from a profile. */
+  | { sources: ResolvedSource[]; summary?: undefined }
+) &
+  TotalsFiguresOptions;
+
+interface TotalsFiguresOptions {
   /**
    * `md` heads the card, four across; `sm` repeats it inside an editor, two across, where it is a
    * reminder beside the field being typed in rather than the card's own answer. The figures
@@ -28,7 +35,8 @@ export interface TotalsFiguresProps {
   size?: 'sm' | 'md';
 }
 
-export function TotalsFigures({ summary, size = 'md' }: TotalsFiguresProps) {
+export function TotalsFigures({ summary: given, sources, size = 'md' }: TotalsFiguresProps) {
+  const summary = given ?? totalsSummaryFromSources(sources);
   return (
     <Box className={classes.totals}>
       {/* Four figures in the one style the whole page uses now (the owner's review of 2026-09-13:
