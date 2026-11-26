@@ -541,7 +541,6 @@ export function MarchPills({
       }
     >
       {rows.map((row, index) => {
-        const over = row.used > row.capacity;
         // The pool as the push reads it: `null` on the leadership block, which is what shelters and never what
         // is sheltered (`raisesPool`).
         const pool = raisesPool(row.pool) ? row.pool : null;
@@ -554,24 +553,7 @@ export function MarchPills({
                 leadership" at 12 px muted — the pool's *name*, which the line never said, so three
                 figures over three grids of pills were told apart by an emoji alone. */}
             <Group justify="space-between" wrap="nowrap" align="center" gap={8}>
-              <Group gap={8} wrap="nowrap" align="center">
-                <Text
-                  span
-                  fz="1.375rem"
-                  lh={1}
-                  fw={700}
-                  className={classes.poolFigure}
-                  c={over ? 'var(--mantine-color-danger-filled)' : poolInk(row.pool)}
-                >
-                  {amount(row.used)}
-                </Text>
-                <Text span fz="1.25rem" lh={1}>
-                  <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
-                </Text>
-                <Text span className={classes.meta} c="dimmed">
-                  {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
-                </Text>
-              </Group>
+              <PoolFigure row={row} />
               {/* **Top right of the first pool, on the pool's own line** (owner, 2026-10-10: *"on the same line as
                   the leadership number … to avoid new line … lower the size of font and check box again"*): a
                   quiet 11 px grey check, the exception to the battle selection order, costing no line of its own. */}
@@ -616,34 +598,13 @@ export function MarchPills({
                 )}
               </Group>
             </Group>
-            {row.entries.length > 0 && (
-              <div
-                className={domainClasses.pillGrid}
-                role="group"
-                aria-label={`${POOL_LABEL[row.pool]} stacks`}
-              >
-                {row.entries.map((entry) => (
-                  <StackPill
-                    key={entry.unit.id}
-                    unit={entry.unit}
-                    count={entry.count}
-                    // What the march's bonuses give this type, as the corner mark's tooltip — the same two
-                    // figures the unit sheet draws beside its bars (`bonusLines`, `./format`).
-                    bonus={bonusLines(entry.bonus.health, entry.bonus.strength)}
-                    editing={editing}
-                    onCount={(next) => {
-                      onCount(entry.unit.id, next);
-                    }}
-                    onLeaveOut={() => {
-                      removeFromFormation(entry.unit.id);
-                    }}
-                    onDetails={() => {
-                      onDetails(entry.unit);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+            <PoolStacks
+              row={row}
+              editing={editing}
+              onCount={onCount}
+              onDetails={onDetails}
+              onLeaveOut={removeFromFormation}
+            />
           </Stack>
         );
       })}
@@ -667,6 +628,95 @@ export function MarchPills({
         />
       )}
     </Stack>
+  );
+}
+
+/**
+ * The pool's own line: the figure in the pool's colour, the glyph, and "of 20 000 leadership". Shared with the
+ * Prime Arena's match, which draws the same pools.
+ */
+export function PoolFigure({ row }: { row: PoolRow }) {
+  const over = row.used > row.capacity;
+  return (
+    <Group gap={8} wrap="nowrap" align="center">
+      <Text
+        span
+        fz="1.375rem"
+        lh={1}
+        fw={700}
+        className={classes.poolFigure}
+        c={over ? 'var(--mantine-color-danger-filled)' : poolInk(row.pool)}
+      >
+        {amount(row.used)}
+      </Text>
+      <Text span fz="1.25rem" lh={1}>
+        <Glyph kind={row.pool} label={POOL_LABEL[row.pool]} />
+      </Text>
+      <Text span className={classes.meta} c="dimmed">
+        {`of ${amount(row.capacity)} ${POOL_LABEL[row.pool].toLowerCase()}`}
+      </Text>
+    </Group>
+  );
+}
+
+export interface PoolStacksProps {
+  row: PoolRow;
+  editing?: boolean;
+  onCount?: (unitId: string, count: number) => void;
+  onDetails?: (unit: UnitDef) => void;
+  onLeaveOut?: (unitId: string) => void;
+  /** Shows the stacks only: no leave-out press (the Prime Arena's match). */
+  readOnly?: boolean;
+}
+
+/** One pool's stacks as the calculator's tier-coloured pills, in the order the row already has. */
+export function PoolStacks({
+  row,
+  editing = false,
+  onCount,
+  onDetails,
+  onLeaveOut,
+  readOnly = false,
+}: PoolStacksProps) {
+  if (row.entries.length === 0) return null;
+  return (
+    <div className={domainClasses.pillGrid} role="group" aria-label={`${POOL_LABEL[row.pool]} stacks`}>
+      {row.entries.map((entry) => (
+        <StackPill
+          key={entry.unit.id}
+          unit={entry.unit}
+          count={entry.count}
+          // What the march's bonuses give this type, as the corner mark's tooltip — the same two
+          // figures the unit sheet draws beside its bars (`bonusLines`, `./format`).
+          {...(entry.bonus === undefined
+            ? {}
+            : { bonus: bonusLines(entry.bonus.health, entry.bonus.strength) })}
+          editing={editing}
+          readOnly={readOnly}
+          {...(onCount === undefined
+            ? {}
+            : {
+                onCount: (next: number) => {
+                  onCount(entry.unit.id, next);
+                },
+              })}
+          {...(onLeaveOut === undefined
+            ? {}
+            : {
+                onLeaveOut: () => {
+                  onLeaveOut(entry.unit.id);
+                },
+              })}
+          {...(onDetails === undefined
+            ? {}
+            : {
+                onDetails: () => {
+                  onDetails(entry.unit);
+                },
+              })}
+        />
+      ))}
+    </div>
   );
 }
 

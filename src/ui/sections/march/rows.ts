@@ -111,8 +111,8 @@ interface PillEntry {
   unit: UnitDef;
   /** Units of this type in the march. */
   count: number;
-  /** What the march's bonuses add to this type — the corner mark's tooltip (`UnitBonus`). */
-  bonus: UnitBonus;
+  /** What the march's bonuses add to this type — the corner mark's tooltip (`UnitBonus`); absent where there is none to show. */
+  bonus?: UnitBonus;
 }
 
 /** One housing pool: what it paid for, and the stacks it is paying for, in the order asked for (`PillOrder`). */
@@ -212,6 +212,29 @@ export function poolRows({
     const usage = result.pools[pool];
     if (entries.length === 0 && usage.capacity <= 0 && usage.used <= 0) continue;
     rows.push({ pool, used: usage.used, capacity: usage.capacity, entries });
+  }
+  return rows;
+}
+
+/**
+ * The Prime Arena's planned stacks as the March's pool blocks, so the match draws the army exactly as the
+ * calculator does: the same pools in the same order, each pool's stacks in battle selection order. `used` is
+ * what the plan spent and `capacity` the squad's housing; the arena has no authority pool.
+ */
+export function arenaPoolRows(
+  stacks: readonly { unit: UnitDef; count: number }[],
+  spent: { leadership: number; dominance: number },
+  housing: { leadership: number; dominance: number },
+): PoolRow[] {
+  const rows: PoolRow[] = [];
+  for (const pool of POOL_ORDER) {
+    if (pool === 'authority') continue;
+    const entries = stacks
+      .filter((stack) => stack.unit.pool === pool && stack.count > 0)
+      .map((stack): PillEntry => ({ unit: stack.unit, count: stack.count }))
+      .sort((left, right) => battleRank(left.unit.id) - battleRank(right.unit.id));
+    if (entries.length === 0 && housing[pool] <= 0 && spent[pool] <= 0) continue;
+    rows.push({ pool, used: spent[pool], capacity: housing[pool], entries });
   }
   return rows;
 }

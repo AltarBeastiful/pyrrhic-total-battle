@@ -1,7 +1,7 @@
 /**
  * The Prime Arena's answer, in the March pane's place and, below 1200 px, in the sheet the bar opens (B-35).
  *
- * It follows the March's own shape (design rule 28): the recap first, then the army as the stack list, then the
+ * It follows the March's own shape (design rule 28): the recap first, then the army as the March's own pool blocks and tier pills, then the
  * story folded into one log per round, in the same `Sections` rhythm the March uses. Colours are the unit's group
  * and tier colours through the shared badge (rules 20, 23), words are ours (rule 26).
  */
@@ -13,6 +13,7 @@ import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
 import { PoolGauge, TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
 import { Disclosure, Sections } from '@/ui/kit';
+import { arenaPoolRows, PoolFigure, PoolStacks } from '@/ui/sections/march';
 
 import { usePrimeArenaStore } from './primeArenaStore';
 
@@ -57,7 +58,7 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
           <Recap plan={plan} />
         )}
       </Stack>
-      {plan !== null && <StackList plan={plan} />}
+      {plan !== null && <ArmyBlocks plan={plan} />}
       {plan !== null && (
         <Disclosure title="Battle log" summary="two rounds" defaultOpened>
           <Stack gap="md">
@@ -97,33 +98,21 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
   );
 }
 
-function StackList({ plan }: { plan: PrimeArenaPlan }) {
+/** The planned army: the March's own pool blocks (pool figure, tier-coloured pills), without its controls. */
+function ArmyBlocks({ plan }: { plan: PrimeArenaPlan }) {
+  const housing = usePrimeArenaStore((state) => state.setup.housing);
+  const rows = arenaPoolRows(plan.stacks, plan.spent, housing);
   return (
-    <Table aria-label="Stack list" withRowBorders verticalSpacing={4}>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Unit</Table.Th>
-          <Table.Th ta="right">Count</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {plan.stacks.map(({ unit, count: n }) => (
-          <Table.Tr key={unit.id}>
-            <Table.Td>
-              <Group gap={6} wrap="nowrap">
-                <TierBadge tier={unit.tier} size="sm" />
-                <Text size="sm">{unit.name}</Text>
-              </Group>
-            </Table.Td>
-            <Table.Td ta="right">
-              <Text span fw={600} size="lg">
-                {count(n)}
-              </Text>
-            </Table.Td>
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+    <Stack gap="lg">
+      {rows.map((row) => (
+        <Stack key={row.pool} gap="xs">
+          <Group gap={8} wrap="nowrap" align="center">
+            <PoolFigure row={row} />
+          </Group>
+          <PoolStacks row={row} readOnly />
+        </Stack>
+      ))}
+    </Stack>
   );
 }
 

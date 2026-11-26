@@ -13,6 +13,9 @@ export { MarchFoot } from './MarchFoot';
 export { MarchQuickSummary } from './MarchQuickSummary';
 export type { MarchQuickSummaryProps } from './MarchQuickSummary';
 export { MarchRecap } from './MarchRecap';
+// The pool blocks the Prime Arena's match draws its army with, so both pages show troops the same way.
+export { PoolFigure, PoolStacks } from './MarchPills';
+export { arenaPoolRows } from './rows';
 export { GenerateControl, MarchGenerateButton } from './MarchGenerateButton';
 export type { GenerateControlProps, MarchGenerateButtonProps } from './MarchGenerateButton';
 
