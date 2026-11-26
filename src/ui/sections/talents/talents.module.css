@@ -700,3 +700,15 @@
     top: calc(var(--strip-h, 4.25rem) + 8px);
   }
 }
+
+/* Option "Ranks on tiles": the rank held over the maximum, small and dim in the top-right corner. */
+.rankMark {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  color: #9a9a90;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  opacity: 0.8;
+}

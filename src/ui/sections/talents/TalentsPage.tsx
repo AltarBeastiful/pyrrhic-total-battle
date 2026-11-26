@@ -40,7 +40,7 @@ import {
   VisuallyHidden,
 } from '@mantine/core';
 import { ArrowDown, ArrowUp, CircleHelp, RotateCcw } from 'lucide-react';
-import { useCallback, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 
 import { talents as TALENTS } from '@/data';
 import { TALENT_TREES, type TalentRecord, type TalentTree as TreeId } from '@/data/types';
@@ -79,7 +79,7 @@ import { AnalyzeAllDialog } from './AllTalentsAnalysis';
 import { CopyToBattle } from './CopyToBattle';
 import { fieldedGroups, fieldedKinds } from './armyKinds';
 import { GOAL_LABELS, KIND_LABELS, percent, statLabel, TREE_LABELS, TREE_SHORT } from './labels';
-import { spentPoints, stepsUpToNode, treePoints, unlockChain } from './spentPoints';
+import { lowestRank, spentPoints, stepsUpToNode, treePoints, unlockChain } from './spentPoints';
 import classes from './talents.module.css';
 import { TalentTree } from './TalentTree';
 import { useUiStore } from '@/ui/uiStore';
@@ -150,6 +150,37 @@ export function TalentsPage() {
   // A ranking row asked for a talent: the tree opens on it, selects it and scrolls it into view (B-29).
   const [reveal, setReveal] = useState<{ id: number; at: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  // A per-viewer convenience: show "rank/max" on every tile. The L key flips it.
+  const [showLevels, setShowLevels] = useState(() => {
+    try {
+      return localStorage.getItem('pyrrhic.talents.showLevels') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleLevels = useCallback(() => {
+    setShowLevels((on) => {
+      try {
+        localStorage.setItem('pyrrhic.talents.showLevels', on ? '0' : '1');
+      } catch {
+        /* storage may be blocked */
+      }
+      return !on;
+    });
+  }, []);
+  useEffect(() => {
+    const key = (e: KeyboardEvent): void => {
+      if (e.key.toLowerCase() !== 'l' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))
+        return;
+      toggleLevels();
+    };
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('keydown', key);
+    };
+  }, [toggleLevels]);
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
   const modeHelpId = useId();
   const [message, setMessage] = useState('');
@@ -262,11 +293,29 @@ export function TalentsPage() {
     else if (active.length > 1) edit({ ignored: [...talentsState.ignored, goal] });
   };
 
+  /**
+   * Set a node's rank by the same rules as the + and - buttons: going up buys (stock, hero level and the nodes above
+   * it), going down never strands a spent child below it.
+   */
   const setRank = (id: number, rank: number): void => {
+    const rec = BY_ID.get(id);
+    if (rec === undefined) return;
+    const bought = talentsState.ranks[String(id)] ?? 0;
+    if (rank > bought) {
+      buy(id, rank - bought);
+      return;
+    }
+    if (rank === bought) return;
+    const floor = lowestRank(TALENTS, talentsState.ranks, id);
+    const target = Math.max(rank, floor);
+    if (target !== rank) {
+      setMessage(`${rec.name} keeps one rank: a talent below it is spent and could not be reached.`);
+    }
+    if (target === bought) return;
     updateProfile(profile.id, (current) => {
       const ranks = { ...current.talents.ranks };
-      if (rank <= 0) delete ranks[String(id)];
-      else ranks[String(id)] = rank;
+      if (target <= 0) delete ranks[String(id)];
+      else ranks[String(id)] = target;
       return { talents: { ...current.talents, ranks } };
     });
   };
@@ -420,6 +469,7 @@ export function TalentsPage() {
           <b>{left === null ? 'Type your points first' : `${String(left)} left`}</b>
         </span>
         <AnalyzeAllDialog onSelect={showTalent} />
+        <Checkbox size="xs" label="Ranks on tiles (L)" checked={showLevels} onChange={toggleLevels} />
         <Button
           size="compact-sm"
           variant="default"
@@ -897,6 +947,7 @@ export function TalentsPage() {
             }}
             onSpendPlan={spendPlanToNode}
             reveal={reveal}
+            showLevels={showLevels}
           />
         </Stack>
       </Panel>

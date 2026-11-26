@@ -86,3 +86,17 @@ export function unlockChain(
   visit(id, true);
   return order;
 }
+
+/**
+ * The lowest rank a node can be taken back to without stranding the tree: a node whose child holds a rank must keep
+ * one of its own (the child is only reachable through it), so the floor is 1; otherwise 0.
+ */
+export function lowestRank(
+  talents: readonly { id: number; parents: readonly number[] }[],
+  ranks: Readonly<Record<string, number>>,
+  id: number,
+): number {
+  const held = ranks[String(id)] ?? 0;
+  if (held === 0) return 0;
+  return talents.some((t) => t.parents.includes(id) && (ranks[String(t.id)] ?? 0) > 0) ? 1 : 0;
+}

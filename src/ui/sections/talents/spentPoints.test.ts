@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
 
-import { spentPoints, stepsUpToNode, treePoints } from './spentPoints';
+import { lowestRank, spentPoints, stepsUpToNode, treePoints } from './spentPoints';
 
 const nodes = [
   { id: 1, tree: 'battle', costs: [1, 2, 3] },
@@ -61,4 +61,18 @@ test('takes the tree up to the last step on the selected level, neighbours inclu
 test('a node outside the plan, or unknown, takes nothing', () => {
   expect(stepsUpToNode(grid, [{ nodeId: 1 }], 4)).toEqual([]);
   expect(stepsUpToNode(grid, stepList, 99)).toEqual([]);
+});
+
+describe('lowestRank', () => {
+  const tree = [
+    { id: 1, parents: [] },
+    { id: 2, parents: [1] },
+  ];
+  it('keeps one rank on a node whose child is spent', () => {
+    expect(lowestRank(tree, { '1': 3, '2': 1 }, 1)).toBe(1);
+  });
+  it('lets a node go to zero when nothing below it is spent', () => {
+    expect(lowestRank(tree, { '1': 3 }, 1)).toBe(0);
+    expect(lowestRank(tree, { '1': 3, '2': 1 }, 2)).toBe(0);
+  });
 });

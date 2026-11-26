@@ -15,7 +15,7 @@ import { Dialog, NumberField } from '@/ui/kit';
 
 import { percent, statLabel, TREE_LABELS } from './labels';
 import { keyRankPicks, rankChipLabel, type RankState } from './rankChips';
-import { stepsUpToNode } from './spentPoints';
+import { lowestRank, stepsUpToNode } from './spentPoints';
 import classes from './talents.module.css';
 import { recapSize, splitRecap } from './recap';
 import { talentFamily, talentIcons } from './talentFamily';
@@ -43,6 +43,8 @@ export interface TalentTreeProps {
   onSpendPlan: (nodeId: number) => void;
   /** A ranking row asked for this talent: scroll its tile into view once it has rendered (B-29). */
   reveal?: { id: number; at: number } | null;
+  /** Show the rank held over the maximum (1/20) in each tile's corner. */
+  showLevels?: boolean;
 }
 
 /** What the plan adds to each node: the count of its steps. */
@@ -115,6 +117,7 @@ export function TalentTree({
   onMax,
   onSpendPlan,
   reveal = null,
+  showLevels = false,
 }: TalentTreeProps) {
   const tiles = useRef(new Map<number, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -366,6 +369,11 @@ export function TalentTree({
                         {fam.numeral}
                       </span>
                     )}
+                    {showLevels && (
+                      <span className={classes.rankMark} aria-hidden>
+                        {`${String(bought)}/${String(n.maxRank)}`}
+                      </span>
+                    )}
                     <span className={classes.name} title={fam.family}>
                       {fam.family}
                     </span>
@@ -432,7 +440,7 @@ export function TalentTree({
                         type="button"
                         className={classes.padButton}
                         aria-label={`Take one rank back from ${n.name}`}
-                        disabled={bought <= 0}
+                        disabled={bought <= lowestRank(talents, ranks, n.id)}
                         onClick={() => {
                           onRank(n.id, bought - 1);
                         }}
@@ -482,6 +490,7 @@ export function TalentTree({
             node={node}
             nodes={nodes}
             bought={ranks[String(node.id)] ?? 0}
+            floor={lowestRank(talents, ranks, node.id)}
             plan={plan}
             onRank={onRank}
             onMax={onMax}
@@ -503,6 +512,7 @@ function NodeEditor({
   nodes,
   bought,
   plan,
+  floor,
   onRank,
   onMax,
   onSpendPlan,
@@ -511,6 +521,8 @@ function NodeEditor({
   nodes: readonly TalentRecord[];
   bought: number;
   plan: TalentPlan;
+  /** The lowest rank the node can be taken back to (1 while a node below it is spent). */
+  floor: number;
   onRank: (id: number, rank: number) => void;
   onMax: (id: number) => void;
   onSpendPlan: (nodeId: number) => void;
@@ -580,7 +592,7 @@ function NodeEditor({
             variant="default"
             size={36}
             aria-label={`Lower ${node.name}`}
-            disabled={bought <= 0}
+            disabled={bought <= floor}
             onClick={() => {
               set(bought - 1);
             }}
@@ -630,7 +642,7 @@ function NodeEditor({
         <Button
           size="xs"
           variant="default"
-          disabled={bought <= 0}
+          disabled={bought <= floor}
           onClick={() => {
             set(0);
           }}
