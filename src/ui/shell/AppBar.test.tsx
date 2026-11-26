@@ -30,23 +30,25 @@ test('the bar is the banner, and the brand is the page’s one H1', () => {
   expect(brand.textContent).toBe('Pyrrhic');
 });
 
-test('the controls in it are the page button, the profile menu and the app menu', () => {
+test('the controls in it are the two page buttons, the profile menu and the app menu', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
 
   expect(within(banner).getByRole('button', { name: 'Menu' })).toBeTruthy();
   // Nothing else: no Generate, no figures, no jump bar (design plan §5.1, `v4-desktop.jpg`).
   expect(within(banner).getByRole('button', { name: /^Profile:/ })).toBeTruthy();
-  expect(within(banner).getAllByRole('button')).toHaveLength(3);
+  expect(within(banner).getAllByRole('button')).toHaveLength(4);
   expect(within(banner).getByRole('button', { name: 'Hero talents' })).toBeTruthy();
+  expect(within(banner).getByRole('button', { name: 'Prime Arena' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: /Generate/ })).toBeNull();
 });
 
 test('the app menu is the last control, at the screen’s edge, after the profile menu', () => {
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
-  const [page, first, second] = within(banner).getAllByRole('button');
+  const [page, arena, first, second] = within(banner).getAllByRole('button');
   expect(page?.textContent).toBe('Hero talents');
+  expect(arena?.textContent).toBe('Prime Arena');
   expect(first?.getAttribute('aria-label')).toMatch(/^Profile:/);
   expect(second?.getAttribute('aria-label')).toBe('Menu');
 });
@@ -56,9 +58,15 @@ test('signed out on a build with an account, Sign in sits on the bar and opens t
   renderWithTheme(<AppBar />);
   const banner = screen.getByRole('banner');
   const buttons = within(banner).getAllByRole('button');
-  expect(buttons.map((button) => button.textContent)).toEqual(['Hero talents', 'Sign in', 'Guest', '']);
+  expect(buttons.map((button) => button.textContent)).toEqual([
+    'Hero talents',
+    'Prime Arena',
+    'Sign in',
+    'Guest',
+    '',
+  ]);
 
-  fireEvent.click(buttons[1] as HTMLElement);
+  fireEvent.click(buttons[2] as HTMLElement);
   expect(useAccountStore.getState().dialog).toBe('signin');
   useAccountStore.setState({ enabled: false, dialog: null });
 });

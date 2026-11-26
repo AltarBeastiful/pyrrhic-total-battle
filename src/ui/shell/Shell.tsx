@@ -56,6 +56,11 @@ const TalentsPage = lazy(() =>
   import('../sections/talents/TalentsPage').then((module) => ({ default: module.TalentsPage })),
 );
 
+// The Prime Arena planner (B-35) is a page of its own too: the planner and its form are a chunk of their own.
+const PrimeArenaPage = lazy(() =>
+  import('../sections/primeArena/PrimeArenaPage').then((module) => ({ default: module.PrimeArenaPage })),
+);
+
 // Most sessions are not opened on a share link, and the ones that are can wait a frame for the
 // prompt: the decoder and the dialog are a chunk of their own (ui-foundation plan §6).
 const LoadSharedDialog = lazy(() =>
@@ -164,6 +169,10 @@ export function Shell() {
           <LazySurface isOpen reserve="panel">
             <TalentsPage />
           </LazySurface>
+        ) : page === 'primeArena' ? (
+          <LazySurface isOpen reserve="panel">
+            <PrimeArenaPage />
+          </LazySurface>
         ) : wide ? (
           <Grid gap="xl">
             <Grid.Col span="auto" miw={0}>
@@ -190,7 +199,7 @@ export function Shell() {
           a sticky element travels only inside its own containing block — and it carries the ground
           from edge to edge, with a `Container` inside it so the content starts and ends on the same
           lines as the panels above it. */}
-      {page === 'talents' ? null : barWide ? (
+      {page !== 'calculator' ? null : barWide ? (
         <div className={classes.commandDock}>
           <Container component="div" size={CONTENT_WIDTH}>
             {/* Between 1024 and 1199 px the March has no pane, so the bar carries the answer and

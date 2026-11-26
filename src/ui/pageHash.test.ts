@@ -25,6 +25,7 @@ test.each([
   ['#talents', 'talents'],
   ['#/talents', 'talents'],
   ['#Talents', 'talents'],
+  ['#prime-arena', 'primeArena'],
   ['', 'calculator'],
   ['#', 'calculator'],
   ['#calculator', 'calculator'],
@@ -49,6 +50,12 @@ test('changing the page writes the fragment, and going back to the calculator cl
   useUiStore.getState().setPage('calculator');
   expect(window.location.hash).toBe('');
   expect(window.location.pathname + window.location.search).toBe('/');
+});
+
+test('the Prime Arena page writes #prime-arena, and keeps no tree in it', () => {
+  unbind = bindPageToHash(window);
+  useUiStore.getState().setPage('primeArena');
+  expect(window.location.hash).toBe('#prime-arena');
 });
 
 test('editing the fragment by hand moves the page', () => {

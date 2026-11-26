@@ -14,8 +14,8 @@ import type { SharePayload } from '@/share/codec';
 import type { StorageAdapter } from '@/state/storage';
 import { useStore, type StoreState } from '@/state/store';
 
-/** The page the shell shows: the calculator (the sections and the March) or the hero talent planner (B-21). */
-export type Page = 'calculator' | 'talents';
+/** The page the shell shows: the calculator (the sections and the March), the hero talent planner (B-21) or the Prime Arena planner (B-35). */
+export type Page = 'calculator' | 'talents' | 'primeArena';
 
 export interface UiState {
   page: Page;

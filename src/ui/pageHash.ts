@@ -9,7 +9,10 @@ import { TALENT_TREES, type TalentTree } from '@/data/types';
 
 import { useUiStore, type Page } from './uiStore';
 
-const PAGE_HASHES: Readonly<Record<Exclude<Page, 'calculator'>, string>> = { talents: 'talents' };
+const PAGE_HASHES: Readonly<Record<Exclude<Page, 'calculator'>, string>> = {
+  talents: 'talents',
+  primeArena: 'prime-arena',
+};
 
 /** The page a fragment names; anything else (empty, a share code, the kit, nonsense) is the calculator. */
 export function pageFromHash(hash: string): Page {
@@ -47,7 +50,8 @@ export function bindPageToHash(win: Window = window): () => void {
 
   const write = (): void => {
     const { page, talentsTree } = useUiStore.getState();
-    const fragment = page === 'calculator' ? '' : `#${PAGE_HASHES[page]}/${talentsTree}`;
+    const fragment =
+      page === 'calculator' ? '' : page === 'talents' ? `#talents/${talentsTree}` : `#${PAGE_HASHES[page]}`;
     win.history.replaceState(null, '', `${win.location.pathname}${win.location.search}${fragment}`);
   };
   // A bare `#talents` is completed to the tree it opens.

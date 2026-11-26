@@ -10,7 +10,7 @@
  * eighty pixels above it is what `v4-desktop.jpg` shows and design rule 5 forbids.
  */
 import { Box, Button, Title } from '@mantine/core';
-import { LogIn, Sparkles, Swords } from 'lucide-react';
+import { LogIn, Shield, Sparkles, Swords } from 'lucide-react';
 
 import { useAccountStore } from '@/account/state';
 
@@ -80,6 +80,34 @@ function PageButton() {
   );
 }
 
+/** Opens the Prime Arena planner (B-35), or comes back to the March calculator from it. */
+function ArenaButton() {
+  const page = useUiStore((state) => state.page);
+  const setPage = useUiStore((state) => state.setPage);
+  const onArena = page === 'primeArena';
+  const label = onArena ? 'March calculator' : 'Prime Arena';
+  return (
+    <Button
+      variant="default"
+      radius="xl"
+      size="compact-md"
+      h={36}
+      aria-label={label}
+      classNames={{
+        root: shellClasses.pageButton,
+        section: shellClasses.pageSection,
+        label: shellClasses.pageLabel,
+      }}
+      leftSection={onArena ? <Swords size={16} aria-hidden /> : <Shield size={16} aria-hidden />}
+      onClick={() => {
+        setPage(onArena ? 'calculator' : 'primeArena');
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
+
 export function AppBar() {
   return (
     <BarSurface
@@ -94,6 +122,7 @@ export function AppBar() {
       actions={
         <>
           <PageButton />
+          <ArenaButton />
           <SignInButton />
           <ProfileMenu />
           <MainMenu />
