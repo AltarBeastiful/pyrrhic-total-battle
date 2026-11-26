@@ -294,7 +294,7 @@ test('hero talents set on one device and troops changed on the other both surviv
   }
 });
 
-test('Prime Arena inputs set on one device and troops changed on the other both survive (schema v17)', () => {
+test('Prime Arena inputs set on one device and troops changed on the other both survive (schema v18)', () => {
   const { phone, pc } = twoDevices();
   const [base] = phone.profiles;
   if (!base) throw new Error('no profile');
@@ -304,7 +304,14 @@ test('Prime Arena inputs set on one device and troops changed on the other both 
     { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
     t + 10,
   );
-  const primeArena = { ...base.primeArena, leadership: 900, captains: ['x'] };
+  const primeArena = {
+    ...base.primeArena,
+    setup: {
+      ...base.primeArena.setup,
+      active: { ...base.primeArena.setup.active, captains: ['x'] },
+      housing: { ...base.primeArena.setup.housing, leadership: 900 },
+    },
+  };
   const onPc = edit(base, { primeArena, sectionUpdatedAt: { primeArena: t + 20 } }, t + 20);
   for (const merged of [
     mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),

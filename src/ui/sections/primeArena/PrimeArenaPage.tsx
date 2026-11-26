@@ -37,10 +37,6 @@ import { artifactRecord, captainRecord, equipmentRecord } from '@/ui/sections/bo
 import { topTier, usePrimeArenaStore, type PlanBudget } from './primeArenaStore';
 
 const SOURCE_LABELS: Record<PrimeArenaSource, string> = {
-  captains: 'Captains',
-  equipment: 'Equipment, gems and enchantments',
-  artifacts: 'Artifacts',
-  dragon: 'Dragon',
   talents: 'Talents',
   hallOfFame: 'Hall of Fame',
   customization: 'Personal technologies',
@@ -63,16 +59,29 @@ export interface PrimeArenaPageProps {
 export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
-  const { inputs, running, plan, planTier, setInputs, setToggle, seedFrom, generate } = usePrimeArenaStore();
+  const {
+    tier,
+    toggles,
+    setup: squad,
+    running,
+    plan,
+    planTier,
+    setTier,
+    setToggle,
+    updateSetup,
+    seedFrom,
+    generate,
+  } = usePrimeArenaStore();
 
   useEffect(() => {
     if (profile === undefined || setup === undefined) return;
-    seedFrom(setup.active, setup.housing);
+    seedFrom(setup);
   }, [profile, setup, seedFrom]);
 
-  const capNotice = inputs.captains.length >= PRIME_ARENA_CAPTAINS;
+  const capNotice = squad.active.captains.length >= PRIME_ARENA_CAPTAINS;
   const tiers = useMemo(() => Array.from({ length: topTier() }, (_, i) => i + 1), []);
-  const canGenerate = profile !== undefined && !running && inputs.leadership + inputs.dominance > 0;
+  const canGenerate =
+    profile !== undefined && !running && squad.housing.leadership + squad.housing.dominance > 0;
 
   return (
     <Stack gap="lg" component="section" aria-labelledby="prime-arena-title">
@@ -91,10 +100,10 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
               fullWidth
               size="sm"
               aria-label="Division tier"
-              value={String(inputs.tier)}
+              value={String(tier)}
               data={tiers.map((tier) => ({ value: String(tier), label: romanTier(tier) }))}
               onChange={(value) => {
-                setInputs({ tier: Number(value) });
+                setTier(Number(value));
               }}
             />
           </Stack>
@@ -102,25 +111,25 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <NumberField
               label="Leadership"
-              value={inputs.leadership}
+              value={squad.housing.leadership}
               min={0}
               onChange={(value) => {
-                setInputs({ leadership: value ?? 0 });
+                updateSetup((s) => ({ housing: { ...s.housing, leadership: value ?? 0 } }));
               }}
             />
             <NumberField
               label="Dominance"
-              value={inputs.dominance}
+              value={squad.housing.dominance}
               min={0}
               onChange={(value) => {
-                setInputs({ dominance: value ?? 0 });
+                updateSetup((s) => ({ housing: { ...s.housing, dominance: value ?? 0 } }));
               }}
             />
           </SimpleGrid>
 
           <Stack gap={6}>
             <Text size="sm" fw={500}>
-              Captains ({inputs.captains.length} of {PRIME_ARENA_CAPTAINS})
+              Captains ({squad.active.captains.length} of {PRIME_ARENA_CAPTAINS})
             </Text>
             {(profile?.sources.captains.length ?? 0) === 0 ? (
               <Text size="sm" c="dimmed">
@@ -129,15 +138,17 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
             ) : (
               <Group gap="xs" role="group" aria-label="Captains">
                 {profile?.sources.captains.map((entry) => {
-                  const on = inputs.captains.includes(entry.id);
+                  const on = squad.active.captains.includes(entry.id);
                   return (
                     <Chip
                       key={entry.id}
                       size="sm"
                       checked={on}
                       onChange={(checked) => {
-                        if (checked && inputs.captains.length >= PRIME_ARENA_CAPTAINS) return;
-                        setInputs({ captains: toggled(inputs.captains, entry.id, checked) });
+                        if (checked && squad.active.captains.length >= PRIME_ARENA_CAPTAINS) return;
+                        updateSetup((s) => ({
+                          active: { ...s.active, captains: toggled(s.active.captains, entry.id, checked) },
+                        }));
                       }}
                     >
                       {captainRecord(entry.captainId)?.name ?? entry.captainId}
@@ -159,9 +170,9 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
               id: e.id,
               name: equipmentRecord(e.equipmentId)?.name ?? e.equipmentId,
             }))}
-            chosen={inputs.equipment}
+            chosen={squad.active.equipment}
             onChange={(equipment) => {
-              setInputs({ equipment });
+              updateSetup((s) => ({ active: { ...s.active, equipment } }));
             }}
           />
           <GearChips
@@ -170,27 +181,34 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
               id: a.id,
               name: artifactRecord(a.artifactId)?.name ?? a.artifactId,
             }))}
-            chosen={inputs.artifacts}
+            chosen={squad.active.artifacts}
             onChange={(artifacts) => {
-              setInputs({ artifacts });
+              updateSetup((s) => ({ active: { ...s.active, artifacts } }));
             }}
           />
 
           <Disclosure
             title="Bonus sources"
-            summary={`${String(PRIME_ARENA_SOURCES.filter((key) => inputs.toggles[key]).length)} counted`}
+            summary={`${String(PRIME_ARENA_SOURCES.filter((key) => toggles[key]).length + (squad.active.dragon ? 1 : 0))} counted`}
           >
             <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
               {PRIME_ARENA_SOURCES.map((key) => (
                 <SwitchRow
                   key={key}
                   label={SOURCE_LABELS[key]}
-                  checked={inputs.toggles[key]}
+                  checked={toggles[key]}
                   onChange={(on) => {
                     setToggle(key, on);
                   }}
                 />
               ))}
+              <SwitchRow
+                label="Dragon"
+                checked={squad.active.dragon}
+                onChange={(on) => {
+                  updateSetup((s) => ({ active: { ...s.active, dragon: on } }));
+                }}
+              />
             </SimpleGrid>
           </Disclosure>
 
