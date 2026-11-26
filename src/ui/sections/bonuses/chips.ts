@@ -16,7 +16,7 @@ import {
   heroes as heroTable,
   titles as titleTable,
 } from '@/data';
-import type { BattleSetup, Profile } from '@/state/schema';
+import type { BattleSetup, BuiltinPermanentSource, Profile } from '@/state/schema';
 
 import { chipValue, describeContribution, rowLines, rowValue } from './labels';
 import { artifactWorth, captainEntryFor, captainWorth, hasStackEffect } from './rows';
@@ -122,6 +122,8 @@ export interface PermanentChipRow {
   value: string;
   /** A row the player added, rather than one of the eight the game always grants. */
   isCustom: boolean;
+  /** Which of the eight it is; absent on a row the player added. */
+  builtin?: BuiltinPermanentSource;
   /** Every line it is worth, for the chip's tooltip; the chip's own `value` stops at "and N more". */
   lines: string[];
 }
@@ -139,6 +141,7 @@ export function permanentChips(profile: Profile): PermanentChipRow[] {
       name: entry.name === '' ? 'Permanent source' : entry.name,
       value: chipValue(entry, 1).text,
       isCustom: entry.builtin === undefined,
+      ...(entry.builtin === undefined ? {} : { builtin: entry.builtin }),
       lines: describeContribution(entry),
       unnamed: entry.name === '',
     }))

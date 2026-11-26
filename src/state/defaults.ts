@@ -62,7 +62,12 @@ export function uuid(): string {
   return crypto.randomUUID();
 }
 
-const PERMANENT_SOURCE_LABELS: Record<BuiltinPermanentSource, string> = {
+/**
+ * The one table of source names, beside `BUILTIN_PERMANENT_SOURCES`: the calculator's permanent chips, the
+ * default rows of a new profile and the Prime Arena's switches all read it. `talents` and `dragon` are switches
+ * of the arena that are not permanent rows, so they are named here too rather than in a page.
+ */
+export const SOURCE_LABELS: Record<BuiltinPermanentSource | 'talents' | 'dragon', string> = {
   heroTalents: 'Hero Talents',
   hallOfFame: 'Hall of Fame',
   customization: 'Customization',
@@ -71,14 +76,16 @@ const PERMANENT_SOURCE_LABELS: Record<BuiltinPermanentSource, string> = {
   clanTechnologies: 'Clan Technologies',
   clanCapitalAppearance: 'Clan Capital Appearance',
   unionOfTriumph: 'Union of Triumph',
+  talents: 'Talents',
+  dragon: 'Dragon',
 };
 
 /** The eight always-present editors of PLAN §3.1. Their entry id is the builtin key, so the same editor
  * keeps its identity across profiles, exports and share links. */
-function defaultPermanentSources(): Profile['sources']['permanent'] {
+export function defaultPermanentSources(): Profile['sources']['permanent'] {
   return BUILTIN_PERMANENT_SOURCES.map((builtin) => ({
     id: builtin,
-    name: PERMANENT_SOURCE_LABELS[builtin],
+    name: SOURCE_LABELS[builtin],
     builtin,
     health: {},
     strength: {},

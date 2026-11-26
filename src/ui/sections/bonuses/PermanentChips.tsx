@@ -19,6 +19,7 @@ import { Plus } from 'lucide-react';
 
 import { useRovingTabs } from '@/ui/kit';
 
+import type { PermanentCounting } from './bodyScope';
 import classes from './bonuses.module.css';
 import type { PermanentChipRow } from './chips';
 import { SourceChip } from './SourceChip';
@@ -27,10 +28,19 @@ export interface PermanentChipsProps {
   chips: PermanentChipRow[];
   onEdit: (entryId: string) => void;
   onAdd: () => void;
+  /**
+   * A fight that counts only some of them (`BodyScope.counting`): the chip's body switches the source in or out of
+   * the fight, the gear still opens its values, and a source the fight does not count is not drawn at all.
+   */
+  counting?: PermanentCounting;
 }
 
-export function PermanentChips({ chips, onEdit, onAdd }: PermanentChipsProps) {
+export function PermanentChips({ chips, onEdit, onAdd, counting }: PermanentChipsProps) {
   const roving = useRovingTabs();
+  const shown =
+    counting === undefined
+      ? chips
+      : chips.filter((chip) => chip.builtin !== undefined && counting.builtins.includes(chip.builtin));
 
   return (
     <Stack gap="xs">
@@ -42,34 +52,61 @@ export function PermanentChips({ chips, onEdit, onAdd }: PermanentChipsProps) {
         wrap="wrap"
         {...roving}
       >
-        {chips.map((chip) => (
-          <SourceChip
-            key={chip.id}
-            name={chip.name}
-            value={chip.value}
-            details={chip.lines}
-            dotted={chip.value !== ''}
-            checked={chip.value !== ''}
-            toggleLabel={chip.value === '' ? `Set ${chip.name}` : `${chip.name}, on every march`}
-            gearLabel={`Edit ${chip.name}`}
-            onToggle={() => {
-              onEdit(chip.id);
-            }}
-            onGear={() => {
-              onEdit(chip.id);
-            }}
-          />
-        ))}
+        {shown.map((chip) => {
+          const key = chip.builtin ?? chip.id;
+          const counted = counting?.isOn(key) ?? false;
+          return (
+            <SourceChip
+              key={chip.id}
+              name={chip.name}
+              value={chip.value}
+              details={chip.lines}
+              dotted={chip.value !== ''}
+              checked={counting === undefined ? chip.value !== '' : counted}
+              toggleLabel={
+                counting !== undefined
+                  ? `${chip.name}, ${counted ? 'counted' : 'not counted'}`
+                  : chip.value === ''
+                    ? `Set ${chip.name}`
+                    : `${chip.name}, on every march`
+              }
+              gearLabel={`Edit ${chip.name}`}
+              onToggle={() => {
+                if (counting === undefined) onEdit(chip.id);
+                else counting.toggle(key, !counted);
+              }}
+              onGear={() => {
+                onEdit(chip.id);
+              }}
+            />
+          );
+        })}
+        {counting?.extras.map(({ key, name }) => {
+          const counted = counting.isOn(key);
+          return (
+            <SourceChip
+              key={key}
+              name={name}
+              checked={counted}
+              toggleLabel={`${name}, ${counted ? 'counted' : 'not counted'}`}
+              onToggle={() => {
+                counting.toggle(key, !counted);
+              }}
+            />
+          );
+        })}
       </Group>
-      <Button
-        variant="subtle"
-        size="compact-sm"
-        leftSection={<Plus size={14} aria-hidden />}
-        w="fit-content"
-        onClick={onAdd}
-      >
-        Add permanent source
-      </Button>
+      {counting === undefined && (
+        <Button
+          variant="subtle"
+          size="compact-sm"
+          leftSection={<Plus size={14} aria-hidden />}
+          w="fit-content"
+          onClick={onAdd}
+        >
+          Add permanent source
+        </Button>
+      )}
     </Stack>
   );
 }

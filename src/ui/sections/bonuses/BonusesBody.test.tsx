@@ -130,3 +130,36 @@ test('the full scope keeps every family, so the calculator reads as it always di
     expect(within(document.body).getAllByText(title).length).toBeGreaterThan(0);
   }
 });
+
+test('a counting scope draws the named permanent sources as switches, and its extras beside them', () => {
+  const toggled: [string, boolean][] = [];
+  const on = new Set(['hallOfFame', 'talents']);
+  const scope: BodyScope = {
+    ...ARENA_SCOPE,
+    families: ['captains', 'equipment', 'permanent'],
+    counting: {
+      builtins: ['hallOfFame', 'customization'],
+      extras: [{ key: 'talents', name: 'Talents' }],
+      isOn: (key) => on.has(key),
+      toggle: (key, next) => {
+        toggled.push([key, next]);
+      },
+    },
+  };
+  renderWithTheme(<Squad captains={5} scope={scope} onSetup={() => {}} />);
+  const group = screen.getByRole('group', { name: /permanent sources/i });
+  // Only the named rows and the extras; the gear still edits the values, and there is no Add button.
+  expect(within(group).getAllByRole('checkbox').map((box) => box.getAttribute('aria-label'))).toEqual([
+    'Customization, not counted',
+    'Hall of Fame, counted',
+    'Talents, counted',
+  ]);
+  expect(screen.queryByRole('button', { name: /add permanent source/i })).toBeNull();
+  fireEvent.click(within(group).getByRole('checkbox', { name: 'Customization, not counted' }));
+  fireEvent.click(within(group).getByRole('checkbox', { name: 'Talents, counted' }));
+  expect(toggled).toEqual([
+    ['customization', true],
+    ['talents', false],
+  ]);
+  expect(within(group).getByRole('button', { name: 'Edit Hall of Fame' })).toBeTruthy();
+});

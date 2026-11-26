@@ -282,9 +282,16 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
     permanent: {
       title: 'Permanent',
       // What is recorded of what is listed: an always-on source with nothing in it is off to the TOTAL.
-      summary: `${String(permanent.filter((chip) => chip.value !== '').length)} of ${String(
-        permanent.length,
-      )} set, always on`,
+      summary:
+        scope.counting === undefined
+          ? `${String(permanent.filter((chip) => chip.value !== '').length)} of ${String(
+              permanent.length,
+            )} set, always on`
+          : `${String(
+              [...scope.counting.builtins, ...scope.counting.extras.map((extra) => extra.key)].filter((key) =>
+                scope.counting?.isOn(key),
+              ).length,
+            )} counted`,
       body: (
         <PermanentChips
           chips={permanent}
@@ -294,6 +301,7 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
           onAdd={() => {
             add('permanent');
           }}
+          {...(scope.counting === undefined ? {} : { counting: scope.counting })}
         />
       ),
     },

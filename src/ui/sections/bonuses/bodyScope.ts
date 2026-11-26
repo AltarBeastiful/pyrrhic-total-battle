@@ -1,3 +1,5 @@
+import type { BuiltinPermanentSource } from '@/state/schema';
+
 import type { BonusesFold } from './uiPrefs';
 
 /**
@@ -26,6 +28,21 @@ export interface BodyScope {
   marchType: boolean;
   /** The caveats and the Summary fold, which read every source the account holds. */
   audit: boolean;
+  /**
+   * A fight that counts only some permanent sources, and lets the player switch each: the Permanent row then
+   * draws just these built-in rows (the gear still edits their values), plus `extras`, as switches that
+   * count or not. Absent, the row is the calculator's: every source, always on, a chip opens its editor.
+   */
+  counting?: PermanentCounting;
+}
+
+export interface PermanentCounting {
+  /** The built-in rows that have a switch. */
+  builtins: readonly BuiltinPermanentSource[];
+  /** Switches that are not permanent rows (talents, the dragon), drawn after them. */
+  extras: readonly { key: string; name: string }[];
+  isOn: (key: string) => boolean;
+  toggle: (key: string, on: boolean) => void;
 }
 
 export const FULL_SCOPE: BodyScope = {
