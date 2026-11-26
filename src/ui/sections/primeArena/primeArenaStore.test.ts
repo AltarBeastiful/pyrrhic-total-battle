@@ -1,14 +1,14 @@
 /**
  * B-36: the Prime Arena inputs live in the account's profile. The store mirrors them in both directions: an edit is
  * written to the active profile (stamped as its own section), and a new document or a switch of profile hydrates the
- * inputs from it. The plan stays in the view store. The squad is a `BattleSetup` (schema v18).
+ * inputs from it. The plan stays in the view store. The squad is a `BattleSetup` (schema v19).
  */
 import { beforeEach, expect, test } from 'vitest';
 
 import { newProfile, newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
 
-import { topTier, usePrimeArenaStore } from './primeArenaStore';
+import { defaultArenaTroops, usePrimeArenaStore } from './primeArenaStore';
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
@@ -32,7 +32,7 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   const root = newRoot();
   const profile = newProfile('saved');
   profile.primeArena = {
-    tier: 8,
+    troops: { ...defaultArenaTroops(), guardsmen: { min: 1, max: 8 } },
     toggles: { clanTechnologies: true, talents: false, hallOfFame: false },
     setup: {
       ...profile.primeArena.setup,
@@ -44,8 +44,8 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   root.profiles = [profile];
   root.activeProfileId = profile.id;
   useStore.getState().replaceDocument(root);
-  const { tier, setup, toggles, seeded } = usePrimeArenaStore.getState();
-  expect(tier).toBe(8);
+  const { troops, setup, toggles, seeded } = usePrimeArenaStore.getState();
+  expect(troops.guardsmen).toEqual({ min: 1, max: 8 });
   expect(setup.active).toMatchObject({ captains: ['a', 'b'], equipment: ['e'], dragon: false });
   expect(setup.housing).toMatchObject({ leadership: 700, dominance: 300 });
   // a switch an older build saved for a source that no longer exists is dropped
@@ -56,12 +56,20 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   expect(seeded).toBe(true);
 });
 
-test('a profile with nothing saved shows the top tier, and switching profile swaps the inputs', () => {
-  expect(usePrimeArenaStore.getState().tier).toBe(topTier());
+test('a profile with nothing saved shows the top level, and switching profile swaps the inputs', () => {
+  expect(usePrimeArenaStore.getState().troops).toEqual(defaultArenaTroops());
   usePrimeArenaStore.getState().updateSetup((s) => ({ housing: { ...s.housing, dominance: 42 } }));
   const other = useStore.getState().createProfile('other');
   useStore.getState().setActiveProfile(other);
   expect(usePrimeArenaStore.getState().setup.housing.dominance).toBe(0);
+});
+
+test('the Troops card is saved with the account, and the untouched top level stores nothing', () => {
+  expect(selectActiveProfile(useStore.getState())?.primeArena.troops).toBeNull();
+  usePrimeArenaStore.getState().updateTroops({ guardsmen: { min: 1, max: 5 } });
+  expect(selectActiveProfile(useStore.getState())?.primeArena.troops?.guardsmen).toEqual({ min: 1, max: 5 });
+  usePrimeArenaStore.getState().updateTroops(defaultArenaTroops());
+  expect(selectActiveProfile(useStore.getState())?.primeArena.troops).toBeNull();
 });
 
 test('seeding clones the active march, keeps five captains, and leaves the excluded sources out', () => {
@@ -107,7 +115,7 @@ test('seeding clones the active march, keeps five captains, and leaves the exclu
 });
 
 test('the plan is not saved', () => {
-  usePrimeArenaStore.setState({ plan: null, planTier: 7 });
+  usePrimeArenaStore.setState({ plan: null, planLevel: 7 });
   const profile = selectActiveProfile(useStore.getState());
-  expect(JSON.stringify(profile)).not.toContain('planTier');
+  expect(JSON.stringify(profile)).not.toContain('planLevel');
 });

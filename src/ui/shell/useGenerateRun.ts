@@ -110,7 +110,11 @@ export interface BarForm {
  */
 export function useBarForm(): BarForm {
   const { press } = useGenerateRun();
+  return barForm(press);
+}
 
+/** The same form for any fight: `press` is whatever its Generate does. */
+export function barForm(press: () => void): BarForm {
   return {
     onSubmit: (event) => {
       event.preventDefault();

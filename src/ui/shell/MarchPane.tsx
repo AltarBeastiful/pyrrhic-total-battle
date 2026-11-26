@@ -22,7 +22,7 @@
  * the first place.
  */
 import { Box } from '@mantine/core';
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
 import { Panel } from '@/ui/kit';
@@ -30,7 +30,12 @@ import { Panel } from '@/ui/kit';
 import classes from './shell.module.css';
 import { usePaneStick } from './usePaneStick';
 
-export function MarchPane() {
+export interface MarchPaneProps {
+  /** What the pane holds: the March by default, the Prime Arena's match in its own frame. */
+  children?: ReactNode;
+}
+
+export function MarchPane({ children }: MarchPaneProps = {}) {
   const pane = useRef<HTMLDivElement>(null);
   const stand = usePaneStick(pane);
 
@@ -51,9 +56,7 @@ export function MarchPane() {
       {/* One surface for the whole pane, as the spike drew it (investigation 0009,
           `v1-desktop.jpg`) and as direction A lights it: the recap, Generate and the March are one
           object, not three floating blocks on the page ground. `MarchSection` brings no ground. */}
-      <Panel surface="pane">
-        <MarchSection />
-      </Panel>
+      <Panel surface="pane">{children ?? <MarchSection />}</Panel>
     </Box>
   );
 }

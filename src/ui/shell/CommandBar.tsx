@@ -24,18 +24,19 @@ import { Select, UnstyledButton } from '@mantine/core';
 
 import { Glyph } from '@/ui/domain';
 import { NumberField } from '@/ui/kit';
-import { MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
 
-import { OBJECTIVE_CHOICES, OBJECTIVE_LOCKED_REASON, POOL_LABELS, POOLS, useCommandBar } from './command';
+import { useCalculatorBar, type BarFrame } from './barFrame';
+import { OBJECTIVE_CHOICES, OBJECTIVE_LOCKED_REASON, POOL_LABELS } from './command';
 import { ObjectiveWhy } from './ObjectiveWhy';
 import classes from './shell.module.css';
-import { useBarForm } from './useGenerateRun';
 import { TWO_PANES, useMediaQuery } from './useMediaQuery';
 
 /** The objective in one line each: the sentence under it is the Battle card's business, not a bar's. */
 const OBJECTIVE_DATA = OBJECTIVE_CHOICES.map((choice) => ({ value: choice.value, label: choice.title }));
 
 export interface CommandBarProps {
+  /** What the bar draws; the calculator's own when absent (`useCalculatorBar`). */
+  frame?: BarFrame;
   /** Given only where the March is in the sheet (1024–1199 px): the bar shows the answer as well. */
   onOpenRecap?: () => void;
   /** How many runs have finished with the sheet shut; each one flashes the summary once. */
@@ -49,9 +50,15 @@ export interface CommandBarProps {
  */
 const BESIDE: ('label' | 'input' | 'description' | 'error')[] = ['label', 'input', 'description', 'error'];
 
-export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
-  const { housing, priority, problems, message, objectiveLocked, setPool, setObjective } = useCommandBar();
-  const form = useBarForm();
+export function CommandBar(props: CommandBarProps) {
+  const calculator = useCalculatorBar();
+  return <CommandBarView {...props} frame={props.frame ?? calculator} />;
+}
+
+/** The bar over a frame config: the same form, wells and Generate for whatever fight fills the frame. */
+export function CommandBarView({ frame, onOpenRecap, pulse = 0 }: CommandBarProps & { frame: BarFrame }) {
+  const { housing, problems, message, setPool, objective, form } = frame;
+  const objectiveLocked = objective?.locked === true;
   // Room, not width for its own sake: from 1200 px the March is a pane and the bar's row is the wells
   // and Generate alone, which is the only state the sentence fits into (owner, 2026-09-21).
   const beside = useMediaQuery(TWO_PANES);
@@ -62,7 +69,7 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
   return (
     /* A real form, and submitting it is generating: `Enter` in any of these fields runs the march
        (`useBarForm`), `Ctrl`/`⌘ + Enter` still does it from anywhere on the page. */
-    <form className={classes.commandBar} aria-label="This march" {...form}>
+    <form className={classes.commandBar} aria-label={frame.label} {...form}>
       {/* One line for the three pools, above the fields rather than under each of them: the bar is
           the height of one row of wells and a message under a field would push Generate off it. */}
       {message !== null && (
@@ -72,7 +79,7 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
       )}
       <div className={classes.commandRow}>
         <div className={classes.commandFields}>
-          {POOLS.map((pool) => (
+          {frame.pools.map((pool) => (
             <NumberField
               key={pool}
               label={POOL_LABELS[pool]}
@@ -95,34 +102,36 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
               dropdown is honestly better at than a list of cards, because it sits in a bar 92 px
               tall (design plan §5.6; design rule 8 is about a choice that needs its sentence on
               screen). */}
-          <Select
-            label="Objective"
-            data={OBJECTIVE_DATA}
-            value={priority}
-            allowDeselect={false}
-            comboboxProps={{ withinPortal: true }}
-            // Locked while the plan decides it (owner, 2026-09-15). The reason goes in Mantine's own
-            // `description` slot rather than a paragraph of our own: a caller's `aria-describedby` is
-            // overwritten by the input's (`Input.mjs`), so the slot is the only way the sentence is
-            // *linked* to the control instead of merely sitting near it — and it renders at `xs`,
-            // which this theme sets to 13 px, inside rule 19's floor.
-            //
-            // **Beside the well, never under it** (owner, 2026-09-21): the slot under a field costs the
-            // bar ~32 px of height (measured 2026-09-15: 88 px to 119.7) on the one edge of the window
-            // a thumb and a Generate share. Re-ordered and laid out in two columns, the same slot is
-            // two lines in the room the label and the well already take, and the bar does not move.
-            disabled={objectiveLocked}
-            {...(printed
-              ? {
-                  description: OBJECTIVE_LOCKED_REASON,
-                  inputWrapperOrder: BESIDE,
-                  classNames: { root: classes.objectiveBeside, description: classes.objectiveNote },
-                }
-              : {})}
-            onChange={(value) => {
-              if (value !== null) setObjective(value);
-            }}
-          />
+          {objective !== null && (
+            <Select
+              label="Objective"
+              data={OBJECTIVE_DATA}
+              value={objective.priority}
+              allowDeselect={false}
+              comboboxProps={{ withinPortal: true }}
+              // Locked while the plan decides it (owner, 2026-09-15). The reason goes in Mantine's own
+              // `description` slot rather than a paragraph of our own: a caller's `aria-describedby` is
+              // overwritten by the input's (`Input.mjs`), so the slot is the only way the sentence is
+              // *linked* to the control instead of merely sitting near it — and it renders at `xs`,
+              // which this theme sets to 13 px, inside rule 19's floor.
+              //
+              // **Beside the well, never under it** (owner, 2026-09-21): the slot under a field costs the
+              // bar ~32 px of height (measured 2026-09-15: 88 px to 119.7) on the one edge of the window
+              // a thumb and a Generate share. Re-ordered and laid out in two columns, the same slot is
+              // two lines in the room the label and the well already take, and the bar does not move.
+              disabled={objectiveLocked}
+              {...(printed
+                ? {
+                    description: OBJECTIVE_LOCKED_REASON,
+                    inputWrapperOrder: BESIDE,
+                    classNames: { root: classes.objectiveBeside, description: classes.objectiveNote },
+                  }
+                : {})}
+              onChange={(value) => {
+                if (value !== null) objective.onChange(value);
+              }}
+            />
+          )}
           {/* Below 1200 px the row has the answer on it too and there is no column to give the
               sentence, so it goes behind the ⓘ instead of standing the bar up another line. */}
           {objectiveLocked && !beside && <ObjectiveWhy className={classes.objectiveWhy} />}
@@ -131,16 +140,16 @@ export function CommandBar({ onOpenRecap, pulse = 0 }: CommandBarProps) {
           <UnstyledButton
             type="button"
             className={classes.answerTap}
-            aria-label="Open the march recap"
+            aria-label={frame.answerLabel}
             onClick={onOpenRecap}
           >
             {/* Keyed on the run count so the animation is re-run rather than re-declared. */}
             <div key={pulse} className={pulse > 0 ? classes.pulse : undefined}>
-              <MarchQuickSummary />
+              {frame.answer}
             </div>
           </UnstyledButton>
         )}
-        <MarchGenerateButton size="sm" />
+        {frame.generate}
       </div>
     </form>
   );

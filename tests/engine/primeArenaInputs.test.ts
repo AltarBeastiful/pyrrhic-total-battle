@@ -73,7 +73,7 @@ describe('primeArenaPool', () => {
     for (const unit of pool) {
       expect(unit.tier).toBeGreaterThanOrEqual(2);
       expect(unit.tier).toBeLessThanOrEqual(9);
-      expect(unit.kind === 'monster' || ['guardsmen', 'specialist'].includes(unit.group)).toBe(true);
+      expect(unit.kind === 'monster' || ['guardsmen', 'specialist'].includes(String(unit.group))).toBe(true);
       expect(unit.kind).not.toBe('mercenary');
     }
     const ids = pool.map((u) => u.id);
@@ -84,7 +84,9 @@ describe('primeArenaPool', () => {
     // The minimum is G2, S2 and M3: no tier-1 troop, and monsters begin where the game puts them.
     const lowest = (group: string): number =>
       Math.min(
-        ...pool.filter((u) => (u.kind === 'monster' ? 'monster' : u.group) === group).map((u) => u.tier),
+        ...pool
+          .filter((u) => String(u.kind === 'monster' ? 'monster' : u.group) === group)
+          .map((u) => u.tier),
       );
     expect(lowest('guardsmen')).toBe(2);
     expect(lowest('specialist')).toBe(2);

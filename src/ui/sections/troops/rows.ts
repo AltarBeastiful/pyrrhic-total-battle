@@ -39,6 +39,8 @@ export const TROOP_ROWS: readonly TroopRow[] = [
   { id: 'monsters', label: 'Monsters', prefix: 'M', tiles: true, allowNone: true },
 ];
 
+const ROW_IDS = TROOP_ROWS.map((row) => row.id);
+
 export const CHIP_ROWS: readonly ChipRowId[] = ['guardsmen', 'specialists'];
 
 export function isChipRow(id: TroopRowId): id is ChipRowId {
@@ -140,13 +142,14 @@ export function isEmptyArmy(troops: ProfileTroops): boolean {
  * player does not field say nothing at all — an empty group adds no line and no word (design
  * rule 14).
  */
-export function rangeSummary(troops: ProfileTroops): string {
-  return TROOP_ROWS.map((row) => {
-    const range = troops[row.id];
-    if (range === null) return null;
-    const low = `${row.prefix}${String(range.min)}`;
-    return range.min === range.max ? low : `${low}–${row.prefix}${String(range.max)}`;
-  })
+export function rangeSummary(troops: ProfileTroops, only: readonly TroopRowId[] = ROW_IDS): string {
+  return TROOP_ROWS.filter((row) => only.includes(row.id))
+    .map((row) => {
+      const range = troops[row.id];
+      if (range === null) return null;
+      const low = `${row.prefix}${String(range.min)}`;
+      return range.min === range.max ? low : `${low}–${row.prefix}${String(range.max)}`;
+    })
     .filter((term) => term !== null)
     .join(' · ');
 }

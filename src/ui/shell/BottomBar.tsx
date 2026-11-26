@@ -33,32 +33,38 @@ import { useState } from 'react';
 import type { Pool } from '@/engine/types';
 import { Glyph } from '@/ui/domain';
 import { ChoiceList, useOpenEditor } from '@/ui/kit';
-import { amount, MarchGenerateButton, MarchQuickSummary } from '@/ui/sections/march';
+import { amount } from '@/ui/sections/march';
 
-import { OBJECTIVE_CHOICES, POOL_LABELS, POOL_SHORT, POOLS, useCommandBar } from './command';
+import { useCalculatorBar, type BarFrame } from './barFrame';
+import { OBJECTIVE_CHOICES, POOL_LABELS, POOL_SHORT } from './command';
 import { ObjectiveWhy } from './ObjectiveWhy';
 import classes from './shell.module.css';
-import { useBarForm } from './useGenerateRun';
 
 /** The objective as a short list: in a popover this narrow, the sentences are the card's job. */
 const OBJECTIVE_ITEMS = OBJECTIVE_CHOICES.map((choice) => ({ value: choice.value, title: choice.title }));
 
 export interface BottomBarProps {
+  /** What the bar draws; the calculator's own when absent (`useCalculatorBar`). */
+  frame?: BarFrame;
   /** Opens the March sheet: the answer half of the bar is one big target. */
   onOpenRecap: () => void;
   /** How many runs have finished with the sheet shut; each one flashes the summary once. */
   pulse?: number;
 }
 
-export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
-  const { housing, priority, objectiveTitle, objectiveLocked, problems, message, setPool, setObjective } =
-    useCommandBar();
-  const form = useBarForm();
+export function BottomBar(props: BottomBarProps) {
+  const calculator = useCalculatorBar();
+  return <BottomBarView {...props} frame={props.frame ?? calculator} />;
+}
+
+/** The phone bar over a frame config. */
+export function BottomBarView({ frame, onOpenRecap, pulse = 0 }: BottomBarProps & { frame: BarFrame }) {
+  const { housing, problems, message, setPool, objective, form } = frame;
 
   return (
     /* The same form the desktop bar is (`CommandBar.tsx`): `Enter` in a chip's field puts the
        figure back and generates. */
-    <form className={classes.bottomBar} aria-label="This march" {...form}>
+    <form className={classes.bottomBar} aria-label={frame.label} {...form}>
       {message !== null && (
         <p className={classes.barMessage} role="alert">
           {message}
@@ -66,7 +72,7 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
       )}
       {housing !== null && (
         <div className={classes.housingRow}>
-          {POOLS.map((pool) => (
+          {frame.pools.map((pool) => (
             <HousingChip
               key={pool}
               pool={pool}
@@ -77,34 +83,36 @@ export function BottomBar({ onOpenRecap, pulse = 0 }: BottomBarProps) {
               }}
             />
           ))}
-          <ObjectiveChip
-            value={priority}
-            title={objectiveTitle}
-            locked={objectiveLocked}
-            onChange={setObjective}
-          />
+          {objective !== null && (
+            <ObjectiveChip
+              value={objective.priority}
+              title={objective.title}
+              locked={objective.locked}
+              onChange={objective.onChange}
+            />
+          )}
           {/* Why that chip cannot be pressed, behind the ⓘ rather than in a line of its own above the
               chips (owner, 2026-09-21). The line was two lines of prose at 390 px and it stood the bar
               up from 120 px to 164 — a quarter of the height of the keyboard it shares the bottom of
               the window with, spent on a sentence that is read once. At the row's own 44 px, because
               this is the phone and everything on this row is something a thumb lands on. */}
-          {objectiveLocked && <ObjectiveWhy size={44} className={classes.chipWhy} />}
+          {objective?.locked === true && <ObjectiveWhy size={44} className={classes.chipWhy} />}
         </div>
       )}
       <div className={classes.answerRow}>
         <UnstyledButton
           type="button"
           className={classes.answerTap}
-          aria-label="Open the march recap"
+          aria-label={frame.answerLabel}
           onClick={onOpenRecap}
         >
           {/* Keyed on the run count so the animation is re-run rather than re-declared: a CSS
               animation only restarts when the element it is on is a new one. */}
           <div key={pulse} className={pulse > 0 ? classes.pulse : undefined}>
-            <MarchQuickSummary />
+            {frame.answer}
           </div>
         </UnstyledButton>
-        <MarchGenerateButton size="sm" />
+        {frame.generate}
       </div>
     </form>
   );

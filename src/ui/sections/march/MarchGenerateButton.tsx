@@ -80,7 +80,11 @@ export function GenerateControl({
   const keyboard = useMediaQuery(HAS_KEYBOARD);
   const blocked = state === 'blocked' && hint !== null;
   const label = blocked ? hint : running ? 'Cancel' : 'Generate';
-  const name = blocked ? `Generate ${noun}: ${hint}` : running ? `Generate ${noun}: cancel` : `Generate ${noun}`;
+  const name = blocked
+    ? `Generate ${noun}: ${hint}`
+    : running
+      ? `Generate ${noun}: cancel`
+      : `Generate ${noun}`;
 
   const button = (
     <Button
@@ -171,6 +175,13 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
   };
 
   return (
-    <GenerateControl size={size} fullWidth={fullWidth} state={state} hint={hint} running={running} onPress={press} />
+    <GenerateControl
+      size={size}
+      fullWidth={fullWidth}
+      state={state}
+      hint={hint}
+      running={running}
+      onPress={press}
+    />
   );
 }

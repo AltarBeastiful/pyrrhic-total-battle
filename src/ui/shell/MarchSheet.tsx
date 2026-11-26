@@ -21,7 +21,7 @@
  */
 import { Drawer } from '@mantine/core';
 import { useDrag, useReducedMotion } from '@mantine/hooks';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { MarchSection } from '@/ui/sections/march';
 import { useBackCloses } from '@/ui/kit/backCloses';
@@ -41,9 +41,13 @@ const SPRING_MS = 160;
 export interface MarchSheetProps {
   opened: boolean;
   onClose: () => void;
+  /** The sheet's heading; "March" unless another fight fills it. */
+  title?: string;
+  /** What the sheet holds: the March section by default. */
+  children?: ReactNode;
 }
 
-export function MarchSheet({ opened, onClose }: MarchSheetProps) {
+export function MarchSheet({ opened, onClose, title = 'March', children }: MarchSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
   const stillness = useReducedMotion();
   // Not a setup editor — Ctrl+Enter leaves it up to show the answer — but Back still puts it down
@@ -127,12 +131,10 @@ export function MarchSheet({ opened, onClose }: MarchSheetProps) {
       <Drawer.Content ref={sheet} className={classes.sheet}>
         <Drawer.Header ref={gripRef} className={classes.sheetGrip} data-dragging={gripping || undefined}>
           <span className={classes.grabber} aria-hidden />
-          <Drawer.Title>March</Drawer.Title>
+          <Drawer.Title>{title}</Drawer.Title>
           <Drawer.CloseButton aria-label="Close" />
         </Drawer.Header>
-        <Drawer.Body>
-          <MarchSection />
-        </Drawer.Body>
+        <Drawer.Body>{children ?? <MarchSection />}</Drawer.Body>
       </Drawer.Content>
     </Drawer.Root>
   );

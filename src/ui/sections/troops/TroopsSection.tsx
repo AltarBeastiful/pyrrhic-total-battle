@@ -58,7 +58,19 @@ const NAME_WIDTH = 120;
  */
 const CHIP_HEIGHT = 26;
 
-export function TroopsSection() {
+/**
+ * A Troops card that is not the account's: the Prime Arena keeps its own troops and shows the rows that fix its
+ * pool. The card, its steppers and its chips are the same; only where they read and write, and which rows they
+ * draw, come from here.
+ */
+export interface TroopsFrame {
+  troops: ProfileTroops;
+  update: (patch: Partial<ProfileTroops>) => void;
+  /** The rows drawn; the calculator draws all four. */
+  rows: readonly TroopRowId[];
+}
+
+export function TroopsSection({ frame }: { frame?: TroopsFrame } = {}) {
   // Only the two fields this card reads (`useActiveProfileSlice`): a keystroke elsewhere on the
   // page — the housing, a bonus — must not re-render eight tier steppers and their chips.
   const profile = useActiveProfileSlice((current) => ({ id: current.id, troops: current.troops }));
@@ -66,12 +78,16 @@ export function TroopsSection() {
   const titleId = useId();
 
   if (profile === undefined) return null;
-  const troops = profile.troops;
+  const troops = frame?.troops ?? profile.troops;
   const profileId = profile.id;
   // A profile with no troops is a profile being filled in: the block says how, above the rows.
-  const empty = isEmptyArmy(troops);
+  const empty = frame === undefined && isEmptyArmy(troops);
 
   const patch = (next: Partial<ProfileTroops>): void => {
+    if (frame !== undefined) {
+      frame.update(next);
+      return;
+    }
     updateProfile(profileId, (current) => ({ troops: { ...current.troops, ...next } }));
   };
 
@@ -141,7 +157,7 @@ export function TroopsSection() {
       aria-labelledby={titleId}
       title="Troops"
       titleId={titleId}
-      meta={rangeSummary(troops)}
+      meta={frame === undefined ? rangeSummary(troops) : rangeSummary(troops, frame.rows)}
     >
       <Stack gap={6}>
         {empty && (
@@ -149,7 +165,7 @@ export function TroopsSection() {
             Add your troops: pick the lowest and highest tier you own.
           </Text>
         )}
-        {TROOP_ROWS.map((row) => (
+        {TROOP_ROWS.filter((row) => frame === undefined || frame.rows.includes(row.id)).map((row) => (
           <GroupRow
             key={row.id}
             row={row}

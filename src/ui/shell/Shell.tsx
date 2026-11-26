@@ -45,6 +45,7 @@ import { AppBar } from './AppBar';
 import { BottomBar } from './BottomBar';
 import { DESKTOP_BAR } from './command';
 import { CommandBar } from './CommandBar';
+import { CommandDock, CONTENT_WIDTH } from './CommandDock';
 import { MarchPane } from './MarchPane';
 import { MarchSheet } from './MarchSheet';
 import classes from './shell.module.css';
@@ -56,9 +57,16 @@ const TalentsPage = lazy(() =>
   import('../sections/talents/TalentsPage').then((module) => ({ default: module.TalentsPage })),
 );
 
-// The Prime Arena planner (B-35) is a page of its own too: the planner and its form are a chunk of their own.
-const PrimeArenaPage = lazy(() =>
-  import('../sections/primeArena/PrimeArenaPage').then((module) => ({ default: module.PrimeArenaPage })),
+// The Prime Arena planner (B-35) fills the calculator's own frame: the planner, its setup column, its match and its
+// bars are a chunk of their own, and the frame below places them where the calculator's sections and March go.
+const ArenaSetup = lazy(() =>
+  import('../sections/primeArena/PrimeArenaFrame').then((module) => ({ default: module.ArenaSetup })),
+);
+const ArenaMatch = lazy(() =>
+  import('../sections/primeArena/PrimeArenaFrame').then((module) => ({ default: module.ArenaMatch })),
+);
+const ArenaBars = lazy(() =>
+  import('../sections/primeArena/PrimeArenaFrame').then((module) => ({ default: module.ArenaBars })),
 );
 
 // Most sessions are not opened on a share link, and the ones that are can wait a frame for the
@@ -69,9 +77,6 @@ const LoadSharedDialog = lazy(() =>
 
 /** What the player edits, in the order the registry fixes; the March is the other column. */
 const SETUP = SECTIONS.filter((section) => section.id !== 'march');
-
-/** The page's own width, not Mantine's: `Container` keeps the content off the edges (M3 margins). */
-const CONTENT_WIDTH = 1600;
 
 export function Shell() {
   const theme = useStore(selectTheme);
@@ -170,9 +175,28 @@ export function Shell() {
             <TalentsPage />
           </LazySurface>
         ) : page === 'primeArena' ? (
-          <LazySurface isOpen reserve="panel">
-            <PrimeArenaPage />
-          </LazySurface>
+          // The calculator's own frame, filled by the arena: the same grid and pane slot, its setup column
+          // and its match where the sections and the March go.
+          wide ? (
+            <Grid gap="xl">
+              <Grid.Col span="auto" miw={0}>
+                <LazySurface isOpen reserve="panel">
+                  <ArenaSetup />
+                </LazySurface>
+              </Grid.Col>
+              <Grid.Col span="content">
+                <MarchPane>
+                  <LazySurface isOpen reserve="panel">
+                    <ArenaMatch />
+                  </LazySurface>
+                </MarchPane>
+              </Grid.Col>
+            </Grid>
+          ) : (
+            <LazySurface isOpen reserve="panel">
+              <ArenaSetup />
+            </LazySurface>
+          )
         ) : wide ? (
           <Grid gap="xl">
             <Grid.Col span="auto" miw={0}>
@@ -199,14 +223,17 @@ export function Shell() {
           a sticky element travels only inside its own containing block — and it carries the ground
           from edge to edge, with a `Container` inside it so the content starts and ends on the same
           lines as the panels above it. */}
-      {page !== 'calculator' ? null : barWide ? (
-        <div className={classes.commandDock}>
-          <Container component="div" size={CONTENT_WIDTH}>
-            {/* Between 1024 and 1199 px the March has no pane, so the bar carries the answer and
-                the sheet opens from it: the answer and Generate travel together (design rule 2). */}
-            <CommandBar {...(wide ? {} : { onOpenRecap: openRecap, pulse: run.index })} />
-          </Container>
-        </div>
+      {page === 'primeArena' ? (
+        // The arena's bar and its sheet, in the calculator's places and at its widths.
+        <LazySurface isOpen>
+          <ArenaBars wide={wide} barWide={barWide} />
+        </LazySurface>
+      ) : page !== 'calculator' ? null : barWide ? (
+        <CommandDock>
+          {/* Between 1024 and 1199 px the March has no pane, so the bar carries the answer and
+              the sheet opens from it: the answer and Generate travel together (design rule 2). */}
+          <CommandBar {...(wide ? {} : { onOpenRecap: openRecap, pulse: run.index })} />
+        </CommandDock>
       ) : (
         <BottomBar pulse={run.index} onOpenRecap={openRecap} />
       )}
