@@ -183,10 +183,13 @@ describe('parseLocationHash', () => {
 });
 
 describe('profile links', () => {
-  it('carries the Prime Arena inputs (schema v18: a battle setup), and a link without them arrives with the defaults', async () => {
+  it('carries the Prime Arena inputs (schema v19: a battle setup and its own troops), and a link without them arrives with the defaults', async () => {
     const profile = realisticProfile();
     profile.primeArena = {
-      tier: 9,
+      troops: {
+        ...profile.troops,
+        guardsmen: { min: 1, max: 9 },
+      },
       toggles: { talents: false },
       seeded: true,
       setup: {
@@ -216,7 +219,7 @@ describe('profile links', () => {
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
     const { setup, ...rest } = v16.profile.primeArena;
-    expect(rest).toEqual({ tier: 0, toggles: {}, seeded: false });
+    expect(rest).toEqual({ troops: null, toggles: {}, seeded: false });
     expect(setup.active).toEqual(fresh.primeArena.setup.active);
     expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
   });

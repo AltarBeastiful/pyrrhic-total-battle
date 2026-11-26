@@ -18,7 +18,7 @@ import { useMemo } from 'react';
 
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { useResultStore } from '@/ui/resultStore';
-import { blockedReason, fabState } from '@/ui/shell/state';
+import { blockedReason, fabState, type FabState } from '@/ui/shell/state';
 import { HAS_KEYBOARD, useMediaQuery } from '@/ui/shell/useMediaQuery';
 
 import { cancelGenerate, runGenerate } from './generate';
@@ -48,37 +48,39 @@ function shortcutWords(): string {
   return /Mac|iPhone|iPad|iPod/i.test(agent) ? '⌘ ↵' : 'Ctrl ↵';
 }
 
-export interface MarchGenerateButtonProps {
+export interface GenerateControlProps {
   size?: 'sm' | 'md';
   fullWidth?: boolean;
+  state: FabState;
+  /** Why pressing would do nothing, in the words the button shows; `null` when it can be pressed. */
+  hint: string | null;
+  running: boolean;
+  /** The tooltip over a ready button: what this Generate sizes. */
+  tooltip?: string;
+  /** What the button makes, for its accessible name: "march" here, "match" in the Prime Arena. */
+  noun?: string;
+  onPress: () => void;
 }
 
-export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGenerateButtonProps) {
-  const profile = useStore(selectActiveProfile);
-  const setup = useStore(selectActiveSetup);
-  const running = useResultStore((state) => state.running);
-  const hasResult = useResultStore((state) => state.last !== null);
+/**
+ * The button and its four states, without knowing what it generates: the March's own `MarchGenerateButton` and
+ * the Prime Arena's bar both draw it, so the gilt, the spinner, the stale dot and the reason-as-label are one
+ * thing.
+ */
+export function GenerateControl({
+  size = 'md',
+  fullWidth = false,
+  state,
+  hint,
+  running,
+  tooltip = 'Size the stacks for this march',
+  noun = 'march',
+  onPress,
+}: GenerateControlProps) {
   const keyboard = useMediaQuery(HAS_KEYBOARD);
-  const lastRunFingerprint = useRunStore((state) => state.lastRunFingerprint);
-
-  // The store hands out the same profile and setup objects until one of them is edited, so the
-  // fingerprint is rebuilt only when something a march is computed from really changed.
-  const fingerprint = useMemo(() => setupFingerprint(profile, setup), [profile, setup]);
-  const hint = blockedReason(profile, setup);
-  const state = fabState({ running, blocked: hint, hasResult, fingerprint, lastRunFingerprint });
-
-  const press = (): void => {
-    if (running) {
-      cancelGenerate();
-      return;
-    }
-    if (hint !== null) return;
-    void runGenerate();
-  };
-
   const blocked = state === 'blocked' && hint !== null;
   const label = blocked ? hint : running ? 'Cancel' : 'Generate';
-  const name = blocked ? `Generate march: ${hint}` : running ? 'Generate march: cancel' : 'Generate march';
+  const name = blocked ? `Generate ${noun}: ${hint}` : running ? `Generate ${noun}: cancel` : `Generate ${noun}`;
 
   const button = (
     <Button
@@ -114,7 +116,7 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
           event.preventDefault();
           return;
         }
-        press();
+        onPress();
       }}
     >
       {label}
@@ -124,7 +126,7 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
   // The state is written on the button's own wrapper, which is what the browser suite waits on to
   // know a run has finished.
   return (
-    <Tooltip label={hint ?? 'Size the stacks for this march'} disabled={!blocked} withinPortal>
+    <Tooltip label={hint ?? tooltip} disabled={!blocked} withinPortal>
       <Indicator
         data-state={state}
         aria-busy={running}
@@ -138,5 +140,37 @@ export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGen
         {button}
       </Indicator>
     </Tooltip>
+  );
+}
+
+export interface MarchGenerateButtonProps {
+  size?: 'sm' | 'md';
+  fullWidth?: boolean;
+}
+
+export function MarchGenerateButton({ size = 'md', fullWidth = false }: MarchGenerateButtonProps) {
+  const profile = useStore(selectActiveProfile);
+  const setup = useStore(selectActiveSetup);
+  const running = useResultStore((state) => state.running);
+  const hasResult = useResultStore((state) => state.last !== null);
+  const lastRunFingerprint = useRunStore((state) => state.lastRunFingerprint);
+
+  // The store hands out the same profile and setup objects until one of them is edited, so the
+  // fingerprint is rebuilt only when something a march is computed from really changed.
+  const fingerprint = useMemo(() => setupFingerprint(profile, setup), [profile, setup]);
+  const hint = blockedReason(profile, setup);
+  const state = fabState({ running, blocked: hint, hasResult, fingerprint, lastRunFingerprint });
+
+  const press = (): void => {
+    if (running) {
+      cancelGenerate();
+      return;
+    }
+    if (hint !== null) return;
+    void runGenerate();
+  };
+
+  return (
+    <GenerateControl size={size} fullWidth={fullWidth} state={state} hint={hint} running={running} onPress={press} />
   );
 }

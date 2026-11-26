@@ -914,7 +914,7 @@ describe('migrateProfile', () => {
           },
         }),
       ]);
-      expect(profile.primeArena).toMatchObject({ tier: 0, toggles: {}, seeded: false });
+      expect(profile.primeArena).toMatchObject({ troops: null, toggles: {}, seeded: false });
       expect(profile.talents).toEqual(newRoot('device').profiles[0]!.talents);
     });
 
@@ -932,7 +932,8 @@ describe('migrateProfile', () => {
         seeded: true,
       };
       const arena = migrate(fixture).profiles[0]!.primeArena;
-      expect(arena).toMatchObject({ tier: 9, seeded: true });
+      expect(arena).toMatchObject({ seeded: true });
+      expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 9 });
       expect(arena.setup.active.captains).toEqual(['a']);
       expect(arena.setup.housing).toMatchObject({ leadership: 5, dominance: 7, authority: 0 });
     });
@@ -966,7 +967,7 @@ describe('migrateProfile', () => {
 
     it('moves gear and pools into the setup and keeps only the switches that still exist', () => {
       const arena = migrate(v17Doc(legacy)).profiles[0]!.primeArena;
-      expect(arena.tier).toBe(8);
+      expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 8 });
       expect(arena.seeded).toBe(true);
       expect(arena.toggles).toEqual({ talents: false, hallOfFame: false });
       expect(arena.setup.marchType).toBe('unspecified');
@@ -986,8 +987,40 @@ describe('migrateProfile', () => {
       const once = migrateProfile(profile, 17);
       expect(once.primeArena.setup.active.equipment).toEqual(['e']);
       expect(
-        migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 18).primeArena,
+        migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 19).primeArena,
       ).toEqual(once.primeArena);
+    });
+  });
+
+  describe('v18 → v19 turns the arena division into the Guardsmen level of its own troops', () => {
+    const v18Doc = (tier: number): Record<string, unknown> => {
+      const doc = newRoot('device');
+      const profile = JSON.parse(JSON.stringify(doc.profiles[0])) as Record<string, unknown>;
+      const { troops: _troops, ...arena } = profile.primeArena as Record<string, unknown>;
+      return {
+        ...JSON.parse(JSON.stringify(doc)),
+        schemaVersion: 18,
+        profiles: [{ ...profile, primeArena: { ...arena, tier } }],
+      };
+    };
+
+    it('writes a saved division as the Guardsmen "to" level and drops the tier', () => {
+      const arena = migrate(v18Doc(7)).profiles[0]!.primeArena;
+      expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 7 });
+      expect(arena.troops?.specialists).toBeNull();
+      expect(arena.troops?.engineers).toBeNull();
+      expect(arena.troops?.monsters).toBeNull();
+      expect(arena.troops?.excludedUnitIds).toEqual([]);
+      expect('tier' in arena).toBe(false);
+    });
+
+    it('leaves the top level to the page when no division was ever chosen', () => {
+      expect(migrate(v18Doc(0)).profiles[0]!.primeArena.troops).toBeNull();
+    });
+
+    it('upgrades an exported v18 profile on import', () => {
+      const profile = (v18Doc(5).profiles as Record<string, unknown>[])[0]!;
+      expect(migrateProfile(profile, 18).primeArena.troops?.guardsmen).toEqual({ min: 1, max: 5 });
     });
   });
 });

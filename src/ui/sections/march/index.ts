@@ -13,8 +13,8 @@ export { MarchFoot } from './MarchFoot';
 export { MarchQuickSummary } from './MarchQuickSummary';
 export type { MarchQuickSummaryProps } from './MarchQuickSummary';
 export { MarchRecap } from './MarchRecap';
-export { MarchGenerateButton } from './MarchGenerateButton';
-export type { MarchGenerateButtonProps } from './MarchGenerateButton';
+export { GenerateControl, MarchGenerateButton } from './MarchGenerateButton';
+export type { GenerateControlProps, MarchGenerateButtonProps } from './MarchGenerateButton';
 
 // What the shell reads besides the components: how a cached run is restored, and the one formatter the
 // command bar and the bottom bar share. Everything else the section owns it imports from its own files;

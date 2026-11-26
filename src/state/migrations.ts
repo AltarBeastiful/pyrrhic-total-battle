@@ -285,6 +285,30 @@ export function arenaBecomesSetup(profile: Record<string, unknown>): Record<stri
 }
 
 /**
+ * `18 → 19` for one profile: the arena's division tier becomes the Guardsmen "to" level of the arena's own
+ * Troops card (the division was that level under another name). Tier 0 was "the top", which stays `null` for
+ * the page to resolve from the game tables. A profile already carrying `troops` is left alone.
+ */
+export function arenaDivisionBecomesTroops(profile: Record<string, unknown>): Record<string, unknown> {
+  const old = profile.primeArena;
+  if (!isPlainObject(old) || 'troops' in old) return profile;
+  const { tier, ...rest } = old;
+  const level = typeof tier === 'number' && tier > 0 ? Math.trunc(tier) : 0;
+  const troops =
+    level === 0
+      ? null
+      : {
+          guardsmen: { min: 1, max: level },
+          specialists: null,
+          engineers: null,
+          monsters: null,
+          topTierExcluded: { guardsmen: [], specialists: [] },
+          excludedUnitIds: [],
+        };
+  return { ...profile, primeArena: { ...rest, troops } };
+}
+
+/**
  * `10 → 11` for one profile (B-21): the account gains the hero talent planner's inputs, empty: level 1, no
  * rank bought, the Battle goal. Nothing else moves.
  */
@@ -402,6 +426,7 @@ export const migrations: MigrationTable = {
   15: (doc) => ({ ...doc, schemaVersion: 16, profiles: migrateProfiles(doc, restrictHeroTalentsSource) }),
   16: (doc) => ({ ...doc, schemaVersion: 17, profiles: migrateProfiles(doc, addPrimeArena) }),
   17: (doc) => ({ ...doc, schemaVersion: 18, profiles: migrateProfiles(doc, arenaBecomesSetup) }),
+  18: (doc) => ({ ...doc, schemaVersion: 19, profiles: migrateProfiles(doc, arenaDivisionBecomesTroops) }),
 };
 
 /**
@@ -431,6 +456,7 @@ export const profileMigrations: MigrationTable = {
   15: restrictHeroTalentsSource,
   16: addPrimeArena,
   17: arenaBecomesSetup,
+  18: arenaDivisionBecomesTroops,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -459,6 +485,7 @@ export const savedStackMigrations: MigrationTable = {
   15: identity,
   16: identity,
   17: identity,
+  18: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
