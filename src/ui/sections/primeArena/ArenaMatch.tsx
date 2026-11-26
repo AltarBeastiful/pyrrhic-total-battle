@@ -10,13 +10,15 @@ import { useId } from 'react';
 
 import type { PrimeArenaRound, PrimeArenaSideOutcome } from '@/engine/primeArena';
 import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
-import { TierBadge } from '@/ui/domain';
+import { PoolGauge, TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
 import { Disclosure, Sections } from '@/ui/kit';
 
 import { usePrimeArenaStore } from './primeArenaStore';
 
 const SIDE_NAME = { attacker: 'Attacker', defender: 'Defender', draw: 'Nobody' } as const;
+
+const POOLS = ['leadership', 'dominance'] as const;
 
 const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 
@@ -70,7 +72,7 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
 }
 
 function Recap({ plan }: { plan: PrimeArenaPlan }) {
-  const { score, spent } = plan;
+  const { score, spent, unspent, maxed } = plan;
   return (
     <Stack gap="xs">
       <Group gap="xs">
@@ -78,10 +80,19 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
           {verdictOf(plan)}
         </Badge>
       </Group>
-      <Text size="sm">
-        Survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds. Leadership spent{' '}
-        {count(spent.leadership)}, Dominance spent {count(spent.dominance)}.
-      </Text>
+      <Text size="sm">Survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds.</Text>
+      {/* The same gauge the March shows: used of available, so the owner can check the army is maxed out. */}
+      <SimpleGrid cols={2} aria-label="Housing">
+        {POOLS.map((pool) => (
+          <Stack key={pool} gap={2}>
+            <PoolGauge pool={pool} used={spent[pool]} total={spent[pool] + unspent[pool]} />
+            <Text size="xs" c={maxed[pool] ? 'dimmed' : 'orange'}>
+              {maxed[pool] ? 'Maxed out' : `${count(unspent[pool])} left`}
+              {maxed[pool] && unspent[pool] > 0 ? ` (${count(unspent[pool])} left, buys no unit)` : ''}
+            </Text>
+          </Stack>
+        ))}
+      </SimpleGrid>
     </Stack>
   );
 }

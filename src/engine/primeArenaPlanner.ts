@@ -38,6 +38,14 @@ export interface PrimeArenaPlan {
   match: PrimeArenaMatch;
   score: PrimeArenaScore;
   spent: { leadership: number; dominance: number };
+  /** Housing the army leaves empty, per pool (Leadership and Dominance). */
+  unspent: { leadership: number; dominance: number };
+  /**
+   * Whether a pool is filled as far as it can be: what is left costs less than the cheapest unit the squad
+   * could field from it (as the march calculator fills a pool). False only when units of the pool exist in
+   * the pool list but cannot be fielded, or the pool has housing and no unit at all.
+   */
+  maxed: { leadership: boolean; dominance: boolean };
   evaluations: number;
 }
 
@@ -67,8 +75,8 @@ export function planPrimeArenaAttack(input: PrimeArenaPlanInput): PrimeArenaPlan
   };
 
   let evaluations = 0;
-  const evaluate = (counts: Counts): { match: PrimeArenaMatch; score: PrimeArenaScore } => {
-    evaluations += 1;
+  const evaluate = (counts: Counts, counted = true): { match: PrimeArenaMatch; score: PrimeArenaScore } => {
+    if (counted) evaluations += 1;
     const { army, stacks } = armyOf(counts);
     const mirror = { stacks, totals: input.defenderTotals ?? input.totals };
     const match = primeArenaMatch(army, mirror);
@@ -113,14 +121,51 @@ export function planPrimeArenaAttack(input: PrimeArenaPlanInput): PrimeArenaPlan
     }
   }
 
+  // Fill the housing as the calculator does: while a pool can still pay for its cheapest unit, spend it. Each
+  // round tries filling the remainder with each affordable unit and keeps the best-ranked outcome.
+  const spentIn = (pool: string, c: Counts): number =>
+    units.reduce((a, u, i) => (u.pool === pool ? a + u.cost * c[i]! : a), 0);
+  for (const pool of ['leadership', 'dominance'] as const) {
+    const budget = pool === 'leadership' ? input.housing.leadership : input.housing.dominance;
+    for (;;) {
+      const left = budget - spentIn(pool, counts);
+      let pick: { counts: Counts; result: ReturnType<typeof evaluate> } | null = null;
+      for (let i = 0; i < units.length; i += 1) {
+        const u = units[i]!;
+        if (u.pool !== pool || u.cost > left) continue;
+        const trial = [...counts];
+        trial[i]! += Math.floor(left / u.cost);
+        // The top-up is the price of a full pool, not search: it is outside the evaluation budget.
+        const result = evaluate(trial, false);
+        if (pick === null || comparePrimeArenaScore(result.score, pick.result.score) > 0) {
+          pick = { counts: trial, result };
+        }
+      }
+      if (pick === null) break;
+      counts.splice(0, counts.length, ...pick.counts);
+      best = pick.result;
+    }
+  }
+
   const { stacks } = armyOf(counts);
   const sum = (pool: string): number =>
     stacks.filter((s) => s.unit.pool === pool).reduce((a, s) => a + s.unit.cost * s.count, 0);
+  const spent = { leadership: sum('leadership'), dominance: sum('dominance') };
+  const unspent = {
+    leadership: input.housing.leadership - spent.leadership,
+    dominance: input.housing.dominance - spent.dominance,
+  };
+  const maxedIn = (pool: 'leadership' | 'dominance'): boolean => {
+    const costs = input.pool.filter((u) => u.pool === pool && u.cost > 0).map((u) => u.cost);
+    return costs.length === 0 ? unspent[pool] <= 0 : unspent[pool] < Math.min(...costs);
+  };
   return {
     stacks,
     match: best.match,
     score: best.score,
-    spent: { leadership: sum('leadership'), dominance: sum('dominance') },
+    spent,
+    unspent,
+    maxed: { leadership: maxedIn('leadership'), dominance: maxedIn('dominance') },
     evaluations,
   };
 }

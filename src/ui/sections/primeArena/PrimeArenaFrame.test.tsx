@@ -186,6 +186,10 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
     expect(within(pane).getByRole('heading', { name: /round 1/i })).toBeTruthy();
     expect(within(pane).getByRole('heading', { name: /round 2/i })).toBeTruthy();
   });
+  // The housing check: used of available per pool, with a maxed-out or "N left" state.
+  expect(within(pane).getByRole('progressbar', { name: /leadership used/i })).toBeTruthy();
+  expect(within(pane).getByRole('progressbar', { name: /dominance used/i })).toBeTruthy();
+  expect(within(pane).getAllByText(/maxed out|left/i).length).toBeGreaterThanOrEqual(2);
   expect(within(pane).getByText(/attacker strikes first/i)).toBeTruthy();
   expect(within(pane).getByText(/defender strikes first/i)).toBeTruthy();
 });
