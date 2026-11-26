@@ -33,6 +33,7 @@ import { MarchSheet } from '@/ui/shell/MarchSheet';
 import { fabState } from '@/ui/shell/state';
 
 import { ArenaMatch, verdictOf } from './ArenaMatch';
+import { ArenaRoleSection } from './ArenaRoleSection';
 import { arenaFingerprint, usePrimeArenaStore } from './primeArenaStore';
 
 export { ArenaMatch };
@@ -103,6 +104,7 @@ export function ArenaSetup() {
   return (
     <Stack gap="lg">
       {/* The Guardsmen level is the only row the arena reads: it unlocks the troops of that level and below. */}
+      <ArenaRoleSection />
       <TroopsSection frame={{ troops, update: updateTroops, rows: ['guardsmen'] }} />
       <BonusesSection frame={{ binding, scope, sources }} />
     </Stack>
@@ -119,12 +121,14 @@ function blockedReason(hasProfile: boolean, leadership: number, dominance: numbe
 /** The arena's bar config: two wells, no objective, and a Generate that plans the attack. */
 function useArenaBar(): { frame: BarFrame; press: () => void } {
   const profile = useStore(selectActiveProfile);
-  const { troops, toggles, setup, running, plan, planKey, updateSetup, generate } = usePrimeArenaStore();
+  const { troops, toggles, setup, role, maxStacks, running, plan, planKey, updateSetup, generate } =
+    usePrimeArenaStore();
   const { leadership, dominance } = setup.housing;
   const hint = blockedReason(profile !== undefined, leadership, dominance);
   const fingerprint = useMemo(
-    () => (profile === undefined ? '' : arenaFingerprint(profile, { troops, toggles, setup })),
-    [profile, troops, toggles, setup],
+    () =>
+      profile === undefined ? '' : arenaFingerprint(profile, { troops, toggles, setup, role, maxStacks }),
+    [profile, troops, toggles, setup, role, maxStacks],
   );
 
   const press = (): void => {

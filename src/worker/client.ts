@@ -5,6 +5,7 @@
  * browser, jsdom, a Node script) or constructing one throws, it transparently falls back to the same
  * jobs on the main thread. Callers get one interface and never branch on it.
  */
+import type { PrimeArenaPlan, PrimeArenaPlanInput } from '@/engine/primeArenaPlanner';
 import type { CampaignInput, CampaignPlan, ResizedMarch } from '@/engine/plan';
 import type { SearchProgress, SearchRequest, StackRequest, SearchResult } from '@/engine/types';
 import type { ExactRaiseAnswer, ExactRaiseInput } from '@/ui/sections/march/exact';
@@ -12,6 +13,7 @@ import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import { KernelUnavailableError } from '@/kernel/boot';
 
+import { planPrimeArenaAttack } from '@/engine/primeArenaPlanner';
 import {
   runCaptainScreen,
   runPlan,
@@ -69,6 +71,8 @@ export interface CalcClient {
    * each lineup are built by the caller (`src/state/captainLineups.ts`).
    */
   captains(request: CaptainScreenInput, signal?: AbortSignal): Promise<CaptainScreenAnswer>;
+  /** B-37: the Prime Arena planner, a search of up to a minute; the arena page keeps a client of its own for it. */
+  arena(request: PrimeArenaPlanInput, signal?: AbortSignal): Promise<PrimeArenaPlan>;
   /** Terminate the worker and reject every job still in flight. */
   dispose(): void;
 }
@@ -126,6 +130,7 @@ function createWorkerClient(worker: Worker): CalcClient {
       case 'positions':
       case 'probe':
       case 'captains':
+      case 'arena':
         entry.resolve(message.result as never);
         return;
       case 'cancelled':
@@ -193,6 +198,8 @@ function createWorkerClient(worker: Worker): CalcClient {
     probe: (request, signal) => send<ProbeAnswer>({ kind: 'probe', id: nextJobId('probe'), request }, signal),
     captains: (request, signal) =>
       send<CaptainScreenAnswer>({ kind: 'captains', id: nextJobId('captains'), request }, signal),
+    arena: (request, signal) =>
+      send<PrimeArenaPlan>({ kind: 'arena', id: nextJobId('arena'), request }, signal),
     dispose() {
       disposed = true;
       for (const [id, entry] of pending) {
@@ -250,6 +257,7 @@ export function createInlineClient(): CalcClient {
         () => runCaptainScreen(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }),
         signal,
       ),
+    arena: (request, signal) => run(() => planPrimeArenaAttack(request), signal),
     dispose() {
       disposed = true;
     },

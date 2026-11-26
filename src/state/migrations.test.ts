@@ -1075,4 +1075,26 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 19)).toEqual(once);
     });
   });
+  describe('v20 → v21 gives the arena a role and a stack cap', () => {
+    const v20Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      delete profile.primeArena.role;
+      delete profile.primeArena.maxStacks;
+      return { ...doc, schemaVersion: 20 };
+    };
+
+    it('adds attacker and eight stacks, the planner defaults', () => {
+      const arena = migrate(v20Doc()).profiles[0]!.primeArena;
+      expect(arena.role).toBe('attacker');
+      expect(arena.maxStacks).toBe(8);
+    });
+
+    it('keeps a role already typed, and upgrades an exported v20 profile once', () => {
+      const profile = (v20Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 20);
+      expect(once.primeArena.maxStacks).toBe(8);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 20)).toEqual(once);
+    });
+  });
 });

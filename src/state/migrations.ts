@@ -415,6 +415,13 @@ export function addArenaSources(profile: Record<string, unknown>): Record<string
   return next;
 }
 
+/** `20 → 21` for one profile: the arena plays the attacker with the planner's default stack cap, as it always did. */
+export function addArenaRole(profile: Record<string, unknown>): Record<string, unknown> {
+  const arena = profile.primeArena;
+  if (!isPlainObject(arena)) return profile;
+  return { ...profile, primeArena: { role: 'attacker', maxStacks: 8, ...arena } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -460,6 +467,7 @@ export const migrations: MigrationTable = {
   17: (doc) => ({ ...doc, schemaVersion: 18, profiles: migrateProfiles(doc, arenaBecomesSetup) }),
   18: (doc) => ({ ...doc, schemaVersion: 19, profiles: migrateProfiles(doc, arenaDivisionBecomesTroops) }),
   19: (doc) => ({ ...doc, schemaVersion: 20, profiles: migrateProfiles(doc, addArenaSources) }),
+  20: (doc) => ({ ...doc, schemaVersion: 21, profiles: migrateProfiles(doc, addArenaRole) }),
 };
 
 /**
@@ -491,6 +499,7 @@ export const profileMigrations: MigrationTable = {
   17: arenaBecomesSetup,
   18: arenaDivisionBecomesTroops,
   19: addArenaSources,
+  20: addArenaRole,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -521,6 +530,7 @@ export const savedStackMigrations: MigrationTable = {
   17: identity,
   18: identity,
   19: identity,
+  20: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

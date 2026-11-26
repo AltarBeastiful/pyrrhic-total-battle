@@ -9,6 +9,7 @@
  * than a `kind` on this one — it is the only job measured in tens of seconds, and on this thread it would
  * sit in front of the next Generate (`raiseSearch.ts`).
  */
+import { planPrimeArenaAttack } from '@/engine/primeArenaPlanner';
 import {
   runCaptainScreen,
   runPlan,
@@ -114,6 +115,10 @@ function run(message: Exclude<CalcRequestMessage, { kind: 'cancel' }>): void {
     if (message.kind === 'probe') {
       const result = runProbe(message.request, context);
       post(cancelled.has(id) ? { kind: 'cancelled', id } : { kind: 'probe', id, result });
+      return;
+    }
+    if (message.kind === 'arena') {
+      post({ kind: 'arena', id, result: planPrimeArenaAttack(message.request) });
       return;
     }
     if (message.kind === 'captains') {

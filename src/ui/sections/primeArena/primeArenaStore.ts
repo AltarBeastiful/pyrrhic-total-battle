@@ -4,9 +4,10 @@
  * `profile.primeArena`, writing every edit to the active profile and filling itself from the profile when a
  * document arrives or the active profile changes. `plan` is a view result and stays here, unsaved.
  *
- * `generate` plans on the main thread. The search is bounded to about three seconds, so the page flips to
- * `running` and yields one task before it starts, which lets the pending state paint. A worker can take the
- * call later without changing this interface.
+ * `generate` plans on a calculation worker of the arena's own (B-37): the planner may search for up to a minute,
+ * so the page flips to `running` and stays responsive while the job runs. Where the platform has no worker the
+ * client runs the same job on the main thread (tests, old browsers). The role and the stack cap are inputs like the
+ * rest: saved with the account, part of the fingerprint.
  */
 import { create } from 'zustand';
 
@@ -17,11 +18,13 @@ import {
   primeArenaInputs,
   type PrimeArenaToggles,
 } from '@/engine/primeArenaInputs';
-import { planPrimeArenaAttack, type PrimeArenaPlan } from '@/engine/primeArenaPlanner';
+import type { PrimeArenaPlan, PrimeArenaRole } from '@/engine/primeArenaPlanner';
 import { defaultPrimeArena } from '@/state/defaults';
+import { DEFAULT_ARENA_STACKS, MAX_ARENA_STACKS } from '@/state/schema';
 import type { BattleSetup, PrimeArenaSaved, Profile, ProfileTroops } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { rowBounds } from '@/ui/sections/troops/rows';
+import { createCalcClient, isAbortError, type CalcClient } from '@/worker/client';
 
 export interface PlanBudget {
   maxEvaluations?: number;
@@ -43,17 +46,17 @@ export function defaultArenaTroops(): ProfileTroops {
   };
 }
 
-type Inputs = Pick<PrimeArenaState, 'troops' | 'toggles' | 'setup' | 'seeded'>;
+type Inputs = Pick<PrimeArenaState, 'troops' | 'toggles' | 'setup' | 'seeded' | 'role' | 'maxStacks'>;
 
 /** What the profile stores for these inputs: only the switches that differ from the rules' defaults. */
-function toSaved({ troops, toggles, setup, seeded }: Inputs): PrimeArenaSaved {
+function toSaved({ troops, toggles, setup, seeded, role, maxStacks }: Inputs): PrimeArenaSaved {
   const differing: Record<string, boolean> = {};
   for (const [key, on] of Object.entries(toggles)) {
     if (on !== DEFAULT_PRIME_ARENA_TOGGLES[key as keyof PrimeArenaToggles]) differing[key] = on;
   }
   // The top level is what `null` means, so a squad nobody touched stores nothing of its troops.
   const untouched = JSON.stringify(troops) === JSON.stringify(defaultArenaTroops());
-  return { troops: untouched ? null : troops, toggles: differing, setup, seeded };
+  return { troops: untouched ? null : troops, toggles: differing, setup, seeded, role, maxStacks };
 }
 
 /** The rules' defaults with the saved switches on top; a switch for a source that no longer exists is dropped. */
@@ -68,12 +71,14 @@ function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
 /** Everything a plan is computed from, as one string: equal strings mean the plan on screen still answers the form. */
 export function arenaFingerprint(
   profile: Profile,
-  inputs: Pick<Inputs, 'troops' | 'toggles' | 'setup'>,
+  inputs: Pick<Inputs, 'troops' | 'toggles' | 'setup' | 'role' | 'maxStacks'>,
 ): string {
   return JSON.stringify([
     inputs.troops,
     inputs.toggles,
     inputs.setup,
+    inputs.role,
+    inputs.maxStacks,
     profile.sources,
     profile.talents.ranks,
   ]);
@@ -93,8 +98,16 @@ function freshInputs(): Inputs {
     toggles: { ...DEFAULT_PRIME_ARENA_TOGGLES },
     setup: fresh.setup,
     seeded: false,
+    role: 'attacker',
+    maxStacks: DEFAULT_ARENA_STACKS,
   };
 }
+
+/** The arena's own calculation client: a minute-long search must not sit in front of the calculator's jobs. */
+let client: CalcClient | undefined;
+const arenaClient = (): CalcClient => (client ??= createCalcClient());
+/** Which Generate the page is waiting for: a reset or a new document makes an answer on its way stale. */
+let generation = 0;
 
 interface PrimeArenaState {
   /** The arena's own Troops card: its Guardsmen "to" level fixes the pool. */
@@ -105,16 +118,24 @@ interface PrimeArenaState {
   setup: BattleSetup;
   /** True once the setup was first cloned from the active march, so a later visit keeps what was typed. */
   seeded: boolean;
+  /** Which side the plan plays: fixes the opponent panel and how it is scored. */
+  role: PrimeArenaRole;
+  /** Most stacks in the squad; the game's real limit is unknown. */
+  maxStacks: number;
   running: boolean;
   /** How hard the search may work; the defaults unless a test tightens it. */
   budget: PlanBudget;
   plan: PrimeArenaPlan | null;
   /** The Guardsmen level the plan was made for, so the result names it even after the input moves on. */
   planLevel: number | null;
+  /** True when the last Generate failed; the bar stays usable. */
+  failed: boolean;
   /** What the plan was made from (`arenaFingerprint`), so the bar can say the inputs moved under it. */
   planKey: string | null;
   /** Edits the Troops card, the way the calculator's card edits `profile.troops`. */
   updateTroops: (patch: Partial<ProfileTroops>) => void;
+  setRole: (role: PrimeArenaRole) => void;
+  setMaxStacks: (maxStacks: number) => void;
   setToggle: (key: keyof PrimeArenaToggles, on: boolean) => void;
   /** Edits the squad, the way the calculator's `updateActiveSetup` edits a march. */
   updateSetup: (patch: (setup: BattleSetup) => Partial<BattleSetup>) => void;
@@ -131,6 +152,16 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   plan: null,
   planLevel: null,
   planKey: null,
+  failed: false,
+  setRole: (role) => {
+    set({ role });
+    save({ ...get(), role });
+  },
+  setMaxStacks: (value) => {
+    const maxStacks = Math.min(MAX_ARENA_STACKS, Math.max(1, Math.round(value)));
+    set({ maxStacks });
+    save({ ...get(), maxStacks });
+  },
   updateTroops: (patch) => {
     const troops = { ...get().troops, ...patch };
     set({ troops });
@@ -174,29 +205,40 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   },
   generate: (profile, given) => {
     if (get().running) return;
-    const { troops, toggles, setup } = get();
+    const { troops, toggles, setup, role, maxStacks } = get();
     const budget = given ?? get().budget;
-    set({ running: true });
-    // One task of yielding: the pending state paints before the bounded search blocks the thread.
-    setTimeout(() => {
-      const prepared = primeArenaInputs({ troops, toggles, setup, profile });
-      const plan = planPrimeArenaAttack({
+    const mine = ++generation;
+    set({ running: true, failed: false });
+    const prepared = primeArenaInputs({ troops, toggles, setup, profile });
+    arenaClient()
+      .arena({
         pool: prepared.pool,
         housing: prepared.housing,
         totals: prepared.totals,
+        role,
+        maxStacks,
         ...budget,
-      });
-      set({
-        plan,
-        planLevel: prepared.level,
-        planKey: arenaFingerprint(profile, { troops, toggles, setup }),
-        running: false,
-      });
-    }, 0);
+      })
+      .then(
+        (plan) => {
+          if (mine !== generation) return;
+          set({
+            plan,
+            planLevel: prepared.level,
+            planKey: arenaFingerprint(profile, { troops, toggles, setup, role, maxStacks }),
+            running: false,
+          });
+        },
+        (error: unknown) => {
+          if (mine !== generation || isAbortError(error)) return;
+          set({ running: false, failed: true });
+        },
+      );
   },
   reset: () => {
     const fresh = freshInputs();
-    set({ ...fresh, running: false, plan: null, planLevel: null, planKey: null });
+    generation += 1;
+    set({ ...fresh, running: false, failed: false, plan: null, planLevel: null, planKey: null });
     save(fresh);
   },
 }));
@@ -210,10 +252,20 @@ function hydrate(profile: Profile | undefined): void {
     toggles: savedToggles(saved.toggles),
     setup: saved.setup,
     seeded: saved.seeded,
+    role: saved.role,
+    maxStacks: saved.maxStacks,
   };
-  const { troops, toggles, setup, seeded } = usePrimeArenaStore.getState();
-  if (JSON.stringify(loaded) === JSON.stringify({ troops, toggles, setup, seeded })) return;
-  usePrimeArenaStore.setState({ ...loaded, plan: null, planLevel: null, planKey: null });
+  const { troops, toggles, setup, seeded, role, maxStacks } = usePrimeArenaStore.getState();
+  if (JSON.stringify(loaded) === JSON.stringify({ troops, toggles, setup, seeded, role, maxStacks })) return;
+  generation += 1;
+  usePrimeArenaStore.setState({
+    ...loaded,
+    running: false,
+    failed: false,
+    plan: null,
+    planLevel: null,
+    planKey: null,
+  });
 }
 
 hydrate(selectActiveProfile(useStore.getState()));

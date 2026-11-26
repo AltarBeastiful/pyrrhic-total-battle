@@ -96,6 +96,24 @@ describe('inline client', () => {
     client.dispose();
   }, 120_000);
 
+  test('plans the Prime Arena squad for the role it is asked, on a client of its own', async () => {
+    const pool = getUnits()
+      .filter((unit) => unit.pool === 'leadership' && unit.tier <= 2)
+      .slice(0, 3);
+    const client = createInlineClient();
+    const plan = await client.arena({
+      pool,
+      housing: { leadership: 4100, authority: 0, dominance: 0 },
+      totals: emptyTotals(),
+      role: 'defender',
+      maxStacks: 2,
+      maxEvaluations: 20,
+    });
+    expect(plan.role).toBe('defender');
+    expect(plan.aggregate).toBe('worst');
+    expect(plan.stacks.length).toBeLessThanOrEqual(2);
+  });
+
   test('an aborted signal cancels a plan too', async () => {
     const client = createInlineClient();
     const controller = new AbortController();
@@ -205,11 +223,19 @@ describe('createCalcClient', () => {
         ['plan', client.plan({ request: smallRequest() })],
         ['probe', client.probe({ plan: { request: smallRequest() } })],
         ['captains', client.captains({ request: smallRequest() } as never)],
+        [
+          'arena',
+          client.arena({
+            pool: [],
+            housing: { leadership: 0, authority: 0, dominance: 0 },
+            totals: emptyTotals(),
+          }),
+        ],
       ];
       for (const [kind, job] of jobs) {
         await expect(withDeadline(job, kind)).resolves.toBeDefined();
       }
-      expect(seen).toEqual(['stack', 'search', 'plan', 'probe', 'captains']);
+      expect(seen).toEqual(['stack', 'search', 'plan', 'probe', 'captains', 'arena']);
       client.dispose();
     } finally {
       delete globals.Worker;

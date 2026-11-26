@@ -4,7 +4,12 @@
  * against (ADR-0005): `SHARE_PROFILE_TEMPLATE` / `SHARE_SETUP_TEMPLATE` are the same objects built
  * with fixed ids and timestamps so they are deterministic.
  */
-import { BUILTIN_PERMANENT_SOURCES, DEFAULT_TALENT_GOAL_ORDER, SCHEMA_VERSION } from './schema';
+import {
+  BUILTIN_PERMANENT_SOURCES,
+  DEFAULT_ARENA_STACKS,
+  DEFAULT_TALENT_GOAL_ORDER,
+  SCHEMA_VERSION,
+} from './schema';
 import type {
   BattleSetup,
   BuiltinPermanentSource,
@@ -55,7 +60,14 @@ export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
   const setup = defaultSetup(deviceId, 'Prime Arena');
   setup.marchType = 'unspecified';
   setup.active.dragon = true;
-  return { troops: null, toggles: {}, setup, seeded: false };
+  return {
+    troops: null,
+    toggles: {},
+    setup,
+    seeded: false,
+    role: 'attacker',
+    maxStacks: DEFAULT_ARENA_STACKS,
+  };
 }
 
 export function uuid(): string {

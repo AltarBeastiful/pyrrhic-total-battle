@@ -111,7 +111,7 @@ test('has no division control: the Guardsmen level of the Troops card fixes the 
   renderArena();
   await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
   expect(screen.queryByText(/division/i)).toBeNull();
-  expect(screen.queryByRole('radiogroup')).toBeNull();
+  expect(screen.queryByRole('radiogroup', { name: /division/i })).toBeNull();
   // The card is the calculator's own steppers, and it writes the arena's troops, not the account's.
   const user = userEvent.setup();
   const before = usePrimeArenaStore.getState().troops.guardsmen?.max ?? 0;
@@ -193,8 +193,48 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
   expect(within(pane).getByRole('progressbar', { name: /leadership used/i })).toBeTruthy();
   expect(within(pane).getByRole('progressbar', { name: /dominance used/i })).toBeTruthy();
   expect(within(pane).getAllByText(/maxed out|left/i).length).toBeGreaterThanOrEqual(2);
-  expect(within(pane).getByText(/attacker strikes first/i)).toBeTruthy();
-  expect(within(pane).getByText(/defender strikes first/i)).toBeTruthy();
+  expect(within(pane).getByText(/attacker.* strikes first/i)).toBeTruthy();
+  expect(within(pane).getByText(/defender.* strikes first/i)).toBeTruthy();
+  // The attacker role is the default: the answer says which side is ours, and what the squad was ranked on.
+  expect(within(pane).getAllByRole('table', { name: 'Attacker (you)' })).toHaveLength(2);
+  expect(within(pane).getByText(/average of 5 opponents/i)).toBeTruthy();
+  expect(within(pane).getByText(/^(victory|defeat|draw)\b/i)).toBeTruthy();
+});
+
+test('the role is the calculator’s segmented control, saved, and a defender plan ranks against the worst case', async () => {
+  const { container } = renderArena();
+  const role = await screen.findByRole('radiogroup', { name: /role/i });
+  expect((within(role).getByRole('radio', { name: 'Attacker' }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(within(role).getByRole('radio', { name: 'Defender' }));
+  expect(usePrimeArenaStore.getState().role).toBe('defender');
+  expect(useStore.getState().doc.profiles[0]?.primeArena.role).toBe('defender');
+
+  typeInto(/leadership/i, '200000');
+  typeInto(/dominance/i, '100000');
+  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
+  const pane = container.querySelector('aside') as HTMLElement;
+  await within(pane).findByText(/worst case of 5 opponents/i, undefined, { timeout: 8000 });
+  expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');
+  // Our side is the defender: it is the one marked, and the verdict is read for it.
+  expect(within(pane).getAllByRole('table', { name: 'Defender (you)' })).toHaveLength(2);
+  expect(within(pane).queryByRole('table', { name: 'Attacker (you)' })).toBeNull();
+  expect(within(pane).getByText(/^(victory|defeat|draw)\b/i)).toBeTruthy();
+  // Changing the role after a plan leaves the plan on screen but stale.
+  fireEvent.click(within(role).getByRole('radio', { name: 'Attacker' }));
+  expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');
+});
+
+test('the stack cap is a typed figure, saved, and the planner is held to it', async () => {
+  renderArena();
+  await screen.findByRole('radiogroup', { name: /role/i });
+  expect((screen.getByRole('textbox', { name: /most stacks/i }) as HTMLInputElement).value).toBe('8');
+  typeInto(/most stacks/i, '2');
+  expect(usePrimeArenaStore.getState().maxStacks).toBe(2);
+  typeInto(/leadership/i, '200000');
+  typeInto(/dominance/i, '100000');
+  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
+  await waitFor(() => expect(usePrimeArenaStore.getState().plan).not.toBeNull(), { timeout: 8000 });
+  expect(usePrimeArenaStore.getState().plan?.stacks.length).toBeLessThanOrEqual(2);
 });
 
 test('narrow, the setup is the page, the bar carries the answer and the sheet holds the match', async () => {

@@ -192,6 +192,8 @@ describe('profile links', () => {
       },
       toggles: { talents: false },
       seeded: true,
+      role: 'defender',
+      maxStacks: 6,
       setup: {
         ...profile.primeArena.setup,
         active: {
@@ -219,7 +221,7 @@ describe('profile links', () => {
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
     const { setup, ...rest } = v16.profile.primeArena;
-    expect(rest).toEqual({ troops: null, toggles: {}, seeded: false });
+    expect(rest).toEqual({ troops: null, toggles: {}, seeded: false, role: 'attacker', maxStacks: 8 });
     expect(setup.active).toEqual(fresh.primeArena.setup.active);
     expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
   });

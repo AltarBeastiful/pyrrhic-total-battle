@@ -45,6 +45,7 @@ describe('request guard', () => {
     expect(isCalcRequestMessage({ kind: 'captains', id: 'f', request: { request: stackRequest } })).toBe(
       true,
     );
+    expect(isCalcRequestMessage({ kind: 'arena', id: 'g', request: { pool: [] } })).toBe(true);
     expect(isCalcRequestMessage({ kind: 'cancel', id: 'c' })).toBe(true);
   });
 
@@ -66,6 +67,7 @@ describe('response guard', () => {
     expect(isCalcResponseMessage({ kind: 'search', id: 'a', result: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'probe', id: 'a', result: { stops: [], row: null } })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'captains', id: 'a', result: { screens: [] } })).toBe(true);
+    expect(isCalcResponseMessage({ kind: 'arena', id: 'a', result: {} })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'cancelled', id: 'a' })).toBe(true);
     expect(isCalcResponseMessage({ kind: 'error', id: 'a', error: { message: 'no' } })).toBe(true);
     expect(

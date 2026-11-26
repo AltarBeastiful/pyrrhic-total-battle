@@ -8,7 +8,12 @@
 import { Badge, Group, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { useId } from 'react';
 
-import type { PrimeArenaRound, PrimeArenaSideOutcome } from '@/engine/primeArena';
+import type {
+  PrimeArenaRound,
+  PrimeArenaSide,
+  PrimeArenaSideOutcome,
+  PrimeArenaStep,
+} from '@/engine/primeArena';
 import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
 import { PoolGauge, TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
@@ -19,18 +24,23 @@ import { usePrimeArenaStore } from './primeArenaStore';
 
 const SIDE_NAME = { attacker: 'Attacker', defender: 'Defender', draw: 'Nobody' } as const;
 
+/** The side's name, with "(you)" on the one the plan plays: the headline match has our squad in the chosen role. */
+const sideLabel = (side: PrimeArenaSide, plan: PrimeArenaPlan): string =>
+  side === plan.role ? `${SIDE_NAME[side]} (you)` : SIDE_NAME[side];
+
 const POOLS = ['leadership', 'dominance'] as const;
 
 const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 
-/** "Attacker wins 2 to 0": the match in a line, for the recap and for the bar's answer. */
+/**
+ * The match in a line, read for our side: the in-game wording (victory, defeat, draw) from the plan's own score,
+ * then the rounds each side took. For a defender plan the score is the defender's, so "victory" means the defence held.
+ */
 export function verdictOf(plan: PrimeArenaPlan): string {
-  const { match } = plan;
-  return match.winner === 'draw'
-    ? 'A draw'
-    : `${SIDE_NAME[match.winner]} wins ${String(Math.max(match.attackerRoundsWon, match.defenderRoundsWon))} to ${String(
-        Math.min(match.attackerRoundsWon, match.defenderRoundsWon),
-      )}`;
+  const { match, score } = plan;
+  const word = score.result === 2 ? 'Victory' : score.result === 1 ? 'Draw' : 'Defeat';
+  const theirs = plan.role === 'attacker' ? match.defenderRoundsWon : match.attackerRoundsWon;
+  return `${word}, ${String(score.roundsWon)} to ${String(theirs)}`;
 }
 
 export interface ArenaMatchProps {
@@ -63,7 +73,7 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
         <Disclosure title="Battle log" summary="two rounds" defaultOpened>
           <Stack gap="md">
             {plan.match.rounds.map((round, i) => (
-              <RoundLog key={i} round={round} index={i + 1} />
+              <RoundLog key={i} plan={plan} round={round} index={i + 1} />
             ))}
           </Stack>
         </Disclosure>
@@ -81,7 +91,10 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
           {verdictOf(plan)}
         </Badge>
       </Group>
-      <Text size="sm">Survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds.</Text>
+      <Text size="sm">
+        Your survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds, against an equal army.
+      </Text>
+      <PanelNote plan={plan} />
       {/* The same gauge the March shows: used of available, so the owner can check the army is maxed out. */}
       <SimpleGrid cols={2} aria-label="Housing">
         {POOLS.map((pool) => (
@@ -94,6 +107,26 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
           </Stack>
         ))}
       </SimpleGrid>
+    </Stack>
+  );
+}
+
+/** What the squad was ranked on: the opponent panel (sizes, fills) and how its results combine, against the even split. */
+function PanelNote({ plan }: { plan: PrimeArenaPlan }) {
+  const { panel, aggregate, panelScore, start } = plan;
+  const how = aggregate === 'mean' ? 'the average' : 'the worst case';
+  const each = aggregate === 'mean' ? 'on average' : 'in the worst of them';
+  return (
+    <Stack gap={2}>
+      <Text size="sm" c="dimmed">
+        Ranked on {how} of {panel.length} opponents: {panel.map((member) => member.label).join('; ')}. A k is
+        the opponent&rsquo;s size against yours.
+      </Text>
+      <Text size="sm" c="dimmed">
+        Against them the squad takes {panelScore.roundsWon.toFixed(2)} of 2 rounds {each} and keeps a survivor
+        share of {panelScore.survivorShare.toFixed(2)}; the even split takes{' '}
+        {start.panelScore.roundsWon.toFixed(2)} and {start.panelScore.survivorShare.toFixed(2)}.
+      </Text>
     </Stack>
   );
 }
@@ -116,9 +149,9 @@ function ArmyBlocks({ plan }: { plan: PrimeArenaPlan }) {
   );
 }
 
-function RoundLog({ round, index }: { round: PrimeArenaRound; index: number }) {
-  const first = round.first === 'attacker' ? 'Attacker strikes first' : 'Defender strikes first';
-  const result = round.winner === 'draw' ? 'Draw' : `${SIDE_NAME[round.winner]} takes the round`;
+function RoundLog({ plan, round, index }: { plan: PrimeArenaPlan; round: PrimeArenaRound; index: number }) {
+  const first = `${sideLabel(round.first, plan)} strikes first`;
+  const result = round.winner === 'draw' ? 'Draw' : `${sideLabel(round.winner, plan)} takes the round`;
   return (
     <Stack gap={6}>
       <Title order={4} size="h5">
@@ -128,9 +161,18 @@ function RoundLog({ round, index }: { round: PrimeArenaRound; index: number }) {
         {first}. {result}.
       </Text>
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <SideTable name="Attacker" side={round.attacker} />
-        <SideTable name="Defender" side={round.defender} />
+        <SideTable name={sideLabel('attacker', plan)} side={round.attacker} />
+        <SideTable name={sideLabel('defender', plan)} side={round.defender} />
       </SimpleGrid>
+      <Disclosure title="Turn by turn" summary={`${String(round.steps.length)} hits`}>
+        <Stack gap={2}>
+          {round.steps.map((step, i) => (
+            <Text key={i} size="xs">
+              {stepLine(plan, round, step)}
+            </Text>
+          ))}
+        </Stack>
+      </Disclosure>
     </Stack>
   );
 }
@@ -174,4 +216,12 @@ function SideTable({ name, side }: { name: string; side: PrimeArenaSideOutcome }
       </Table.Tfoot>
     </Table>
   );
+}
+
+/** One hit in words: who struck with which stack, what it hit, the damage and the units it killed. */
+function stepLine(plan: PrimeArenaPlan, round: PrimeArenaRound, step: PrimeArenaStep): string {
+  const other = step.side === 'attacker' ? 'defender' : 'attacker';
+  const striker = round[step.side].stacks[step.stack]?.unit.name ?? 'a stack';
+  const target = round[other].stacks[step.target]?.unit.name ?? 'a stack';
+  return `${sideLabel(step.side, plan)} ${striker} hits ${sideLabel(other, plan)} ${target} for ${count(Math.round(step.damage))}, ${count(step.kills)} killed.`;
 }

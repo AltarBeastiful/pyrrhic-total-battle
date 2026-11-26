@@ -2,7 +2,7 @@
  * Worker protocol (S-25). Every message is plain structured-cloneable data — the engine contract is
  * already plain data (ADR-0006), so nothing here needs a serialiser.
  *
- * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions' | 'probe' | 'captains', id, request }
+ * Request:  { kind: 'stack' | 'search' | 'plan' | 'resize' | 'raise' | 'positions' | 'probe' | 'captains' | 'arena', id, request }
  *           and  { kind: 'cancel', id }
  * Response: { kind: 'stack', id, result, summary }
  *           { kind: 'progress', id, progress }   (searches only, zero or more)
@@ -13,6 +13,7 @@
  *           { kind: 'positions', id, result }  (`PositionTrades`, S-147)
  *           { kind: 'probe', id, result }      (`ProbeAnswer`, W17 C3)
  *           { kind: 'captains', id, result }   (`CaptainScreenAnswer`, W17 C5a)
+ *           { kind: 'arena', id, result }      (`PrimeArenaPlan`, B-37)
  *           { kind: 'cancelled', id }
  *           { kind: 'error', id, error: { message, code? } }   (`code: 'kernel-unavailable'`: the worker has no kernel)
  *
@@ -23,6 +24,7 @@
 import type { AdvisorRow, ProbeInfo, ShownStop } from '@/engine/advisor';
 import type { CompleteMethod } from '@/engine/campaign';
 import type { ScreenStop, ScreenLineup, LineupScreen } from '@/engine/captains';
+import type { PrimeArenaPlan, PrimeArenaPlanInput } from '@/engine/primeArenaPlanner';
 import type { CampaignInput, CampaignPlan, MarchWithin, ResizedMarch } from '@/engine/plan';
 import type { MarkerRates } from '@/engine/rating';
 import type {
@@ -192,6 +194,16 @@ export interface CaptainScreenAnswer {
   screens: LineupScreen[];
 }
 
+/**
+ * **The Prime Arena planner** (B-37): one search of up to a minute, so it runs here rather than on the page, and
+ * on a client of its own so it never sits in front of the calculator's jobs.
+ */
+export interface ArenaJob {
+  kind: 'arena';
+  id: JobId;
+  request: PrimeArenaPlanInput;
+}
+
 /** Cooperative cancel: the worker stops at its next checkpoint and answers `cancelled`. */
 export interface CancelJob {
   kind: 'cancel';
@@ -199,7 +211,16 @@ export interface CancelJob {
 }
 
 export type CalcRequestMessage =
-  StackJob | SearchJob | PlanJob | ResizeJob | RaiseJob | PositionsJob | ProbeJob | CaptainsJob | CancelJob;
+  | StackJob
+  | SearchJob
+  | PlanJob
+  | ResizeJob
+  | RaiseJob
+  | PositionsJob
+  | ProbeJob
+  | CaptainsJob
+  | ArenaJob
+  | CancelJob;
 
 export interface StackDoneMessage {
   kind: 'stack';
@@ -279,6 +300,13 @@ export interface CaptainsDoneMessage {
   result: CaptainScreenAnswer;
 }
 
+/** The Prime Arena plan, answered (`planPrimeArenaAttack`). */
+export interface ArenaDoneMessage {
+  kind: 'arena';
+  id: JobId;
+  result: PrimeArenaPlan;
+}
+
 export type CalcResponseMessage =
   | StackDoneMessage
   | SearchProgressMessage
@@ -289,6 +317,7 @@ export type CalcResponseMessage =
   | PositionsDoneMessage
   | ProbeDoneMessage
   | CaptainsDoneMessage
+  | ArenaDoneMessage
   | CancelledMessage
   | ErrorMessage;
 
@@ -333,6 +362,7 @@ export function isCalcRequestMessage(value: unknown): value is CalcRequestMessag
     case 'positions':
     case 'probe':
     case 'captains':
+    case 'arena':
       return isRecord(value.request);
     case 'cancel':
       return true;
@@ -354,6 +384,7 @@ export function isCalcResponseMessage(value: unknown): value is CalcResponseMess
     case 'positions':
     case 'probe':
     case 'captains':
+    case 'arena':
       return isRecord(value.result);
     // The two answers that may be nothing: an army with no troop type to field over gets no march at all,
     // and a raise with no stack it may move gets no better counts than the ones already on screen.
