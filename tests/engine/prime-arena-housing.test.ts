@@ -23,6 +23,7 @@ describe('planPrimeArenaAttack fills the housing as the calculator does', () => 
       pool,
       housing: { leadership, authority: 0, dominance },
       totals: BONUS,
+      maxMillis: 1_500,
     });
     expect(plan.unspent.leadership).toBeLessThan(cheapest('leadership'));
     expect(plan.unspent.leadership).toBe(leadership - plan.spent.leadership);
@@ -36,6 +37,7 @@ describe('planPrimeArenaAttack fills the housing as the calculator does', () => 
       pool,
       housing: { leadership: 40_000, authority: 0, dominance: 0 },
       totals: BONUS,
+      maxMillis: 1_500,
     });
     expect(none.unspent.dominance).toBe(0);
     expect(none.maxed.dominance).toBe(true);
@@ -43,6 +45,7 @@ describe('planPrimeArenaAttack fills the housing as the calculator does', () => 
       pool,
       housing: { leadership: 40_000, authority: 0, dominance: 1 },
       totals: BONUS,
+      maxMillis: 1_500,
     });
     expect(thin.unspent.dominance).toBe(1);
     expect(thin.maxed.dominance).toBe(true);
@@ -53,6 +56,7 @@ describe('planPrimeArenaAttack fills the housing as the calculator does', () => 
       pool: TROOPS,
       housing: { leadership: 40_000, authority: 0, dominance: 6_000 },
       totals: BONUS,
+      maxMillis: 1_500,
     });
     expect(plan.unspent.dominance).toBe(6_000);
     expect(plan.maxed.dominance).toBe(false);

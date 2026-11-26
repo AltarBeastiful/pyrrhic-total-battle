@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { comparePrimeArenaScore, primeArenaMatch, primeArenaScore } from '../../src/engine/primeArena';
-import { planPrimeArenaAttack } from '../../src/engine/primeArenaPlanner';
+import { primeArenaScore } from '../../src/engine/primeArena';
+import {
+  comparePanelScore,
+  planPrimeArenaAttack,
+  scorePrimeArenaPanel,
+} from '../../src/engine/primeArenaPlanner';
 import type { PrimeArenaPlanInput } from '../../src/engine/primeArenaPlanner';
 import { totalsFrom } from '../helpers/request';
 import { monsterSet, troopSet } from '../helpers/units';
@@ -14,6 +18,7 @@ const input = (over: Partial<PrimeArenaPlanInput> = {}): PrimeArenaPlanInput => 
   pool: [...TROOPS, ...MONSTERS],
   housing: { leadership: 40_000, authority: 0, dominance: 6_000 },
   totals: BONUS,
+  maxMillis: 3_000,
   ...over,
 });
 
@@ -63,9 +68,8 @@ describe('planPrimeArenaAttack', () => {
       ...TROOPS.map((unit) => ({ unit, count: Math.floor(40_000 / TROOPS.length / unit.cost) })),
       ...MONSTERS.map((unit) => ({ unit, count: Math.floor(6_000 / MONSTERS.length / unit.cost) })),
     ];
-    const army = { stacks: even, totals: BONUS };
-    const baseline = primeArenaScore(primeArenaMatch(army, army));
-    expect(comparePrimeArenaScore(plan.score, baseline)).toBeGreaterThanOrEqual(0);
+    const baseline = scorePrimeArenaPanel(even, BONUS, 'attacker', plan.panel);
+    expect(comparePanelScore(plan.panelScore, baseline)).toBeGreaterThanOrEqual(0);
   });
 
   it('is deterministic', () => {
@@ -82,7 +86,9 @@ describe('planPrimeArenaAttack', () => {
 
   it('finishes within a few seconds at a full-size arena', () => {
     const started = Date.now();
-    planPrimeArenaAttack(input({ housing: { leadership: 2_000_000, authority: 0, dominance: 300_000 } }));
+    planPrimeArenaAttack(
+      input({ housing: { leadership: 2_000_000, authority: 0, dominance: 300_000 }, maxMillis: 3_000 }),
+    );
     expect(Date.now() - started).toBeLessThan(5_000);
   });
 });
