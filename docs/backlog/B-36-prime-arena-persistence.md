@@ -2,13 +2,13 @@
 type: reference
 title: "B-36 Prime Arena persistence and share link"
 created: 2026-11-26
-tags: [backlog, prime-arena, ready-for-agent]
+tags: [backlog, prime-arena, done]
 related: ['[[B-32-prime-arena-match-engine]]', '[[design-rules]]']
 ---
 
 # B-36 Prime Arena persistence and share link
 
-Status: `ready-for-agent`. From the 2026-11-26 Prime Arena grilling. Cite [[design-rules]] in any UI brief.
+Status: `done` (2026-11-27, merged on branch `prime-arena`, not pushed). From the 2026-11-26 Prime Arena grilling. Cite [[design-rules]] in any UI brief.
 
 ## Context (shared by B-32 to B-36)
 

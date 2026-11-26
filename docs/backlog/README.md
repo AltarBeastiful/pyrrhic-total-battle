@@ -47,6 +47,12 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 16 | [[B-19-equipment-sets]] | Equipment sets, grade badges, tighter pills | L | the 2026-10-20 grilling, design settled | none |
 | 17 | [[B-20-equipment-drag-and-drop]] | Drag a piece onto a set | M | needs B-19 and a library decision | B-19, owner call on a drag library |
 | 18 | [[B-25-copy-talents-to-battle]] | Copy held talents into the Hero Talents bonus; Analyze prices from the held rank | M | 2026-11-20 grilling, design settled; amends B-24 | none |
+| 20 | [[B-32-prime-arena-match-engine]] | Prime Arena: army-versus-army two-round match — **done** | M | 2026-11-26 grilling; first of five | none |
+| 21 | [[B-33-prime-arena-input-model]] | Prime Arena: tier pool, captains, bonus toggles — **done** | M | parallel with B-32 | none |
+| 22 | [[B-34-prime-arena-attack-planner]] | Prime Arena: Attack stack planner (mirror defender) — **done** | L | needs the match and the inputs | B-32, B-33 |
+| 23 | [[B-35-prime-arena-battle-type]] | Prime Arena: sixth battle type in the UI — **done** | M | the demoable slice | B-34 |
+| 24 | [[B-36-prime-arena-persistence]] | Prime Arena: save and share link — **done** | S | deferrable | B-35 |
+| 25 | [[B-37-prime-arena-report-faithful-planner]] | Prime Arena: report-faithful match, role-aware planner — **done** | L | 2026-11-26 grill-me + real battle report | B-32 to B-36 |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 
