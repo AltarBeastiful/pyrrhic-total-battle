@@ -361,6 +361,11 @@ export function TalentTree({
                         </span>
                       )}
                     </span>
+                    {fam.numeral !== null && (
+                      <span className={classes.tier} aria-hidden>
+                        {fam.numeral}
+                      </span>
+                    )}
                     <span className={classes.name} title={fam.family}>
                       {fam.family}
                     </span>

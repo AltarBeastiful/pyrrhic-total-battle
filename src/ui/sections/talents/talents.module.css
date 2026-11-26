@@ -90,6 +90,33 @@
 
 .tile[data-state='planned'] {
   border-color: #e3b04b;
+  border-width: 2px;
+  padding: 8px 7px 7px;
+  background: linear-gradient(
+    color-mix(in srgb, #e3b04b 26%, #2a2d30),
+    color-mix(in srgb, #e3b04b 12%, #202326)
+  );
+  box-shadow:
+    0 0 0 1px rgba(227, 176, 75, 0.35),
+    0 0 14px -2px rgba(227, 176, 75, 0.55),
+    0 3px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* The tier numeral (I, II, III) of the talent's name, in the card's top-left corner. */
+.tier {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #5a5d5f;
+  color: #f0dcae;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
 }
 
 .tile[data-state='locked'] {
