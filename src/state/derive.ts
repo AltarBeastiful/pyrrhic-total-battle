@@ -174,7 +174,8 @@ function idFactory(): (base: string, discriminator?: string) => string {
 
 // ---- Captains --------------------------------------------------------------------------------------
 /**
- * bonus% = level × perLevel + stars[star] (PLAN §3.1). The Sofia ÷2 / Amanitore ×1.5 / Skadi ×2 multipliers
+ * bonus% = level × perLevel + stars[star] (PLAN §3.1). `star` is the 0..6 index, i.e. in-game stars − 1
+ * (3 stars in game = star 2), because the table is indexed from the first star. The Sofia ÷2 / Amanitore ×1.5 / Skadi ×2 multipliers
  * are already baked into `perLevel` in `captains.json`, so they must not be applied again here.
  */
 export function captainValue(

@@ -152,6 +152,7 @@ export const captainEntrySchema = z.object({
   id: nonEmpty,
   captainId: nonEmpty,
   level: z.int().min(0),
+  /** Index into the captain table's `stars` ladder: in-game stars − 1 (3 stars in game = 2). */
   star: z.int().min(0).max(6),
 });
 

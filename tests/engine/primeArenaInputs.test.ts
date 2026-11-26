@@ -192,7 +192,9 @@ describe('primeArenaInputs', () => {
 
   it("gates a captain's star bonus on the star count, from the captain table's own ladder (Leonidas, melee health)", () => {
     // Ladder in src/data/tables/captains.json: health stars [0, 0, 40, 40, 120, 120, 280]; level adds 1 per level.
-    const melee = (star: number): number => {
+    // The table is indexed from the first star: `star` below is in-game stars − 1, so the first health boost
+    // (+40) is at index 2 = 3 stars in game, as the owner says.
+    const melee = (star: number /* in-game stars − 1 */): number => {
       const profile = account();
       profile.sources.captains = [{ id: 'l', captainId: 'leonidas', level: 10, star }];
       return primeArenaInputs(base({ profile, setup: squad({ captains: ['l'] }) })).totals.health.melee;

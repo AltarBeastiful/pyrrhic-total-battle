@@ -128,11 +128,16 @@ export interface MercenaryRecord {
 }
 
 // ---- Bonus source tables -------------------------------------------------------------------------
-/** Captain progression on one key: bonus% = level × perLevel + stars[star] (star 0..6). */
+/**
+ * Captain progression on one key: bonus% = level × perLevel + stars[star].
+ * WATCH THE OFFSET: in game a captain has 1 to 7 stars, but `stars` is indexed from 0, so
+ * index = in-game stars − 1 (stars[0] is 1 star, stars[2] is 3 stars, stars[6] is 7 stars).
+ * The `star` stored on a captain entry is that same 0..6 index.
+ */
 export interface CaptainProgression {
   key: BonusKey;
   perLevel: number;
-  stars: number[]; // 7 entries, index = star level 0..6
+  stars: number[]; // 7 entries, index = in-game stars − 1 (0..6)
 }
 /**
  * The kinds of march a bonus can be limited to (W17 C5-0): `solo` (one player's own march), `group`
