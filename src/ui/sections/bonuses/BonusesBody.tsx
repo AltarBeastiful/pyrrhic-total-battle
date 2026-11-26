@@ -8,15 +8,14 @@ import { Alert, Stack } from '@mantine/core';
 import { useMemo, useRef, useState } from 'react';
 
 import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
-import { mintSourceId, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
-import { setActiveFlag } from '@/state/actions/bonuses';
+import { mintSourceId, setActiveFlag, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
-import type { BattleSetup, Profile } from '@/state/schema';
-import { useStore } from '@/state/store';
+import type { Profile } from '@/state/schema';
+import type { SetupBinding } from '@/state/setupBinding';
 import { Disclosure } from '@/ui/kit';
 
 import { ArtifactChips } from './ArtifactChips';
-import { CaptainChips } from './CaptainChips';
+import { CAPTAIN_CAP_MESSAGE, CaptainChips } from './CaptainChips';
 import { FamilyRow } from './FamilyRow';
 import { artifactChips, captainChips, permanentChips, titleChips, type CaptainTarget } from './chips';
 import { EquipmentSets, SlotCounter } from './EquipmentSets';
@@ -30,7 +29,6 @@ import { RecoverySheet } from './RecoverySheet';
 import {
   captainEntryFor,
   firstQuality,
-  MAX_ACTIVE_ARTIFACTS,
   MAX_ACTIVE_CAPTAINS,
   MAX_EQUIPMENT,
   sourceGroups,
@@ -38,25 +36,32 @@ import {
   totalsSummary,
 } from './rows';
 import type { AddKind, EditorTarget, SourceGroup } from './rows';
+import { SetupBindingProvider } from './SetupBindingContext';
 import { SourceChips } from './SourceChips';
 import { TitleChips } from './TitleChips';
 import { TotalsBreakdown } from './TotalsBreakdown';
 import { readFold, writeFold, type BonusesFold } from './uiPrefs';
+import { type FOLDED, FULL_SCOPE, type ORDER, type BodyScope } from './bodyScope';
 
-/**
- * The families on screen, in the order a player touches them on an ordinary day: who rides, what
- * they wear, what the account always has, what else counts, what is running, the temple. The two
- * set once come after, folded (`FOLDED`).
- */
-const ORDER = ['captains', 'equipment', 'permanent', 'other', 'events', 'recovery'] as const;
-const FOLDED = ['artifacts', 'titles'] as const satisfies readonly BonusesFold[];
+const NUMBER_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+
+/** The line under the captains when the cap is reached; the calculator's own words for its three. */
+function captainRefusal(cap: number): string {
+  return cap === MAX_ACTIVE_CAPTAINS
+    ? CAPTAIN_CAP_MESSAGE
+    : `${NUMBER_WORDS[cap] ?? String(cap)} captains at most take the field. Take one out first.`;
+}
 
 export interface BonusesBodyProps {
   profile: Profile;
-  setup: BattleSetup;
+  binding: SetupBinding;
+  scope?: BodyScope;
 }
 
-export function BonusesBody({ profile, setup }: BonusesBodyProps) {
+export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBodyProps) {
+  const { setup, caps } = binding;
+  const maxCaptains = caps.captains;
+  const maxArtifacts = caps.artifacts;
   // B-16: a foot fold opens on load when the device left it open or when something in it is on.
   // Resolved once per loaded profile (the document can arrive after the first render), then the
   // hand owns it for the session. The device memory is `uiPrefs`, never the document (rule 4).
@@ -80,7 +85,10 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
     () => new Map<string, SourceGroup>(sourceGroups(profile, setup).map((group) => [group.id, group])),
     [profile, setup],
   );
-  const captains = useMemo(() => captainChips(profile, setup), [profile, setup]);
+  const captains = useMemo(
+    () => captainChips(profile, setup).filter((chip) => scope.hero || chip.target.kind !== 'hero'),
+    [profile, setup, scope.hero],
+  );
   const artifacts = useMemo(() => artifactChips(profile, setup), [profile, setup]);
   const permanent = useMemo(() => permanentChips(profile), [profile]);
   const titles = useMemo(() => titleChips(setup), [setup]);
@@ -103,20 +111,20 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
     return id;
   };
 
-  /** A tap on a chip body. Three ride with a march; the fourth is refused, politely. */
+  /** A tap on a chip body. Up to the cap ride; the next is refused, politely. */
   const enlist = (target: CaptainTarget): void => {
     if (target.kind === 'hero') {
-      setActiveFlag('hero', !setup.active.hero);
+      setActiveFlag(binding, 'hero', !setup.active.hero);
       return;
     }
     const entry = captainEntryFor(profile, target.captainId);
     const on = entry !== undefined && setup.active.captains.includes(entry.id);
-    if (!on && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS) {
+    if (!on && setup.active.captains.length >= maxCaptains) {
       setRefusedCaptain(true);
       return;
     }
     setRefusedCaptain(false);
-    toggleActiveSource('captains', entry?.id ?? captainEntryIdFor(target.captainId), !on);
+    toggleActiveSource(binding, 'captains', entry?.id ?? captainEntryIdFor(target.captainId), !on);
   };
 
   /** A tap on a gear. It mints the entry the popover writes into and never changes who marches. */
@@ -141,12 +149,12 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
   const equipArtifact = (artifactId: string): void => {
     const entry = profile.sources.artifacts.find((candidate) => candidate.artifactId === artifactId);
     const on = entry !== undefined && setup.active.artifacts.includes(entry.id);
-    if (!on && setup.active.artifacts.length >= MAX_ACTIVE_ARTIFACTS) {
+    if (!on && setup.active.artifacts.length >= maxArtifacts) {
       setRefusedArtifact(true);
       return;
     }
     setRefusedArtifact(false);
-    toggleActiveSource('artifacts', entry?.id ?? artifactEntryIdFor(artifactId), !on);
+    toggleActiveSource(binding, 'artifacts', entry?.id ?? artifactEntryIdFor(artifactId), !on);
   };
 
   // ---- the two Add buttons ----------------------------------------------------------------------
@@ -170,7 +178,7 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
           },
         ],
       }));
-      toggleActiveSource('equipment', id, true);
+      toggleActiveSource(binding, 'equipment', id, true);
       setEditor({ kind: 'equipment', id });
       return;
     }
@@ -190,7 +198,7 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
       ...sources,
       custom: [...sources.custom, { id, name: 'New source', health: {}, strength: {} }],
     }));
-    toggleActiveSource('custom', id, true);
+    toggleActiveSource(binding, 'custom', id, true);
     setEditor({ kind: 'custom', id });
   };
 
@@ -221,20 +229,21 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
   > = {
     captains: {
       title: 'Hero and captains',
-      summary: `${String(setup.active.captains.length)}/${String(MAX_ACTIVE_CAPTAINS)}`,
+      summary: `${String(setup.active.captains.length)}/${String(maxCaptains)}`,
       body: (
         <CaptainChips
           chips={captains}
-          isRefused={refusedCaptain && setup.active.captains.length >= MAX_ACTIVE_CAPTAINS}
+          isRefused={refusedCaptain && setup.active.captains.length >= maxCaptains}
+          refusal={captainRefusal(maxCaptains)}
           onEnlist={enlist}
           onConfigure={configureCaptain}
           marchType={setup.marchType}
           onMarchType={(marchType) => {
-            useStore.getState().updateActiveSetup(() => ({ marchType }));
+            binding.update(() => ({ marchType }));
           }}
           // The control is drawn only when it can change a reading: a restricted captain (Amanitore, Hercules)
           // is selected on this march. Owning one on the bench reads the same, so it would only take space.
-          showMarchType={selectsRestrictedCaptain(profile, setup)}
+          showMarchType={scope.marchType && selectsRestrictedCaptain(profile, setup)}
         />
       ),
     },
@@ -249,17 +258,17 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
           onAdd={() => {
             add('equipment');
           }}
-          addDisabled={profile.sources.equipment.length >= MAX_EQUIPMENT}
+          addDisabled={profile.sources.equipment.length >= (caps.equipment ?? MAX_EQUIPMENT)}
         />
       ),
     },
     artifacts: {
       title: 'Artifacts',
-      summary: `${String(setup.active.artifacts.length)}/${String(MAX_ACTIVE_ARTIFACTS)}`,
+      summary: `${String(setup.active.artifacts.length)}/${String(maxArtifacts)}`,
       body: (
         <ArtifactChips
           chips={artifacts}
-          isRefused={refusedArtifact && setup.active.artifacts.length >= MAX_ACTIVE_ARTIFACTS}
+          isRefused={refusedArtifact && setup.active.artifacts.length >= maxArtifacts}
           onToggle={equipArtifact}
           onConfigure={artifactEntryIdFor}
         />
@@ -294,23 +303,24 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
   };
 
   return (
-    <>
-      {caveats.map((caveat) => (
-        <Alert key={caveat} color="brass" variant="light">
-          {caveat}
-        </Alert>
-      ))}
+    <SetupBindingProvider value={binding}>
+      {scope.audit &&
+        caveats.map((caveat) => (
+          <Alert key={caveat} color="brass" variant="light">
+            {caveat}
+          </Alert>
+        ))}
       <Stack gap="md">
-        {ORDER.map((id) => (
+        {scope.families.map((id) => (
           <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
             {panels[id].body}
           </FamilyRow>
         ))}
       </Stack>
       {/* The folds share one part, as the March's do: a hairline between two collapsed rows
-              is a rule between two rules. The two families set once, then the audit. */}
+          is a rule between two rules. The two families set once, then the audit. */}
       <Stack gap={0}>
-        {FOLDED.map((id) => (
+        {scope.folded.map((id) => (
           <Disclosure
             key={id}
             title={panels[id].title}
@@ -325,11 +335,13 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
           </Disclosure>
         ))}
         {/* Renamed from "Every key and what feeds it" (owner, 2026-09-28: *"this section should be
-                renamed Summary"*): it already recaps the hero and the captains under every key they
-                feed, so the name says what the block is rather than what it contains. */}
-        <Disclosure title="Summary">
-          <TotalsBreakdown profile={profile} setup={setup} />
-        </Disclosure>
+            renamed Summary"*): it already recaps the hero and the captains under every key they
+            feed, so the name says what the block is rather than what it contains. */}
+        {scope.audit && (
+          <Disclosure title="Summary">
+            <TotalsBreakdown profile={profile} setup={setup} />
+          </Disclosure>
+        )}
       </Stack>
       {editor?.kind === 'equipment' && (
         <EquipmentSheet
@@ -346,6 +358,6 @@ export function BonusesBody({ profile, setup }: BonusesBodyProps) {
       {editor?.kind === 'vip' && <VipSheet {...sheet} />}
       {editor?.kind === 'dragon' && <DragonSheet {...sheet} />}
       {editor?.kind === 'recovery' && <RecoverySheet {...sheet} />}
-    </>
+    </SetupBindingProvider>
   );
 }

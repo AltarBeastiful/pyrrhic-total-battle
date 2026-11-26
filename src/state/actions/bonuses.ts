@@ -12,6 +12,7 @@
  * them, because the profile patch goes in as one write.
  */
 import type { ActiveSources, BattleSetup, ProfileSources } from '../schema';
+import type { SetupWriter } from '../setupBinding';
 import { useStore } from '../store';
 
 /** Lists of `setup.active`: entry ids for owned sources, table ids for titles, events and the +25 pills. */
@@ -43,9 +44,9 @@ export function updateSources(profileId: string, updater: (sources: ProfileSourc
   useStore.getState().updateProfile(profileId, (profile) => ({ sources: updater(profile.sources) }));
 }
 
-/** Switch one id on or off in the active setup. */
-export function toggleActiveSource(key: ActiveListKey, id: string, on: boolean): void {
-  useStore.getState().updateActiveSetup((setup) => {
+/** Switch one id on or off in the bound setup (the active march's, or the arena's squad). */
+export function toggleActiveSource(binding: SetupWriter, key: ActiveListKey, id: string, on: boolean): void {
+  binding.update((setup) => {
     const list = setup.active[key];
     if (on === list.includes(id)) return {};
     const active: ActiveSources = { ...setup.active };
@@ -54,9 +55,9 @@ export function toggleActiveSource(key: ActiveListKey, id: string, on: boolean):
   });
 }
 
-/** Switch a flag source (hero, VIP, dragon, unknown sources) on or off in the active setup. */
-export function setActiveFlag(key: ActiveFlagKey, on: boolean): void {
-  useStore.getState().updateActiveSetup((setup) => {
+/** Switch a flag source (hero, VIP, dragon, unknown sources) on or off in the bound setup. */
+export function setActiveFlag(binding: SetupWriter, key: ActiveFlagKey, on: boolean): void {
+  binding.update((setup) => {
     if (setup.active[key] === on) return {};
     const active: ActiveSources = { ...setup.active, [key]: on };
     return { active };

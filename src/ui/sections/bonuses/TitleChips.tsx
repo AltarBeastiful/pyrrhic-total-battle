@@ -10,6 +10,7 @@
 import { Stack, Text } from '@mantine/core';
 
 import { setTitleOwned, toggleActiveSource } from '@/state/actions/bonuses';
+import { useSetupWriter } from './SetupBindingContext';
 import { ChipRow } from '@/ui/kit';
 
 import type { TitleFamilyRow } from './chips';
@@ -20,6 +21,7 @@ export interface TitleChipsProps {
 }
 
 export function TitleChips({ profileId, families }: TitleChipsProps) {
+  const writer = useSetupWriter();
   return (
     <Stack gap="xs">
       {families.map((family) => (
@@ -42,7 +44,7 @@ export function TitleChips({ profileId, families }: TitleChipsProps) {
               for (const chip of family.chips) {
                 if (chosen.has(chip.id) === chip.worn) continue;
                 setTitleOwned(profileId, chip.id, chosen.has(chip.id));
-                if (chosen.has(chip.id)) toggleActiveSource('titles', chip.id, true);
+                if (chosen.has(chip.id)) toggleActiveSource(writer, 'titles', chip.id, true);
               }
             }}
           />

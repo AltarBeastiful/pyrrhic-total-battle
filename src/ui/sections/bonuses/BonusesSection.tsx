@@ -24,11 +24,12 @@
 import { Stack } from '@mantine/core';
 import { useId, useMemo } from 'react';
 
-import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
+import { selectActiveProfile, useStore } from '@/state/store';
 import { Panel, Sections } from '@/ui/kit';
 
 import { BonusesBody } from './BonusesBody';
 import { MAX_ACTIVE_CAPTAINS, totalsSummary } from './rows';
+import { useActiveSetupBinding } from './SetupBindingContext';
 import { SetupBar } from './SetupBar';
 import { TotalsFigures } from './TotalsFigures';
 
@@ -38,11 +39,12 @@ import { TotalsFigures } from './TotalsFigures';
  */
 export function BonusesSection() {
   const profile = useStore(selectActiveProfile);
-  const setup = useStore(selectActiveSetup);
+  const binding = useActiveSetupBinding();
+  const setup = binding?.setup;
   const titleId = useId();
   const summary = useMemo(() => (profile && setup ? totalsSummary(profile, setup) : null), [profile, setup]);
 
-  if (profile === undefined || setup === undefined || summary === null) return null;
+  if (profile === undefined || binding === null || setup === undefined || summary === null) return null;
 
   return (
     <Panel
@@ -63,7 +65,7 @@ export function BonusesSection() {
 
         {/* One part of the card, under the TOTAL's hairline: everything a source is and does. */}
         <Stack gap="lg">
-          <BonusesBody profile={profile} setup={setup} />
+          <BonusesBody profile={profile} binding={binding} />
           {/* The battle setup closes the form (owner, 2026-09-17: "experiment with moving the battle
               setup at the end of the form"; it stood first, one 16 px gap over the captains, "too
               crowded"). What is on this march is chosen above; which named setup holds that choice —

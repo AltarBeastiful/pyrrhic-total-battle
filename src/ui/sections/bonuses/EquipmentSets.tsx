@@ -36,6 +36,7 @@ import { Plus } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { toggleActiveSource } from '@/state/actions/bonuses';
+import { useSetupWriter } from './SetupBindingContext';
 import {
   addEmptySet,
   deleteSetAndPieces,
@@ -179,6 +180,7 @@ function Draggable({ id, children }: { id: string; children: React.ReactNode }) 
 }
 
 function PieceChip({ piece, on, onEdit }: PieceProps) {
+  const writer = useSetupWriter();
   const record = equipmentRecord(piece.equipmentId);
   const name = record?.name ?? piece.equipmentId;
   const worth = equipmentWorth(record, piece);
@@ -198,7 +200,7 @@ function PieceChip({ piece, on, onEdit }: PieceProps) {
         dotted
         toggleLabel={on ? `${name}, on for this march` : `Switch on ${name}`}
         onToggle={() => {
-          toggleActiveSource('equipment', piece.id, !on);
+          toggleActiveSource(writer, 'equipment', piece.id, !on);
         }}
         gearLabel={`Edit ${name}`}
         onGear={() => {

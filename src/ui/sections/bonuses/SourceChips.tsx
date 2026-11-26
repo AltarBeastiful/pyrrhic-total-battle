@@ -23,10 +23,12 @@ import { useRovingTabs } from '@/ui/kit';
 import classes from './bonuses.module.css';
 import type { EditorTarget, SourceGroup, SourceRow, ToggleTarget } from './rows';
 import { SourceChip } from './SourceChip';
+import { useSetupWriter } from './SetupBindingContext';
+import type { SetupWriter } from '@/state/setupBinding';
 
-function apply(target: ToggleTarget, on: boolean): void {
-  if ('flag' in target) setActiveFlag(target.flag, on);
-  else toggleActiveSource(target.list, target.id, on);
+function apply(writer: SetupWriter, target: ToggleTarget, on: boolean): void {
+  if ('flag' in target) setActiveFlag(writer, target.flag, on);
+  else toggleActiveSource(writer, target.list, target.id, on);
 }
 
 /** The chip's accessible name says the state, because the ground colour cannot (rule 24). */
@@ -36,6 +38,7 @@ function toggleLabel(row: SourceRow): string {
 }
 
 function Chip({ row, onEdit }: { row: SourceRow; onEdit: (target: EditorTarget) => void }) {
+  const writer = useSetupWriter();
   const editor = row.editor;
   // A source switched on with nothing typed into it says so under its name, and nowhere else (owner,
   // 2026-09-13 — the card's "N on but empty" badge was retired): an em dash is how a table says "no
@@ -52,7 +55,7 @@ function Chip({ row, onEdit }: { row: SourceRow; onEdit: (target: EditorTarget) 
       toggleLabel={toggleLabel(row)}
       onToggle={() => {
         if (row.locked === true && editor !== undefined) onEdit(editor);
-        else if (row.toggle !== undefined) apply(row.toggle, !row.on);
+        else if (row.toggle !== undefined) apply(writer, row.toggle, !row.on);
       }}
       {...(editor === undefined
         ? {}
