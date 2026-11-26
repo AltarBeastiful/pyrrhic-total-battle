@@ -7,7 +7,7 @@
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
 import { talents as talentTable, unitById } from '../data';
-import { DEFAULT_PRIME_ARENA, DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
+import { DEFAULT_SETTINGS, DEFAULT_TALENTS, defaultPrimeArena } from './defaults';
 import {
   DEFAULT_TALENT_GOAL_ORDER,
   profileSchema,
@@ -219,11 +219,69 @@ export function dropEquipmentWearer(profile: Record<string, unknown>): Record<st
   return { ...profile, sources: { ...profile.sources, equipment } };
 }
 
+/** What `16 → 17` gave a profile: the first shape of the Prime Arena inputs (B-36), frozen here. */
+const PRIME_ARENA_V17 = {
+  tier: 0,
+  leadership: 0,
+  dominance: 0,
+  captains: [],
+  equipment: [],
+  artifacts: [],
+  toggles: {},
+  seeded: false,
+};
+
 /** `16 → 17` for one profile (B-36): the account gains the Prime Arena inputs, empty. Nothing else moves. */
 export function addPrimeArena(profile: Record<string, unknown>): Record<string, unknown> {
   return isPlainObject(profile.primeArena)
     ? profile
-    : { ...profile, primeArena: structuredClone(DEFAULT_PRIME_ARENA) };
+    : { ...profile, primeArena: structuredClone(PRIME_ARENA_V17) };
+}
+
+/** The switches that still exist at v18: the other four are now the setup's own captains, gear and dragon. */
+const ARENA_V18_TOGGLES = ['talents', 'hallOfFame', 'customization', 'armyModernization', 'monstersBoost'];
+
+/**
+ * `17 → 18` for one profile: the arena's captains, gear, dragon and pools become a `BattleSetup`. A switch that
+ * was off for captains, equipment or artifacts empties that list (the same army counts); a dragon switch moves
+ * to `active.dragon`; the others keep their keys. A profile that already carries a `setup` is left alone.
+ */
+export function arenaBecomesSetup(profile: Record<string, unknown>): Record<string, unknown> {
+  const old = profile.primeArena;
+  if (!isPlainObject(old) || isPlainObject(old.setup)) return profile;
+  const deviceId = typeof profile.deviceId === 'string' ? profile.deviceId : 'migrated';
+  const fresh = defaultPrimeArena(deviceId);
+  const switches = isPlainObject(old.toggles) ? old.toggles : {};
+  const ids = (value: unknown, key: string): string[] =>
+    switches[key] === false || !Array.isArray(value) ? [] : value.filter((id) => typeof id === 'string');
+  const number = (value: unknown): number => (typeof value === 'number' && value >= 0 ? value : 0);
+  const toggles: Record<string, boolean> = {};
+  for (const key of ARENA_V18_TOGGLES) {
+    if (typeof switches[key] === 'boolean') toggles[key] = switches[key];
+  }
+  const setup = {
+    ...fresh.setup,
+    // Deterministic (the profile's own uuid), so a document migrates to the same bytes every time it is read.
+    id: typeof profile.id === 'string' ? profile.id : fresh.setup.id,
+    updatedAt: typeof profile.updatedAt === 'number' ? profile.updatedAt : 0,
+    active: {
+      ...fresh.setup.active,
+      captains: ids(old.captains, 'captains'),
+      equipment: ids(old.equipment, 'equipment'),
+      artifacts: ids(old.artifacts, 'artifacts'),
+      dragon: switches.dragon !== false,
+    },
+    housing: { ...fresh.setup.housing, leadership: number(old.leadership), dominance: number(old.dominance) },
+  };
+  return {
+    ...profile,
+    primeArena: {
+      tier: typeof old.tier === 'number' ? old.tier : 0,
+      toggles,
+      setup,
+      seeded: old.seeded === true,
+    },
+  };
 }
 
 /**
@@ -343,6 +401,7 @@ export const migrations: MigrationTable = {
   14: (doc) => ({ ...doc, schemaVersion: 15, profiles: migrateProfiles(doc, pointsBecomeStock) }),
   15: (doc) => ({ ...doc, schemaVersion: 16, profiles: migrateProfiles(doc, restrictHeroTalentsSource) }),
   16: (doc) => ({ ...doc, schemaVersion: 17, profiles: migrateProfiles(doc, addPrimeArena) }),
+  17: (doc) => ({ ...doc, schemaVersion: 18, profiles: migrateProfiles(doc, arenaBecomesSetup) }),
 };
 
 /**
@@ -371,6 +430,7 @@ export const profileMigrations: MigrationTable = {
   14: pointsBecomeStock,
   15: restrictHeroTalentsSource,
   16: addPrimeArena,
+  17: arenaBecomesSetup,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -398,6 +458,7 @@ export const savedStackMigrations: MigrationTable = {
   14: identity,
   15: identity,
   16: identity,
+  17: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

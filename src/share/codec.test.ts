@@ -183,17 +183,23 @@ describe('parseLocationHash', () => {
 });
 
 describe('profile links', () => {
-  it('carries the Prime Arena inputs (schema v17, B-36), and a link without them arrives with the defaults', async () => {
+  it('carries the Prime Arena inputs (schema v18: a battle setup), and a link without them arrives with the defaults', async () => {
     const profile = realisticProfile();
     profile.primeArena = {
       tier: 9,
-      leadership: 1_200,
-      dominance: 800,
-      captains: ['c1', 'c2'],
-      equipment: ['e1'],
-      artifacts: ['a1'],
-      toggles: { dragon: false, talents: false },
+      toggles: { talents: false },
       seeded: true,
+      setup: {
+        ...profile.primeArena.setup,
+        active: {
+          ...profile.primeArena.setup.active,
+          captains: ['c1', 'c2'],
+          equipment: ['e1'],
+          artifacts: ['a1'],
+          dragon: false,
+        },
+        housing: { leadership: 1_200, authority: 0, dominance: 800 },
+      },
     };
     const decoded = await decodeShare(await buildProfileLink(profile));
     if (decoded.kind !== 'profile') throw new Error('wrong kind');
@@ -209,7 +215,10 @@ describe('profile links', () => {
       }),
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
-    expect(v16.profile.primeArena).toEqual(fresh.primeArena);
+    const { setup, ...rest } = v16.profile.primeArena;
+    expect(rest).toEqual({ tier: 0, toggles: {}, seeded: false });
+    expect(setup.active).toEqual(fresh.primeArena.setup.active);
+    expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
   });
 
   it('round-trips a realistic profile', async () => {

@@ -900,16 +900,21 @@ describe('migrateProfile', () => {
       const fixture = v16Doc();
       expect(migrations[16]?.(fixture).schemaVersion).toBe(17);
       const profile = migrate(fixture).profiles[0]!;
-      expect(profile.primeArena).toEqual({
-        tier: 0,
-        leadership: 0,
-        dominance: 0,
-        captains: [],
-        equipment: [],
-        artifacts: [],
-        toggles: {},
-        seeded: false,
-      });
+      expect(migrations[16]?.(fixture).profiles).toEqual([
+        expect.objectContaining({
+          primeArena: {
+            tier: 0,
+            leadership: 0,
+            dominance: 0,
+            captains: [],
+            equipment: [],
+            artifacts: [],
+            toggles: {},
+            seeded: false,
+          },
+        }),
+      ]);
+      expect(profile.primeArena).toMatchObject({ tier: 0, toggles: {}, seeded: false });
       expect(profile.talents).toEqual(newRoot('device').profiles[0]!.talents);
     });
 
@@ -927,12 +932,62 @@ describe('migrateProfile', () => {
         seeded: true,
       };
       const arena = migrate(fixture).profiles[0]!.primeArena;
-      expect(arena).toMatchObject({ tier: 9, leadership: 5, dominance: 7, captains: ['a'], seeded: true });
+      expect(arena).toMatchObject({ tier: 9, seeded: true });
+      expect(arena.setup.active.captains).toEqual(['a']);
+      expect(arena.setup.housing).toMatchObject({ leadership: 5, dominance: 7, authority: 0 });
     });
 
     it('upgrades a v16 exported profile on import', () => {
       const profile = (v16Doc().profiles as Record<string, unknown>[])[0]!;
       expect(migrateProfile(profile, 16).primeArena.seeded).toBe(false);
+    });
+  });
+
+  describe('v17 → v18 turns the Prime Arena inputs into a battle setup', () => {
+    const v17Doc = (arena: Record<string, unknown>): Record<string, unknown> => {
+      const doc = newRoot('device');
+      const profile = JSON.parse(JSON.stringify(doc.profiles[0])) as Record<string, unknown>;
+      return {
+        ...JSON.parse(JSON.stringify(doc)),
+        schemaVersion: 17,
+        profiles: [{ ...profile, primeArena: arena }],
+      };
+    };
+    const legacy = {
+      tier: 8,
+      leadership: 700,
+      dominance: 300,
+      captains: ['a', 'b'],
+      equipment: ['e'],
+      artifacts: ['x'],
+      toggles: { captains: false, dragon: false, talents: false, hallOfFame: false, clanTechnologies: true },
+      seeded: true,
+    };
+
+    it('moves gear and pools into the setup and keeps only the switches that still exist', () => {
+      const arena = migrate(v17Doc(legacy)).profiles[0]!.primeArena;
+      expect(arena.tier).toBe(8);
+      expect(arena.seeded).toBe(true);
+      expect(arena.toggles).toEqual({ talents: false, hallOfFame: false });
+      expect(arena.setup.marchType).toBe('unspecified');
+      expect(arena.setup.active).toMatchObject({
+        captains: [], // its switch was off, so the same army counts
+        equipment: ['e'],
+        artifacts: ['x'],
+        dragon: false,
+        titles: [],
+        hero: false,
+      });
+      expect(arena.setup.housing).toEqual({ leadership: 700, authority: 0, dominance: 300 });
+    });
+
+    it('upgrades an exported v17 profile on import, and leaves a v18 one alone', () => {
+      const profile = (v17Doc(legacy).profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 17);
+      expect(once.primeArena.setup.active.equipment).toEqual(['e']);
+      expect(
+        migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 18).primeArena,
+      ).toEqual(once.primeArena);
     });
   });
 });

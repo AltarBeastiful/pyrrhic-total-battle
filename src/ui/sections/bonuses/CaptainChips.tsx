@@ -27,6 +27,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { heroes as heroTable } from '@/data';
 import { setActiveFlag, updateSources } from '@/state/actions/bonuses';
+import { useSetupWriter } from './SetupBindingContext';
 import type { SetupMarchType } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { CaptainChip } from '@/ui/domain';
@@ -128,6 +129,7 @@ function CaptainLevelEditor({ captainId }: { captainId: string }) {
 
 /** The hero's gear opens a pick, not a level: all the profile stores is which hero leads. */
 function HeroEditor() {
+  const writer = useSetupWriter();
   const profile = useStore(selectActiveProfile);
   if (profile === undefined) return null;
   const hero = heroTable.find((record) => record.id === profile.sources.hero);
@@ -159,7 +161,7 @@ function HeroEditor() {
               }
               return { ...current, hero: heroId };
             });
-            setActiveFlag('hero', heroId !== '');
+            setActiveFlag(writer, 'hero', heroId !== '');
           }}
         />
       </Stack>
@@ -235,6 +237,8 @@ const EnlistChip = memo(function EnlistChip({
 // ---- the row -------------------------------------------------------------------------------------
 export interface CaptainChipsProps {
   chips: CaptainChipRow[];
+  /** What the card says when a chip is tapped past the cap; the calculator's three when absent. */
+  refusal?: string;
   /** The march is full and a fourth chip was tapped. */
   isRefused: boolean;
   onEnlist: (target: CaptainTarget) => void;
@@ -252,6 +256,7 @@ const keyOf = (target: CaptainTarget): string => (target.kind === 'hero' ? 'hero
 export function CaptainChips({
   chips,
   isRefused,
+  refusal = CAPTAIN_CAP_MESSAGE,
   onEnlist,
   onConfigure,
   marchType,
@@ -306,7 +311,7 @@ export function CaptainChips({
         ))}
       </Group>
       <Text role="status" size="xs" c="dimmed" mih="1.125rem">
-        {isRefused ? CAPTAIN_CAP_MESSAGE : ''}
+        {isRefused ? refusal : ''}
       </Text>
       {/* The kind of march decides which captains count (Amanitore: group; Hercules: epic monsters).
           "Any" is today's behaviour, so a player who never touches it sees nothing change. Tooltips

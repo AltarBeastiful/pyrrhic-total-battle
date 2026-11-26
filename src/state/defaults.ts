@@ -47,17 +47,16 @@ export const DEFAULT_TALENTS: Talents = {
   pointsOverride: null,
 };
 
-/** A new profile's Prime Arena inputs: the top division, nothing typed, no gear taken yet, the rules' switches. */
-export const DEFAULT_PRIME_ARENA: PrimeArenaSaved = {
-  tier: 0,
-  leadership: 0,
-  dominance: 0,
-  captains: [],
-  equipment: [],
-  artifacts: [],
-  toggles: {},
-  seeded: false,
-};
+/**
+ * A new profile's Prime Arena inputs: the top division, an empty setup that names no march type (the arena has
+ * none), the dragon counted as the rules do by default, the rules' switches.
+ */
+export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
+  const setup = defaultSetup(deviceId, 'Prime Arena');
+  setup.marchType = 'unspecified';
+  setup.active.dragon = true;
+  return { tier: 0, toggles: {}, setup, seeded: false };
+}
 
 export function uuid(): string {
   return crypto.randomUUID();
@@ -196,7 +195,7 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
     upgrades: [],
     settings: { ...DEFAULT_SETTINGS },
     talents: structuredClone(DEFAULT_TALENTS),
-    primeArena: structuredClone(DEFAULT_PRIME_ARENA),
+    primeArena: defaultPrimeArena(deviceId),
   };
 }
 

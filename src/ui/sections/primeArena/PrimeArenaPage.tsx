@@ -5,23 +5,13 @@
  * account's gear and bonus sources through `primeArenaInputs`.
  *
  * The form is the summary (design rule 6): the division tier, the two typed pools (rule 9), the five captains
- * and the shared gear as chips (rules 8, 12), and one switch per bonus source, the rules' own defaults on.
+ * and the shared gear through the calculator's own Bonuses body bound to the squad (rules 8, 12), and one switch
+ * per permanent source and for talents and the dragon, the rules' own defaults on.
  * Generate sits next to the answer (rule 2). The result follows rule 28's order: the recap first, then the
  * stack list as the army, then the story, folded into one log per round. Colours are the unit's group and
  * tier colours through the shared badge (rules 20, 23), words are ours (rule 26).
  */
-import {
-  Badge,
-  Button,
-  Chip,
-  Group,
-  SegmentedControl,
-  SimpleGrid,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core';
+import { Badge, Button, Group, SegmentedControl, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { useEffect, useMemo } from 'react';
 
 import {
@@ -31,23 +21,21 @@ import {
   type PrimeArenaSource,
 } from '@/engine/primeArenaInputs';
 import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
+import type { SetupBinding } from '@/state/setupBinding';
 import type { PrimeArenaRound, PrimeArenaSideOutcome } from '@/engine/primeArena';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
 import { romanTier } from '@/ui/domain/unitGroup';
 import { Disclosure, NumberField, Panel, SwitchRow } from '@/ui/kit';
+import { BonusesBody } from '@/ui/sections/bonuses/BonusesBody';
+import type { BodyScope } from '@/ui/sections/bonuses/bodyScope';
 import { TotalsBreakdown } from '@/ui/sections/bonuses/TotalsBreakdown';
 import { TotalsFigures } from '@/ui/sections/bonuses/TotalsFigures';
-import { artifactRecord, captainRecord, equipmentRecord } from '@/ui/sections/bonuses/rows';
 
 import { topTier, usePrimeArenaStore, type PlanBudget } from './primeArenaStore';
 
 const SOURCE_LABELS: Record<PrimeArenaSource, string> = {
-  captains: 'Captains',
-  equipment: 'Equipment, gems and enchantments',
-  artifacts: 'Artifacts',
-  dragon: 'Dragon',
   talents: 'Talents',
   hallOfFame: 'Hall of Fame',
   customization: 'Personal technologies',
@@ -55,22 +43,39 @@ const SOURCE_LABELS: Record<PrimeArenaSource, string> = {
   monstersBoost: 'Monuments',
 };
 
-const CAP_MESSAGE = 'Five captains at most take the field. Take one out first.';
-const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
+/** Five captains take the field; artifacts keep the calculator's three. */
+const ARENA_CAPS = { captains: PRIME_ARENA_CAPTAINS, artifacts: 3 } as const;
 
-function toggled(list: readonly string[], id: string, on: boolean): string[] {
-  return on ? [...list.filter((x) => x !== id), id] : list.filter((x) => x !== id);
-}
+/**
+ * What the arena counts of the cards: captains (no hero, no march type), equipment and artifacts. Titles, events,
+ * the temple, VIP and the other pills never count, and the permanent sources have their own switches below.
+ */
+const ARENA_SCOPE: BodyScope = {
+  families: ['captains', 'equipment'],
+  folded: ['artifacts'],
+  hero: false,
+  marchType: false,
+  audit: false,
+};
+
+const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 
 /** The bonuses the switches above add up to, shown before Generate: figures, and the audit one fold down. */
 function ArenaTotals({
   profile,
-  inputs,
+  tier,
+  setup,
+  toggles,
 }: {
   profile: NonNullable<ReturnType<typeof selectActiveProfile>>;
-  inputs: ReturnType<typeof usePrimeArenaStore.getState>['inputs'];
+  tier: number;
+  setup: SetupBinding['setup'];
+  toggles: ReturnType<typeof usePrimeArenaStore.getState>['toggles'];
 }) {
-  const sources = useMemo(() => primeArenaInputs({ ...inputs, profile }).sources, [inputs, profile]);
+  const sources = useMemo(
+    () => primeArenaInputs({ tier, profile, setup, toggles }).sources,
+    [tier, profile, setup, toggles],
+  );
   return (
     <Stack gap="xs">
       <TotalsFigures sources={sources} size="sm" />
@@ -89,16 +94,39 @@ export interface PrimeArenaPageProps {
 export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
   const profile = useStore(selectActiveProfile);
   const setup = useStore(selectActiveSetup);
-  const { inputs, running, plan, planTier, setInputs, setToggle, seedFrom, generate } = usePrimeArenaStore();
+  const {
+    tier,
+    toggles,
+    setup: squad,
+    running,
+    plan,
+    planTier,
+    setTier,
+    setToggle,
+    updateSetup,
+    seedFrom,
+    generate,
+  } = usePrimeArenaStore();
 
   useEffect(() => {
     if (profile === undefined || setup === undefined) return;
-    seedFrom(setup.active, setup.housing);
+    seedFrom(setup);
   }, [profile, setup, seedFrom]);
 
-  const capNotice = inputs.captains.length >= PRIME_ARENA_CAPTAINS;
+  // The arena's rules, as the shared body's binding: its own squad, five captains.
+  const binding = useMemo<SetupBinding>(
+    () => ({
+      setup: squad,
+      update: (edit) => {
+        updateSetup(edit);
+      },
+      caps: ARENA_CAPS,
+    }),
+    [squad, updateSetup],
+  );
   const tiers = useMemo(() => Array.from({ length: topTier() }, (_, i) => i + 1), []);
-  const canGenerate = profile !== undefined && !running && inputs.leadership + inputs.dominance > 0;
+  const canGenerate =
+    profile !== undefined && !running && squad.housing.leadership + squad.housing.dominance > 0;
 
   return (
     <Stack gap="lg" component="section" aria-labelledby="prime-arena-title">
@@ -117,10 +145,10 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
               fullWidth
               size="sm"
               aria-label="Division tier"
-              value={String(inputs.tier)}
+              value={String(tier)}
               data={tiers.map((tier) => ({ value: String(tier), label: romanTier(tier) }))}
               onChange={(value) => {
-                setInputs({ tier: Number(value) });
+                setTier(Number(value));
               }}
             />
           </Stack>
@@ -128,99 +156,57 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <NumberField
               label="Leadership"
-              value={inputs.leadership}
+              value={squad.housing.leadership}
               min={0}
               onChange={(value) => {
-                setInputs({ leadership: value ?? 0 });
+                updateSetup((s) => ({ housing: { ...s.housing, leadership: value ?? 0 } }));
               }}
             />
             <NumberField
               label="Dominance"
-              value={inputs.dominance}
+              value={squad.housing.dominance}
               min={0}
               onChange={(value) => {
-                setInputs({ dominance: value ?? 0 });
+                updateSetup((s) => ({ housing: { ...s.housing, dominance: value ?? 0 } }));
               }}
             />
           </SimpleGrid>
 
-          <Stack gap={6}>
-            <Text size="sm" fw={500}>
-              Captains ({inputs.captains.length} of {PRIME_ARENA_CAPTAINS})
-            </Text>
-            {(profile?.sources.captains.length ?? 0) === 0 ? (
-              <Text size="sm" c="dimmed">
-                No captains on this account yet.
-              </Text>
-            ) : (
-              <Group gap="xs" role="group" aria-label="Captains">
-                {profile?.sources.captains.map((entry) => {
-                  const on = inputs.captains.includes(entry.id);
-                  return (
-                    <Chip
-                      key={entry.id}
-                      size="sm"
-                      checked={on}
-                      onChange={(checked) => {
-                        if (checked && inputs.captains.length >= PRIME_ARENA_CAPTAINS) return;
-                        setInputs({ captains: toggled(inputs.captains, entry.id, checked) });
-                      }}
-                    >
-                      {captainRecord(entry.captainId)?.name ?? entry.captainId}
-                    </Chip>
-                  );
-                })}
-              </Group>
-            )}
-            {capNotice && (
-              <Text size="sm" c="dimmed" role="status">
-                {CAP_MESSAGE}
-              </Text>
-            )}
-          </Stack>
-
-          <GearChips
-            title="Equipment"
-            entries={(profile?.sources.equipment ?? []).map((e) => ({
-              id: e.id,
-              name: equipmentRecord(e.equipmentId)?.name ?? e.equipmentId,
-            }))}
-            chosen={inputs.equipment}
-            onChange={(equipment) => {
-              setInputs({ equipment });
-            }}
-          />
-          <GearChips
-            title="Artifacts"
-            entries={(profile?.sources.artifacts ?? []).map((a) => ({
-              id: a.id,
-              name: artifactRecord(a.artifactId)?.name ?? a.artifactId,
-            }))}
-            chosen={inputs.artifacts}
-            onChange={(artifacts) => {
-              setInputs({ artifacts });
-            }}
-          />
+          {/* The calculator's own cards over the squad: captains (five), equipment sets and artifacts. */}
+          {profile !== undefined && (
+            <Stack gap="lg">
+              <BonusesBody profile={profile} binding={binding} scope={ARENA_SCOPE} />
+            </Stack>
+          )}
 
           <Disclosure
             title="Bonus sources"
-            summary={`${String(PRIME_ARENA_SOURCES.filter((key) => inputs.toggles[key]).length)} counted`}
+            summary={`${String(PRIME_ARENA_SOURCES.filter((key) => toggles[key]).length + (squad.active.dragon ? 1 : 0))} counted`}
           >
             <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="xs">
               {PRIME_ARENA_SOURCES.map((key) => (
                 <SwitchRow
                   key={key}
                   label={SOURCE_LABELS[key]}
-                  checked={inputs.toggles[key]}
+                  checked={toggles[key]}
                   onChange={(on) => {
                     setToggle(key, on);
                   }}
                 />
               ))}
+              <SwitchRow
+                label="Dragon"
+                checked={squad.active.dragon}
+                onChange={(on) => {
+                  updateSetup((s) => ({ active: { ...s.active, dragon: on } }));
+                }}
+              />
             </SimpleGrid>
           </Disclosure>
 
-          {profile !== undefined && <ArenaTotals profile={profile} inputs={inputs} />}
+          {profile !== undefined && (
+            <ArenaTotals profile={profile} tier={tier} setup={squad} toggles={toggles} />
+          )}
 
           <Group>
             <Button
@@ -256,38 +242,6 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
           <Result plan={plan} />
         </Panel>
       )}
-    </Stack>
-  );
-}
-
-interface GearChipsProps {
-  title: string;
-  entries: { id: string; name: string }[];
-  chosen: readonly string[];
-  onChange: (ids: string[]) => void;
-}
-
-function GearChips({ title, entries, chosen, onChange }: GearChipsProps) {
-  if (entries.length === 0) return null;
-  return (
-    <Stack gap={6}>
-      <Text size="sm" fw={500}>
-        {title}
-      </Text>
-      <Group gap="xs" role="group" aria-label={title}>
-        {entries.map((entry) => (
-          <Chip
-            key={entry.id}
-            size="sm"
-            checked={chosen.includes(entry.id)}
-            onChange={(checked) => {
-              onChange(toggled(chosen, entry.id, checked));
-            }}
-          >
-            {entry.name}
-          </Chip>
-        ))}
-      </Group>
     </Stack>
   );
 }

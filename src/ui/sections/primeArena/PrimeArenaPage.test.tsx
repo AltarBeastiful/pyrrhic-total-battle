@@ -6,8 +6,9 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
+import { captains as captainTable } from '@/data';
 import { newProfile, newRoot } from '@/state/defaults';
-import { useStore } from '@/state/store';
+import { selectActiveSetup, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { PrimeArenaPage } from './PrimeArenaPage';
@@ -50,7 +51,7 @@ test('shows the inputs of the arena and no result before a run', () => {
   expect(screen.getByRole('heading', { name: 'Prime Arena' })).toBeTruthy();
   expect(screen.getByRole('textbox', { name: /leadership/i })).toBeTruthy();
   expect(screen.getByRole('textbox', { name: /dominance/i })).toBeTruthy();
-  expect(screen.getByRole('checkbox', { name: /alexander/i })).toBeTruthy();
+  expect(screen.getByRole('checkbox', { name: /^Send Alexander on this march$/ })).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /bonus sources/i }));
   // The sources the rules count start on, the ones they leave out start off.
   expect((screen.getByRole('switch', { name: /^talents/i, hidden: true }) as HTMLInputElement).checked).toBe(
@@ -71,13 +72,28 @@ test('Generate waits for a Leadership or Dominance budget', () => {
   expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(true);
 });
 
-test('keeps at most five captains', () => {
-  seed(6);
+test('keeps at most five captains, over the calculator’s own captain chips', () => {
   renderWithTheme(<PrimeArenaPage budget={BUDGET} />);
-  const chips = screen.getAllByRole('checkbox', { name: /alexander/i });
+  const chips = captainTable
+    .slice(0, 6)
+    .map((record) =>
+      screen.getByRole('checkbox', { name: new RegExp(`^Send ${record.name} on this march$`) }),
+    );
   for (const chip of chips) fireEvent.click(chip);
-  expect(chips.filter((chip) => (chip as HTMLInputElement).checked)).toHaveLength(5);
+  expect(usePrimeArenaStore.getState().setup.active.captains).toHaveLength(5);
   expect(screen.getByText(/five captains at most/i)).toBeTruthy();
+  // The calculator's march is untouched.
+  expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
+});
+
+test('has no chip or switch for a source the rules leave out', () => {
+  renderWithTheme(<PrimeArenaPage budget={BUDGET} />);
+  expect(screen.queryByRole('checkbox', { name: /hero/i })).toBeNull();
+  for (const name of [/titles/i, /events/i, /permanent/i, /recovery/i, /vip/i, /clan/i, /kingdom/i]) {
+    expect(screen.queryByText(name)).toBeNull();
+  }
+  expect(screen.queryByRole('group', { name: /march type/i })).toBeNull();
+  expect(screen.getByText('Hero and captains')).toBeTruthy();
 });
 
 test('Generate plans an attack stack and logs both rounds', async () => {

@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 
 import { PRIME_ARENA_SOURCES, primeArenaInputs, primeArenaPool } from '../../src/engine/primeArenaInputs';
 import type { PrimeArenaInput } from '../../src/engine/primeArenaInputs';
-import { newProfile } from '../../src/state/defaults';
-import type { Profile } from '../../src/state/schema';
+import { defaultSetup, newProfile } from '../../src/state/defaults';
+import type { BattleSetup, Profile } from '../../src/state/schema';
 
 function account(): Profile {
   const profile = newProfile('arena');
@@ -35,14 +35,24 @@ function account(): Profile {
   return profile;
 }
 
+type Squad = { captains?: string[]; equipment?: string[]; artifacts?: string[]; dragon?: boolean };
+const squad = (over: Squad = {}): BattleSetup => {
+  const setup = defaultSetup();
+  setup.active = {
+    ...setup.active,
+    captains: over.captains ?? ['c1'],
+    equipment: over.equipment ?? ['e1'],
+    artifacts: over.artifacts ?? [],
+    dragon: over.dragon ?? true,
+  };
+  setup.housing = { leadership: 120_000, authority: 77, dominance: 90_000 };
+  return setup;
+};
+
 const base = (over: Partial<PrimeArenaInput> = {}): PrimeArenaInput => ({
   tier: 9,
-  leadership: 120_000,
-  dominance: 90_000,
   profile: account(),
-  captains: ['c1'],
-  equipment: ['e1'],
-  artifacts: [],
+  setup: squad(),
   ...over,
 });
 
@@ -90,7 +100,8 @@ describe('primeArenaInputs', () => {
   it('takes a source out when its toggle is off', () => {
     const { totals } = primeArenaInputs(
       base({
-        toggles: { captains: false, equipment: false, dragon: false, talents: false, hallOfFame: false },
+        setup: squad({ captains: [], equipment: [], dragon: false }),
+        toggles: { talents: false, hallOfFame: false },
       }),
     );
     expect(totals.strength.mounted).toBe(0);
@@ -106,7 +117,17 @@ describe('primeArenaInputs', () => {
     const profile = account();
     profile.sources.titles = ['baron'];
     profile.sources.vipLevel = 12;
-    const out = primeArenaInputs(base({ profile }));
+    const setup = squad();
+    // even a setup that switched them on counts none of them
+    setup.active = {
+      ...setup.active,
+      titles: ['baron'],
+      vip: true,
+      hero: true,
+      custom: ['x1'],
+      events: ['e'],
+    };
+    const out = primeArenaInputs(base({ profile, setup }));
     expect(out.sources.map((s) => s.kind)).not.toContain('custom');
     expect(out.sources.map((s) => s.kind)).not.toContain('title');
     expect(out.totals.strength.army).toBe(11);
@@ -120,13 +141,13 @@ describe('primeArenaInputs', () => {
       level: 10,
       star: 2,
     }));
-    const out = primeArenaInputs(base({ profile, captains: ['a', 'b', 'c', 'd', 'e'] }));
+    const out = primeArenaInputs(base({ profile, setup: squad({ captains: ['a', 'b', 'c', 'd', 'e'] }) }));
     expect(out.totals.strength.mounted).toBe(300);
   });
 
   it('rejects a sixth captain', () => {
     const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
-    expect(() => primeArenaInputs(base({ captains: ids }))).toThrow(/five captains/i);
+    expect(() => primeArenaInputs(base({ setup: squad({ captains: ids }) }))).toThrow(/five captains/i);
   });
 
   it('lets the caller override the talent ranks', () => {
