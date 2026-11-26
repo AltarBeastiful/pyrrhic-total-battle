@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -506,9 +506,9 @@ export type Talents = z.infer<typeof talentsSchema>;
 /**
  * The Prime Arena page's inputs (schema v18). The arena's gear and pools are a whole `BattleSetup` (captains,
  * equipment, artifacts and dragon in `active`; Leadership and Dominance in `housing`), so the page reuses the
- * calculator's cards over it. Entry ids refer to `sources`. `troops` is the arena's own Troops card (schema v19,
- * replacing the division tier): the Guardsmen "to" level fixes the pool, `null` is "the top level", which the
- * page resolves from the game tables; `toggles` holds only the permanent-source and talent switches that differ from
+ * calculator's cards over it. Entry ids refer to `sources`. The arena keeps no troops of its own (schema v22): the
+ * Guardsmen "to" level that fixes its pool is the account's `profile.troops`, the calculator's own, so a step
+ * on either page moves both. `toggles` holds only the permanent-source and talent switches that differ from
  * the rules' defaults; `seeded` records that the setup was first cloned from the active march, so a reload keeps
  * what was typed. The plan is a view result and is not stored.
  */
@@ -516,7 +516,6 @@ export const DEFAULT_ARENA_STACKS = 8;
 export const MAX_ARENA_STACKS = 16;
 
 export const primeArenaSchema = z.object({
-  troops: troopsSchema.nullable(),
   toggles: z.record(z.string(), z.boolean()).catch({}),
   setup: battleSetupSchema,
   seeded: z.boolean(),

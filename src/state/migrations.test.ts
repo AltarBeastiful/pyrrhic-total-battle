@@ -914,7 +914,7 @@ describe('migrateProfile', () => {
           },
         }),
       ]);
-      expect(profile.primeArena).toMatchObject({ troops: null, toggles: {}, seeded: false });
+      expect(profile.primeArena).toMatchObject({ toggles: {}, seeded: false });
       expect(profile.talents).toEqual(newRoot('device').profiles[0]!.talents);
     });
 
@@ -933,7 +933,7 @@ describe('migrateProfile', () => {
       };
       const arena = migrate(fixture).profiles[0]!.primeArena;
       expect(arena).toMatchObject({ seeded: true });
-      expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 9 });
+      expect('troops' in arena).toBe(false); // the arena reads the account's troops since v22
       expect(arena.setup.active.captains).toEqual(['a']);
       expect(arena.setup.housing).toMatchObject({ leadership: 5, dominance: 7, authority: 0 });
     });
@@ -967,7 +967,7 @@ describe('migrateProfile', () => {
 
     it('moves gear and pools into the setup and keeps only the switches that still exist', () => {
       const arena = migrate(v17Doc(legacy)).profiles[0]!.primeArena;
-      expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 8 });
+      expect('troops' in arena).toBe(false); // the arena reads the account's troops since v22
       expect(arena.seeded).toBe(true);
       expect(arena.toggles).toEqual({ talents: false, hallOfFame: false });
       expect(arena.setup.marchType).toBe('unspecified');
@@ -1004,8 +1004,20 @@ describe('migrateProfile', () => {
       };
     };
 
+    // The step itself (v22 later drops the arena's own troops, so the full chain no longer shows them).
+    const stepOnly = (doc: Record<string, unknown>) =>
+      (migrations[18]!(doc).profiles as { primeArena: Record<string, unknown> }[])[0]!.primeArena as {
+        troops: {
+          guardsmen: unknown;
+          specialists: unknown;
+          engineers: unknown;
+          monsters: unknown;
+          excludedUnitIds: unknown;
+        } | null;
+      };
+
     it('writes a saved division as the Guardsmen "to" level and drops the tier', () => {
-      const arena = migrate(v18Doc(7)).profiles[0]!.primeArena;
+      const arena = stepOnly(v18Doc(7));
       expect(arena.troops?.guardsmen).toEqual({ min: 1, max: 7 });
       expect(arena.troops?.specialists).toBeNull();
       expect(arena.troops?.engineers).toBeNull();
@@ -1015,12 +1027,12 @@ describe('migrateProfile', () => {
     });
 
     it('leaves the top level to the page when no division was ever chosen', () => {
-      expect(migrate(v18Doc(0)).profiles[0]!.primeArena.troops).toBeNull();
+      expect(stepOnly(v18Doc(0)).troops).toBeNull();
     });
 
     it('upgrades an exported v18 profile on import', () => {
       const profile = (v18Doc(5).profiles as Record<string, unknown>[])[0]!;
-      expect(migrateProfile(profile, 18).primeArena.troops?.guardsmen).toEqual({ min: 1, max: 5 });
+      expect('troops' in migrateProfile(profile, 18).primeArena).toBe(false);
     });
   });
   describe('v19 → v20 adds the Monuments and Personal Technologies rows and drops the arena switches that vanished', () => {
@@ -1095,6 +1107,36 @@ describe('migrateProfile', () => {
       const once = migrateProfile(profile, 20);
       expect(once.primeArena.maxStacks).toBe(8);
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 20)).toEqual(once);
+    });
+  });
+  describe('v21 → v22 drops the arena’s own troops: it reads the account’s', () => {
+    const v21Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      profile.primeArena.troops = {
+        guardsmen: { min: 1, max: 6 },
+        specialists: null,
+        engineers: null,
+        monsters: null,
+        topTierExcluded: { guardsmen: [], specialists: [] },
+        excludedUnitIds: [],
+      };
+      return { ...doc, schemaVersion: 21 };
+    };
+
+    it('removes the field and leaves the account’s troops and the rest of the arena as they were', () => {
+      const before = (v21Doc().profiles as { troops: unknown }[])[0]!.troops;
+      const profile = migrate(v21Doc()).profiles[0]!;
+      expect('troops' in profile.primeArena).toBe(false);
+      expect(profile.troops).toEqual(before);
+      expect(profile.primeArena).toMatchObject({ role: 'attacker', maxStacks: 8, seeded: false });
+    });
+
+    it('upgrades an exported v21 profile once', () => {
+      const profile = (v21Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 21);
+      expect('troops' in once.primeArena).toBe(false);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
     });
   });
 });

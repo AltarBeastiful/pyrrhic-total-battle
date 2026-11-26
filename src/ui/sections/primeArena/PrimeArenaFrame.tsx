@@ -2,8 +2,8 @@
  * The Prime Arena in the calculator's frame (B-35). There is no page of its own: the arena is the second fight the
  * calculator's frame holds, and this file only fills what that frame asks for, in the places it asks for it.
  *
- * - **the setup column** (`ArenaSetup`): the calculator's own Troops card, bound to the arena's own troops, whose
- *   Guardsmen level fixes the pool, and its own Bonuses card, bound to the arena's squad through the same body the
+ * - **the setup column** (`ArenaSetup`): the calculator's own Troops card, showing its Guardsmen row on the account's
+ *   own troops (one source with the calculator: a step on either page moves both), whose level fixes the pool, and its own Bonuses card, bound to the arena's squad through the same body the
  *   calculator uses (five captains, no hero, no march type, only the sources the arena counts);
  * - **the answer** (`ArenaMatch`, in the March pane's place and, below 1200 px, in the sheet the bar opens);
  * - **the bars** (`ArenaBars`): the calculator's command bar and phone bar over a frame config with the two
@@ -61,8 +61,8 @@ export function ArenaSetup() {
   const profile = useStore(selectActiveProfile);
   const march = useStore(selectActiveSetup);
   const inputs = useArenaInputs();
-  const { troops, toggles, setup } = inputs;
-  const { updateTroops, setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
+  const { toggles, setup } = inputs;
+  const { setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
 
   useEffect(() => {
     if (profile === undefined || march === undefined) return;
@@ -99,7 +99,8 @@ export function ArenaSetup() {
     [setup.active.dragon, toggles, setToggle, updateSetup],
   );
   const sources = useMemo(
-    () => (profile === undefined ? [] : primeArenaInputs({ ...inputs, profile }).sources),
+    () =>
+      profile === undefined ? [] : primeArenaInputs({ ...inputs, profile, troops: profile.troops }).sources,
     [inputs, profile],
   );
 
@@ -107,7 +108,7 @@ export function ArenaSetup() {
     <Stack gap="lg">
       {/* The Guardsmen level is the only row the arena reads: it unlocks the troops of that level and below. */}
       <ArenaRoleSection />
-      <TroopsSection frame={{ troops, update: updateTroops, rows: ['guardsmen'] }} />
+      <TroopsSection frame={{ rows: ['guardsmen'] }} />
       <BonusesSection frame={{ binding, scope, sources }} />
     </Stack>
   );

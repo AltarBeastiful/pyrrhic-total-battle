@@ -183,13 +183,9 @@ describe('parseLocationHash', () => {
 });
 
 describe('profile links', () => {
-  it('carries the Prime Arena inputs (schema v19: a battle setup and its own troops), and a link without them arrives with the defaults', async () => {
+  it('carries the Prime Arena inputs (a battle setup; since v22 no troops of its own), and a link without them arrives with the defaults', async () => {
     const profile = realisticProfile();
     profile.primeArena = {
-      troops: {
-        ...profile.troops,
-        guardsmen: { min: 1, max: 9 },
-      },
       toggles: { talents: false },
       seeded: true,
       role: 'defender',
@@ -221,9 +217,28 @@ describe('profile links', () => {
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
     const { setup, ...rest } = v16.profile.primeArena;
-    expect(rest).toEqual({ troops: null, toggles: {}, seeded: false, role: 'attacker', maxStacks: 8 });
+    expect(rest).toEqual({ toggles: {}, seeded: false, role: 'attacker', maxStacks: 8 });
     expect(setup.active).toEqual(fresh.primeArena.setup.active);
     expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
+  });
+
+  it('a v21 link that carried the arena’s own troops arrives without them, and keeps the account’s', async () => {
+    const profile = realisticProfile();
+    const withOld = {
+      ...profile,
+      primeArena: { ...profile.primeArena, troops: { ...profile.troops, guardsmen: { min: 1, max: 9 } } },
+    };
+    const decoded = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 21,
+        dataVersion: CURRENT_DATA_VERSION,
+        profile: withOld as unknown as Profile,
+      }),
+    );
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect('troops' in decoded.profile.primeArena).toBe(false);
+    expect(decoded.profile.troops).toEqual(profile.troops);
   });
 
   it('round-trips a realistic profile', async () => {

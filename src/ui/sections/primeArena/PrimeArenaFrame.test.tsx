@@ -17,7 +17,7 @@ import { Shell } from '@/ui/shell/Shell';
 import { TWO_PANES } from '@/ui/shell/useMediaQuery';
 import { useUiStore } from '@/ui/uiStore';
 
-import { defaultArenaTroops, usePrimeArenaStore } from './primeArenaStore';
+import { usePrimeArenaStore } from './primeArenaStore';
 
 vi.setConfig({ testTimeout: 30_000 });
 
@@ -112,14 +112,22 @@ test('has no division control: the Guardsmen level of the Troops card fixes the 
   await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
   expect(screen.queryByText(/division/i)).toBeNull();
   expect(screen.queryByRole('radiogroup', { name: /division/i })).toBeNull();
-  // The card is the calculator's own steppers, and it writes the arena's troops, not the account's.
+  // The card is the calculator's own, on the account's troops: one source, so a step here is a step there.
   const user = userEvent.setup();
-  const before = usePrimeArenaStore.getState().troops.guardsmen?.max ?? 0;
+  const before = useStore.getState().doc.profiles[0]!.troops.guardsmen?.max ?? 0;
   await user.click(screen.getByRole('button', { name: 'Guardsmen to: one tier down' }));
-  expect(usePrimeArenaStore.getState().troops.guardsmen?.max).toBe(before - 1);
-  expect(useStore.getState().doc.profiles[0]?.troops.guardsmen).not.toEqual(
-    usePrimeArenaStore.getState().troops.guardsmen,
-  );
+  expect(useStore.getState().doc.profiles[0]!.troops.guardsmen?.max).toBe(before - 1);
+  // ... and the other way: the calculator's write shows in the arena's card.
+  act(() => {
+    useStore.getState().updateProfile(useStore.getState().doc.activeProfileId, (p) => ({
+      troops: { ...p.troops, guardsmen: { min: 1, max: 4 } },
+    }));
+  });
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: 'Guardsmen to: one tier down' })).toBeTruthy();
+  });
+  await user.click(screen.getByRole('button', { name: 'Guardsmen to: one tier down' }));
+  expect(useStore.getState().doc.profiles[0]!.troops.guardsmen?.max).toBe(3);
   expect(screen.queryByRole('group', { name: /^Engineers at/ })).toBeNull();
 });
 
@@ -278,10 +286,6 @@ test('narrow, the setup is the page, the bar carries the answer and the sheet ho
   const sheet = await screen.findByRole('dialog', { name: 'Match' }, { timeout: 8000 });
   expect((await within(sheet).findAllByRole('group', { name: /stacks$/i })).length).toBeGreaterThan(0);
   expect(within(sheet).queryByRole('table', { name: /stack list/i })).toBeNull();
-});
-
-test('the fresh arena opens at the top level of the Troops card', () => {
-  expect(usePrimeArenaStore.getState().troops).toEqual(defaultArenaTroops());
 });
 
 test('an equipment set switches on in the arena squad, not on the calculator march (B-35)', async () => {

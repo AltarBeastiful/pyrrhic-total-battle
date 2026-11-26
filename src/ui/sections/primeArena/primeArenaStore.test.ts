@@ -3,12 +3,13 @@
  * written to the active profile (stamped as its own section), and a new document or a switch of profile hydrates the
  * inputs from it. The plan stays in the view store. The squad is a `BattleSetup` (schema v19).
  */
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
+import { primeArenaInputs } from '@/engine/primeArenaInputs';
 import { newProfile, newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
 
-import { arenaFingerprint, defaultArenaTroops, usePrimeArenaStore } from './primeArenaStore';
+import { arenaFingerprint, pickInputs, usePrimeArenaStore } from './primeArenaStore';
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());
@@ -32,7 +33,6 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   const root = newRoot();
   const profile = newProfile('saved');
   profile.primeArena = {
-    troops: { ...defaultArenaTroops(), guardsmen: { min: 1, max: 8 } },
     toggles: { clanTechnologies: true, talents: false, hallOfFame: false },
     setup: {
       ...profile.primeArena.setup,
@@ -46,10 +46,9 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   root.profiles = [profile];
   root.activeProfileId = profile.id;
   useStore.getState().replaceDocument(root);
-  const { troops, setup, toggles, seeded, role, maxStacks } = usePrimeArenaStore.getState();
+  const { setup, toggles, seeded, role, maxStacks } = usePrimeArenaStore.getState();
   expect(role).toBe('defender');
   expect(maxStacks).toBe(5);
-  expect(troops.guardsmen).toEqual({ min: 1, max: 8 });
   expect(setup.active).toMatchObject({ captains: ['a', 'b'], equipment: ['e'], dragon: false });
   expect(setup.housing).toMatchObject({ leadership: 700, dominance: 300 });
   // a switch an older build saved for a source that no longer exists is dropped
@@ -60,20 +59,25 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   expect(seeded).toBe(true);
 });
 
-test('a profile with nothing saved shows the top level, and switching profile swaps the inputs', () => {
-  expect(usePrimeArenaStore.getState().troops).toEqual(defaultArenaTroops());
+test('switching profile swaps the inputs', () => {
   usePrimeArenaStore.getState().updateSetup((s) => ({ housing: { ...s.housing, dominance: 42 } }));
   const other = useStore.getState().createProfile('other');
   useStore.getState().setActiveProfile(other);
   expect(usePrimeArenaStore.getState().setup.housing.dominance).toBe(0);
 });
 
-test('the Troops card is saved with the account, and the untouched top level stores nothing', () => {
-  expect(selectActiveProfile(useStore.getState())?.primeArena.troops).toBeNull();
-  usePrimeArenaStore.getState().updateTroops({ guardsmen: { min: 1, max: 5 } });
-  expect(selectActiveProfile(useStore.getState())?.primeArena.troops?.guardsmen).toEqual({ min: 1, max: 5 });
-  usePrimeArenaStore.getState().updateTroops(defaultArenaTroops());
-  expect(selectActiveProfile(useStore.getState())?.primeArena.troops).toBeNull();
+test('the arena keeps no troops of its own: the Guardsmen level is the account’s, and a plan is made from it', () => {
+  expect('troops' in usePrimeArenaStore.getState()).toBe(false);
+  expect('troops' in selectActiveProfile(useStore.getState())!.primeArena).toBe(false);
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore
+    .getState()
+    .updateProfile(profile.id, (p) => ({ troops: { ...p.troops, guardsmen: { min: 1, max: 5 } } }));
+  const now = selectActiveProfile(useStore.getState())!;
+  expect(
+    primeArenaInputs({ ...pickInputs(usePrimeArenaStore.getState()), profile: now, troops: now.troops })
+      .level,
+  ).toBe(5);
 });
 
 test('seeding clones the active march, keeps five captains, and leaves the excluded sources out', () => {
@@ -139,10 +143,9 @@ test('the role and the stack cap are saved with the account and default to attac
 });
 
 test('the fingerprint moves with the role and the cap, so the bar calls the plan stale', () => {
-  const profile = selectActiveProfile(useStore.getState())!;
   const key = () => {
-    const { troops, toggles, setup, role, maxStacks } = usePrimeArenaStore.getState();
-    return arenaFingerprint(profile, { troops, toggles, setup, role, maxStacks });
+    const { toggles, setup, role, maxStacks } = usePrimeArenaStore.getState();
+    return arenaFingerprint(selectActiveProfile(useStore.getState())!, { toggles, setup, role, maxStacks });
   };
   const before = key();
   usePrimeArenaStore.getState().setRole('defender');
@@ -150,4 +153,40 @@ test('the fingerprint moves with the role and the cap, so the bar calls the plan
   expect(asDefender).not.toBe(before);
   usePrimeArenaStore.getState().setMaxStacks(5);
   expect(key()).not.toBe(asDefender);
+});
+
+test('the fingerprint moves with the account’s Guardsmen level, so the plan made at another level is stale', () => {
+  const profile = selectActiveProfile(useStore.getState())!;
+  const key = () => {
+    const { toggles, setup, role, maxStacks } = usePrimeArenaStore.getState();
+    return arenaFingerprint(selectActiveProfile(useStore.getState())!, { toggles, setup, role, maxStacks });
+  };
+  const before = key();
+  useStore
+    .getState()
+    .updateProfile(profile.id, (p) => ({ troops: { ...p.troops, guardsmen: { min: 1, max: 4 } } }));
+  expect(key()).not.toBe(before);
+});
+
+test('Generate plans at the account’s Guardsmen level, and the plan names it', async () => {
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore
+    .getState()
+    .updateProfile(profile.id, (p) => ({ troops: { ...p.troops, guardsmen: { min: 1, max: 5 } } }));
+  usePrimeArenaStore
+    .getState()
+    .updateSetup((s) => ({ housing: { ...s.housing, leadership: 5000, dominance: 500 } }));
+  usePrimeArenaStore
+    .getState()
+    .generate(selectActiveProfile(useStore.getState())!, { maxEvaluations: 20, maxMillis: 500 });
+  await vi.waitFor(
+    () => {
+      expect(usePrimeArenaStore.getState().plan).not.toBeNull();
+    },
+    { timeout: 10_000 },
+  );
+  expect(usePrimeArenaStore.getState().planLevel).toBe(5);
+  expect(Math.max(...usePrimeArenaStore.getState().plan!.stacks.map((s) => s.unit.tier))).toBeLessThanOrEqual(
+    5,
+  );
 });

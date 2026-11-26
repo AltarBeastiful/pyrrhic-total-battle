@@ -1,6 +1,6 @@
 /**
- * The Prime Arena page's state (B-35): the B-33 inputs (the arena's own Troops card, the switches, and a
- * `BattleSetup` that holds the squad) and the last plan. The inputs are saved with the account (B-36): this store mirrors
+ * The Prime Arena page's state (B-35): the B-33 inputs (the switches and a `BattleSetup` that holds the squad; the
+ * Guardsmen level is the account's own `profile.troops`, shared with the calculator, not copied here) and the last plan. The inputs are saved with the account (B-36): this store mirrors
  * `profile.primeArena`, writing every edit to the active profile and filling itself from the profile when a
  * document arrives or the active profile changes. `plan` is a view result and stays here, unsaved.
  *
@@ -22,9 +22,8 @@ import {
 import type { PrimeArenaPlan, PrimeArenaRole } from '@/engine/primeArenaPlanner';
 import { defaultPrimeArena } from '@/state/defaults';
 import { DEFAULT_ARENA_STACKS, MAX_ARENA_STACKS } from '@/state/schema';
-import type { BattleSetup, PrimeArenaSaved, Profile, ProfileTroops } from '@/state/schema';
+import type { BattleSetup, PrimeArenaSaved, Profile } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { rowBounds } from '@/ui/sections/troops/rows';
 import { createCalcClient, isAbortError, type CalcClient } from '@/worker/client';
 
 export interface PlanBudget {
@@ -32,25 +31,9 @@ export interface PlanBudget {
   maxMillis?: number;
 }
 
-/**
- * The arena's Troops card as a fresh squad has it: Guardsmen from G1 up to the highest level the game has, the
- * other rows unused (the Guardsmen level alone fixes the pool).
- */
-export function defaultArenaTroops(): ProfileTroops {
-  return {
-    guardsmen: { min: 1, max: rowBounds('guardsmen').max },
-    specialists: null,
-    engineers: null,
-    monsters: null,
-    topTierExcluded: { guardsmen: [], specialists: [] },
-    excludedUnitIds: [],
-  };
-}
-
-/** Everything a plan is computed from (and the profile saves): one object, so no site spells the six fields out. */
+/** Everything a plan is computed from (and the profile saves): one object, so no site spells the fields out. The Guardsmen level that fixes the pool is not among them: it
+ * is `profile.troops`, the calculator's own. */
 export interface ArenaInputs {
-  /** The arena's own Troops card: its Guardsmen "to" level fixes the pool. */
-  troops: ProfileTroops;
   /** The switches for talents and the permanent sources; captains, gear and dragon are the setup's own lists. */
   toggles: PrimeArenaToggles;
   /** The squad: captains, gear and dragon in `active`, Leadership and Dominance in `housing`. */
@@ -64,28 +47,26 @@ export interface ArenaInputs {
 }
 
 /** The inputs out of the store's state. */
-export function pickInputs({ troops, toggles, setup, seeded, role, maxStacks }: ArenaInputs): ArenaInputs {
-  return { troops, toggles, setup, seeded, role, maxStacks };
+export function pickInputs({ toggles, setup, seeded, role, maxStacks }: ArenaInputs): ArenaInputs {
+  return { toggles, setup, seeded, role, maxStacks };
 }
 
 /** The inputs as one object that changes only when one of them does, for hooks that depend on them. */
 export function useArenaInputs(): ArenaInputs {
-  const { troops, toggles, setup, seeded, role, maxStacks } = usePrimeArenaStore();
+  const { toggles, setup, seeded, role, maxStacks } = usePrimeArenaStore();
   return useMemo(
-    () => ({ troops, toggles, setup, seeded, role, maxStacks }),
-    [troops, toggles, setup, seeded, role, maxStacks],
+    () => ({ toggles, setup, seeded, role, maxStacks }),
+    [toggles, setup, seeded, role, maxStacks],
   );
 }
 
 /** What the profile stores for these inputs: only the switches that differ from the rules' defaults. */
-function toSaved({ troops, toggles, setup, seeded, role, maxStacks }: ArenaInputs): PrimeArenaSaved {
+function toSaved({ toggles, setup, seeded, role, maxStacks }: ArenaInputs): PrimeArenaSaved {
   const differing: Record<string, boolean> = {};
   for (const [key, on] of Object.entries(toggles)) {
     if (on !== DEFAULT_PRIME_ARENA_TOGGLES[key as keyof PrimeArenaToggles]) differing[key] = on;
   }
-  // The top level is what `null` means, so a squad nobody touched stores nothing of its troops.
-  const untouched = JSON.stringify(troops) === JSON.stringify(defaultArenaTroops());
-  return { troops: untouched ? null : troops, toggles: differing, setup, seeded, role, maxStacks };
+  return { toggles: differing, setup, seeded, role, maxStacks };
 }
 
 /** The rules' defaults with the saved switches on top; a switch for a source that no longer exists is dropped. */
@@ -97,10 +78,13 @@ function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
   return toggles;
 }
 
-/** Everything a plan is computed from, as one string: equal strings mean the plan on screen still answers the form. */
+/**
+ * Everything a plan is computed from, as one string: equal strings mean the plan on screen still answers the form.
+ * The account's troops are in it (their Guardsmen level fixes the pool), beside its sources and talents.
+ */
 export function arenaFingerprint(profile: Profile, inputs: Omit<ArenaInputs, 'seeded'>): string {
   return JSON.stringify([
-    inputs.troops,
+    profile.troops,
     inputs.toggles,
     inputs.setup,
     inputs.role,
@@ -116,11 +100,10 @@ function save(inputs: ArenaInputs): void {
   updateProfile(doc.activeProfileId, { primeArena: toSaved(inputs) });
 }
 
-/** A fresh squad: the profile default's setup on the top troop level. */
+/** A fresh squad: the profile default's setup. */
 function freshInputs(): ArenaInputs {
   const fresh = defaultPrimeArena(useStore.getState().doc.deviceId);
   return {
-    troops: defaultArenaTroops(),
     toggles: { ...DEFAULT_PRIME_ARENA_TOGGLES },
     setup: fresh.setup,
     seeded: false,
@@ -146,8 +129,6 @@ interface PrimeArenaState extends ArenaInputs {
   failed: boolean;
   /** What the plan was made from (`arenaFingerprint`), so the bar can say the inputs moved under it. */
   planKey: string | null;
-  /** Edits the Troops card, the way the calculator's card edits `profile.troops`. */
-  updateTroops: (patch: Partial<ProfileTroops>) => void;
   setRole: (role: PrimeArenaRole) => void;
   setMaxStacks: (maxStacks: number) => void;
   setToggle: (key: keyof PrimeArenaToggles, on: boolean) => void;
@@ -175,11 +156,6 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     const maxStacks = Math.min(MAX_ARENA_STACKS, Math.max(1, Math.round(value)));
     set({ maxStacks });
     save({ ...get(), maxStacks });
-  },
-  updateTroops: (patch) => {
-    const troops = { ...get().troops, ...patch };
-    set({ troops });
-    save({ ...get(), troops });
   },
   setToggle: (key, on) => {
     const toggles = { ...get().toggles, [key]: on };
@@ -224,7 +200,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     const budget = given ?? get().budget;
     const mine = ++generation;
     set({ running: true, failed: false });
-    const prepared = primeArenaInputs({ ...inputs, profile });
+    const prepared = primeArenaInputs({ ...inputs, profile, troops: profile.troops });
     arenaClient()
       .arena({
         pool: prepared.pool,
@@ -263,7 +239,6 @@ function hydrate(profile: Profile | undefined): void {
   if (profile === undefined) return;
   const saved = profile.primeArena;
   const loaded: ArenaInputs = {
-    troops: saved.troops ?? defaultArenaTroops(),
     toggles: savedToggles(saved.toggles),
     setup: saved.setup,
     seeded: saved.seeded,

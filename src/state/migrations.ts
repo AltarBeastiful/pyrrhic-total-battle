@@ -422,6 +422,18 @@ export function addArenaRole(profile: Record<string, unknown>): Record<string, u
   return { ...profile, primeArena: { role: 'attacker', maxStacks: 8, ...arena } };
 }
 
+/**
+ * `21 → 22` for one profile: the arena stops keeping troops of its own. Its Guardsmen level is the account's
+ * (`profile.troops`, the calculator's), so the saved copy goes; whatever level it held is not carried over, the
+ * account's is what the pool follows now.
+ */
+export function dropArenaTroops(profile: Record<string, unknown>): Record<string, unknown> {
+  const arena = profile.primeArena;
+  if (!isPlainObject(arena) || !('troops' in arena)) return profile;
+  const { troops: _troops, ...rest } = arena;
+  return { ...profile, primeArena: rest };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -468,6 +480,7 @@ export const migrations: MigrationTable = {
   18: (doc) => ({ ...doc, schemaVersion: 19, profiles: migrateProfiles(doc, arenaDivisionBecomesTroops) }),
   19: (doc) => ({ ...doc, schemaVersion: 20, profiles: migrateProfiles(doc, addArenaSources) }),
   20: (doc) => ({ ...doc, schemaVersion: 21, profiles: migrateProfiles(doc, addArenaRole) }),
+  21: (doc) => ({ ...doc, schemaVersion: 22, profiles: migrateProfiles(doc, dropArenaTroops) }),
 };
 
 /**
@@ -500,6 +513,7 @@ export const profileMigrations: MigrationTable = {
   18: arenaDivisionBecomesTroops,
   19: addArenaSources,
   20: addArenaRole,
+  21: dropArenaTroops,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -531,6 +545,7 @@ export const savedStackMigrations: MigrationTable = {
   18: identity,
   19: identity,
   20: identity,
+  21: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

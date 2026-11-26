@@ -53,7 +53,7 @@ export const DEFAULT_TALENTS: Talents = {
 };
 
 /**
- * A new profile's Prime Arena inputs: the top troop level, an empty setup that names no march type (the arena has
+ * A new profile's Prime Arena inputs: an empty setup that names no march type (the arena has
  * none), the dragon counted as the rules do by default, the rules' switches.
  */
 export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
@@ -61,7 +61,6 @@ export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
   setup.marchType = 'unspecified';
   setup.active.dragon = true;
   return {
-    troops: null,
     toggles: {},
     setup,
     seeded: false,
