@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -497,6 +497,25 @@ export const talentsSchema = z.object({
 });
 export type Talents = z.infer<typeof talentsSchema>;
 
+// ---- Prime Arena ----------------------------------------------------------------------------------
+/**
+ * The Prime Arena page's inputs (schema v17, B-36). Entry ids refer to `sources`. `tier` 0 is "the top division",
+ * which the page resolves from the game tables; `toggles` holds only the bonus-source switches that differ from
+ * the rules' defaults; `seeded` records that the gear was first filled from the active march, so a reload keeps
+ * what was typed. The plan is a view result and is not stored.
+ */
+export const primeArenaSchema = z.object({
+  tier: z.int().min(0),
+  leadership: z.number().min(0),
+  dominance: z.number().min(0),
+  captains: z.array(z.string()),
+  equipment: z.array(z.string()),
+  artifacts: z.array(z.string()),
+  toggles: z.record(z.string(), z.boolean()).catch({}),
+  seeded: z.boolean(),
+});
+export type PrimeArenaSaved = z.infer<typeof primeArenaSchema>;
+
 // ---- Profile --------------------------------------------------------------------------------------
 /**
  * The parts of a profile two devices can change independently (S-49e). Each gets its own edit time in
@@ -513,6 +532,7 @@ export const PROFILE_SECTIONS = [
   'upgrades',
   'settings',
   'talents',
+  'primeArena',
 ] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
@@ -533,6 +553,8 @@ export const profileSchema = syncMetaSchema.extend({
   settings: profileSettingsSchema,
   /** The hero talent planner's inputs (schema v11, B-21; priorities v12, B-22). */
   talents: talentsSchema,
+  /** The Prime Arena page's inputs (schema v17, B-36). */
+  primeArena: primeArenaSchema,
   /** When each section was last edited; absent on a profile no edit has stamped yet (S-49e). */
   sectionUpdatedAt: z.partialRecord(z.enum(PROFILE_SECTIONS), timestamp).optional(),
 });

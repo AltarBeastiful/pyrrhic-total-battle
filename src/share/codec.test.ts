@@ -183,6 +183,35 @@ describe('parseLocationHash', () => {
 });
 
 describe('profile links', () => {
+  it('carries the Prime Arena inputs (schema v17, B-36), and a link without them arrives with the defaults', async () => {
+    const profile = realisticProfile();
+    profile.primeArena = {
+      tier: 9,
+      leadership: 1_200,
+      dominance: 800,
+      captains: ['c1', 'c2'],
+      equipment: ['e1'],
+      artifacts: ['a1'],
+      toggles: { titles: true, talents: false },
+      seeded: true,
+    };
+    const decoded = await decodeShare(await buildProfileLink(profile));
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect(decoded.profile.primeArena).toEqual(profile.primeArena);
+
+    const fresh = newProfile('Guest', DEVICE);
+    const v16 = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 16,
+        dataVersion: CURRENT_DATA_VERSION,
+        profile: fresh,
+      }),
+    );
+    if (v16.kind !== 'profile') throw new Error('wrong kind');
+    expect(v16.profile.primeArena).toEqual(fresh.primeArena);
+  });
+
   it('round-trips a realistic profile', async () => {
     const profile = realisticProfile();
     const decoded = await decodeShare(await buildProfileLink(profile));

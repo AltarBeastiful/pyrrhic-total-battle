@@ -885,4 +885,54 @@ describe('migrateProfile', () => {
 
     expect(migrateProfile(profile, 2).setups[0]).not.toHaveProperty('pinnedUnitIds');
   });
+  describe('v16 → v17 (B-36) gives every profile its Prime Arena inputs, empty', () => {
+    const v16Doc = (): Record<string, unknown> => {
+      const doc = newRoot('device');
+      const profile = doc.profiles[0]!;
+      const { primeArena: _arena, ...old } = profile as unknown as Record<string, unknown>;
+      return JSON.parse(JSON.stringify({ ...doc, schemaVersion: 16, profiles: [old] })) as Record<
+        string,
+        unknown
+      >;
+    };
+
+    it('adds the default inputs to a profile that has none, and moves nothing else', () => {
+      const fixture = v16Doc();
+      expect(migrations[16]?.(fixture).schemaVersion).toBe(17);
+      const profile = migrate(fixture).profiles[0]!;
+      expect(profile.primeArena).toEqual({
+        tier: 0,
+        leadership: 0,
+        dominance: 0,
+        captains: [],
+        equipment: [],
+        artifacts: [],
+        toggles: {},
+        seeded: false,
+      });
+      expect(profile.talents).toEqual(newRoot('device').profiles[0]!.talents);
+    });
+
+    it('keeps inputs a profile already carries', () => {
+      const fixture = v16Doc();
+      const profiles = fixture.profiles as Record<string, unknown>[];
+      profiles[0]!.primeArena = {
+        tier: 9,
+        leadership: 5,
+        dominance: 7,
+        captains: ['a'],
+        equipment: [],
+        artifacts: [],
+        toggles: {},
+        seeded: true,
+      };
+      const arena = migrate(fixture).profiles[0]!.primeArena;
+      expect(arena).toMatchObject({ tier: 9, leadership: 5, dominance: 7, captains: ['a'], seeded: true });
+    });
+
+    it('upgrades a v16 exported profile on import', () => {
+      const profile = (v16Doc().profiles as Record<string, unknown>[])[0]!;
+      expect(migrateProfile(profile, 16).primeArena.seeded).toBe(false);
+    });
+  });
 });

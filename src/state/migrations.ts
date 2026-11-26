@@ -7,7 +7,7 @@
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
 import { talents as talentTable, unitById } from '../data';
-import { DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
+import { DEFAULT_PRIME_ARENA, DEFAULT_SETTINGS, DEFAULT_TALENTS } from './defaults';
 import {
   DEFAULT_TALENT_GOAL_ORDER,
   profileSchema,
@@ -219,6 +219,13 @@ export function dropEquipmentWearer(profile: Record<string, unknown>): Record<st
   return { ...profile, sources: { ...profile.sources, equipment } };
 }
 
+/** `16 → 17` for one profile (B-36): the account gains the Prime Arena inputs, empty. Nothing else moves. */
+export function addPrimeArena(profile: Record<string, unknown>): Record<string, unknown> {
+  return isPlainObject(profile.primeArena)
+    ? profile
+    : { ...profile, primeArena: structuredClone(DEFAULT_PRIME_ARENA) };
+}
+
 /**
  * `10 → 11` for one profile (B-21): the account gains the hero talent planner's inputs, empty: level 1, no
  * rank bought, the Battle goal. Nothing else moves.
@@ -335,6 +342,7 @@ export const migrations: MigrationTable = {
   13: (doc) => ({ ...doc, schemaVersion: 14, profiles: migrateProfiles(doc, addTalentGroupOverrides) }),
   14: (doc) => ({ ...doc, schemaVersion: 15, profiles: migrateProfiles(doc, pointsBecomeStock) }),
   15: (doc) => ({ ...doc, schemaVersion: 16, profiles: migrateProfiles(doc, restrictHeroTalentsSource) }),
+  16: (doc) => ({ ...doc, schemaVersion: 17, profiles: migrateProfiles(doc, addPrimeArena) }),
 };
 
 /**
@@ -362,6 +370,7 @@ export const profileMigrations: MigrationTable = {
   13: addTalentGroupOverrides,
   14: pointsBecomeStock,
   15: restrictHeroTalentsSource,
+  16: addPrimeArena,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -388,6 +397,7 @@ export const savedStackMigrations: MigrationTable = {
   13: identity,
   14: identity,
   15: identity,
+  16: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

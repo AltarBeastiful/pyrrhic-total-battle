@@ -294,6 +294,28 @@ test('hero talents set on one device and troops changed on the other both surviv
   }
 });
 
+test('Prime Arena inputs set on one device and troops changed on the other both survive (schema v17)', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const onPhone = edit(
+    base,
+    { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
+    t + 10,
+  );
+  const primeArena = { ...base.primeArena, leadership: 900, captains: ['x'] };
+  const onPc = edit(base, { primeArena, sectionUpdatedAt: { primeArena: t + 20 } }, t + 20);
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.primeArena).toEqual(primeArena);
+    expect(profile?.troops.guardsmen).toBeNull();
+  }
+});
+
 test('sameContent ignores the order of profiles, tombstones and section stamps', () => {
   const { phone } = twoDevices();
   const [first] = phone.profiles;

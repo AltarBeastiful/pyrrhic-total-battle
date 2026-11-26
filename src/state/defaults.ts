@@ -11,6 +11,7 @@ import type {
   Profile,
   ProfileSettings,
   Talents,
+  PrimeArenaSaved,
   RootDocument,
   SavedStack,
 } from './schema';
@@ -44,6 +45,18 @@ export const DEFAULT_TALENTS: Talents = {
   crypts: ['common', 'rare', 'epic'],
   groupOverrides: {},
   pointsOverride: null,
+};
+
+/** A new profile's Prime Arena inputs: the top division, nothing typed, no gear taken yet, the rules' switches. */
+export const DEFAULT_PRIME_ARENA: PrimeArenaSaved = {
+  tier: 0,
+  leadership: 0,
+  dominance: 0,
+  captains: [],
+  equipment: [],
+  artifacts: [],
+  toggles: {},
+  seeded: false,
 };
 
 export function uuid(): string {
@@ -183,6 +196,7 @@ function buildProfile(id: string, deviceId: string, name: string, now: number, s
     upgrades: [],
     settings: { ...DEFAULT_SETTINGS },
     talents: structuredClone(DEFAULT_TALENTS),
+    primeArena: structuredClone(DEFAULT_PRIME_ARENA),
   };
 }
 
