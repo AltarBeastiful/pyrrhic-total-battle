@@ -284,6 +284,7 @@ export interface EquipmentSetsProps {
 
 export function EquipmentSets({ profile, setup, onEdit, onAdd, addDisabled }: EquipmentSetsProps) {
   const { sets, loose } = layoutOf(profile, setup);
+  const writer = useSetupWriter();
   const [dragging, setDragging] = useState(false);
   // A mouse drags after a few pixels, so a click stays a click; a finger must rest first, so a swipe still scrolls the page (B-20).
   const sensors = useSensors(
@@ -364,6 +365,7 @@ export function EquipmentSets({ profile, setup, onEdit, onAdd, addDisabled }: Eq
                     aria-label={`${set.name}, ${String(set.on)} of ${String(set.pieces.length)} on`}
                     onChange={() => {
                       setPiecesOn(
+                        writer,
                         set.pieces.map((piece) => piece.id),
                         set.state !== 'all',
                       );

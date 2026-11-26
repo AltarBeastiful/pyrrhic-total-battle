@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { captains as captainTable } from '@/data';
 import { newProfile, newRoot } from '@/state/defaults';
-import { selectActiveSetup, useStore } from '@/state/store';
+import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { ThemeHarness } from '@/ui/kit/testRender';
 import { DESKTOP_BAR } from '@/ui/shell/command';
 import { Shell } from '@/ui/shell/Shell';
@@ -282,4 +282,25 @@ test('narrow, the setup is the page, the bar carries the answer and the sheet ho
 
 test('the fresh arena opens at the top level of the Troops card', () => {
   expect(usePrimeArenaStore.getState().troops).toEqual(defaultArenaTroops());
+});
+
+test('an equipment set switches on in the arena squad, not on the calculator march (B-35)', async () => {
+  const profile = selectActiveProfile(useStore.getState())!;
+  useStore.getState().updateProfile(profile.id, {
+    sources: {
+      ...profile.sources,
+      equipment: [
+        { id: 'a1', equipmentId: 'emerald-guardian', quality: 'rare', setId: 's1' },
+        { id: 'a2', equipmentId: 'war-master', quality: 'rare', setId: 's1' },
+      ],
+    } as typeof profile.sources,
+  });
+  const marchBefore = selectActiveSetup(useStore.getState())!.active.equipment;
+  renderArena();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('checkbox', { name: /0 of 2 on/ }));
+  expect([...usePrimeArenaStore.getState().setup.active.equipment].sort()).toEqual(['a1', 'a2']);
+  expect(selectActiveSetup(useStore.getState())!.active.equipment).toEqual(marchBefore);
+  await user.click(await screen.findByRole('checkbox', { name: /2 of 2 on/ }));
+  expect(usePrimeArenaStore.getState().setup.active.equipment).toEqual([]);
 });

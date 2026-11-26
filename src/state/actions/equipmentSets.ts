@@ -4,6 +4,7 @@
  * Nothing here touches what a total is made of: which pieces are on is still `setup.active.equipment`.
  */
 import type { ProfileSources } from '../schema';
+import type { SetupWriter } from '../setupBinding';
 import { useStore } from '../store';
 import { mintSourceId, removeSourceEntry, updateSources } from './bonuses';
 
@@ -97,9 +98,9 @@ export function deleteSetAndPieces(profileId: string, setId: string): void {
   updateSources(profileId, (sources) => prune(withoutSet(sources, setId)));
 }
 
-/** Switch every piece of a set on or off in the active setup, in one write. */
-export function setPiecesOn(pieceIds: readonly string[], on: boolean): void {
-  useStore.getState().updateActiveSetup((setup) => {
+/** Switch every piece of a set on or off in the setup the writer is bound to (the march or the arena squad), in one write. */
+export function setPiecesOn(writer: SetupWriter, pieceIds: readonly string[], on: boolean): void {
+  writer.update((setup) => {
     const kept = setup.active.equipment.filter((id) => !pieceIds.includes(id));
     const equipment = on ? [...kept, ...pieceIds] : kept;
     return { active: { ...setup.active, equipment } };
