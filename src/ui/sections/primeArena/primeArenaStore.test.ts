@@ -17,11 +17,11 @@ beforeEach(() => {
 
 test('an edited input is saved on the active profile and stamps its own section', () => {
   usePrimeArenaStore.getState().setInputs({ leadership: 1500, captains: ['c1'] });
-  usePrimeArenaStore.getState().setToggle('titles', true);
+  usePrimeArenaStore.getState().setToggle('talents', false);
   const profile = selectActiveProfile(useStore.getState());
   expect(profile?.primeArena.leadership).toBe(1500);
   expect(profile?.primeArena.captains).toEqual(['c1']);
-  expect(profile?.primeArena.toggles).toEqual({ titles: true });
+  expect(profile?.primeArena.toggles).toEqual({ talents: false });
   expect(profile?.sectionUpdatedAt?.primeArena).toBeGreaterThan(0);
 });
 
@@ -35,7 +35,7 @@ test('inputs saved in a profile fill the store when that document arrives', () =
     captains: ['a', 'b'],
     equipment: ['e'],
     artifacts: [],
-    toggles: { clanTechnologies: true, talents: false },
+    toggles: { clanTechnologies: true, talents: false, dragon: false },
     seeded: true,
   };
   root.profiles = [profile];
@@ -43,7 +43,9 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   useStore.getState().replaceDocument(root);
   const { inputs, seeded } = usePrimeArenaStore.getState();
   expect(inputs).toMatchObject({ tier: 8, leadership: 700, dominance: 300, captains: ['a', 'b'] });
-  expect(inputs.toggles.clanTechnologies).toBe(true);
+  // a switch an older build saved for a source that no longer exists is dropped
+  expect(Object.keys(inputs.toggles)).not.toContain('clanTechnologies');
+  expect(inputs.toggles.dragon).toBe(false);
   expect(inputs.toggles.talents).toBe(false);
   expect(inputs.toggles.captains).toBe(true);
   expect(seeded).toBe(true);

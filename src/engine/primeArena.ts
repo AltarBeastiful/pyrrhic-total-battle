@@ -7,11 +7,13 @@
  * both rounds.
  *
  * Round model (our reading of the rules, the support text does not spell it out):
- *   - in a pass every living stack acts once, strongest base damage first (count × strength, as `attackOrder`);
+ *   - in a pass every living stack acts once, strongest base damage first (`attackOrder` from battle.ts, reused
+ *     as is; the rest of battle.ts, including `battleSequence`, is not used: it walks a one-sided battle);
  *   - the two sides alternate one stack at a time, the round's first side leading; a stack already dead when
  *     its turn comes is skipped; passes repeat until a side is wiped (or a pass kills nobody);
  *   - a stack hits the enemy category it has the largest strength-against for among the categories still alive
- *     (`chooseTarget`), at the living-unit count it has when it acts;
+ *     (picked inside `effectiveUnit`, which calls `chooseTarget`; this file does not call it directly), at the
+ *     living-unit count it has when it acts;
  *   - inside that category the hit lands on the living stack with the highest total HP; damage kills whole
  *     units, the remainder is lost, and overkill spills to the next-highest stack of the same category;
  *   - a round is won by wiping the other side, else by the higher surviving-troop share, equal share = draw.

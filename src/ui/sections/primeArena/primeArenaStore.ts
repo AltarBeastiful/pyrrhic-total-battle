@@ -13,6 +13,8 @@ import { create } from 'zustand';
 import { getUnits } from '@/data';
 import {
   DEFAULT_PRIME_ARENA_TOGGLES,
+  isPrimeArenaUnit,
+  PRIME_ARENA_SOURCES,
   PRIME_ARENA_CAPTAINS,
   primeArenaInputs,
   type PrimeArenaToggles,
@@ -40,10 +42,7 @@ export interface PlanBudget {
 /** The highest tier that has a Specialist or a Monster: the top division unlocks it. */
 export function topTier(): number {
   return getUnits().reduce(
-    (best, unit) =>
-      (unit.kind === 'monster' || (unit.kind === 'troop' && unit.group === 'specialist')) && unit.tier > best
-        ? unit.tier
-        : best,
+    (best, unit) => (isPrimeArenaUnit(unit) && unit.tier > best ? unit.tier : best),
     1,
   );
 }
@@ -78,6 +77,15 @@ function toSaved(inputs: PrimeArenaFormInputs, seeded: boolean): PrimeArenaSaved
   };
 }
 
+/** The rules' defaults with the saved switches on top; a switch for a source that no longer exists is dropped. */
+function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
+  const toggles = { ...DEFAULT_PRIME_ARENA_TOGGLES };
+  for (const key of PRIME_ARENA_SOURCES) {
+    if (typeof saved[key] === 'boolean') toggles[key] = saved[key];
+  }
+  return toggles;
+}
+
 function fromSaved(saved: PrimeArenaSaved): { inputs: PrimeArenaFormInputs; seeded: boolean } {
   return {
     seeded: saved.seeded,
@@ -88,7 +96,7 @@ function fromSaved(saved: PrimeArenaSaved): { inputs: PrimeArenaFormInputs; seed
       captains: [...saved.captains],
       equipment: [...saved.equipment],
       artifacts: [...saved.artifacts],
-      toggles: { ...DEFAULT_PRIME_ARENA_TOGGLES, ...saved.toggles },
+      toggles: savedToggles(saved.toggles),
     },
   };
 }
@@ -111,7 +119,6 @@ interface PrimeArenaState {
   setToggle: (key: keyof PrimeArenaToggles, on: boolean) => void;
   /** Fills the empty inputs from the account's gear and the active march's housing, once. */
   seedFrom: (
-    profile: Profile,
     active: { captains: string[]; equipment: string[]; artifacts: string[] },
     housing: { leadership: number; dominance: number },
   ) => void;
@@ -136,7 +143,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     set({ inputs });
     save(inputs, get().seeded);
   },
-  seedFrom: (_profile, active, housing) => {
+  seedFrom: (active, housing) => {
     if (get().seeded) return;
     const inputs = {
       ...get().inputs,

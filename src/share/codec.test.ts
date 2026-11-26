@@ -192,7 +192,7 @@ describe('profile links', () => {
       captains: ['c1', 'c2'],
       equipment: ['e1'],
       artifacts: ['a1'],
-      toggles: { titles: true, talents: false },
+      toggles: { dragon: false, talents: false },
       seeded: true,
     };
     const decoded = await decodeShare(await buildProfileLink(profile));

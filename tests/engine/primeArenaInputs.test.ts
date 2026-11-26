@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { primeArenaInputs, primeArenaPool } from '../../src/engine/primeArenaInputs';
+import { PRIME_ARENA_SOURCES, primeArenaInputs, primeArenaPool } from '../../src/engine/primeArenaInputs';
 import type { PrimeArenaInput } from '../../src/engine/primeArenaInputs';
 import { newProfile } from '../../src/state/defaults';
 import type { Profile } from '../../src/state/schema';
@@ -99,10 +99,17 @@ describe('primeArenaInputs', () => {
     expect(totals.strength.specialist).toBe(0);
   });
 
-  it('leaves titles, clan, kingdom and temporary bonuses out unless switched on', () => {
-    expect(primeArenaInputs(base()).sources.map((s) => s.kind)).not.toContain('custom');
-    const on = primeArenaInputs(base({ toggles: { custom: true, clanTechnologies: true } }));
-    expect(on.totals.strength.army).toBe(11 + 20 + 9);
+  it('has no switch for the sources the rules leave out, and never counts them', () => {
+    expect(PRIME_ARENA_SOURCES).not.toContain('titles');
+    expect(PRIME_ARENA_SOURCES).not.toContain('clanTechnologies');
+    expect(PRIME_ARENA_SOURCES).not.toContain('custom');
+    const profile = account();
+    profile.sources.titles = ['baron'];
+    profile.sources.vipLevel = 12;
+    const out = primeArenaInputs(base({ profile }));
+    expect(out.sources.map((s) => s.kind)).not.toContain('custom');
+    expect(out.sources.map((s) => s.kind)).not.toContain('title');
+    expect(out.totals.strength.army).toBe(11);
   });
 
   it('accepts five captains', () => {

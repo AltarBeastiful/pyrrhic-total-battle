@@ -25,9 +25,11 @@ import {
 import { useEffect, useMemo } from 'react';
 
 import { PRIME_ARENA_CAPTAINS, PRIME_ARENA_SOURCES, type PrimeArenaSource } from '@/engine/primeArenaInputs';
+import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
 import type { PrimeArenaRound, PrimeArenaSideOutcome } from '@/engine/primeArena';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { TierBadge } from '@/ui/domain';
+import { count } from '@/ui/domain/format';
 import { romanTier } from '@/ui/domain/unitGroup';
 import { Disclosure, NumberField, Panel, SwitchRow } from '@/ui/kit';
 import { artifactRecord, captainRecord, equipmentRecord } from '@/ui/sections/bonuses/rows';
@@ -44,19 +46,9 @@ const SOURCE_LABELS: Record<PrimeArenaSource, string> = {
   customization: 'Personal technologies',
   armyModernization: 'Army modernization',
   monstersBoost: 'Monuments',
-  clanTechnologies: 'Clan technologies',
-  clanCapitalAppearance: 'Clan capital appearance',
-  unionOfTriumph: 'Union of Triumph',
-  titles: 'Titles',
-  hero: 'Hero',
-  vip: 'VIP',
-  otherPills: 'Other bonuses',
-  events: 'Events',
-  custom: 'Custom sources',
 };
 
 const CAP_MESSAGE = 'Five captains at most take the field. Take one out first.';
-const fmt = (n: number): string => Math.round(n).toLocaleString('en-US').replace(/,/g, ' ');
 const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 
 function toggled(list: readonly string[], id: string, on: boolean): string[] {
@@ -75,7 +67,7 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
 
   useEffect(() => {
     if (profile === undefined || setup === undefined) return;
-    seedFrom(profile, setup.active, setup.housing);
+    seedFrom(setup.active, setup.housing);
   }, [profile, setup, seedFrom]);
 
   const capNotice = inputs.captains.length >= PRIME_ARENA_CAPTAINS;
@@ -97,7 +89,7 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
             </Text>
             <SegmentedControl
               fullWidth
-              size="xs"
+              size="sm"
               aria-label="Division tier"
               value={String(inputs.tier)}
               data={tiers.map((tier) => ({ value: String(tier), label: romanTier(tier) }))}
@@ -141,7 +133,7 @@ export function PrimeArenaPage({ budget }: PrimeArenaPageProps) {
                   return (
                     <Chip
                       key={entry.id}
-                      size="xs"
+                      size="sm"
                       checked={on}
                       onChange={(checked) => {
                         if (checked && inputs.captains.length >= PRIME_ARENA_CAPTAINS) return;
@@ -258,7 +250,7 @@ function GearChips({ title, entries, chosen, onChange }: GearChipsProps) {
         {entries.map((entry) => (
           <Chip
             key={entry.id}
-            size="xs"
+            size="sm"
             checked={chosen.includes(entry.id)}
             onChange={(checked) => {
               onChange(toggled(chosen, entry.id, checked));
@@ -274,7 +266,7 @@ function GearChips({ title, entries, chosen, onChange }: GearChipsProps) {
 
 const SIDE_NAME = { attacker: 'Attacker', defender: 'Defender', draw: 'Nobody' } as const;
 
-function Result({ plan }: { plan: NonNullable<ReturnType<typeof usePrimeArenaStore.getState>['plan']> }) {
+function Result({ plan }: { plan: PrimeArenaPlan }) {
   const { match, score, stacks, spent } = plan;
   const verdict =
     match.winner === 'draw'
@@ -290,7 +282,7 @@ function Result({ plan }: { plan: NonNullable<ReturnType<typeof usePrimeArenaSto
         </Badge>
         <Text size="sm">
           Survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds. Leadership spent{' '}
-          {fmt(spent.leadership)}, Dominance spent {fmt(spent.dominance)}.
+          {count(spent.leadership)}, Dominance spent {count(spent.dominance)}.
         </Text>
       </Group>
 
@@ -302,7 +294,7 @@ function Result({ plan }: { plan: NonNullable<ReturnType<typeof usePrimeArenaSto
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {stacks.map(({ unit, count }) => (
+          {stacks.map(({ unit, count: n }) => (
             <Table.Tr key={unit.id}>
               <Table.Td>
                 <Group gap={6} wrap="nowrap">
@@ -312,7 +304,7 @@ function Result({ plan }: { plan: NonNullable<ReturnType<typeof usePrimeArenaSto
               </Table.Td>
               <Table.Td ta="right">
                 <Text span fw={600} size="lg">
-                  {fmt(count)}
+                  {count(n)}
                 </Text>
               </Table.Td>
             </Table.Tr>
@@ -364,13 +356,16 @@ function SideTable({ name, side }: { name: string; side: PrimeArenaSideOutcome }
         {side.stacks.map((s) => (
           <Table.Tr key={s.unit.id}>
             <Table.Td>
-              <Text size="sm">{s.unit.name}</Text>
+              <Group gap={6} wrap="nowrap">
+                <TierBadge tier={s.unit.tier} size="sm" />
+                <Text size="sm">{s.unit.name}</Text>
+              </Group>
             </Table.Td>
             <Table.Td ta="right">
-              <Text size="sm">{fmt(s.start)}</Text>
+              <Text size="sm">{count(s.start)}</Text>
             </Table.Td>
             <Table.Td ta="right">
-              <Text size="sm">{fmt(s.survivors)}</Text>
+              <Text size="sm">{count(s.survivors)}</Text>
             </Table.Td>
           </Table.Tr>
         ))}

@@ -56,9 +56,8 @@ test('shows the inputs of the arena and no result before a run', () => {
   expect((screen.getByRole('switch', { name: /^talents/i, hidden: true }) as HTMLInputElement).checked).toBe(
     true,
   );
-  expect((screen.getByRole('switch', { name: /^titles/i, hidden: true }) as HTMLInputElement).checked).toBe(
-    false,
-  );
+  expect(screen.queryByRole('switch', { name: /^titles/i, hidden: true })).toBeNull();
+  expect(screen.queryByRole('switch', { name: /^clan/i, hidden: true })).toBeNull();
   expect(screen.queryByRole('region', { name: /result/i })).toBeNull();
 });
 

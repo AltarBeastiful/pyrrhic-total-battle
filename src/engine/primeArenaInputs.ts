@@ -22,7 +22,10 @@ import type { BonusTotals, Housing, ResolvedSource } from './types';
 /** An arena squad has five captains. */
 export const PRIME_ARENA_CAPTAINS = 5;
 
-/** The sources that can be switched on or off. */
+/**
+ * The sources that can be switched on or off: exactly the ones the rules count. Titles, clan, kingdom, events,
+ * temporary bonuses, the hero and VIP have no switch; they never count.
+ */
 export const PRIME_ARENA_SOURCES = [
   'captains',
   'equipment',
@@ -30,22 +33,11 @@ export const PRIME_ARENA_SOURCES = [
   'dragon',
   'talents',
   ...(['hallOfFame', 'customization', 'armyModernization', 'monstersBoost'] as const),
-  ...(['clanTechnologies', 'clanCapitalAppearance', 'unionOfTriumph'] as const),
-  'titles',
-  'hero',
-  'vip',
-  'otherPills',
-  'events',
-  'custom',
 ] as const;
 export type PrimeArenaSource = (typeof PRIME_ARENA_SOURCES)[number];
 export type PrimeArenaToggles = Record<PrimeArenaSource, boolean>;
 
-/**
- * What counts by default: the rules list captains, artifacts, equipment (with enchantments and gems), Dragon,
- * Hall of Fame, Monuments, Personal Technologies and talents. Titles, clan, kingdom, events and temporary
- * bonuses do not; neither do the hero and VIP, which the list does not name.
- */
+/** What counts by default: every source with a switch. */
 export const DEFAULT_PRIME_ARENA_TOGGLES: Readonly<PrimeArenaToggles> = {
   captains: true,
   equipment: true,
@@ -56,15 +48,6 @@ export const DEFAULT_PRIME_ARENA_TOGGLES: Readonly<PrimeArenaToggles> = {
   customization: true,
   armyModernization: true,
   monstersBoost: true,
-  clanTechnologies: false,
-  clanCapitalAppearance: false,
-  unionOfTriumph: false,
-  titles: false,
-  hero: false,
-  vip: false,
-  otherPills: false,
-  events: false,
-  custom: false,
 };
 
 export interface PrimeArenaInput {
@@ -81,10 +64,6 @@ export interface PrimeArenaInput {
   toggles?: Partial<PrimeArenaToggles>;
   /** Talent ranks by game id; the profile's own ranks when absent. */
   talentRanks?: Readonly<Record<string, number>>;
-  /** Used only when `titles` / `events` / `otherPills` are switched on. */
-  titleIds?: readonly string[];
-  eventIds?: readonly string[];
-  otherPillIds?: readonly string[];
 }
 
 export interface PrimeArenaInputs {
@@ -96,13 +75,14 @@ export interface PrimeArenaInputs {
   totals: BonusTotals;
 }
 
-/** Every Specialist and Monster at `tier`: no guardsmen, engineers (siege), scouts or mercenaries. */
+/** Whether a unit can be in an arena squad: a Specialist or a Monster, never guardsmen, siege, scouts or mercenaries. */
+export function isPrimeArenaUnit(unit: UnitDef): boolean {
+  return (unit.kind === 'troop' && unit.group === 'specialist') || unit.kind === 'monster';
+}
+
+/** Every Specialist and Monster at `tier`. */
 export function primeArenaPool(tier: number): UnitDef[] {
-  return getUnits().filter(
-    (unit) =>
-      unit.tier === tier &&
-      ((unit.kind === 'troop' && unit.group === 'specialist') || unit.kind === 'monster'),
-  );
+  return getUnits().filter((unit) => unit.tier === tier && isPrimeArenaUnit(unit));
 }
 
 function talentSources(ranks: Readonly<Record<string, number>>): ResolvedSource[] {
@@ -129,23 +109,22 @@ export function primeArenaInputs(input: PrimeArenaInput): PrimeArenaInputs {
     captains: on.captains ? [...input.captains] : [],
     equipment: on.equipment ? [...input.equipment] : [],
     artifacts: on.artifacts ? [...input.artifacts] : [],
-    titles: on.titles ? [...(input.titleIds ?? profile.sources.titles)] : [],
-    hero: on.hero,
-    events: on.events ? [...(input.eventIds ?? [])] : [],
-    otherPills: on.otherPills ? [...(input.otherPillIds ?? [])] : [],
-    vip: on.vip,
+    titles: [],
+    hero: false,
+    events: [],
+    otherPills: [],
+    vip: false,
     dragon: on.dragon,
-    custom: on.custom ? profile.sources.custom.map((entry) => entry.id) : [],
+    custom: [],
   };
 
-  // Permanent rows are always resolved; the arena decides which of them count. The typed Hero Talents row is
-  // replaced by the rank table, so it never counts here.
+  // Permanent rows are always resolved; the arena decides which of them count: only the built-in rows with a
+  // switch. The typed Hero Talents row is replaced by the rank table, so it never counts here.
   const permanent = new Map(profile.sources.permanent.map((row) => [`permanent:${row.id}`, row]));
   const sources = resolveSources(profile, setup).filter((source) => {
     if (source.kind !== 'permanent') return true;
     const builtin: BuiltinPermanentSource | undefined = permanent.get(source.id)?.builtin;
-    if (builtin === 'heroTalents') return false;
-    return builtin === undefined ? on.custom : on[builtin];
+    return builtin !== undefined && builtin in on && on[builtin as PrimeArenaSource];
   });
   if (on.talents) sources.push(...talentSources(input.talentRanks ?? profile.talents.ranks));
 
