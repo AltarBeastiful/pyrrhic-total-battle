@@ -59,6 +59,11 @@ export interface PrimeArenaPanelScore {
   result: number;
   roundsWon: number;
   survivorShare: number;
+  /**
+   * Our surviving cost share minus the opponent's, summed over both rounds (-2..2), lost rounds included. The
+   * planner's tie-break below result and rounds won: it stays continuous when every match is lost.
+   */
+  margin: number;
 }
 
 export interface PrimeArenaPlanInput {
@@ -242,12 +247,23 @@ function scaled(stacks: readonly PrimeArenaStack[], factor: number): PrimeArenaS
   });
 }
 
+function shareMargin(match: PrimeArenaMatch, role: PrimeArenaRole): number {
+  const other = role === 'attacker' ? 'defender' : 'attacker';
+  return match.rounds.reduce((a, r) => a + r[role].share - r[other].share, 0);
+}
+
 /** Our side's score of a match: attacker or defender perspective. */
-function sideScore(match: PrimeArenaMatch, role: PrimeArenaRole): PrimeArenaScore {
+function headlineScore(match: PrimeArenaMatch, role: PrimeArenaRole): PrimeArenaScore {
+  const { margin: _margin, ...score } = sideScore(match, role);
+  return score;
+}
+
+function sideScore(match: PrimeArenaMatch, role: PrimeArenaRole): PrimeArenaScore & { margin: number } {
   return {
     result: match.winner === role ? 2 : match.winner === 'draw' ? 1 : 0,
     roundsWon: roundsWonBy(match, role),
     survivorShare: match.rounds[0][role].share + match.rounds[1][role].share,
+    margin: shareMargin(match, role),
   };
 }
 
@@ -267,7 +283,12 @@ function matchAgainst(
 }
 
 export function comparePanelScore(a: PrimeArenaPanelScore, b: PrimeArenaPanelScore): number {
-  return a.result - b.result || a.roundsWon - b.roundsWon || a.survivorShare - b.survivorShare;
+  return (
+    a.result - b.result ||
+    a.roundsWon - b.roundsWon ||
+    a.margin - b.margin ||
+    a.survivorShare - b.survivorShare
+  );
 }
 
 /** A squad's score over a panel: the mean for an attacker, the worst member for a defender. */
@@ -287,6 +308,7 @@ export function scorePrimeArenaPanel(
     result: scores.reduce((a, s) => a + s.result, 0) / n,
     roundsWon: scores.reduce((a, s) => a + s.roundsWon, 0) / n,
     survivorShare: scores.reduce((a, s) => a + s.survivorShare, 0) / n,
+    margin: scores.reduce((a, s) => a + s.margin, 0) / n,
   };
 }
 
@@ -571,7 +593,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     role,
     stacks,
     match,
-    score: sideScore(match, role),
+    score: headlineScore(match, role),
     panel,
     aggregate: ROLE_PANELS[role].aggregate,
     panelScore: bestScore,

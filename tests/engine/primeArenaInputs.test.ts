@@ -190,6 +190,21 @@ describe('primeArenaInputs', () => {
     expect(primeArenaInputs(base({ profile, setup: named })).totals).toEqual(without.totals);
   });
 
+  it("gates a captain's star bonus on the star count, from the captain table's own ladder (Leonidas, melee health)", () => {
+    // Ladder in src/data/tables/captains.json: health stars [0, 0, 40, 40, 120, 120, 280]; level adds 1 per level.
+    const melee = (star: number): number => {
+      const profile = account();
+      profile.sources.captains = [{ id: 'l', captainId: 'leonidas', level: 10, star }];
+      return primeArenaInputs(base({ profile, setup: squad({ captains: ['l'] }) })).totals.health.melee;
+    };
+    const none = melee(0);
+    expect(melee(1)).toBe(none);
+    expect(melee(2)).toBe(none + 40);
+    expect(melee(3)).toBe(none + 40);
+    expect(melee(4)).toBe(none + 120);
+    expect(melee(6)).toBe(none + 280);
+  });
+
   it('counts the typed Monuments and Personal Technologies, and not the stand-ins the arena used to read', () => {
     expect(PRIME_ARENA_SOURCES).toEqual(expect.arrayContaining(['monuments', 'personalTechnologies']));
     for (const gone of ['customization', 'armyModernization', 'monstersBoost']) {

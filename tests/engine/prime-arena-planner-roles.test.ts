@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { planPrimeArena, primeArenaPanel, scorePrimeArenaPanel } from '../../src/engine/primeArenaPlanner';
 import type { PrimeArenaPlanInput } from '../../src/engine/primeArenaPlanner';
+import { primeArenaPool } from '../../src/engine/primeArenaInputs';
 import { totalsFrom } from '../helpers/request';
 import { monsterSet, troopSet } from '../helpers/units';
 
@@ -180,4 +181,41 @@ describe('planPrimeArena: panel and role', () => {
     planPrimeArena(input({ maxMillis: 300, maxEvaluations: Infinity }));
     expect(Date.now() - started).toBeLessThan(2_000);
   });
+});
+
+describe('defender search climbs when every panel member is lost', () => {
+  const troops = {
+    guardsmen: { min: 1, max: 4 },
+    specialists: null,
+    engineers: null,
+    monsters: null,
+    topTierExcluded: { guardsmen: [], specialists: [] },
+    excludedUnitIds: [],
+  } as unknown as Parameters<typeof primeArenaPool>[0];
+  const pool = primeArenaPool(troops);
+  const housing = { leadership: 3_000_000, authority: 0, dominance: 400_000 };
+  const bonus = (key: 'melee' | 'mounted' | null): ReturnType<typeof totalsFrom> =>
+    totalsFrom({
+      strength: { army: 80 },
+      health: { army: 60, ...(key ? { [key]: 100 } : {}) },
+    } as never);
+
+  it.each([null, 'melee', 'mounted'] as const)(
+    'bonus %s: the plan beats the even-split start on the continuous margin',
+    (key) => {
+      const plan = planPrimeArena({
+        pool,
+        housing,
+        totals: bonus(key),
+        role: 'defender',
+        maxStacks: 8,
+        maxMillis: 3_000,
+        maxEvaluations: 3_000,
+      });
+      const k = (s: typeof plan.stacks): string => s.map((x) => `${x.unit.id}:${x.count}`).join();
+      expect(k(plan.stacks)).not.toBe(k(plan.start.stacks));
+      expect(plan.panelScore.margin).toBeGreaterThan(plan.start.panelScore.margin);
+      expect(plan.panelScore.result).toBeGreaterThanOrEqual(plan.start.panelScore.result - 1e-9);
+    },
+  );
 });
