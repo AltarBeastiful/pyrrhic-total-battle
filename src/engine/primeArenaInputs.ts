@@ -1,9 +1,9 @@
 /**
  * Prime Arena input model (B-33): what a player types for the arena and what the match engine reads back.
  *
- * In: the division tier and a battle setup (Leadership and Dominance typed by hand, up to five captains with one
- * shared gear and artifact loadout, the dragon), and a toggle per permanent source and for talents. Out: the troop pool (every Specialist and Monster at the
- * tier, no scouts, siege or mercenaries) and the aggregated bonuses.
+ * In: the arena's troops card and a battle setup (Leadership and Dominance typed by hand, up to five captains with one
+ * shared gear and artifact loadout, the dragon), and a toggle per permanent source and for talents. Out: the troop pool (Guardsmen, Specialists and Monsters from tier 2 up to the Guardsmen level, no scouts, siege or
+ * mercenaries) and the aggregated bonuses.
  *
  * Pure. The sources are resolved by the same `resolveSources` the march calculator uses, then filtered by the
  * arena's rules; talents do not go through it (the profile's Hero Talents row is typed by hand there), they are
@@ -13,7 +13,7 @@
 import { getUnits, talents as talentTable } from '../data';
 import type { UnitDef } from '../data/types';
 import { resolveSources } from '../state/derive';
-import type { BattleSetup, BuiltinPermanentSource, Profile } from '../state/schema';
+import type { BattleSetup, BuiltinPermanentSource, Profile, ProfileTroops } from '../state/schema';
 import { aggregateBonuses } from './bonuses';
 import { talentSource } from './talentAnalysis';
 import type { BonusTotals, Housing, ResolvedSource } from './types';
@@ -46,8 +46,11 @@ export const DEFAULT_PRIME_ARENA_TOGGLES: Readonly<PrimeArenaToggles> = {
 };
 
 export interface PrimeArenaInput {
-  /** Highest troop tier the division unlocks. */
-  tier: number;
+  /**
+   * The arena's Troops card: its Guardsmen "to" level unlocks the troops of that level and below
+   * (`primeArenaPool`); the categories and unit ids it drops stay out.
+   */
+  troops: ProfileTroops;
   profile: Profile;
   /**
    * The squad: up to five captains, the shared gear and the dragon in `active`, Leadership and Dominance in
@@ -61,7 +64,8 @@ export interface PrimeArenaInput {
 }
 
 export interface PrimeArenaInputs {
-  tier: number;
+  /** The Guardsmen level the pool was built for. */
+  level: number;
   /** Troops the squad may field. */
   pool: UnitDef[];
   housing: Housing;
@@ -74,9 +78,36 @@ export function isPrimeArenaUnit(unit: UnitDef): boolean {
   return (unit.kind === 'troop' && unit.group === 'specialist') || unit.kind === 'monster';
 }
 
-/** Every Specialist and Monster at `tier`. */
-export function primeArenaPool(tier: number): UnitDef[] {
-  return getUnits().filter((unit) => unit.tier === tier && isPrimeArenaUnit(unit));
+/** The lowest tier a troop of the arena may be: tier-1 troops never fight there (monsters begin at 3 on their own). */
+export const PRIME_ARENA_MIN_TIER = 2;
+
+/** The Guardsmen "to" level of the Troops card: the one number that fixes the arena's pool; 0 while the row is off. */
+export function primeArenaLevel(troops: ProfileTroops): number {
+  return troops.guardsmen?.max ?? 0;
+}
+
+/**
+ * The troops a squad may field, in one place: the Guardsmen, the Specialists and the Monsters from tier 2 up to
+ * the Guardsmen level (G2, S2 and M3 are the lowest), minus what the Troops card drops: the top tier's dropped
+ * categories and any dropped unit id. No engineers, scouts, siege or mercenaries.
+ */
+export function primeArenaPool(troops: ProfileTroops): UnitDef[] {
+  const level = primeArenaLevel(troops);
+  return getUnits().filter((unit) => {
+    const isGuardsman = unit.kind === 'troop' && unit.group === 'guardsmen';
+    if (!isGuardsman && !isPrimeArenaUnit(unit)) return false;
+    if (unit.tier < PRIME_ARENA_MIN_TIER || unit.tier > level) return false;
+    if (troops.excludedUnitIds.includes(unit.id)) return false;
+    if (unit.tier === level && unit.category !== undefined) {
+      const dropped = isGuardsman
+        ? troops.topTierExcluded.guardsmen
+        : unit.group === 'specialist'
+          ? troops.topTierExcluded.specialists
+          : [];
+      if (dropped.includes(unit.category)) return false;
+    }
+    return true;
+  });
 }
 
 function talentSources(ranks: Readonly<Record<string, number>>): ResolvedSource[] {
@@ -123,8 +154,8 @@ export function primeArenaInputs(input: PrimeArenaInput): PrimeArenaInputs {
   if (on.talents) sources.push(...talentSources(input.talentRanks ?? profile.talents.ranks));
 
   return {
-    tier: input.tier,
-    pool: primeArenaPool(input.tier),
+    level: primeArenaLevel(input.troops),
+    pool: primeArenaPool(input.troops),
     housing: { leadership: setup.housing.leadership, authority: 0, dominance: setup.housing.dominance },
     sources,
     totals: aggregateBonuses(sources),

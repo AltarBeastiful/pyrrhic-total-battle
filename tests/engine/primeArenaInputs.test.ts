@@ -1,5 +1,5 @@
 /**
- * B-33: the Prime Arena input model. Division tier, hand-typed Leadership and Dominance, five captains with one
+ * B-33: the Prime Arena input model. The troops card (its Guardsmen level fixes the pool), hand-typed Leadership and Dominance, five captains with one
  * shared gear loadout, and per-source toggles in, the troop pool and the aggregated bonuses out.
  * Expected numbers are read off the game tables (captain star rows, equipment quality rows, talent rank rows).
  */
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { PRIME_ARENA_SOURCES, primeArenaInputs, primeArenaPool } from '../../src/engine/primeArenaInputs';
 import type { PrimeArenaInput } from '../../src/engine/primeArenaInputs';
 import { defaultSetup, newProfile } from '../../src/state/defaults';
-import type { BattleSetup, Profile } from '../../src/state/schema';
+import type { BattleSetup, Profile, ProfileTroops } from '../../src/state/schema';
 
 function account(): Profile {
   const profile = newProfile('arena');
@@ -50,30 +50,70 @@ const squad = (over: Squad = {}): BattleSetup => {
 };
 
 const base = (over: Partial<PrimeArenaInput> = {}): PrimeArenaInput => ({
-  tier: 9,
+  troops: troopsAt(9),
   profile: account(),
   setup: squad(),
   ...over,
 });
 
+/** The arena's Troops card with the Guardsmen "to" level at `level` and nothing else set. */
+const troopsAt = (level: number, over: Partial<ProfileTroops> = {}): ProfileTroops => ({
+  guardsmen: { min: 1, max: level },
+  specialists: null,
+  engineers: null,
+  monsters: null,
+  topTierExcluded: { guardsmen: [], specialists: [] },
+  excludedUnitIds: [],
+  ...over,
+});
+
 describe('primeArenaPool', () => {
-  it('holds every Specialist and Monster at the division tier, nothing else', () => {
-    const pool = primeArenaPool(9);
-    expect(pool.length).toBeGreaterThan(0);
+  it('holds the Guardsmen, Specialists and Monsters from tier 2 up to the Guardsmen level, nothing else', () => {
+    const pool = primeArenaPool(troopsAt(9));
     for (const unit of pool) {
-      expect(unit.tier).toBe(9);
-      expect(['specialist', 'monster']).toContain(unit.group);
+      expect(unit.tier).toBeGreaterThanOrEqual(2);
+      expect(unit.tier).toBeLessThanOrEqual(9);
+      expect(unit.kind === 'monster' || ['guardsmen', 'specialist'].includes(unit.group)).toBe(true);
       expect(unit.kind).not.toBe('mercenary');
     }
     const ids = pool.map((u) => u.id);
-    expect(ids).toEqual(expect.arrayContaining(['duelist-2', 'whitemane-2', 'kraken-2', 'trickster-2']));
-    expect(ids).not.toContain('corax-2'); // guardsman
+    expect(ids).toEqual(
+      expect.arrayContaining(['duelist-2', 'whitemane-2', 'kraken-2', 'trickster-2', 'corax-2']),
+    );
     expect(ids).not.toContain('josephine-2'); // engineer
+    // The minimum is G2, S2 and M3: no tier-1 troop, and monsters begin where the game puts them.
+    const lowest = (group: string): number =>
+      Math.min(
+        ...pool.filter((u) => (u.kind === 'monster' ? 'monster' : u.group) === group).map((u) => u.tier),
+      );
+    expect(lowest('guardsmen')).toBe(2);
+    expect(lowest('specialist')).toBe(2);
+    expect(lowest('monster')).toBe(3);
   });
 
-  it('follows the division tier', () => {
-    expect(primeArenaPool(3).every((u) => u.tier === 3)).toBe(true);
-    expect(primeArenaPool(3).map((u) => u.id)).not.toEqual(primeArenaPool(9).map((u) => u.id));
+  it('follows the Guardsmen level, and the lower the level the fewer troops', () => {
+    const low = primeArenaPool(troopsAt(3));
+    expect(low.every((u) => u.tier <= 3)).toBe(true);
+    expect(low.length).toBeLessThan(primeArenaPool(troopsAt(9)).length);
+  });
+
+  it('is empty while the Guardsmen row is not used', () => {
+    expect(primeArenaPool(troopsAt(9, { guardsmen: null }))).toEqual([]);
+  });
+
+  it('leaves out the top-tier categories and the unit ids the Troops card drops', () => {
+    const full = primeArenaPool(troopsAt(9));
+    const dropped = full.find((u) => u.kind === 'monster' && u.tier === 9);
+    const category = full.find((u) => u.group === 'guardsmen' && u.tier === 9)?.category;
+    const pool = primeArenaPool(
+      troopsAt(9, {
+        excludedUnitIds: dropped === undefined ? [] : [dropped.id],
+        topTierExcluded: { guardsmen: category === undefined ? [] : [category], specialists: [] },
+      }),
+    );
+    expect(pool.map((u) => u.id)).not.toContain(dropped?.id);
+    expect(pool.some((u) => u.group === 'guardsmen' && u.tier === 9 && u.category === category)).toBe(false);
+    expect(pool.some((u) => u.group === 'guardsmen' && u.tier === 8 && u.category === category)).toBe(true);
   });
 });
 
@@ -81,8 +121,7 @@ describe('primeArenaInputs', () => {
   it('passes the hand-typed pools as housing with no authority', () => {
     const out = primeArenaInputs(base());
     expect(out.housing).toEqual({ leadership: 120_000, authority: 0, dominance: 90_000 });
-    expect(out.tier).toBe(9);
-    expect(out.pool).toEqual(primeArenaPool(9));
+    expect(out.pool).toEqual(primeArenaPool(troopsAt(9)));
   });
 
   it('counts captains, gear, dragon, Hall of Fame and talents by default', () => {
