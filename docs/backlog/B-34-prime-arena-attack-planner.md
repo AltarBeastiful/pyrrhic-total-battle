@@ -22,7 +22,7 @@ Standing criteria: the benchmark rating does not regress; tests are written once
 
 ## Acceptance criteria
 
-A pure `planPrimeArenaAttack(input)` returns the best Attack stack against a mirror defender, with a per-round breakdown, ranked as in the context.
+A pure `planPrimeArena(input)` returns the best Attack stack against a mirror defender, with a per-round breakdown, ranked as in the context.
 
 ## Blocked by
 

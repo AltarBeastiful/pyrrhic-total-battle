@@ -300,7 +300,7 @@ export interface CaptainsDoneMessage {
   result: CaptainScreenAnswer;
 }
 
-/** The Prime Arena plan, answered (`planPrimeArenaAttack`). */
+/** The Prime Arena plan, answered (`planPrimeArena`). */
 export interface ArenaDoneMessage {
   kind: 'arena';
   id: JobId;

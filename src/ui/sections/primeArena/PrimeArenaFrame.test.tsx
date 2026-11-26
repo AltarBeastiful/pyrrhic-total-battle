@@ -197,8 +197,29 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
   expect(within(pane).getByText(/defender.* strikes first/i)).toBeTruthy();
   // The attacker role is the default: the answer says which side is ours, and what the squad was ranked on.
   expect(within(pane).getAllByRole('table', { name: 'Attacker (you)' })).toHaveLength(2);
-  expect(within(pane).getByText(/average of 5 opponents/i)).toBeTruthy();
+  expect(within(pane).getByText(/average of \d+ opponents/i)).toBeTruthy();
+  // Panel wording is plain (rule 26): sizes against yours, no jargon letter; opponents of other mixes are listed.
+  const note = within(pane).getByText(/average of \d+ opponents/i).textContent ?? '';
+  expect(note).toMatch(/% of your size/);
+  expect(note).toMatch(/even split/);
+  expect(note).toMatch(/mostly melee/);
+  expect(note).not.toMatch(/\bk\b/);
+  // What the match does not model, and the check of the typed housing.
+  expect(within(pane).getByText(/blocked.*not modelled/i)).toBeTruthy();
+  expect(within(pane).getAllByText(/real maximum/i).length).toBeGreaterThanOrEqual(1);
   expect(within(pane).getByText(/^(victory|defeat|draw)\b/i)).toBeTruthy();
+});
+
+test('a pool typed as zero says no units are fielded from it', async () => {
+  const { container } = renderArena();
+  await screen.findByRole('form', { name: 'This match' });
+  typeInto(/leadership/i, '200000');
+  typeInto(/dominance/i, '0');
+  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
+  const pane = container.querySelector('aside') as HTMLElement;
+  await within(pane).findByText(/no dominance typed, so no monsters are fielded/i, undefined, {
+    timeout: 8000,
+  });
 });
 
 test('the role is the calculator’s segmented control, saved, and a defender plan ranks against the worst case', async () => {
@@ -213,7 +234,7 @@ test('the role is the calculator’s segmented control, saved, and a defender pl
   typeInto(/dominance/i, '100000');
   fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
   const pane = container.querySelector('aside') as HTMLElement;
-  await within(pane).findByText(/worst case of 5 opponents/i, undefined, { timeout: 8000 });
+  await within(pane).findByText(/worst case of \d+ opponents/i, undefined, { timeout: 8000 });
   expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');
   // Our side is the defender: it is the one marked, and the verdict is read for it.
   expect(within(pane).getAllByRole('table', { name: 'Defender (you)' })).toHaveLength(2);

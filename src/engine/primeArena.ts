@@ -45,6 +45,11 @@ export interface PrimeArenaArmy {
 }
 
 export type PrimeArenaSide = 'attacker' | 'defender';
+export const PRIME_ARENA_SIDES = ['attacker', 'defender'] as const;
+
+/** Narrows a string (a control's value) to a side. */
+export const isPrimeArenaSide = (value: string): value is PrimeArenaSide =>
+  (PRIME_ARENA_SIDES as readonly string[]).includes(value);
 
 export interface PrimeArenaStackOutcome {
   unit: UnitDef;
@@ -254,7 +259,8 @@ function outcome(side: Side): PrimeArenaSideOutcome {
   return { stacks, share: primeArenaShare(stacks) };
 }
 
-const otherSide = (who: PrimeArenaSide): PrimeArenaSide => (who === 'attacker' ? 'defender' : 'attacker');
+export const otherSide = (who: PrimeArenaSide): PrimeArenaSide =>
+  who === 'attacker' ? 'defender' : 'attacker';
 
 function playRound(
   attackerArmy: PrimeArenaArmy,
@@ -324,6 +330,10 @@ export function primeArenaMatch(attacker: PrimeArenaArmy, defender: PrimeArenaAr
   }
   return { rounds, attackerRoundsWon, defenderRoundsWon, winner };
 }
+
+/** Rounds a side took in a match. */
+export const roundsWonBy = (match: PrimeArenaMatch, side: PrimeArenaSide): number =>
+  side === 'attacker' ? match.attackerRoundsWon : match.defenderRoundsWon;
 
 /** The attacker's ranking score: match result, then rounds won, then survivor share over both rounds. */
 export function primeArenaScore(match: PrimeArenaMatch): PrimeArenaScore {

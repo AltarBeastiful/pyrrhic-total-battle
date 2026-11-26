@@ -7,9 +7,11 @@
 import { Group, SegmentedControl, Stack, Text } from '@mantine/core';
 import { useId } from 'react';
 
+import { isPrimeArenaSide, PRIME_ARENA_SIDES } from '@/engine/primeArena';
 import { MAX_ARENA_STACKS } from '@/state/schema';
 import { NumberField, Panel } from '@/ui/kit';
 
+import { SIDE_NAME } from './ArenaMatch';
 import { usePrimeArenaStore } from './primeArenaStore';
 
 export function ArenaRoleSection() {
@@ -21,19 +23,16 @@ export function ArenaRoleSection() {
       aria-labelledby={titleId}
       title="Role"
       titleId={titleId}
-      meta={`${role === 'attacker' ? 'Attacker' : 'Defender'} · up to ${String(maxStacks)} stacks`}
+      meta={`${SIDE_NAME[role]} · up to ${String(maxStacks)} stacks`}
     >
       <Stack gap="xs">
         <SegmentedControl
           size="xs"
           aria-label="Role"
           value={role}
-          data={[
-            { value: 'attacker', label: 'Attacker' },
-            { value: 'defender', label: 'Defender' },
-          ]}
+          data={PRIME_ARENA_SIDES.map((side) => ({ value: side, label: SIDE_NAME[side] }))}
           onChange={(value) => {
-            setRole(value === 'defender' ? 'defender' : 'attacker');
+            if (isPrimeArenaSide(value)) setRole(value);
           }}
         />
         <Group gap="sm" align="flex-end" wrap="nowrap">

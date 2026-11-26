@@ -8,6 +8,7 @@
 import { Badge, Group, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { useId } from 'react';
 
+import { otherSide, roundsWonBy } from '@/engine/primeArena';
 import type {
   PrimeArenaRound,
   PrimeArenaSide,
@@ -22,7 +23,7 @@ import { arenaPoolRows, PoolFigure, PoolStacks } from '@/ui/sections/march';
 
 import { usePrimeArenaStore } from './primeArenaStore';
 
-const SIDE_NAME = { attacker: 'Attacker', defender: 'Defender', draw: 'Nobody' } as const;
+export const SIDE_NAME = { attacker: 'Attacker', defender: 'Defender', draw: 'Nobody' } as const;
 
 /** The side's name, with "(you)" on the one the plan plays: the headline match has our squad in the chosen role. */
 const sideLabel = (side: PrimeArenaSide, plan: PrimeArenaPlan): string =>
@@ -39,7 +40,7 @@ const pct = (share: number): string => `${(share * 100).toFixed(1)} %`;
 export function verdictOf(plan: PrimeArenaPlan): string {
   const { match, score } = plan;
   const word = score.result === 2 ? 'Victory' : score.result === 1 ? 'Draw' : 'Defeat';
-  const theirs = plan.role === 'attacker' ? match.defenderRoundsWon : match.attackerRoundsWon;
+  const theirs = roundsWonBy(match, otherSide(plan.role));
   return `${word}, ${String(score.roundsWon)} to ${String(theirs)}`;
 }
 
@@ -100,15 +101,43 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
         {POOLS.map((pool) => (
           <Stack key={pool} gap={2}>
             <PoolGauge pool={pool} used={spent[pool]} total={spent[pool] + unspent[pool]} />
-            <Text size="xs" c={maxed[pool] ? 'dimmed' : 'orange'}>
-              {maxed[pool] ? 'Maxed out' : `${count(unspent[pool])} left`}
-              {maxed[pool] && unspent[pool] > 0 ? ` (${count(unspent[pool])} left, buys no unit)` : ''}
+            <Text size="xs" c={maxed[pool] && spent[pool] > 0 ? 'dimmed' : 'orange'}>
+              {housingSentence(pool, spent[pool], unspent[pool], maxed[pool])}
             </Text>
           </Stack>
         ))}
       </SimpleGrid>
+      <Text size="xs" c="dimmed">
+        Damage the game lists as blocked is not modelled here.
+      </Text>
     </Stack>
   );
+}
+
+const POOL_WORD = {
+  leadership: { name: 'Leadership', units: 'troops' },
+  dominance: { name: 'Dominance', units: 'monsters' },
+} as const;
+
+/**
+ * The check the March makes of its pools, for a typed figure: is the army held back by the housing the player
+ * typed (the March's `bindingSentence`: every point is spent, so a bigger army needs more of it), or does the
+ * figure leave housing no unit can fill, or is it zero? The figure is typed by hand, so it asks the player to
+ * confirm it is the real maximum.
+ */
+export function housingSentence(
+  pool: (typeof POOLS)[number],
+  spent: number,
+  unspent: number,
+  maxed: boolean,
+): string {
+  const { name, units } = POOL_WORD[pool];
+  if (spent + unspent === 0) {
+    return `No ${name} typed, so no ${units} are fielded. Type your real maximum if you have one.`;
+  }
+  if (!maxed) return `${count(unspent)} left`;
+  const left = unspent > 0 ? ` (${count(unspent)} left, buys no unit)` : '';
+  return `Maxed out${left}. Your ${name} is what ends the plan: every point of it that buys a unit is spent, so check that ${count(spent + unspent)} is your real maximum.`;
 }
 
 /** What the squad was ranked on: the opponent panel (sizes, fills) and how its results combine, against the even split. */
@@ -119,8 +148,7 @@ function PanelNote({ plan }: { plan: PrimeArenaPlan }) {
   return (
     <Stack gap={2}>
       <Text size="sm" c="dimmed">
-        Ranked on {how} of {panel.length} opponents: {panel.map((member) => member.label).join('; ')}. A k is
-        the opponent&rsquo;s size against yours.
+        Ranked on {how} of {panel.length} opponents: {panel.map((member) => member.label).join('; ')}.
       </Text>
       <Text size="sm" c="dimmed">
         Against them the squad takes {panelScore.roundsWon.toFixed(2)} of 2 rounds {each} and keeps a survivor
@@ -220,7 +248,7 @@ function SideTable({ name, side }: { name: string; side: PrimeArenaSideOutcome }
 
 /** One hit in words: who struck with which stack, what it hit, the damage and the units it killed. */
 function stepLine(plan: PrimeArenaPlan, round: PrimeArenaRound, step: PrimeArenaStep): string {
-  const other = step.side === 'attacker' ? 'defender' : 'attacker';
+  const other = otherSide(step.side);
   const striker = round[step.side].stacks[step.stack]?.unit.name ?? 'a stack';
   const target = round[other].stacks[step.target]?.unit.name ?? 'a stack';
   return `${sideLabel(step.side, plan)} ${striker} hits ${sideLabel(other, plan)} ${target} for ${count(Math.round(step.damage))}, ${count(step.kills)} killed.`;

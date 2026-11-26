@@ -13,7 +13,7 @@ import type { PositionTrades } from '@/ui/sections/march/positions';
 
 import { KernelUnavailableError } from '@/kernel/boot';
 
-import { planPrimeArenaAttack } from '@/engine/primeArenaPlanner';
+import { planPrimeArena } from '@/engine/primeArenaPlanner';
 import {
   runCaptainScreen,
   runPlan,
@@ -257,7 +257,7 @@ export function createInlineClient(): CalcClient {
         () => runCaptainScreen(request, { onProgress: () => undefined, cancelled: () => aborted(signal) }),
         signal,
       ),
-    arena: (request, signal) => run(() => planPrimeArenaAttack(request), signal),
+    arena: (request, signal) => run(() => planPrimeArena(request), signal),
     dispose() {
       disposed = true;
     },

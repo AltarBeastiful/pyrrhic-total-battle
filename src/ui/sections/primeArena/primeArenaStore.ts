@@ -9,6 +9,7 @@
  * client runs the same job on the main thread (tests, old browsers). The role and the stack cap are inputs like the
  * rest: saved with the account, part of the fingerprint.
  */
+import { useMemo } from 'react';
 import { create } from 'zustand';
 
 import {
@@ -46,10 +47,38 @@ export function defaultArenaTroops(): ProfileTroops {
   };
 }
 
-type Inputs = Pick<PrimeArenaState, 'troops' | 'toggles' | 'setup' | 'seeded' | 'role' | 'maxStacks'>;
+/** Everything a plan is computed from (and the profile saves): one object, so no site spells the six fields out. */
+export interface ArenaInputs {
+  /** The arena's own Troops card: its Guardsmen "to" level fixes the pool. */
+  troops: ProfileTroops;
+  /** The switches for talents and the permanent sources; captains, gear and dragon are the setup's own lists. */
+  toggles: PrimeArenaToggles;
+  /** The squad: captains, gear and dragon in `active`, Leadership and Dominance in `housing`. */
+  setup: BattleSetup;
+  /** True once the setup was first cloned from the active march, so a later visit keeps what was typed. */
+  seeded: boolean;
+  /** Which side the plan plays: fixes the opponent panel and how it is scored. */
+  role: PrimeArenaRole;
+  /** Most stacks in the squad; the game's real limit is unknown. */
+  maxStacks: number;
+}
+
+/** The inputs out of the store's state. */
+export function pickInputs({ troops, toggles, setup, seeded, role, maxStacks }: ArenaInputs): ArenaInputs {
+  return { troops, toggles, setup, seeded, role, maxStacks };
+}
+
+/** The inputs as one object that changes only when one of them does, for hooks that depend on them. */
+export function useArenaInputs(): ArenaInputs {
+  const { troops, toggles, setup, seeded, role, maxStacks } = usePrimeArenaStore();
+  return useMemo(
+    () => ({ troops, toggles, setup, seeded, role, maxStacks }),
+    [troops, toggles, setup, seeded, role, maxStacks],
+  );
+}
 
 /** What the profile stores for these inputs: only the switches that differ from the rules' defaults. */
-function toSaved({ troops, toggles, setup, seeded, role, maxStacks }: Inputs): PrimeArenaSaved {
+function toSaved({ troops, toggles, setup, seeded, role, maxStacks }: ArenaInputs): PrimeArenaSaved {
   const differing: Record<string, boolean> = {};
   for (const [key, on] of Object.entries(toggles)) {
     if (on !== DEFAULT_PRIME_ARENA_TOGGLES[key as keyof PrimeArenaToggles]) differing[key] = on;
@@ -69,10 +98,7 @@ function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
 }
 
 /** Everything a plan is computed from, as one string: equal strings mean the plan on screen still answers the form. */
-export function arenaFingerprint(
-  profile: Profile,
-  inputs: Pick<Inputs, 'troops' | 'toggles' | 'setup' | 'role' | 'maxStacks'>,
-): string {
+export function arenaFingerprint(profile: Profile, inputs: Omit<ArenaInputs, 'seeded'>): string {
   return JSON.stringify([
     inputs.troops,
     inputs.toggles,
@@ -85,13 +111,13 @@ export function arenaFingerprint(
 }
 
 /** Writes the inputs to the active profile, which stamps the Prime Arena section for the account merge. */
-function save(inputs: Inputs): void {
+function save(inputs: ArenaInputs): void {
   const { doc, updateProfile } = useStore.getState();
   updateProfile(doc.activeProfileId, { primeArena: toSaved(inputs) });
 }
 
 /** A fresh squad: the profile default's setup on the top troop level. */
-function freshInputs(): Inputs {
+function freshInputs(): ArenaInputs {
   const fresh = defaultPrimeArena(useStore.getState().doc.deviceId);
   return {
     troops: defaultArenaTroops(),
@@ -109,19 +135,7 @@ const arenaClient = (): CalcClient => (client ??= createCalcClient());
 /** Which Generate the page is waiting for: a reset or a new document makes an answer on its way stale. */
 let generation = 0;
 
-interface PrimeArenaState {
-  /** The arena's own Troops card: its Guardsmen "to" level fixes the pool. */
-  troops: ProfileTroops;
-  /** The switches for talents and the permanent sources; captains, gear and dragon are the setup's own lists. */
-  toggles: PrimeArenaToggles;
-  /** The squad: captains, gear and dragon in `active`, Leadership and Dominance in `housing`. */
-  setup: BattleSetup;
-  /** True once the setup was first cloned from the active march, so a later visit keeps what was typed. */
-  seeded: boolean;
-  /** Which side the plan plays: fixes the opponent panel and how it is scored. */
-  role: PrimeArenaRole;
-  /** Most stacks in the squad; the game's real limit is unknown. */
-  maxStacks: number;
+interface PrimeArenaState extends ArenaInputs {
   running: boolean;
   /** How hard the search may work; the defaults unless a test tightens it. */
   budget: PlanBudget;
@@ -205,11 +219,12 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   },
   generate: (profile, given) => {
     if (get().running) return;
-    const { troops, toggles, setup, role, maxStacks } = get();
+    const inputs = pickInputs(get());
+    const { role, maxStacks } = inputs;
     const budget = given ?? get().budget;
     const mine = ++generation;
     set({ running: true, failed: false });
-    const prepared = primeArenaInputs({ troops, toggles, setup, profile });
+    const prepared = primeArenaInputs({ ...inputs, profile });
     arenaClient()
       .arena({
         pool: prepared.pool,
@@ -225,7 +240,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
           set({
             plan,
             planLevel: prepared.level,
-            planKey: arenaFingerprint(profile, { troops, toggles, setup, role, maxStacks }),
+            planKey: arenaFingerprint(profile, inputs),
             running: false,
           });
         },
@@ -247,7 +262,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
 function hydrate(profile: Profile | undefined): void {
   if (profile === undefined) return;
   const saved = profile.primeArena;
-  const loaded: Inputs = {
+  const loaded: ArenaInputs = {
     troops: saved.troops ?? defaultArenaTroops(),
     toggles: savedToggles(saved.toggles),
     setup: saved.setup,
@@ -255,8 +270,7 @@ function hydrate(profile: Profile | undefined): void {
     role: saved.role,
     maxStacks: saved.maxStacks,
   };
-  const { troops, toggles, setup, seeded, role, maxStacks } = usePrimeArenaStore.getState();
-  if (JSON.stringify(loaded) === JSON.stringify({ troops, toggles, setup, seeded, role, maxStacks })) return;
+  if (JSON.stringify(loaded) === JSON.stringify(pickInputs(usePrimeArenaStore.getState()))) return;
   generation += 1;
   usePrimeArenaStore.setState({
     ...loaded,

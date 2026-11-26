@@ -34,7 +34,7 @@ import { fabState } from '@/ui/shell/state';
 
 import { ArenaMatch, verdictOf } from './ArenaMatch';
 import { ArenaRoleSection } from './ArenaRoleSection';
-import { arenaFingerprint, usePrimeArenaStore } from './primeArenaStore';
+import { arenaFingerprint, useArenaInputs, usePrimeArenaStore } from './primeArenaStore';
 
 export { ArenaMatch };
 
@@ -60,7 +60,9 @@ const ARENA_SCOPE_BASE: Omit<BodyScope, 'counting'> = {
 export function ArenaSetup() {
   const profile = useStore(selectActiveProfile);
   const march = useStore(selectActiveSetup);
-  const { troops, toggles, setup, updateTroops, setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
+  const inputs = useArenaInputs();
+  const { troops, toggles, setup } = inputs;
+  const { updateTroops, setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
 
   useEffect(() => {
     if (profile === undefined || march === undefined) return;
@@ -97,8 +99,8 @@ export function ArenaSetup() {
     [setup.active.dragon, toggles, setToggle, updateSetup],
   );
   const sources = useMemo(
-    () => (profile === undefined ? [] : primeArenaInputs({ troops, profile, setup, toggles }).sources),
-    [troops, profile, setup, toggles],
+    () => (profile === undefined ? [] : primeArenaInputs({ ...inputs, profile }).sources),
+    [inputs, profile],
   );
 
   return (
@@ -121,14 +123,13 @@ function blockedReason(hasProfile: boolean, leadership: number, dominance: numbe
 /** The arena's bar config: two wells, no objective, and a Generate that plans the attack. */
 function useArenaBar(): { frame: BarFrame; press: () => void } {
   const profile = useStore(selectActiveProfile);
-  const { troops, toggles, setup, role, maxStacks, running, plan, planKey, updateSetup, generate } =
-    usePrimeArenaStore();
-  const { leadership, dominance } = setup.housing;
+  const inputs = useArenaInputs();
+  const { running, plan, planKey, updateSetup, generate } = usePrimeArenaStore();
+  const { leadership, dominance } = inputs.setup.housing;
   const hint = blockedReason(profile !== undefined, leadership, dominance);
   const fingerprint = useMemo(
-    () =>
-      profile === undefined ? '' : arenaFingerprint(profile, { troops, toggles, setup, role, maxStacks }),
-    [profile, troops, toggles, setup, role, maxStacks],
+    () => (profile === undefined ? '' : arenaFingerprint(profile, inputs)),
+    [profile, inputs],
   );
 
   const press = (): void => {
@@ -153,7 +154,7 @@ function useArenaBar(): { frame: BarFrame; press: () => void } {
   const frame: BarFrame = {
     label: 'This match',
     pools: ARENA_POOLS,
-    housing: setup.housing,
+    housing: inputs.setup.housing,
     problems,
     message: said.length === 0 ? null : said.join(' '),
     setPool: (pool, value) => {
