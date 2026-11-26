@@ -180,8 +180,12 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
   fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
 
   const pane = container.querySelector('aside') as HTMLElement;
-  const stackList = await within(pane).findByRole('table', { name: /stack list/i }, { timeout: 8000 });
-  expect(within(stackList).getAllByRole('row').length).toBeGreaterThan(1);
+  // The planned army is the calculator's own pills, one block per housing pool; no table of its own.
+  const stackGroup = (
+    await within(pane).findAllByRole('group', { name: /stacks$/i }, { timeout: 8000 })
+  )[0] as HTMLElement;
+  expect(stackGroup.querySelectorAll('[data-stack]').length).toBeGreaterThan(0);
+  expect(within(pane).queryByRole('table', { name: /stack list/i })).toBeNull();
   await waitFor(() => {
     expect(within(pane).getByRole('heading', { name: /round 1/i })).toBeTruthy();
     expect(within(pane).getByRole('heading', { name: /round 2/i })).toBeTruthy();
@@ -208,7 +212,8 @@ test('narrow, the setup is the page, the bar carries the answer and the sheet ho
   });
   fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
   const sheet = await screen.findByRole('dialog', { name: 'Match' }, { timeout: 8000 });
-  expect(await within(sheet).findByRole('table', { name: /stack list/i })).toBeTruthy();
+  expect((await within(sheet).findAllByRole('group', { name: /stacks$/i })).length).toBeGreaterThan(0);
+  expect(within(sheet).queryByRole('table', { name: /stack list/i })).toBeNull();
 });
 
 test('the fresh arena opens at the top level of the Troops card', () => {

@@ -88,8 +88,10 @@ export interface StackPillProps {
   onCount?: (count: number) => void;
   /** A press on the pill: take this type out of the march. */
   onLeaveOut?: () => void;
-  /** The 22 px mark in the corner: open the unit sheet. */
-  onDetails: () => void;
+  /** The 22 px mark in the corner: open the unit sheet. Without it the pill draws no mark. */
+  onDetails?: () => void;
+  /** The pill only shows the stack (the Prime Arena's result): no press, no leave-out toggle. */
+  readOnly?: boolean;
   /**
    * **What this march's bonuses give the type**, as the corner mark's tooltip — one line each, already
    * written ("Health: +43.5%", "Strength: +12%"), because the words and the notation are the March's
@@ -108,6 +110,7 @@ export function StackPill({
   onCount,
   onLeaveOut,
   onDetails,
+  readOnly = false,
   bonus,
 }: StackPillProps) {
   const ink = tierInk(unit.tier);
@@ -150,6 +153,13 @@ export function StackPill({
           {label}
           <CountField unit={unit} count={count} {...(onCount === undefined ? {} : { onCount })} />
         </div>
+      ) : readOnly ? (
+        <div className={classes.pillBody}>
+          {label}
+          <Text span fz="1.1875rem" lh={1} fw={700} className={classes.pillCount} c={ink}>
+            {figure}
+          </Text>
+        </div>
       ) : (
         <UnstyledButton
           className={classes.pillBody}
@@ -164,7 +174,7 @@ export function StackPill({
           </Text>
         </UnstyledButton>
       )}
-      {!editing && (
+      {!editing && onDetails !== undefined && (
         <Tooltip
           // One line per bracket, and no type of its own: a tooltip reads the way every other tooltip on
           // the page reads (the theme's own 12 px, its own ink, its own half-second delay — design rule 23).
