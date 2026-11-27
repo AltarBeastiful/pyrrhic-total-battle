@@ -4,7 +4,7 @@
  * against (ADR-0005): `SHARE_PROFILE_TEMPLATE` / `SHARE_SETUP_TEMPLATE` are the same objects built
  * with fixed ids and timestamps so they are deterministic.
  */
-import { version } from '../data';
+import versionJson from '../data/tables/version.json';
 import {
   BUILTIN_PERMANENT_SOURCES,
   DEFAULT_ARENA_STACKS,
@@ -23,7 +23,7 @@ import type {
 } from './schema';
 
 /** Game-table version the app currently ships, as `version.json` states it. */
-export const CURRENT_DATA_VERSION = version.dataVersion;
+export const CURRENT_DATA_VERSION: number = versionJson.dataVersion;
 
 /**
  * **The account's preferences as a new profile has them** (schema v9; `docs/plans/burn-ceiling.md` §3.1): a
