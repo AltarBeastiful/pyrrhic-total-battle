@@ -25,6 +25,24 @@ export interface BarObjective {
   onChange: (value: string) => void;
 }
 
+/**
+ * For a fight that works its pools out (the Prime Arena, B-43): the bonus % added on top of what the app knows, typed
+ * beside the pools, and the button that puts the maximum back into them.
+ */
+export interface BarMaximum {
+  /** The bonus field's name. */
+  label: string;
+  /** The same in a phone chip's worth of room. */
+  short: string;
+  percent: number;
+  /** The most the field takes. */
+  max: number;
+  setPercent: (percent: number) => void;
+  /** The button's accessible name; it reads "Max". */
+  fillLabel: string;
+  fill: () => void;
+}
+
 export interface BarFrame {
   /** The accessible name of the bar's form: "This march". */
   label: string;
@@ -35,6 +53,8 @@ export interface BarFrame {
   problems: Record<Pool, string | null>;
   message: string | null;
   setPool: (pool: Pool, value: number | null) => void;
+  /** The pools' bonus and "Max", where the fight has them. */
+  maximum?: BarMaximum;
   /** The objective control, or `null` where the fight has none. */
   objective: BarObjective | null;
   form: BarForm;

@@ -1182,4 +1182,29 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
     });
   });
+
+  describe('v23 → v24: the arena gains the other capacity bonus % and no capacity basis (B-43)', () => {
+    const v23Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      delete profile.primeArena.otherCapacity;
+      delete profile.primeArena.capacityBasis;
+      const setup = profile.primeArena.setup as { housing: Record<string, number> };
+      setup.housing = { leadership: 700, authority: 0, dominance: 300 };
+      return { ...doc, schemaVersion: 23 };
+    };
+
+    it('adds 0 % and a null basis, and keeps the typed pools', () => {
+      const arena = migrate(v23Doc()).profiles[0]!.primeArena;
+      expect(arena).toMatchObject({ otherCapacity: 0, capacityBasis: null });
+      expect(arena.setup.housing).toEqual({ leadership: 700, authority: 0, dominance: 300 });
+    });
+
+    it('upgrades an exported v23 profile once', () => {
+      const profile = (v23Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 23);
+      expect(once.primeArena).toMatchObject({ otherCapacity: 0, capacityBasis: null });
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 23)).toEqual(once);
+    });
+  });
 });

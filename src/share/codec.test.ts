@@ -191,6 +191,8 @@ describe('profile links', () => {
       seeded: true,
       role: 'defender',
       maxStacks: 6,
+      otherCapacity: 12.5,
+      capacityBasis: { captains: [{ captainId: 'aydae', level: 40 }], other: 12.5 },
       setup: {
         ...profile.primeArena.setup,
         active: {
@@ -218,7 +220,14 @@ describe('profile links', () => {
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
     const { setup, ...rest } = v16.profile.primeArena;
-    expect(rest).toEqual({ toggles: {}, seeded: false, role: 'attacker', maxStacks: 8 });
+    expect(rest).toEqual({
+      toggles: {},
+      seeded: false,
+      role: 'attacker',
+      maxStacks: 8,
+      otherCapacity: 0,
+      capacityBasis: null,
+    });
     expect(setup.active).toEqual(fresh.primeArena.setup.active);
     expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
   });

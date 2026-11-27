@@ -306,6 +306,8 @@ test('Prime Arena inputs set on one device and troops changed on the other both 
   );
   const primeArena = {
     ...base.primeArena,
+    otherCapacity: 15,
+    capacityBasis: { captains: [{ captainId: 'aydae', level: 40 }], other: 15 },
     setup: {
       ...base.primeArena.setup,
       active: { ...base.primeArena.setup.active, captains: ['x'] },

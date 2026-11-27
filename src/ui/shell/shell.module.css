@@ -389,6 +389,21 @@
   flex: 1 1 0;
 }
 
+/* The Prime Arena's "Max" beside its wells: as tall as they are (not Generate's 44 px) and no wider than its word. */
+.commandBar .commandFields > .maxButton {
+  height: 2.5rem !important;
+  flex: 0 0 auto;
+}
+
+/* The same on the phone: a chip that is a button, taking only the width of its word. */
+.maxChip {
+  composes: chip;
+  min-width: 2.75rem;
+  flex: 0 0 auto;
+  justify-content: center;
+  font-weight: 600;
+}
+
 /* The one message line both bars show, above the fields rather than under each of them. */
 .barMessage {
   margin: 0;
