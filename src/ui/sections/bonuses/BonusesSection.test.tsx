@@ -463,6 +463,98 @@ test('the march ignores what an artifact gives against other players, and its Su
   expect(within(strength).queryByText("Mars' Twin Blades L1 ★0.1")).toBeNull();
 });
 
+/** The editor behind an artifact's gear, and its buttons by name. */
+async function artifactEditor(user: ReturnType<typeof userEvent.setup>, name: string) {
+  openGroup('Artifacts');
+  fireEvent.click(within(card()).getByRole('checkbox', { name: `Equip ${name}` }));
+  await user.click(within(card()).getByRole('button', { name: new RegExp(`${name}’s level$`) }));
+  const editor = screen.getByRole('dialog');
+  const button = (label: string): HTMLElement => within(editor).getByRole('button', { name: label });
+  return { editor, button };
+}
+
+const isOff = (node: HTMLElement): boolean => node.getAttribute('aria-disabled') === 'true';
+
+test('+ and − move an artifact’s level by one, stop at 1 and 60, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  const level = () => profile()?.sources.artifacts[0]?.level;
+
+  // A new artifact is at level 1, the bottom: nothing to take down.
+  expect(isOff(button('Lower level'))).toBe(true);
+  await user.click(button('Raise level'));
+  expect(level()).toBe(2);
+  expect(within(editor).getByText('+19 % health and strength (melee)')).toBeTruthy();
+  await user.click(button('Lower level'));
+  expect(level()).toBe(1);
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
+
+  typeNumber(editor, 'Level', '59');
+  await user.click(button('Raise level'));
+  expect(level()).toBe(60);
+  expect(isOff(button('Raise level'))).toBe(true);
+});
+
+test('+ and − move an artifact’s star by one segment, stop at 0.1 and 5.0, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  const star = () => profile()?.sources.artifacts[0]?.star;
+
+  expect(isOff(button('Lower star rating'))).toBe(true);
+  await user.click(button('Raise star rating'));
+  expect(star()).toBe('0.2');
+  expect(within(editor).getByText('+19.5 % health and strength (melee)')).toBeTruthy();
+  await user.click(button('Lower star rating'));
+  expect(star()).toBe('0.1');
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
+
+  // The next segment is the next step of the game's ladder: a whole star follows its fourth segment.
+  for (const [from, to] of [
+    ['2.0', '2.1'],
+    ['1.4', '2.0'],
+    ['4.4', '5.0'],
+  ] as const) {
+    await chooseIn(user, editor, 'Star rating', `★ ${from}`);
+    await user.click(button('Raise star rating'));
+    expect(star()).toBe(to);
+  }
+  expect(isOff(button('Raise star rating'))).toBe(true);
+});
+
+test('the artifact steppers work from the keyboard, and the end of a ladder keeps the focus', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  typeNumber(editor, 'Level', '59');
+
+  button('Raise level').focus();
+  await user.keyboard('{Enter}');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(60);
+  // A natively disabled button drops the focus to the page, and Escape then no longer reaches the editor.
+  expect(document.activeElement).toBe(button('Raise level'));
+  expect((button('Raise level') as HTMLButtonElement).disabled).toBe(false);
+  await user.keyboard('{Enter}');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(60);
+
+  button('Raise star rating').focus();
+  await user.keyboard(' ');
+  expect(profile()?.sources.artifacts[0]?.star).toBe('0.2');
+  await user.keyboard('{Escape}');
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+test('a captain’s editor has no + and − buttons', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  await user.click(captainGear('Aydae'));
+
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /^(Raise|Lower) / })).toBeNull();
+});
+
 test('the star rating offers the game’s 25 steps, from 0.1 to 5.0', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);
