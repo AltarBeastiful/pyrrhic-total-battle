@@ -7,16 +7,22 @@
  *   calculator uses (five captains, no hero, no march type, only the sources the arena counts);
  * - **the answer** (`ArenaMatch`, in the March pane's place and, below 1200 px, in the sheet the bar opens);
  * - **the bars** (`ArenaBars`): the calculator's command bar and phone bar over a frame config with the two
- *   pools the arena has, no objective, and a Generate that plans the attack.
+ *   pools the arena has, the other capacity bonus % and "Max" beside them (the squad's maximum fills the pools,
+ *   B-43), no objective, and a Generate that plans the attack.
  */
-import { Stack, Text, VisuallyHidden } from '@mantine/core';
+import { Button, Stack, Text, VisuallyHidden } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { PRIME_ARENA_PERMANENT, primeArenaInputs } from '@/engine/primeArenaInputs';
+import {
+  PRIME_ARENA_CAPTAINS,
+  PRIME_ARENA_PERMANENT,
+  primeArenaInputs,
+  rankArenaCaptains,
+} from '@/engine/primeArenaInputs';
 import type { Pool } from '@/engine/types';
 import { SOURCE_LABELS } from '@/state/defaults';
-import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS } from '@/state/schema';
+import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS, MAX_OTHER_CAPACITY } from '@/state/schema';
 import type { SetupBinding } from '@/state/setupBinding';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
@@ -48,7 +54,7 @@ const ARENA_POOLS: readonly Pool[] = ['leadership', 'dominance'];
 /**
  * What the arena counts of the Bonuses card: captains (no hero, no march type), equipment, the permanent sources
  * it has switches for with the talents and the dragon beside them, and the artifacts fold. Titles, events, the
- * temple, VIP and the audit never count there.
+ * temple, VIP and the caveats never count there; the Summary reads the arena's own resolved sources.
  */
 const ARENA_SCOPE_BASE: Omit<BodyScope, 'counting'> = {
   families: ['captains', 'equipment', 'permanent'],
@@ -63,17 +69,22 @@ export function ArenaSetup() {
   const march = useStore(selectActiveSetup);
   const inputs = useArenaInputs();
   const { toggles, setup } = inputs;
-  const { setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
+  const { setToggle, updateSetup, open, pickStrongest, shining } = usePrimeArenaStore();
+  const nobodyToPick = useMemo(
+    () => rankArenaCaptains(profile?.sources.captains ?? []).length === 0,
+    [profile],
+  );
 
   useEffect(() => {
     if (profile === undefined || march === undefined) return;
-    seedFrom(march);
-  }, [profile, march, seedFrom]);
+    open(march);
+  }, [profile, march, open]);
 
-  // The arena's rules, as the shared body's binding: its own squad, five captains.
+  // The arena's rules, as the shared body's binding: its own squad, five captains, read as an Arena fight (the
+  // saved squad names no march type), so an artifact shows what it gives against other players.
   const binding = useMemo<SetupBinding>(
     () => ({
-      setup,
+      setup: { ...setup, marchType: 'arena' },
       update: (edit) => {
         updateSetup(edit);
       },
@@ -84,6 +95,22 @@ export function ArenaSetup() {
   const scope = useMemo<BodyScope>(
     () => ({
       ...ARENA_SCOPE_BASE,
+      captains: {
+        shining,
+        action: (
+          <Button
+            variant="light"
+            size="compact-xs"
+            w="fit-content"
+            // On the phone the heading stands over its chips, whose corner gears reach 10 px above their row.
+            mb="sm"
+            disabled={nobodyToPick}
+            onClick={pickStrongest}
+          >
+            {`Pick ${String(PRIME_ARENA_CAPTAINS)} strongest`}
+          </Button>
+        ),
+      },
       counting: {
         builtins: PRIME_ARENA_PERMANENT,
         extras: [
@@ -97,7 +124,7 @@ export function ArenaSetup() {
         },
       },
     }),
-    [setup.active.dragon, toggles, setToggle, updateSetup],
+    [setup.active.dragon, toggles, setToggle, updateSetup, shining, nobodyToPick, pickStrongest],
   );
   const sources = useMemo(
     () =>
@@ -126,7 +153,8 @@ function blockedReason(hasProfile: boolean, leadership: number, dominance: numbe
 function useArenaBar(): { frame: BarFrame; press: () => void } {
   const profile = useStore(selectActiveProfile);
   const inputs = useArenaInputs();
-  const { running, plan, planKey, updateSetup, generate } = usePrimeArenaStore();
+  const { running, plan, planKey, updateSetup, setOtherCapacity, fillMaximum, generate } =
+    usePrimeArenaStore();
   const { leadership, dominance } = inputs.setup.housing;
   const hint = blockedReason(profile !== undefined, leadership, dominance);
   const fingerprint = useMemo(
@@ -161,6 +189,16 @@ function useArenaBar(): { frame: BarFrame; press: () => void } {
     message: said.length === 0 ? null : said.join(' '),
     setPool: (pool, value) => {
       updateSetup((s) => ({ housing: { ...s.housing, [pool]: value ?? 0 } }));
+    },
+    maximum: {
+      label: 'Other capacity bonus %',
+      spokenName: 'Other capacity bonus',
+      short: 'Bonus',
+      percent: inputs.otherCapacity,
+      max: MAX_OTHER_CAPACITY,
+      setPercent: setOtherCapacity,
+      fillLabel: 'Max Leadership and Dominance',
+      fill: fillMaximum,
     },
     objective: null,
     form: barForm(press),

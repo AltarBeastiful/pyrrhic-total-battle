@@ -7,6 +7,9 @@
  * and stay here so the section owns its own wording.
  */
 import type {
+  ArtifactCapacity,
+  ArtifactOptionValue,
+  ArtifactRarity,
   BonusKey,
   BonusMap,
   Group,
@@ -27,6 +30,20 @@ export interface BonusLike {
   strength?: BonusMap | undefined;
   special?: SpecialMap | undefined;
   matchup?: readonly MatchupBonus[] | undefined;
+  /** Percent added to a Prime Arena pool; no total of a march. */
+  capacity?: ArtifactCapacity | undefined;
+}
+
+const CAPACITY_LABELS: Record<keyof ArtifactCapacity, string> = {
+  leadership: 'Leadership',
+  dominance: 'Dominance',
+};
+
+/** The pools a bonus raises, each under its name; one it adds nothing to is left out. */
+function capacityFigures(bonus: BonusLike): { pool: string; label: string; value: number }[] {
+  return Object.entries(bonus.capacity ?? {}).flatMap(([pool, value]) =>
+    value ? [{ pool, label: CAPACITY_LABELS[pool as keyof ArtifactCapacity], value }] : [],
+  );
 }
 
 export const BONUS_LABELS: Record<BonusKey, string> = {
@@ -94,20 +111,6 @@ export function count(n: number, one: string, many: string): string {
   return `${String(n)} ${n === 1 ? one : many}`;
 }
 
-/**
- * Star notation of the artifact tables ("0.1" … "5.0"): full stars, then the quarter steps. Used when an
- * artifact carries no star table of its own, so the player can still record what they have.
- */
-export const FALLBACK_STAR_KEYS: string[] = (() => {
-  const keys = ['0.0'];
-  for (let full = 0; full <= 4; full += 1) {
-    const first = full === 0 ? 1 : 0;
-    for (let part = first; part <= 4; part += 1) keys.push(`${String(full)}.${String(part)}`);
-  }
-  keys.push('5.0');
-  return keys;
-})();
-
 export const AGAINST_LABELS: Record<StrengthAgainstKey, string> = {
   melee: 'melee',
   ranged: 'ranged',
@@ -148,6 +151,9 @@ function collect(bonus: BonusLike, short: boolean): { label: string; parts: stri
       `${BONUS_LABELS[entry.attacker]} against ${AGAINST_LABELS[entry.target]}`,
       formatPercent(entry.value),
     );
+  }
+  for (const { pool, label, value } of capacityFigures(bonus)) {
+    add(`capacity:${pool}`, label, formatPercent(value));
   }
 
   return [...byKey.values()];
@@ -199,13 +205,46 @@ export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
   return { ...(key === undefined ? {} : { key }), text };
 }
 
+export const RARITY_LABELS: Record<ArtifactRarity, string> = {
+  rare: 'Rare',
+  epic: 'Epic',
+  legendary: 'Legendary',
+};
+
+/** The unit sets an option id spells in the singular, as the rest of the card names them. */
+const OPTION_SETS: Record<string, string> = {
+  guardsman: 'guardsmen',
+  specialist: 'specialists',
+  engineer: 'engineers',
+  monster: 'monsters',
+};
+
 /** `armyStrengthAndHealth` → "Army strength and health": the random-bonus options read as sentences. */
 export function humanizeOption(option: string): string {
-  const spaced = option
+  if (option === 'marchSpeed') return 'March speed against monsters';
+  const base = option.replace(/AgainstPlayers$/, '');
+  const spaced = base
+    .replace(/^(guardsman|specialist|engineer|monster)(?=[A-Z])/, (set) => OPTION_SETS[set] ?? set)
     .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
     .trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  const against = base === option ? '' : ' against other players';
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1) + against;
+}
+
+/** The one figure a random option's value shows: an option on health and strength gives both the same. */
+export function optionFigure(value: ArtifactOptionValue): number {
+  const { health, strength, special, againstPlayers, capacity, unused } = value;
+  const maps = [
+    health,
+    strength,
+    special,
+    againstPlayers?.health,
+    againstPlayers?.strength,
+    capacity,
+    unused,
+  ];
+  return maps.flatMap((map) => Object.values(map ?? {}))[0] ?? 0;
 }
 
 /**
@@ -244,6 +283,9 @@ export function rowLines(bonus: BonusLike): string[] {
   for (const entry of bonus.matchup ?? []) {
     const against = `${BONUS_LABELS[entry.attacker].toLowerCase()} against ${AGAINST_LABELS[entry.target]}`;
     lines.push(`${formatPercent(entry.value)} strength (${against})`);
+  }
+  for (const { label, value } of capacityFigures(bonus)) {
+    lines.push(`${formatPercent(value)} ${label.toLowerCase()}`);
   }
   return lines;
 }

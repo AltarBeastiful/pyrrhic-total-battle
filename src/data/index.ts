@@ -7,6 +7,7 @@
  */
 import artifactsJson from './tables/artifacts.json';
 import battleSelectionJson from './tables/battleSelection.json';
+import capacitiesJson from './tables/capacities.json';
 import captainsJson from './tables/captains.json';
 import equipmentJson from './tables/equipment.json';
 import eventsJson from './tables/events.json';
@@ -26,6 +27,7 @@ import type {
   ArtifactRecord,
   BattleSelectionOrder,
   BonusKey,
+  CapacityTable,
   CaptainRecord,
   Category,
   DataVersion,
@@ -63,6 +65,7 @@ export const mercenaries = table<MercenaryRecord[]>(mercenariesJson);
 export const captains = table<CaptainRecord[]>(captainsJson);
 export const equipment = table<EquipmentRecord[]>(equipmentJson);
 export const artifacts = table<ArtifactRecord[]>(artifactsJson);
+export const capacities = table<CapacityTable>(capacitiesJson);
 export const titles = table<TitleRecord[]>(titlesJson);
 export const heroes = table<HeroRecord[]>(heroesJson);
 export const otherPills = table<OtherPillRecord[]>(otherPillsJson);

@@ -17,7 +17,7 @@ import { Shell } from '@/ui/shell/Shell';
 import { TWO_PANES } from '@/ui/shell/useMediaQuery';
 import { useUiStore } from '@/ui/uiStore';
 
-import { usePrimeArenaStore } from './primeArenaStore';
+import { CAPTAIN_SHINE_MS, usePrimeArenaStore } from './primeArenaStore';
 
 vi.setConfig({ testTimeout: 30_000 });
 
@@ -73,6 +73,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   useUiStore.setState({ page: 'calculator' });
   Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: realMatchMedia });
 });
@@ -155,6 +156,7 @@ test('the permanent sources and the talents are the calculator’s chips, under 
 });
 
 test('keeps at most five captains, over the calculator’s own captain chips', async () => {
+  seed(0); // nobody owned, so the opening fills nothing and every chip starts off
   renderArena();
   await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
   const chips = captainTable
@@ -171,7 +173,80 @@ test('keeps at most five captains, over the calculator’s own captain chips', a
   expect(screen.queryByText('Titles')).toBeNull();
 });
 
+test('artifacts read with what they give against other players, and the Summary lists strike two squads', async () => {
+  const user = userEvent.setup();
+  renderArena();
+  await user.click(await screen.findByRole('button', { name: /^Artifacts/ }));
+  await user.click(await screen.findByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  // The chip rides the arena's figure: level 1 gives army health and strength against other players only.
+  expect(screen.getByText(/42 % HP \/ \+42 % STR army/)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  const editor = screen.getByRole('dialog');
+  expect(within(editor).getByText('+42 % health and strength (army)')).toBeTruthy();
+  expect(within(editor).getByText('+1.1 % strike two squads chance')).toBeTruthy();
+  await user.keyboard('{Escape}');
+
+  await user.click(screen.getByRole('button', { name: 'Summary' }));
+  const special = await screen.findByRole('region', { name: 'Special' });
+  expect(within(special).getByText('Strike two squads chance')).toBeTruthy();
+  expect(within(special).getAllByText('+1.1 %').length).toBeGreaterThan(0);
+  // The Summary reads the arena's sources: what the artifact gives against other players is in it.
+  const strength = screen.getByRole('region', { name: 'Strength' });
+  expect(within(strength).getByText("Mars' Twin Blades L1 ★0.1")).toBeTruthy();
+});
+
+test('a random line against other players counts in the arena (B-42)', async () => {
+  const user = userEvent.setup();
+  renderArena();
+  // The fold may open by itself: the device remembers how it was left.
+  const fold = await screen.findByRole('button', { name: /^Artifacts/ });
+  if (fold.getAttribute('aria-expanded') !== 'true') await user.click(fold);
+  await user.click(await screen.findByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  await user.click(screen.getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  const editor = screen.getByRole('dialog');
+  await user.click(within(editor).getByRole('combobox', { name: 'Star rating' }));
+  await user.click(within(editor).getByRole('option', { name: '★ 1.0' }));
+  await user.click(within(editor).getByRole('combobox', { name: 'Random bonus 1' }));
+  await user.click(within(editor).getByRole('option', { name: 'Army strength against other players' }));
+  const field = within(editor).getByRole('combobox', { name: 'Random bonus 1' });
+  const described = (field.getAttribute('aria-describedby') ?? '').split(' ');
+  expect(described.map((id) => document.getElementById(id)?.textContent ?? '').join('')).toBe(
+    'Against other players',
+  );
+  expect(within(editor).queryByText(/not counted/i)).toBeNull();
+  // Level 1: 42 against players, and the line's smallest value, 20.
+  expect(within(editor).getByText('+62 % strength (army)')).toBeTruthy();
+});
+
+test('Zeus’ capacity counts in the arena: no mark on its lines, and the editor shows what it raises (B-44)', async () => {
+  const user = userEvent.setup();
+  renderArena();
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const fold = await screen.findByRole('button', { name: /^Artifacts/ });
+  if (fold.getAttribute('aria-expanded') !== 'true') await user.click(fold);
+  await user.click(await screen.findByRole('checkbox', { name: "Equip Zeus' Lightning" }));
+  // Level 1: 2.5 % to both pools.
+  expect(savedPools()).toEqual([1537, 461]);
+  await user.click(screen.getByRole('button', { name: /Zeus' Lightning’s level$/ }));
+  const editor = screen.getByRole('dialog');
+  await user.click(within(editor).getByRole('combobox', { name: 'Star rating' }));
+  await user.click(within(editor).getByRole('option', { name: '★ 1.0' }));
+  await user.click(within(editor).getByRole('combobox', { name: 'Random bonus 1' }));
+  // Authority is still nowhere; Leadership and Dominance carry no mark.
+  expect(within(editor).getByRole('option', { name: /Authority\s*Not counted/ })).toBeTruthy();
+  expect(within(editor).getByRole('option', { name: 'Dominance' })).toBeTruthy();
+  await user.click(within(editor).getByRole('option', { name: 'Leadership' }));
+  // No note under the line.
+  const field = within(editor).getByRole('combobox', { name: 'Random bonus 1' });
+  const described = (field.getAttribute('aria-describedby') ?? '').split(' ');
+  expect(described.map((id) => document.getElementById(id)?.textContent ?? '').join('')).toBe('');
+  expect(within(editor).getByText('+3.5 % leadership')).toBeTruthy(); // and the line's smallest value, 1
+  expect(within(editor).getByText('+2.5 % dominance')).toBeTruthy();
+  await waitFor(() => expect(savedPools()).toEqual([1552, 461]));
+});
+
 test('Generate waits for a Leadership or Dominance budget, and says so', async () => {
+  seed(0); // a squad with a captain fills the pools by itself (B-43)
   renderArena();
   const bar = await screen.findByRole('form', { name: 'This match' });
   const generate = within(bar).getByRole('button', { name: /generate match/i });
@@ -307,4 +382,175 @@ test('an equipment set switches on in the arena squad, not on the calculator mar
   expect(selectActiveSetup(useStore.getState())!.active.equipment).toEqual(marchBefore);
   await user.click(await screen.findByRole('checkbox', { name: /2 of 2 on/ }));
   expect(usePrimeArenaStore.getState().setup.active.equipment).toEqual([]);
+});
+
+/** Seven captains at levels that rank them Skadi, Aydae, Beowulf, Bernard, Brunhild, Carter; Aurora is not owned. */
+function seedRoster(): void {
+  const profile = selectActiveProfile(useStore.getState())!;
+  const levels: [string, number][] = [
+    ['aurora', 0],
+    ['aydae', 40],
+    ['beowulf', 30],
+    ['bernard', 20],
+    ['brunhild', 10],
+    ['carter', 1],
+    ['skadi', 99],
+  ];
+  useStore.getState().updateProfile(profile.id, {
+    sources: {
+      ...profile.sources,
+      captains: levels.map(([captainId, level]) => ({ id: `e-${captainId}`, captainId, level, star: 0 })),
+    },
+  });
+}
+
+/** The names of the captain chips that are on, and of those marked to shine. */
+function chipNames(): { riding: string[]; shining: string[] } {
+  const chips = within(screen.getByRole('group', { name: 'Captains and hero' })).getAllByRole(
+    'checkbox',
+  ) as HTMLInputElement[];
+  const nameOf = (chip: HTMLInputElement): string =>
+    (chip.getAttribute('aria-label') ?? '').replace(/^Send | on this march$|, riding with this march$/g, '');
+  return {
+    riding: chips.filter((chip) => chip.checked).map(nameOf),
+    shining: chips.filter((chip) => chip.closest('[data-shine]') !== null).map(nameOf),
+  };
+}
+
+/**
+ * Holds the shine's own timeout, so a shine lasts until the test ends it, however slow the machine draws the page.
+ * Every other timeout runs as usual (fake timers would stall Testing Library's own waits).
+ */
+function holdShine(): () => void {
+  const real = globalThis.setTimeout;
+  let finish: (() => void) | undefined;
+  vi.spyOn(globalThis, 'setTimeout').mockImplementation(((handler: () => void, ms?: number) => {
+    if (ms !== CAPTAIN_SHINE_MS) return real(handler, ms);
+    finish = handler;
+    return real(() => undefined, 0);
+  }) as typeof setTimeout);
+  return () => {
+    act(() => finish?.());
+  };
+}
+
+test('opening the page fills the squad with the strongest captains, which shine once (B-45)', async () => {
+  const endShine = holdShine();
+  seedRoster();
+  renderArena();
+  await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
+  const strongest = ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Skadi'];
+  await waitFor(() => expect(chipNames().riding).toEqual(strongest), { timeout: 8000 });
+  expect(chipNames().shining).toEqual(strongest);
+  // Once: the mark goes by itself and the chips stay on.
+  endShine();
+  expect(chipNames().shining).toEqual([]);
+  expect(chipNames().riding).toEqual(strongest);
+});
+
+test('"Pick 5 strongest" stands beside the captains heading and replaces the selection at once (B-45)', async () => {
+  const endShine = holdShine();
+  seedRoster();
+  renderArena();
+  const button = await screen.findByRole('button', { name: 'Pick 5 strongest' });
+  // Beside the heading: the same label column as the family's name and its count.
+  expect(button.parentElement?.textContent).toMatch(/^Hero and captains5\/5/);
+  endShine();
+  // A hand edit swaps Skadi for Carter, without a shine and without being undone.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Skadi, riding with this march' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Send Carter on this march' }));
+  expect(chipNames()).toEqual({
+    riding: ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Carter'],
+    shining: [],
+  });
+  fireEvent.click(button);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(chipNames()).toEqual({
+    riding: ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Skadi'],
+    shining: ['Skadi'],
+  });
+  expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
+});
+
+test('with no captain owned "Pick 5 strongest" cannot be pressed (B-45)', async () => {
+  seed(0);
+  renderArena();
+  const button = await screen.findByRole('button', { name: 'Pick 5 strongest' });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('the calculator keeps its own captain selection: nothing filled, no quick pick (B-45)', async () => {
+  seedRoster();
+  render(<Shell />, { wrapper: ThemeHarness });
+  await screen.findByRole('group', { name: 'Captains and hero' });
+  expect(screen.queryByRole('button', { name: 'Pick 5 strongest' })).toBeNull();
+  expect(chipNames()).toEqual({ riding: [], shining: [] });
+  expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
+});
+
+/** The saved arena pools, as `[leadership, dominance]`. */
+const savedPools = (): [number, number] => {
+  const { leadership, dominance } = selectActiveProfile(useStore.getState())!.primeArena.setup.housing;
+  return [leadership, dominance];
+};
+
+// The seeded captain is level 10: 1500 Leadership and 450 Dominance in the game's table.
+test('the bar fills the squad’s maximum, takes the other capacity bonus % and restores it with Max (B-43)', async () => {
+  renderArena();
+  const bar = await screen.findByRole('form', { name: 'This match' });
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const field = within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }) as HTMLInputElement;
+  expect(field.value).toBe('0');
+  const user = userEvent.setup();
+  // Typed key by key: a decimal fraction survives the way there.
+  await user.click(field);
+  await user.keyboard('0.7');
+  expect(field.value).toBe('0.7');
+  expect(selectActiveProfile(useStore.getState())!.primeArena.otherCapacity).toBe(0.7);
+  expect(savedPools()).toEqual([1510, 453]);
+  typeInto(/^leadership/i, '5');
+  expect(savedPools()).toEqual([5, 453]);
+  await user.click(within(bar).getByRole('button', { name: 'Max Leadership and Dominance' }));
+  expect(savedPools()).toEqual([1510, 453]);
+});
+
+test('a captain level changed while the page is open refills the pools (B-43)', async () => {
+  renderArena();
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const profile = selectActiveProfile(useStore.getState())!;
+  act(() => {
+    useStore.getState().updateProfile(profile.id, {
+      sources: {
+        ...profile.sources,
+        captains: profile.sources.captains.map((entry) => ({ ...entry, level: 100 })),
+      },
+    });
+  });
+  await waitFor(() => expect(savedPools()).toEqual([14_000, 3500]));
+});
+
+test('the phone bar holds the bonus % as a chip beside the pools, with Max (B-43)', async () => {
+  stubMedia([]);
+  renderArena();
+  const bar = await screen.findByRole('form', { name: 'This match' });
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const user = userEvent.setup();
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 0 %' }));
+  await user.keyboard('12.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  expect(within(bar).getByRole('button', { name: 'Other capacity bonus 12.5 %' })).toBeTruthy();
+  expect(savedPools()).toEqual([1687, 506]);
+  // A fraction that opens with a zero can be typed too: 1500 × 1.005 = 1507.5.
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 12.5 %' }));
+  await user.keyboard('0.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  expect(savedPools()).toEqual([1507, 452]);
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 0.5 %' }));
+  await user.keyboard('12.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  act(() => {
+    usePrimeArenaStore.getState().updateSetup((s) => ({ housing: { ...s.housing, dominance: 9 } }));
+  });
+  await user.click(within(bar).getByRole('button', { name: 'Max Leadership and Dominance' }));
+  expect(savedPools()).toEqual([1687, 506]);
 });

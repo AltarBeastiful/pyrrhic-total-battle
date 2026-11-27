@@ -422,18 +422,337 @@ test('an artifact is equipped from its chip and levelled from its gear', async (
   openGroup('Artifacts');
 
   const row = within(card()).getByRole('group', { name: 'Artifacts' });
-  expect(within(row).getAllByRole('checkbox')).toHaveLength(15);
+  expect(within(row).getAllByRole('checkbox')).toHaveLength(16);
+  expect(within(row).getByRole('checkbox', { name: "Equip Mars' Twin Blades" })).toBeTruthy();
 
   fireEvent.click(within(row).getByRole('checkbox', { name: 'Equip Ruby Brooch' }));
   expect(setup()?.active.artifacts).toHaveLength(1);
+  // A new artifact starts at the bottom of the game's ladders.
+  expect(profile()?.sources.artifacts[0]).toMatchObject({ level: 1, star: '0.1' });
 
   await user.click(within(card()).getByRole('button', { name: /Ruby Brooch’s level$/ }));
-  expect(screen.getByRole('textbox', { name: 'Level' })).toBeTruthy();
-  expect(screen.getByRole('combobox', { name: 'Star rating' })).toBeTruthy();
-  typeNumber(document.body, 'Melee strength', '30');
+  const editor = screen.getByRole('dialog');
+  expect(within(editor).getByRole('combobox', { name: 'Star rating' })).toBeTruthy();
+  // The level is the one figure to type: the percentages are the game's.
+  expect(
+    within(editor)
+      .getAllByRole('textbox')
+      .map((field) => field.getAttribute('inputmode')),
+  ).toEqual(['numeric']);
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
 
-  expect(profile()?.sources.artifacts[0]?.manual?.strength).toEqual({ melee: 30 });
-  expect(totals(card()).Strength).toBe('0 %');
+  typeNumber(editor, 'Level', '20');
+  expect(within(editor).getByText('+28 % health and strength (melee)')).toBeTruthy();
+  typeNumber(editor, 'Level', '0');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(1);
+});
+
+test('the march ignores what an artifact gives against other players, and its Summary lists strike two squads', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  openGroup('Artifacts');
+  await user.click(within(card()).getByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  await user.click(within(card()).getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  expect(within(screen.getByRole('dialog')).getByText('+1.1 % strike two squads chance')).toBeTruthy();
+  await user.keyboard('{Escape}');
+
+  await user.click(within(card()).getByRole('button', { name: 'Summary' }));
+  const special = within(card()).getByRole('region', { name: 'Special' });
+  expect(within(special).getByText('Strike two squads chance')).toBeTruthy();
+  const strength = within(card()).getByRole('region', { name: 'Strength' });
+  expect(within(strength).queryByText("Mars' Twin Blades L1 ★0.1")).toBeNull();
+});
+
+/** The editor behind an artifact's gear, and its buttons by name. */
+async function artifactEditor(user: ReturnType<typeof userEvent.setup>, name: string) {
+  openGroup('Artifacts');
+  fireEvent.click(within(card()).getByRole('checkbox', { name: `Equip ${name}` }));
+  await user.click(within(card()).getByRole('button', { name: new RegExp(`${name}’s level$`) }));
+  const editor = screen.getByRole('dialog');
+  const button = (label: string): HTMLElement => within(editor).getByRole('button', { name: label });
+  return { editor, button };
+}
+
+const isOff = (node: HTMLElement): boolean => node.getAttribute('aria-disabled') === 'true';
+
+test('+ and − move an artifact’s level by one, stop at 1 and 60, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  const level = () => profile()?.sources.artifacts[0]?.level;
+
+  // A new artifact is at level 1, the bottom: nothing to take down.
+  expect(isOff(button('Lower level'))).toBe(true);
+  await user.click(button('Raise level'));
+  expect(level()).toBe(2);
+  expect(within(editor).getByText('+19 % health and strength (melee)')).toBeTruthy();
+  await user.click(button('Lower level'));
+  expect(level()).toBe(1);
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
+
+  typeNumber(editor, 'Level', '59');
+  await user.click(button('Raise level'));
+  expect(level()).toBe(60);
+  expect(isOff(button('Raise level'))).toBe(true);
+});
+
+test('+ and − move an artifact’s star by one segment, stop at 0.1 and 5.0, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  const star = () => profile()?.sources.artifacts[0]?.star;
+
+  expect(isOff(button('Lower star rating'))).toBe(true);
+  await user.click(button('Raise star rating'));
+  expect(star()).toBe('0.2');
+  expect(within(editor).getByText('+19.5 % health and strength (melee)')).toBeTruthy();
+  await user.click(button('Lower star rating'));
+  expect(star()).toBe('0.1');
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
+
+  // The next segment is the next step of the game's ladder: a whole star follows its fourth segment.
+  for (const [from, to] of [
+    ['2.0', '2.1'],
+    ['1.4', '2.0'],
+    ['4.4', '5.0'],
+  ] as const) {
+    await chooseIn(user, editor, 'Star rating', `★ ${from}`);
+    await user.click(button('Raise star rating'));
+    expect(star()).toBe(to);
+  }
+  expect(isOff(button('Raise star rating'))).toBe(true);
+});
+
+test('the artifact steppers work from the keyboard, and the end of a ladder keeps the focus', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Ruby Brooch');
+  typeNumber(editor, 'Level', '59');
+
+  button('Raise level').focus();
+  await user.keyboard('{Enter}');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(60);
+  // A natively disabled button drops the focus to the page, and Escape then no longer reaches the editor.
+  expect(document.activeElement).toBe(button('Raise level'));
+  expect((button('Raise level') as HTMLButtonElement).disabled).toBe(false);
+  await user.keyboard('{Enter}');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(60);
+
+  button('Raise star rating').focus();
+  await user.keyboard(' ');
+  expect(profile()?.sources.artifacts[0]?.star).toBe('0.2');
+  await user.keyboard('{Escape}');
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+// ---- B-42: the random bonus lines -----------------------------------------------------------------
+const savedLines = () => profile()?.sources.artifacts[0]?.lines;
+const lineFields = (editor: HTMLElement): string[] =>
+  within(editor)
+    .queryAllByRole('combobox', { name: /^Random bonus \d$/ })
+    .map((field) => field.getAttribute('aria-label') ?? '');
+
+/** Picks an option on one line: the choice is named by what it reads, "not counted" included. */
+async function pickLine(
+  user: ReturnType<typeof userEvent.setup>,
+  editor: HTMLElement,
+  line: number,
+  option: RegExp,
+): Promise<void> {
+  await user.click(within(editor).getByRole('combobox', { name: `Random bonus ${String(line)}` }));
+  await user.click(within(editor).getByRole('option', { name: option }));
+}
+
+/** What a line says under its option, as a screen reader gets it with the field. */
+function lineNote(editor: HTMLElement, line: number): string | null {
+  const field = within(editor).getByRole('combobox', { name: `Random bonus ${String(line)}` });
+  const ids = (field.getAttribute('aria-describedby') ?? '').split(' ');
+  const text = ids.map((id) => document.getElementById(id)?.textContent ?? '').join('');
+  return text === '' ? null : text;
+}
+
+const lineValues = (editor: HTMLElement, line: number): HTMLElement =>
+  within(editor).getByRole('radiogroup', { name: `Random bonus ${String(line)} value` });
+
+test('an artifact shows one random bonus line per whole star reached, five at most', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Heart of the Forest');
+
+  expect(lineFields(editor)).toEqual([]);
+  expect(within(editor).getByText('Random bonus lines open from star 1.0.')).toBeTruthy();
+  await chooseIn(user, editor, 'Star rating', '★ 0.4');
+  expect(lineFields(editor)).toEqual([]);
+  await user.click(button('Raise star rating'));
+  expect(lineFields(editor)).toEqual(['Random bonus 1']);
+  await chooseIn(user, editor, 'Star rating', '★ 3.4');
+  expect(lineFields(editor)).toHaveLength(3);
+  await chooseIn(user, editor, 'Star rating', '★ 5.0');
+  expect(lineFields(editor)).toHaveLength(5);
+});
+
+test('a line takes an option, then one of its three values, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Heart of the Forest');
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  expect(within(editor).getByText('+207 % strength (army)')).toBeTruthy(); // level 1: 42, star 2.0: 165
+
+  expect(within(editor).queryByRole('radiogroup')).toBeNull();
+  await pickLine(user, editor, 2, /^Army strength$/);
+  // Line 1 stays empty; the new line starts on the smallest of the three values.
+  expect(savedLines()).toEqual([null, { option: 'armyStrength', rarity: 'rare' }]);
+  expect(within(editor).getByText('+227 % strength (army)')).toBeTruthy();
+
+  const values = within(lineValues(editor, 2)).getAllByRole('radio');
+  expect(values.map((radio) => radio.closest('div')?.textContent)).toEqual([
+    '+20 %Rare',
+    '+40 %Epic',
+    '+100 %Legendary',
+  ]);
+  await user.click(within(lineValues(editor, 2)).getByRole('radio', { name: /Legendary/ }));
+  expect(savedLines()?.[1]).toEqual({ option: 'armyStrength', rarity: 'legendary' });
+  expect(within(editor).getByText('+307 % strength (army)')).toBeTruthy();
+
+  // Another option on the same line keeps the rarity; the same option on two lines adds up.
+  await pickLine(user, editor, 1, /^Army strength$/);
+  expect(within(editor).getByText('+327 % strength (army)')).toBeTruthy();
+  await pickLine(user, editor, 2, /^Army health$/);
+  expect(savedLines()?.[1]).toEqual({ option: 'armyHealth', rarity: 'legendary' });
+
+  // A line can be emptied again, and a profile with every line empty records none.
+  await pickLine(user, editor, 2, /^Empty$/);
+  expect(savedLines()).toEqual([{ option: 'armyStrength', rarity: 'rare' }]);
+  await pickLine(user, editor, 1, /^Empty$/);
+  expect(savedLines()).toBeUndefined();
+});
+
+test('lowering the star hides a line and stops counting it; raising the star brings it back', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Heart of the Forest');
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  await pickLine(user, editor, 2, /^Army strength$/);
+
+  await user.click(button('Lower star rating'));
+  expect(lineFields(editor)).toEqual(['Random bonus 1']);
+  expect(within(editor).getByText('+194 % strength (army)')).toBeTruthy(); // 42 + star 1.4: 152
+  // Hidden, not forgotten: a pick on another line keeps it.
+  await pickLine(user, editor, 1, /^Army health$/);
+  expect(savedLines()?.[1]).toEqual({ option: 'armyStrength', rarity: 'rare' });
+
+  await user.click(button('Raise star rating'));
+  expect(within(editor).getByRole('combobox', { name: 'Random bonus 2' })).toHaveProperty(
+    'value',
+    'Army strength',
+  );
+  expect(within(editor).getByText('+227 % strength (army)')).toBeTruthy();
+});
+
+test('the march marks the options it does not count, and leaves them selectable', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, "Zeus' Lightning");
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  await user.click(within(editor).getByRole('combobox', { name: 'Random bonus 1' }));
+  // The artifact's own options and no other, each saying whether it counts here.
+  expect(
+    within(editor)
+      .getAllByRole('option')
+      .map((option) => option.textContent),
+  ).toEqual([
+    'Empty',
+    'AuthorityNot counted',
+    'DominanceNot counted',
+    'Double damage chance',
+    'LeadershipNot counted',
+  ]);
+  await user.click(within(editor).getByRole('option', { name: /Leadership/ }));
+  expect(savedLines()).toEqual([{ option: 'leadership', rarity: 'rare' }]);
+  expect(lineNote(editor, 1)).toBe('Not counted');
+  await pickLine(user, editor, 1, /^Double damage chance$/);
+  expect(lineNote(editor, 1)).toBeNull();
+  // The march's housing takes no capacity (B-44), so no capacity figure reads as one that counts.
+  expect(within(editor).queryByText(/% (leadership|dominance)$/)).toBeNull();
+});
+
+test('the march marks a line against other players as not counted', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Ruby Brooch');
+  await chooseIn(user, editor, 'Star rating', '★ 1.0');
+  await pickLine(user, editor, 1, /^Melee strength and health against other players\s*Not counted$/);
+  expect(lineNote(editor, 1)).toBe('Against other players, not counted');
+  expect(within(editor).getByText('+23 % health and strength (melee)')).toBeTruthy();
+});
+
+test('the march shows what a level gives that it does not count, marked, so + is seen to move it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, "Zeus' Lightning");
+  // Zeus' levels raise capacity alone, which no march counts.
+  expect(within(editor).getByText('+2.5 % leadership · Not counted')).toBeTruthy();
+  expect(within(editor).getByText('+2.5 % dominance · Not counted')).toBeTruthy();
+  typeNumber(editor, 'Level', '59');
+  await user.click(button('Raise level'));
+  expect(within(editor).getByText('+25 % leadership · Not counted')).toBeTruthy();
+  expect(within(editor).getByText('+0.7 % double damage chance')).toBeTruthy();
+});
+
+test.each([
+  // Level 1 and star 0.1: Mars against other players from the level alone; Forest Crown 17.5 + 18, both ways.
+  ["Mars' Twin Blades", '+42 % health and strength (army)', []],
+  ['Forest Crown', '+35.5 % health and strength (army)', ['+35.5 % health and strength (army)']],
+])('the march shows what %s gives against other players, marked', async (name, against, counted) => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, name);
+  expect(within(editor).getByText(`${against} · Against other players, not counted`)).toBeTruthy();
+  for (const line of counted) expect(within(editor).getByText(line)).toBeTruthy();
+});
+
+test('an emptied level field saves nothing, so a new level can be typed into it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Ruby Brooch');
+  const level = () => profile()?.sources.artifacts[0]?.level;
+  const field = within(editor).getByRole('textbox', { name: 'Level' });
+  typeNumber(editor, 'Level', '35');
+
+  await user.clear(field);
+  expect(field).toHaveProperty('value', '');
+  expect(level()).toBe(35);
+  await user.type(field, '42');
+  expect(level()).toBe(42);
+  expect(field).toHaveProperty('value', '42');
+
+  // Left empty, the field goes back to the level that is saved.
+  await user.clear(field);
+  await user.tab();
+  expect(field).toHaveProperty('value', '42');
+  expect(level()).toBe(42);
+});
+
+test('a captain’s editor has no + and − buttons', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  await user.click(captainGear('Aydae'));
+
+  expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /^(Raise|Lower) / })).toBeNull();
+});
+
+test('the star rating offers the game’s 25 steps, from 0.1 to 5.0', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  openGroup('Artifacts');
+  await user.click(within(card()).getByRole('button', { name: /Heart of the Forest’s level$/ }));
+  await user.click(screen.getByRole('combobox', { name: 'Star rating' }));
+
+  const steps = screen.getAllByRole('option').map((option) => option.textContent);
+  expect(steps).toHaveLength(25);
+  expect([steps[0], steps.at(-1)]).toEqual(['★ 0.1', '★ 5.0']);
 });
 
 test('a permanent source is on while something is recorded in it, and its gear opens the sheet that moves the TOTAL', () => {

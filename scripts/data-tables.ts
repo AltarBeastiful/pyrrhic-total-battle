@@ -14,7 +14,14 @@ import { fileURLToPath } from 'node:url';
 import { format as prettierFormat, resolveConfig, type Options } from 'prettier';
 
 import { TABLE_FILES, validateTable, type TableFile } from '../src/data/schema.ts';
-import { BONUS_KEYS, CATEGORIES, QUALITIES, SPECIAL_KEYS, STRENGTH_AGAINST_KEYS } from '../src/data/types.ts';
+import {
+  ARTIFACT_RARITIES,
+  BONUS_KEYS,
+  CATEGORIES,
+  QUALITIES,
+  SPECIAL_KEYS,
+  STRENGTH_AGAINST_KEYS,
+} from '../src/data/types.ts';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const TABLES_DIR = path.join(REPO_ROOT, 'src', 'data', 'tables');
@@ -46,6 +53,7 @@ function byNumericKey(value: Json): Json {
 }
 
 const CONTRIBUTION_KEYS = ['health', 'strength', 'special', 'matchup'] as const;
+const ARTIFACT_ROW_KEYS = [...CONTRIBUTION_KEYS, 'againstPlayers', 'capacity', 'unused'] as const;
 
 function contribution(value: Json): Json {
   if (!isObject(value)) return value;
@@ -59,19 +67,30 @@ function contribution(value: Json): Json {
   return out;
 }
 
-function levels(value: Json): Json {
-  if (!isObject(value)) return value;
-  const out = order(value, ['base', 'star']) as JsonObject;
-  if ('base' in out) out.base = byNumericKey(out.base as Json);
-  if ('star' in out) out.star = byNumericKey(out.star as Json);
+/** An artifact's level or star rows: rows by number, each row's keys in the declared order. */
+function artifactRows(value: Json): Json {
+  const out = byNumericKey(value);
+  if (!isObject(out)) return out;
+  for (const key of Object.keys(out)) out[key] = artifactRow(out[key] as Json);
   return out;
 }
 
-function progression(value: Json, keys: readonly string[] = ['key', 'levels']): Json {
+function artifactRow(value: Json): Json {
   if (!isObject(value)) return value;
-  const out = order(value, keys) as JsonObject;
-  if ('levels' in out) out.levels = levels(out.levels as Json);
+  const out = order(contribution(value), ARTIFACT_ROW_KEYS) as JsonObject;
+  if ('againstPlayers' in out) out.againstPlayers = contribution(out.againstPlayers as Json);
+  if ('capacity' in out) out.capacity = order(out.capacity as Json, ['leadership', 'dominance']);
+  if ('unused' in out) out.unused = order(out.unused as Json, ['authority', 'marchSpeed']);
   return out;
+}
+
+/** A random option: its id, then its three values, the smallest first. */
+function artifactOption(value: Json): Json {
+  const out = order(value, ['id', 'values']);
+  if (!isObject(out) || out.values === undefined || !isObject(out.values)) return out;
+  const values = order(out.values, ARTIFACT_RARITIES) as JsonObject;
+  for (const rarity of Object.keys(values)) values[rarity] = artifactRow(values[rarity] as Json);
+  return { ...out, values };
 }
 
 function unit(value: Json, keys: readonly string[]): Json {
@@ -138,17 +157,11 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
     return out;
   },
   'artifacts.json': (value) => {
-    const out = order(value, [
-      'id',
-      'name',
-      'health',
-      'strength',
-      'special',
-      'randomBonusOptions',
-    ]) as JsonObject;
-    for (const key of ['health', 'strength', 'special'] as const) {
-      if (key in out) out[key] = progression(out[key] as Json);
+    const out = order(value, ['id', 'name', 'levels', 'stars', 'randomOptions']) as JsonObject;
+    for (const key of ['levels', 'stars'] as const) {
+      if (key in out) out[key] = artifactRows(out[key] as Json);
     }
+    if (Array.isArray(out.randomOptions)) out.randomOptions = out.randomOptions.map(artifactOption);
     return out;
   },
   'titles.json': (value) => {
@@ -202,6 +215,13 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
   'temple.json': (value) => {
     const out = order(value, ['multiplier']) as JsonObject;
     out.multiplier = byNumericKey(out.multiplier as Json);
+    return out;
+  },
+  'capacities.json': (value) => {
+    const out = order(value, ['captain', 'hero']) as JsonObject;
+    for (const key of ['captain', 'hero'] as const) {
+      if (key in out) out[key] = order(out[key] as Json, ['leadership', 'authority', 'dominance']);
+    }
     return out;
   },
   'orders.json': (value) => order(value, ['troops', 'monsters', 'captains']),

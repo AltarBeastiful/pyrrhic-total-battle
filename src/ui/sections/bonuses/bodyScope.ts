@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { BuiltinPermanentSource } from '@/state/schema';
 
 import type { BonusesFold } from './uiPrefs';
@@ -34,6 +36,15 @@ export interface BodyScope {
    * count or not. Absent, the row is the calculator's: every source, always on, a chip opens its editor.
    */
   counting?: PermanentCounting;
+  /** What a page adds to the captains' family; absent, the family is the calculator's. */
+  captains?: CaptainExtras;
+}
+
+export interface CaptainExtras {
+  /** A control beside the family's heading (the arena's quick pick, B-45). */
+  action: ReactNode;
+  /** The captains (table ids) to mark with one short shine. */
+  shining: readonly string[];
 }
 
 export interface PermanentCounting {

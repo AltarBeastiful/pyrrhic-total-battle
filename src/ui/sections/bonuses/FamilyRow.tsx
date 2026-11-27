@@ -18,10 +18,12 @@ export interface FamilyRowProps {
   title: string;
   /** How many are on, of how many: "3/3", "2 of 8 sources on", "always on". */
   count: ReactNode;
+  /** A control that acts on the whole family, beside its name and count. */
+  action?: ReactNode;
   children: ReactNode;
 }
 
-export function FamilyRow({ title, count, children }: FamilyRowProps) {
+export function FamilyRow({ title, count, action, children }: FamilyRowProps) {
   return (
     <div className={classes.family}>
       <Stack gap={2} className={classes.familyLabel}>
@@ -31,6 +33,7 @@ export function FamilyRow({ title, count, children }: FamilyRowProps) {
         <Text size="xs" c="dimmed">
           {count}
         </Text>
+        {action}
       </Stack>
       <div className={classes.familyChips}>{children}</div>
     </div>

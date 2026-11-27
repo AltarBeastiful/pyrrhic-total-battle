@@ -7,7 +7,8 @@
 import { Alert, Stack } from '@mantine/core';
 import { useMemo, useRef, useState } from 'react';
 
-import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
+import { equipment as equipmentTable } from '@/data';
+import type { ResolvedSource } from '@/engine/types';
 import { mintSourceId, setActiveFlag, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import type { Profile } from '@/state/schema';
@@ -32,7 +33,6 @@ import {
   MAX_ACTIVE_CAPTAINS,
   MAX_EQUIPMENT,
   sourceGroups,
-  starKeys,
   totalsSummary,
 } from './rows';
 import type { AddKind, EditorTarget, SourceGroup } from './rows';
@@ -56,9 +56,14 @@ export interface BonusesBodyProps {
   profile: Profile;
   binding: SetupBinding;
   scope?: BodyScope;
+  /**
+   * The sources another fight counts, already resolved (the Prime Arena): the Summary fold reads these, and is
+   * drawn even where the scope leaves the calculator's audit out.
+   */
+  sources?: ResolvedSource[];
 }
 
-export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBodyProps) {
+export function BonusesBody({ profile, binding, scope = FULL_SCOPE, sources }: BonusesBodyProps) {
   const { setup, caps } = binding;
   const maxCaptains = caps.captains;
   const maxArtifacts = caps.artifacts;
@@ -137,11 +142,10 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
     const found = profile.sources.artifacts.find((entry) => entry.artifactId === artifactId);
     if (found !== undefined) return found.id;
     const id = mintSourceId();
-    const record = artifactTable.find((entry) => entry.id === artifactId);
-    const star = starKeys(record)[0] ?? '0.0';
+    // The bottom of the game's ladders, level 1 and star 0.1: the player raises it from there.
     updateSources(profileId, (sources) => ({
       ...sources,
-      artifacts: [...sources.artifacts, { id, artifactId, level: 1, star }],
+      artifacts: [...sources.artifacts, { id, artifactId, level: 1, star: '0.1' }],
     }));
     return id;
   };
@@ -225,16 +229,18 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
 
   const panels: Record<
     (typeof ORDER)[number] | (typeof FOLDED)[number],
-    { title: string; summary: React.ReactNode; body: React.ReactNode }
+    { title: string; summary: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }
   > = {
     captains: {
       title: 'Hero and captains',
+      action: scope.captains?.action,
       summary: `${String(setup.active.captains.length)}/${String(maxCaptains)}`,
       body: (
         <CaptainChips
           chips={captains}
           isRefused={refusedCaptain && setup.active.captains.length >= maxCaptains}
           refusal={captainRefusal(maxCaptains)}
+          {...(scope.captains === undefined ? {} : { shining: scope.captains.shining })}
           onEnlist={enlist}
           onConfigure={configureCaptain}
           marchType={setup.marchType}
@@ -320,7 +326,7 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
         ))}
       <Stack gap="md">
         {scope.families.map((id) => (
-          <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
+          <FamilyRow key={id} title={panels[id].title} count={panels[id].summary} action={panels[id].action}>
             {panels[id].body}
           </FamilyRow>
         ))}
@@ -345,9 +351,9 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
         {/* Renamed from "Every key and what feeds it" (owner, 2026-09-28: *"this section should be
             renamed Summary"*): it already recaps the hero and the captains under every key they
             feed, so the name says what the block is rather than what it contains. */}
-        {scope.audit && (
+        {(scope.audit || sources !== undefined) && (
           <Disclosure title="Summary">
-            <TotalsBreakdown profile={profile} setup={setup} />
+            <TotalsBreakdown {...(sources === undefined ? { profile, setup } : { sources })} />
           </Disclosure>
         )}
       </Stack>

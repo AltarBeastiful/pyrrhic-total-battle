@@ -21,12 +21,16 @@ export interface NumberFieldProps {
   /** `null` is an empty field; only reachable when `allowEmpty`. */
   value: number | null;
   onChange: (value: number | null) => void;
+  /** Focus left the field; for a caller that holds an emptied field until then. */
+  onBlur?: () => void;
   min?: number;
   max?: number;
   /** An empty field reports `null` instead of falling back to `min` (or 0). */
   allowEmpty?: boolean;
   /** Counts are whole; only a field that really measures a fraction turns this on. */
   allowDecimal?: boolean;
+  /** Most digits after the point, where `allowDecimal` lets one be typed. */
+  decimalScale?: number;
   /** A field that can hold a correction below zero; `min` then no longer clamps at 0. */
   allowNegative?: boolean;
   /** A glyph inside the field, at the start: the pool's mark, a currency. */
@@ -50,10 +54,12 @@ export function NumberField({
   accessibleName,
   value,
   onChange,
+  onBlur,
   min = 0,
   max,
   allowEmpty = false,
   allowDecimal = false,
+  decimalScale,
   allowNegative = false,
   leftSection,
   description,
@@ -71,6 +77,7 @@ export function NumberField({
       // Off by default, and not only because counts are whole: react-number-format accepts a comma
       // as a decimal separator, so "84,300" would otherwise reach the caller as 84.3.
       allowDecimal={allowDecimal}
+      {...(decimalScale === undefined ? {} : { decimalScale })}
       allowNegative={allowNegative}
       disabled={disabled}
       leftSection={leftSection}
@@ -87,6 +94,7 @@ export function NumberField({
       }}
       {...(enterKeyHint === undefined ? {} : { enterKeyHint })}
       {...(max === undefined ? {} : { max })}
+      {...(onBlur === undefined ? {} : { onBlur })}
       {...(placeholder === undefined ? {} : { placeholder })}
       {...(w === undefined ? {} : { w })}
       onChange={(next) => {

@@ -186,19 +186,21 @@ function HeroEditor() {
 interface EnlistChipProps {
   chip: CaptainChipRow;
   opened: boolean;
+  shine: boolean;
   onToggle: (target: CaptainTarget) => void;
   onGear: (target: CaptainTarget) => void;
   onOpenedChange: (target: CaptainTarget, opened: boolean) => void;
 }
 
 /**
- * Memoised on purpose: thirty-one of these sit on one phone screen beside fifteen artifacts and
+ * Memoised on purpose: thirty-one of these sit on one phone screen beside sixteen artifacts and
  * twenty-eight titles, and a toggle must not re-render the lot. The editor is built only for the
  * chip whose popover is open, so the other thirty get `null` and stay put.
  */
 const EnlistChip = memo(function EnlistChip({
   chip,
   opened,
+  shine,
   onToggle,
   onGear,
   onOpenedChange,
@@ -211,6 +213,7 @@ const EnlistChip = memo(function EnlistChip({
       level={chip.level}
       star={chip.star}
       details={chip.details}
+      shine={shine}
       onToggle={() => {
         onToggle(chip.target);
       }}
@@ -249,6 +252,8 @@ export interface CaptainChipsProps {
   onMarchType: (next: SetupMarchType) => void;
   /** Whether to draw the march-type control: only when it can change a reading (a restricted captain is owned). */
   showMarchType: boolean;
+  /** The captains (table ids) to mark with one short shine. */
+  shining?: readonly string[];
 }
 
 const keyOf = (target: CaptainTarget): string => (target.kind === 'hero' ? 'hero' : target.captainId);
@@ -262,6 +267,7 @@ export function CaptainChips({
   marchType,
   onMarchType,
   showMarchType,
+  shining = [],
 }: CaptainChipsProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const roving = useRovingTabs();
@@ -304,6 +310,7 @@ export function CaptainChips({
             key={chip.id}
             chip={chip}
             opened={openId === chip.id}
+            shine={shining.includes(chip.id)}
             onToggle={toggle}
             onGear={gear}
             onOpenedChange={openedChange}

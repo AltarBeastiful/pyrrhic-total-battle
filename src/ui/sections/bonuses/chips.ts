@@ -96,7 +96,7 @@ export interface ArtifactChipRow {
   value: string;
 }
 
-/** All fifteen artifacts, whether or not the profile has ever recorded one. */
+/** Every artifact of the table, whether or not the profile has ever recorded one. */
 export function artifactChips(profile: Profile, setup: BattleSetup): ArtifactChipRow[] {
   const active = setup.active.artifacts;
   const byArtifact = new Map(profile.sources.artifacts.map((entry) => [entry.artifactId, entry]));
@@ -104,13 +104,13 @@ export function artifactChips(profile: Profile, setup: BattleSetup): ArtifactChi
   return artifactTable.map((record) => {
     const entry = byArtifact.get(record.id);
     const on = entry !== undefined && active.includes(entry.id);
-    const worth = entry === undefined ? '' : rowValue(artifactWorth(record, entry));
+    const worth = entry === undefined ? {} : artifactWorth(record, entry, setup.marchType);
     return {
       id: record.id,
       name: record.name,
       on,
-      levelSet: entry !== undefined && worth !== '',
-      value: entry === undefined ? '' : chipValue(artifactWorth(record, entry), 1).text,
+      levelSet: rowValue(worth) !== '',
+      value: chipValue(worth, 1).text,
     };
   });
 }

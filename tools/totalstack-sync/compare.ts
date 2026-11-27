@@ -514,34 +514,6 @@ function candidates(chunks: readonly Chunk[], marker: RegExp, kind: '[' | '{'): 
   return out;
 }
 
-/** Follows a `"$ref:name"` to the literal assigned to `name` in one of the chunks. */
-function resolveRef(chunks: readonly Chunk[], name: string): Json | undefined {
-  const marker = new RegExp(`(?<![\\w$.])${name}\\s*=\\s*(?:Object\\.freeze\\()?[[{]`, 'g');
-  for (const chunk of chunks) {
-    marker.lastIndex = 0;
-    const offsets: number[] = [];
-    for (let match = marker.exec(chunk.text); match; match = marker.exec(chunk.text)) {
-      offsets.push(match.index + match[0].length - 1);
-      if (offsets.length > 50) break;
-    }
-    if (offsets.length === 0) continue;
-    const stacks = bracketStacksAt(
-      chunk.text,
-      offsets.map((offset) => offset + 1),
-    );
-    for (const offset of offsets) {
-      const frame = (stacks.get(offset + 1) ?? []).at(-1);
-      if (!frame || frame.close < 0 || frame.open !== offset) continue;
-      try {
-        return jsLiteralToJson(chunk.text.slice(frame.open, frame.close + 1));
-      } catch {
-        // try the next assignment to that name
-      }
-    }
-  }
-  return undefined;
-}
-
 // ---- 3. Locating the tables by content ------------------------------------------------------------
 
 export type TableName =
@@ -550,7 +522,6 @@ export type TableName =
   | 'mercenaries.json'
   | 'captains.json'
   | 'equipment.json'
-  | 'artifacts.json'
   | 'titles.json'
   | 'temple.json';
 
@@ -560,7 +531,6 @@ export const COMPARED_TABLES: readonly TableName[] = [
   'mercenaries.json',
   'captains.json',
   'equipment.json',
-  'artifacts.json',
   'titles.json',
   'temple.json',
 ];
@@ -572,7 +542,6 @@ const HOW_WE_FIND_IT: Record<TableName, string> = {
   'mercenaries.json': 'the array containing `id:"cyclops-5"`',
   'captains.json': 'the object keyed by captain names whose values carry `bonusKey`/`starBonuses`',
   'equipment.json': 'the array whose records carry `bonusesByQuality`',
-  'artifacts.json': 'the array whose records carry `randomBonusOptions`',
   'titles.json':
     'the array whose records carry `playerOnlyHealthBonuses`, or a title name such as "Battlemaster"',
   'temple.json': 'the object keyed "1".."45" whose values run 1.04 … 5.91',
@@ -613,7 +582,6 @@ export interface RawTables {
   captains?: JsonObject;
   captainOrder?: string[];
   equipment?: JsonObject[];
-  artifacts?: JsonObject[];
   titles?: JsonObject[];
   temple?: JsonObject;
 }
@@ -674,11 +642,6 @@ export function locateTables(chunks: readonly Chunk[]): RawTables {
     records.every((record) => isObject(record.bonusesByQuality)),
   );
   if (equipment) found.equipment = equipment;
-
-  const artifacts = findArray(chunks, keyMarker('randomBonusOptions'), (records) =>
-    records.some((record) => Array.isArray(record.randomBonusOptions)),
-  );
-  if (artifacts) found.artifacts = artifacts;
 
   // A title is a flat `{ name, healthBonuses, … }`; the equipment pieces carry the same bonus keys one
   // level down, inside `bonusesByQuality`, so the shape check has to rule them out.
@@ -915,107 +878,15 @@ function normaliseTitle(record: JsonObject): JsonObject {
   return { id: slug(name), name, bonus: normaliseContribution(record) };
 }
 
-export interface NormalisedTable {
-  rows: JsonObject[];
-  /** `id` + path prefix pairs the bundle cannot answer for (an artifact level table behind a `$ref`). */
-  notComparable: { id: string; prefix: string; reason: string }[];
-}
-
-function levelTable(
-  chunks: readonly Chunk[],
-  base: Json | undefined,
-  star: Json | undefined,
-): { levels?: JsonObject; unresolved: string[] } {
-  const levels: JsonObject = {};
-  const unresolved: string[] = [];
-  for (const [key, value] of [
-    ['base', base],
-    ['star', star],
-  ] as const) {
-    if (value === undefined) continue;
-    if (isObject(value)) {
-      levels[key] = value;
-      continue;
-    }
-    if (typeof value === 'string' && value.startsWith('$ref:')) {
-      const name = value.slice('$ref:'.length);
-      const resolved = resolveRef(chunks, name);
-      if (isObject(resolved)) levels[key] = resolved;
-      else unresolved.push(`$ref:${name}`);
-    }
-  }
-  const out: { levels?: JsonObject; unresolved: string[] } = { unresolved };
-  if (Object.keys(levels).length > 0) out.levels = levels;
-  return out;
-}
-
-function normaliseArtifacts(chunks: readonly Chunk[], records: JsonObject[]): NormalisedTable {
-  const notComparable: NormalisedTable['notComparable'] = [];
-  const rowsOut = records.map((record) => {
-    const name = String(record.name ?? '');
-    const id = slug(name);
-    const out: JsonObject = { id, name };
-
-    for (const axis of ['health', 'strength'] as const) {
-      const baseKey = axis === 'health' ? 'baseHealthByLevel' : 'baseStrengthByLevel';
-      const starKey = axis === 'health' ? 'starHealthByLevel' : 'starStrengthByLevel';
-      const targetKey = axis === 'health' ? 'healthTargetKey' : 'strengthTargetKey';
-      if (!(baseKey in record) && !(starKey in record) && !(targetKey in record)) continue;
-      const progression: JsonObject = { key: str(record[targetKey]) ?? 'army' };
-      const table = levelTable(chunks, record[baseKey], record[starKey]);
-      if (table.levels) progression.levels = table.levels;
-      if (table.unresolved.length > 0) {
-        notComparable.push({
-          id,
-          prefix: `${axis}.levels`,
-          reason: `level table behind ${table.unresolved.join(' and ')}`,
-        });
-      }
-      out[axis] = progression;
-    }
-
-    const special = record.specialStrengthProgressions;
-    if (isObject(special)) {
-      const [key, value] = Object.entries(special)[0] ?? [];
-      if (key !== undefined) {
-        const progression: JsonObject = { key };
-        const table = isObject(value)
-          ? levelTable(chunks, value.baseByLevel, value.starByLevel)
-          : { unresolved: [] as string[] };
-        if (table.levels) progression.levels = table.levels;
-        if (table.unresolved.length > 0) {
-          notComparable.push({
-            id,
-            prefix: 'special.levels',
-            reason: `level table behind ${table.unresolved.join(' and ')}`,
-          });
-        }
-        out.special = progression;
-      }
-    }
-
-    const options = record.randomBonusOptions;
-    out.randomBonusOptions = Array.isArray(options)
-      ? options
-          .map((entry) => (isObject(entry) ? str(entry.id) : str(entry)))
-          .filter((entry): entry is string => entry !== undefined && !/AgainstPlayers$/.test(entry))
-      : [];
-    return out;
-  });
-  return { rows: rowsOut, notComparable };
-}
-
-export function normaliseTables(chunks: readonly Chunk[], raw: RawTables): Map<TableName, NormalisedTable> {
-  const out = new Map<TableName, NormalisedTable>();
-  const plain = (rowsOut: JsonObject[]): NormalisedTable => ({ rows: rowsOut, notComparable: [] });
-  if (raw.troops) out.set('troops.json', plain(raw.troops.map(normaliseTroop)));
-  if (raw.monsters) out.set('monsters.json', plain(raw.monsters.map(normaliseMonster)));
-  if (raw.mercenaries) out.set('mercenaries.json', plain(raw.mercenaries.map(normaliseMercenary)));
-  if (raw.captains) out.set('captains.json', plain(normaliseCaptains(raw.captains, raw.captainOrder)));
-  if (raw.equipment) out.set('equipment.json', plain(raw.equipment.map(normaliseEquipment)));
-  if (raw.artifacts) out.set('artifacts.json', normaliseArtifacts(chunks, raw.artifacts));
-  if (raw.titles) out.set('titles.json', plain(raw.titles.map(normaliseTitle)));
-  if (raw.temple) out.set('temple.json', plain([{ id: 'temple', multiplier: raw.temple }]));
+export function normaliseTables(raw: RawTables): Map<TableName, JsonObject[]> {
+  const out = new Map<TableName, JsonObject[]>();
+  if (raw.troops) out.set('troops.json', raw.troops.map(normaliseTroop));
+  if (raw.monsters) out.set('monsters.json', raw.monsters.map(normaliseMonster));
+  if (raw.mercenaries) out.set('mercenaries.json', raw.mercenaries.map(normaliseMercenary));
+  if (raw.captains) out.set('captains.json', normaliseCaptains(raw.captains, raw.captainOrder));
+  if (raw.equipment) out.set('equipment.json', raw.equipment.map(normaliseEquipment));
+  if (raw.titles) out.set('titles.json', raw.titles.map(normaliseTitle));
+  if (raw.temple) out.set('temple.json', [{ id: 'temple', multiplier: raw.temple }]);
   return out;
 }
 
@@ -1037,8 +908,6 @@ export interface TableDiff {
   added: string[];
   removed: string[];
   changed: FieldChange[];
-  /** Records whose `levels` (or other referenced sub-table) the bundle does not spell out in place. */
-  notComparable: { id: string; paths: string[] }[];
 }
 
 export interface CompareResult {
@@ -1082,18 +951,17 @@ function diffTable(
   file: TableName,
   how: string,
   ourRows: JsonObject[],
-  theirs: NormalisedTable | undefined,
+  theirs: JsonObject[] | undefined,
 ): TableDiff {
   const diff: TableDiff = {
     file,
     how,
     located: theirs !== undefined,
     ours: ourRows.length,
-    theirs: theirs?.rows.length ?? 0,
+    theirs: theirs?.length ?? 0,
     added: [],
     removed: [],
     changed: [],
-    notComparable: [],
   };
   if (!theirs) return diff;
 
@@ -1101,7 +969,7 @@ function diffTable(
   const byId = (list: JsonObject[]): Map<string, JsonObject> =>
     new Map(list.map((row) => [String(row.id ?? ''), row]));
   const ours = byId(ourRows);
-  const them = byId(theirs.rows);
+  const them = byId(theirs);
 
   for (const id of them.keys()) if (!ours.has(id)) diff.added.push(id);
   for (const id of ours.keys()) if (!them.has(id)) diff.removed.push(id);
@@ -1109,10 +977,6 @@ function diffTable(
   for (const [id, ourRow] of ours) {
     const theirRow = them.get(id);
     if (!theirRow) continue;
-    const skip = theirs.notComparable.filter((entry) => entry.id === id);
-    if (skip.length > 0) {
-      diff.notComparable.push({ id, paths: [...new Set(skip.map((entry) => entry.prefix))].sort() });
-    }
     const left = new Map<string, Json>();
     const right = new Map<string, Json>();
     flatten(ourRow, '', left);
@@ -1120,7 +984,6 @@ function diffTable(
     const paths = [...new Set([...left.keys(), ...right.keys()])].sort();
     for (const path of paths) {
       if (ignoredPaths.some((prefix) => covered(path, prefix))) continue;
-      if (skip.some((entry) => covered(path, entry.prefix))) continue;
       const a = left.get(path);
       const b = right.get(path);
       if (JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)) {
@@ -1169,7 +1032,7 @@ export async function compareChunks(
   options: { tablesDir?: string } = {},
 ): Promise<CompareResult> {
   const raw = locateTables(chunks);
-  const theirs = normaliseTables(chunks, raw);
+  const theirs = normaliseTables(raw);
   const ours = await readOurTables(options.tablesDir ?? TABLES_DIR);
 
   let dataVersion: number | undefined;
@@ -1189,7 +1052,7 @@ export async function compareChunks(
     chunks: chunks.map((chunk) => chunk.name),
     dataVersion,
     tables,
-    theirRows: new Map([...theirs].map(([file, table]) => [file, table.rows])),
+    theirRows: theirs,
     missing: tables.filter((table) => !table.located).map((table) => table.file),
     differences: tables.reduce(
       (total, table) => total + table.added.length + table.removed.length + table.changed.length,
@@ -1264,32 +1127,20 @@ export function renderReport(result: CompareResult): string {
     }
   }
 
-  const notes = result.tables
-    .filter((table) => table.notComparable.length > 0)
-    .map((table) => {
-      const ids = table.notComparable.map((entry) => `\`${entry.id}\``);
-      const paths = [...new Set(table.notComparable.flatMap((entry) => entry.paths))].sort();
-      const shown = ids.slice(0, 6).join(', ') + (ids.length > 6 ? ', …' : '');
-      return (
-        `- \`${table.file}\` — ${paths.map((path) => `\`${path}\``).join(', ')} not compared for ` +
-        `${ids.length} record${ids.length === 1 ? '' : 's'} (${shown}): the bundle keeps those tables in ` +
-        'shared variables this tool could not follow. Everything else in those records was compared.'
-      );
-    });
-  if (result.missing.length > 0 || notes.length > 0) {
-    lines.push('');
-    lines.push('### Not comparable');
-    lines.push('');
-    for (const file of result.missing) {
-      lines.push(
-        `- \`${file}\` — not found in the files given. Looked for ${HOW_WE_FIND_IT[file]}. Add the lazy chunk that holds it and run again.`,
-      );
-    }
-    for (const note of notes) lines.push(note);
+  lines.push('');
+  lines.push('### Not comparable');
+  lines.push('');
+  for (const file of result.missing) {
     lines.push(
-      '- `heroes.json`, `otherPills.json`, `events.json`, `vip.json`, `orders.json`, `version.json` — no content locator; verify these against the game.',
+      `- \`${file}\` — not found in the files given. Looked for ${HOW_WE_FIND_IT[file]}. Add the lazy chunk that holds it and run again.`,
     );
   }
+  lines.push(
+    '- `artifacts.json` — generated from the game’s own data (`pnpm data:artifacts`), which TotalStack cannot overrule.',
+  );
+  lines.push(
+    '- `heroes.json`, `otherPills.json`, `events.json`, `vip.json`, `orders.json`, `version.json` — no content locator; verify these against the game.',
+  );
   lines.push('');
   return lines.join('\n');
 }

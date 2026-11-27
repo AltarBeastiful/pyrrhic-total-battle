@@ -23,6 +23,7 @@
     "data:format": "node scripts/data-format.ts",
     "data:check": "node scripts/data-check.ts",
     "data:talents": "node scripts/talents-convert.ts",
+    "data:artifacts": "node scripts/artifacts-convert.ts",
     "data:compare": "node tools/totalstack-sync/compare.ts",
     "bench:baseline": "vitest run tests/engine/plan-benchmark.test.ts; node scripts/plan-baseline.ts",
     "bench:review": "node scripts/plan-baseline-review.ts",

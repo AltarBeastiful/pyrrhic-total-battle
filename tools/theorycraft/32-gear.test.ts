@@ -11,12 +11,10 @@
  * won in an event, an artifact is levelled with resources, a piece of equipment is forged and upgraded; the
  * numbers here say what each would be worth *if* it were on, nothing about how to get it.
  *
- * Two caveats the tables themselves impose:
+ * Two caveats:
  *   - Equipment is quoted at **godlike**, the top row of `byQuality`; every other quality is in the second
  *     table so a reader can find their own row.
- *   - Only **Heart of the Forest** has a level table in `artifacts.json`. Every other artifact resolves
- *     through `entry.manual`, i.e. the numbers the player types off their own sheet, so this report can
- *     only say which key it feeds, not how much.
+ *   - Artifacts are listed at the top of both their ladders; only **Heart of the Forest** joins the ranking.
  *
  * `THEORY=1 pnpm vitest run tools/theorycraft/32-gear.test.ts`
  */
@@ -215,34 +213,32 @@ describe.skipIf(!process.env.THEORY)('C3 gear', () => {
     }
 
     // Artifacts.
-    report.add('\n### Artifacts (`artifacts.json`, 15 entries)\n');
+    report.add(`\n### Artifacts (\`artifacts.json\`, ${String(artifactTable.length)} entries)\n`);
     report.add(
-      'Only Heart of the Forest carries a level table. The others resolve through `entry.manual` — the ' +
-        'numbers the player reads off their own artifact — so the table can say **which key** each feeds and ' +
-        'nothing about how much. The `random bonus` column is the extra roll the artifact can carry; its ' +
-        'value is also typed by the player.',
+      'Every artifact carries the game’s level and star tables; the column below is what each gives at the ' +
+        'top of both ladders (L60 ★5.0). The `random bonus` column names the options the artifact ' +
+        'can roll, one per whole star.',
     );
     report.add('');
-    report.add('| artifact | keys | level table? | random bonus options |');
-    report.add('|---|---|---|---|');
+    report.add('| artifact | at L60 ★5.0 | random bonus options |');
+    report.add('|---|---|---|');
     for (const record of artifactTable) {
-      const keys = [
-        record.health ? `${record.health.key} health` : '',
-        record.strength ? `${record.strength.key} strength` : '',
-        record.special ? String(record.special.key) : '',
-      ]
-        .filter(Boolean)
-        .join(', ');
-      const hasLevels = Boolean(record.health?.levels ?? record.strength?.levels ?? record.special?.levels);
+      const source = resolveOne(
+        profile,
+        setup,
+        {
+          profile: { artifacts: [{ id: 'probe', artifactId: record.id, level: 60, star: '5.0' }] },
+          active: { artifacts: ['probe'] },
+        },
+        ['artifact'],
+      );
       report.add(
-        `| ${record.name} | ${keys || '—'} | ${hasLevels ? '**yes**' : 'no (manual)'} | ${(record.randomBonusOptions ?? []).join(', ') || '—'} |`,
+        `| ${record.name} | ${describeSource(source)} | ${record.randomOptions.map((option) => option.id).join(', ') || '—'} |`,
       );
     }
 
-    // Heart of the Forest, the one artifact we can actually price.
-    report.add(
-      '\n**Heart of the Forest, priced from its own table** (`base[level] + star[star]`, army strength):\n',
-    );
+    // Heart of the Forest down its ladders.
+    report.add('\n**Heart of the Forest, from its own table** (level row + star row, army strength):\n');
     report.add('| level ★star | army strength | Δ avg 8 types | Δ avg winner |');
     report.add('|---|---|---|---|');
     for (const [level, star] of [
@@ -355,10 +351,8 @@ describe.skipIf(!process.env.THEORY)('C3 gear', () => {
         `is worth avg / 100 — ${n(Math.round((baseAvg.winner ?? 0) / 100))} on the winner march — so ` +
         'Battlemaster’s 5 points are worth about another ' +
         `${n(Math.round((5 * (baseAvg.winner ?? 0)) / 100))} of expected damage on top of its row.\n` +
-        '- **Artifacts cannot be ranked from the tables.** Fourteen of the fifteen have no level table, so ' +
-        'their contribution is whatever the player types. The one that can be priced, Heart of the Forest, ' +
-        'reaches +720 army strength at L60 ★5.0 and is then the largest single strength source anywhere in ' +
-        'the data, larger than any captain star.\n' +
+        '- **Only Heart of the Forest is ranked here.** It reaches +720 army strength at L60 ★5.0 and is ' +
+        'then the largest single plain strength source in the data, larger than any captain star.\n' +
         '- Again: **obtainability is a game question.** This report prices, it does not advise.',
     );
 

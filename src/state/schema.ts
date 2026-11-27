@@ -17,13 +17,22 @@
  */
 import { z } from 'zod';
 
-import { BONUS_KEYS, CATEGORIES, GROUPS, MARCH_TYPES, QUALITIES, RACES, SPECIAL_KEYS } from '../data/types';
+import {
+  ARTIFACT_RARITIES,
+  BONUS_KEYS,
+  CATEGORIES,
+  GROUPS,
+  MARCH_TYPES,
+  QUALITIES,
+  RACES,
+  SPECIAL_KEYS,
+} from '../data/types';
 import type { BonusMap, Category, SpecialMap } from '../data/types';
 import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 26;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -172,20 +181,24 @@ export const equipmentEntrySchema = z.object({
     .optional(),
 });
 
-/** `star` is the in-game star notation ("0.1".."5.0"), kept as a string like the data tables. */
+/** The game rolls one random bonus per whole star, so an artifact has five lines at most (B-42). */
+export const ARTIFACT_LINES = 5;
+
+/** One rolled bonus: the option and which of its three values. The figure itself is the table's. */
+export const artifactRollSchema = z.object({ option: nonEmpty, rarity: z.enum(ARTIFACT_RARITIES) });
+
+/**
+ * What the player says of one artifact: its level, its star and the random bonuses the game rolled. The
+ * figures are the game table's (B-39, B-42). `star` is the in-game star notation ("0.1".."5.0"), a string like
+ * the data tables' keys. `lines[k - 1]` is line k, `null` while it is empty; it counts from star k.0, and a
+ * lower star keeps it unread. No `lines` means none is recorded.
+ */
 export const artifactEntrySchema = z.object({
   id: nonEmpty,
   artifactId: nonEmpty,
-  level: z.int().min(0),
+  level: z.int().min(1),
   star: z.string(),
-  manual: z
-    .object({
-      health: bonusMapSchema.optional(),
-      strength: bonusMapSchema.optional(),
-      special: specialMapSchema.optional(),
-    })
-    .optional(),
-  random: z.object({ option: z.string(), value: z.number() }).optional(),
+  lines: z.array(artifactRollSchema.nullable()).max(ARTIFACT_LINES).optional(),
 });
 
 export const customSourceSchema = z.object({
@@ -217,6 +230,9 @@ export const sourcesSchema = z.object({
   custom: z.array(customSourceSchema),
 });
 export type ProfileSources = z.infer<typeof sourcesSchema>;
+export type ArtifactRoll = z.infer<typeof artifactRollSchema>;
+/** One random line of an artifact: a rolled bonus, or `null` while it is empty. */
+export type ArtifactLine = ArtifactRoll | null;
 
 // ---- Recovery / housing / enemy / method ----------------------------------------------------------
 export const RECOVERY_MODES = ['retrain', 'revive', 'selective'] as const satisfies readonly RecoveryMode[];
@@ -525,6 +541,33 @@ export const arenaSetupSchema = battleSetupSchema.extend({
   }),
 });
 
+/** The most the other capacity bonus % may be typed as. */
+export const MAX_OTHER_CAPACITY = 1000;
+
+/**
+ * What the arena's pools were last filled from (schema v24, B-43): the squad captains with their level, and the other
+ * capacity bonus %. While today's inputs read the same, what the player typed over the pools stays.
+ */
+export const arenaCapacityBasisSchema = z.object({
+  captains: z.array(z.object({ captainId: nonEmpty, level: z.int().min(0) })),
+  /**
+   * Each squad artifact that raises capacity (Zeus' Lightning; schema v26, B-44): its level, its star and the open
+   * random lines that raise capacity. Absent while none is aboard.
+   */
+  artifacts: z
+    .array(
+      z.object({
+        artifactId: nonEmpty,
+        level: z.int().min(1),
+        star: z.string(),
+        lines: z.array(artifactRollSchema),
+      }),
+    )
+    .optional(),
+  other: z.number().min(0),
+});
+export type ArenaCapacityBasis = z.infer<typeof arenaCapacityBasisSchema>;
+
 export const primeArenaSchema = z.object({
   toggles: z.record(z.string(), z.boolean()).catch({}),
   setup: arenaSetupSchema,
@@ -533,6 +576,10 @@ export const primeArenaSchema = z.object({
   role: z.enum(['attacker', 'defender']).catch('attacker'),
   /** Most stacks in the squad (schema v21); the real limit is unknown, 8 is the planner's default. */
   maxStacks: z.number().int().min(1).max(MAX_ARENA_STACKS).catch(DEFAULT_ARENA_STACKS),
+  /** Capacity bonus % the app has no source for (schema v24), added to the captains' Leadership and Dominance. */
+  otherCapacity: z.number().min(0).max(MAX_OTHER_CAPACITY).catch(0),
+  /** `null` until the page first reads this arena: the saved pools stay as typed, unless both are zero. */
+  capacityBasis: arenaCapacityBasisSchema.nullable().catch(null),
 });
 export type PrimeArenaSaved = z.infer<typeof primeArenaSchema>;
 

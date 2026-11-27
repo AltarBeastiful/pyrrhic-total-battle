@@ -174,19 +174,46 @@ export interface EquipmentRecord {
   byQuality: Partial<Record<Quality, BonusContribution>>;
 }
 
-/** Level → percent tables; `star` keys are the in-game star notation "0.1".."5.0". */
-export interface LevelTable {
-  base?: Record<string, number>; // "1".."60"
-  star?: Record<string, number>;
+/**
+ * What one row of an artifact (a level, or a star step) gives, in the game's own values (B-39). Empty when
+ * the app carries none of the row's effects.
+ */
+export interface ArtifactRow extends Pick<BonusContribution, 'health' | 'strength' | 'special'> {
+  /** Bonuses the game gives against other players only: they count in Prime Arena and nowhere else (B-41). */
+  againstPlayers?: Pick<BonusContribution, 'health' | 'strength'>;
+  /** Percent added to what the squad can lead. No total of a march: it raises the Prime Arena maximum (B-44). */
+  capacity?: ArtifactCapacity;
 }
+
+/** The capacity pools an artifact can raise, in percent. */
+export type ArtifactCapacity = Partial<Record<'leadership' | 'dominance', number>>;
+
+/** The three values the game can roll for a random bonus, the smallest first (B-42). */
+export const ARTIFACT_RARITIES = ['rare', 'epic', 'legendary'] as const;
+export type ArtifactRarity = (typeof ARTIFACT_RARITIES)[number];
+
+/** What one rolled random bonus gives: a row, plus the kinds only a random bonus carries so far. */
+export interface ArtifactOptionValue extends ArtifactRow {
+  /** Figures the app never counts, kept so the option can be shown. */
+  unused?: Partial<Record<'authority' | 'marchSpeed', number>>;
+}
+
+export interface ArtifactRandomOption {
+  /** What saved profiles store, e.g. "armyHealth" or "armyStrengthAgainstPlayers". */
+  id: string;
+  values: Record<ArtifactRarity, ArtifactOptionValue>;
+}
+
+/** Built from the game export by `scripts/artifacts-convert.ts`; never edited by hand. */
 export interface ArtifactRecord {
   id: string;
   name: string;
-  /** Which key each progression feeds; the value comes from `levels` or is typed by the user when unknown. */
-  health?: { key: BonusKey; levels?: LevelTable };
-  strength?: { key: BonusKey; levels?: LevelTable };
-  special?: { key: SpecialKey; levels?: LevelTable };
-  randomBonusOptions: string[]; // option ids the random bonus can take, e.g. "armyHealth"
+  /** Keys "1".."60". An artifact's total is its level row plus its star row. */
+  levels: Record<string, ArtifactRow>;
+  /** Keys "0.1".."5.0", the in-game star notation. The two rows may feed different stats. */
+  stars: Record<string, ArtifactRow>;
+  /** The random bonuses this artifact can roll; the game rolls one per whole star (B-42). */
+  randomOptions: ArtifactRandomOption[];
 }
 
 export interface TitleRecord {
@@ -223,6 +250,19 @@ export interface EventRecord {
 export interface VipRecord {
   level: number;
   bonus: BonusContribution;
+}
+
+/** Leadership, authority and dominance at each level, 1 to 600: index = level − 1. */
+export interface CapacityLadder {
+  leadership: number[];
+  authority: number[];
+  dominance: number[];
+}
+
+/** What a captain (every captain holds the same figures) and the hero can lead at each level (B-43). */
+export interface CapacityTable {
+  captain: CapacityLadder;
+  hero: CapacityLadder;
 }
 
 export interface TempleTable {

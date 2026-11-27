@@ -43,6 +43,8 @@ test('inputs saved in a profile fill the store when that document arrives', () =
     seeded: true,
     role: 'defender',
     maxStacks: 5,
+    otherCapacity: 25,
+    capacityBasis: { captains: [], other: 25 },
   };
   root.profiles = [profile];
   root.activeProfileId = profile.id;
@@ -50,6 +52,8 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   const { setup, toggles, seeded, role, maxStacks } = usePrimeArenaStore.getState();
   expect(role).toBe('defender');
   expect(maxStacks).toBe(5);
+  expect(usePrimeArenaStore.getState().otherCapacity).toBe(25);
+  expect(usePrimeArenaStore.getState().capacityBasis).toEqual({ captains: [], other: 25 });
   expect(setup.active).toMatchObject({ captains: ['a', 'b'], equipment: ['e'], dragon: false });
   expect(setup.housing).toMatchObject({ leadership: 700, dominance: 300 });
   // a switch an older build saved for a source that no longer exists is dropped

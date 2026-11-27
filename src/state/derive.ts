@@ -10,9 +10,8 @@
  * here divides by 100.
  *
  * Assumptions taken (see the story report):
- * - Artifact contribution = `levels.base[level] + levels.star[star]` (TotalStack shows the two tables side
- *   by side and the in-game sheet shows one number, so we read them as additive). Artifacts without a level
- *   table fall back to the `manual` values typed by the player.
+ * - Artifact contribution = the level row plus the star row of the game's table (B-39): the in-game sheet
+ *   shows one number, so we read the two as additive. The rows may feed different stats.
  * - VIP falls back to `sources.vipManual` whenever the table has no row for the level or the row is all
  *   zeroes (today `vip.json` is a placeholder: every level is 0).
  * - Conditional sources (Svyatogor "alone only", Amanitore "group marches only", Hercules "epic monsters
@@ -36,7 +35,9 @@ import {
 import { CAMPAIGN } from '../config';
 import { BONUS_KEYS, CATEGORIES, SPECIAL_KEYS } from '../data/types';
 import type {
+  ArtifactCapacity,
   ArtifactRecord,
+  ArtifactRow,
   BonusContribution,
   BonusKey,
   CaptainProgression,
@@ -64,7 +65,16 @@ import type {
   StackingOptions,
   StackRequest,
 } from '../engine/types';
-import type { BattleSetup, Profile, ProfileTroops, SetupMarchType, SetupMethod } from './schema';
+import { ARTIFACT_LINES } from './schema';
+import type {
+  ArtifactRoll,
+  BattleSetup,
+  Profile,
+  ProfileSources,
+  ProfileTroops,
+  SetupMarchType,
+  SetupMethod,
+} from './schema';
 
 // ---- Tables ---------------------------------------------------------------------------------------
 /** The game tables the derive layer reads. Injectable so tests can pin values without touching `src/data`. */
@@ -210,59 +220,54 @@ const MARCH_TYPE_PHRASES: Record<Exclude<SetupMarchType, 'unspecified'>, string>
 };
 
 // ---- Artifacts -------------------------------------------------------------------------------------
-/** Prefix of a random-bonus option id → the bonus key it feeds (`guardsmanStrength` → `guardsmen`). */
-const RANDOM_OPTION_KEYS: Record<string, BonusKey> = {
-  army: 'army',
-  guardsman: 'guardsmen',
-  specialist: 'specialist',
-  engineer: 'engineers',
-  monster: 'monster',
-  melee: 'melee',
-  ranged: 'ranged',
-  mounted: 'mounted',
-  flying: 'flying',
-};
+type ArtifactEntry = ProfileSources['artifacts'][number];
 
-/** Random-bonus options that are special-strength keys rather than `<key><Health|Strength>` pairs. */
-const RANDOM_OPTION_SPECIALS: Record<string, SpecialKey> = {
-  doubleDamageChance: 'doubleDamageChance',
-  armyStrengthAgainstEpicMonsters: 'armyStrengthAgainstEpicMonsters',
-};
+/** What of a saved artifact its figures come from. */
+export type ArtifactState = Pick<ArtifactEntry, 'level' | 'star' | 'lines'>;
 
-/** Applies an artifact random bonus; returns false when the option id is not one we understand. */
-function addRandomBonus(target: Draft, option: string, value: number): boolean {
-  const special = RANDOM_OPTION_SPECIALS[option];
-  if (special !== undefined) {
-    addKey(target.special, special, value);
-    return true;
-  }
-  for (const [prefix, key] of Object.entries(RANDOM_OPTION_KEYS)) {
-    if (!option.startsWith(prefix)) continue;
-    const suffix = option.slice(prefix.length);
-    if (suffix === 'Health') addKey(target.health, key, value);
-    else if (suffix === 'Strength') addKey(target.strength, key, value);
-    else if (suffix === 'StrengthAndHealth') {
-      addKey(target.health, key, value);
-      addKey(target.strength, key, value);
-    } else continue;
-    return true;
-  }
-  return false;
+/** The random lines a star has opened: one per whole star reached, so line k counts from star k.0 (B-42). */
+export const artifactLineCount = (star: string): number => Math.min(ARTIFACT_LINES, Math.floor(Number(star)));
+
+/** The random bonuses that count at this star: the lines it has opened, the empty ones left out. */
+export function openRolls({ star, lines = [] }: Pick<ArtifactEntry, 'star' | 'lines'>): ArtifactRoll[] {
+  return lines.slice(0, artifactLineCount(star)).filter((line) => line !== null);
 }
 
-/** `levels.base[level] + levels.star[star]`, or 0 when the artifact carries no table (see the header). */
-function artifactLevelValue(
-  progression: { levels?: { base?: Record<string, number>; star?: Record<string, number> } } | undefined,
-  level: number,
-  star: string,
-): number {
-  const levels = progression?.levels;
-  if (!levels) return 0;
-  return (levels.base?.[String(level)] ?? 0) + (levels.star?.[star] ?? 0);
+/** What an artifact's figures add up from: its level row, its star row and the random lines its star has opened. */
+function artifactRows(record: ArtifactRecord, entry: ArtifactState): (ArtifactRow | undefined)[] {
+  const rolled = openRolls(entry).map((roll) => byId(record.randomOptions, roll.option)?.values[roll.rarity]);
+  return [record.levels[String(entry.level)], record.stars[entry.star], ...rolled];
 }
 
-const hasLevelTable = (record: ArtifactRecord | undefined): boolean =>
-  Boolean(record?.health?.levels ?? record?.strength?.levels ?? record?.special?.levels);
+/**
+ * What an artifact gives as the player has it, on this kind of march: its level row, its star row and the
+ * random lines its star has opened, each read from the game's table (B-39, B-42). What any of them gives
+ * against other players is added in the Prime Arena only, in the same additive bracket (B-41). Capacity,
+ * authority and march speed are no total (capacity: `artifactCapacity`), and an option the artifact cannot
+ * roll gives nothing.
+ */
+export function artifactBonus(
+  record: ArtifactRecord,
+  entry: ArtifactState,
+  marchType: SetupMarchType,
+): Pick<ArtifactRow, 'health' | 'strength' | 'special'> {
+  const value = draft();
+  for (const row of artifactRows(record, entry)) {
+    addContribution(value, row);
+    if (marchType === 'arena') addContribution(value, row?.againstPlayers);
+  }
+  return { health: value.health, strength: value.strength, special: value.special };
+}
+
+/**
+ * The percent an artifact adds to what a squad can lead, per pool (B-44): the same rows and open lines. It
+ * counts in the Prime Arena maximum only (`arenaMaximum`), never in a march's housing.
+ */
+export function artifactCapacity(record: ArtifactRecord, entry: ArtifactState): ArtifactCapacity {
+  const value: ArtifactCapacity = {};
+  for (const row of artifactRows(record, entry)) addInto(value, row?.capacity);
+  return value;
+}
 
 // ---- VIP -------------------------------------------------------------------------------------------
 const contributionIsZero = (bonus: BonusContribution): boolean =>
@@ -336,37 +341,14 @@ export function resolveSources(
     out.push(toSource(id, `${name} (${titleCase(entry.quality)})`, 'equipment', value));
   }
 
-  // Artifacts (up to 3): level tables when we have them, hand-typed values when we do not, plus the random bonus.
+  // Artifacts: what the table gives at this level and star, and on the random lines.
   for (const entry of activeEntries(sources.artifacts, active.artifacts)) {
     const record = byId(tables.artifacts, entry.artifactId);
     const value = draft();
-    if (hasLevelTable(record)) {
-      if (record?.health) {
-        addKey(value.health, record.health.key, artifactLevelValue(record.health, entry.level, entry.star));
-      }
-      if (record?.strength) {
-        addKey(
-          value.strength,
-          record.strength.key,
-          artifactLevelValue(record.strength, entry.level, entry.star),
-        );
-      }
-      if (record?.special) {
-        addKey(
-          value.special,
-          record.special.key,
-          artifactLevelValue(record.special, entry.level, entry.star),
-        );
-      }
-    } else {
-      addInto(value.health, entry.manual?.health);
-      addInto(value.strength, entry.manual?.strength);
-      addInto(value.special, entry.manual?.special);
-    }
-    if (entry.random) addRandomBonus(value, entry.random.option, entry.random.value);
+    if (record) addContribution(value, artifactBonus(record, entry, setup.marchType));
     const name = record?.name ?? entry.artifactId;
     const id = nextId(`artifact:${entry.artifactId}`, entry.id);
-    out.push(toSource(id, `${name} L${entry.level} ★${entry.star || '0'}`, 'artifact', value));
+    out.push(toSource(id, `${name} L${entry.level} ★${entry.star}`, 'artifact', value));
   }
 
   // Titles: `active.titles` holds title ids straight from `titles.json`.
@@ -461,13 +443,6 @@ export function sourceCaveats(
       notes.push(`${record.name}: ${record.note}`);
     } else if (!captainCounts(record, marchType)) {
       notes.push(`${record.name} is not counted on ${MARCH_TYPE_PHRASES[marchType]}. ${record.note}`);
-    }
-  }
-
-  for (const entry of activeEntries(sources.artifacts, setup.active.artifacts)) {
-    const record = byId(tables.artifacts, entry.artifactId);
-    if (!hasLevelTable(record)) {
-      notes.push(`${record?.name ?? entry.artifactId}: no level table yet — the values you typed are used.`);
     }
   }
 

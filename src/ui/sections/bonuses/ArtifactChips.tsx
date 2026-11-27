@@ -1,36 +1,178 @@
 /**
- * The artifacts, in the same chips the captains use (design plan §7.3, D-34): all fifteen on screen,
+ * The artifacts, in the same chips the captains use (design plan §7.3, D-34): all sixteen on screen,
  * "0/3" beside the heading, a gear on every one of them, three at a time and the fourth refused.
  *
- * The gear opens an anchored popover holding the level and the star rating the artifact's card
- * shows. Only one artifact's level curve has been measured so far, so the rest also carry the two
- * percentages read straight off the card, and the bonus the artifact rolled sits behind a fold —
- * it is one option out of forty and it belongs next to the option it was rolled on.
+ * The gear opens an anchored popover holding what the artifact's card shows in game: its level, its star
+ * rating and the random bonuses it rolled, one line per whole star reached. The figures are all the game's
+ * (B-39, B-42), so the player picks and types no percentage.
  */
-import { Divider, Group, Select, Stack, Text } from '@mantine/core';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ActionIcon, Box, Divider, Group, SegmentedControl, Select, Stack, Text } from '@mantine/core';
+import { Check, Minus, Plus } from 'lucide-react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { BonusKey } from '@/data/types';
+import { ARTIFACT_RARITIES } from '@/data/types';
+import type { ArtifactRandomOption, ArtifactRarity } from '@/data/types';
 import { updateSources } from '@/state/actions/bonuses';
-import type { ProfileSources } from '@/state/schema';
+import { artifactLineCount } from '@/state/derive';
+import type { ArtifactLine, ProfileSources, SetupMarchType } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { BONUS_KEY_GLYPHS, Glyph } from '@/ui/domain';
-import { Disclosure, NumberField, useRovingTabs } from '@/ui/kit';
+import { NumberField, useRovingTabs } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import type { ArtifactChipRow } from './chips';
-import { BONUS_LABELS, humanizeOption, rowValue, SPECIAL_LABELS } from './labels';
-import { artifactHasLevels, artifactRecord, artifactWorth, starKeys } from './rows';
+import { formatPercent, humanizeOption, optionFigure, RARITY_LABELS, rowLines } from './labels';
+import { artifactRecord, artifactUncountedLines, artifactWorth, optionNote } from './rows';
+import { useBoundMarchType } from './SetupBindingContext';
 import { SourceChip } from './SourceChip';
-import { singleKey } from './values';
 
 /** What the card says when a fourth artifact is tapped. */
 export const ARTIFACT_CAP_MESSAGE = 'Three artifacts at most. Take one out first.';
 
 type ArtifactEntry = ProfileSources['artifacts'][number];
 
+/**
+ * A field between its − and its + (B-40, design rule 10: sixty levels, twenty-five star steps). A press moves
+ * one place along the table's ladder. At an end the button is marked off with `data-disabled`, not `disabled`:
+ * a natively disabled button drops a keyboard player's focus to the page, out of the editor.
+ */
+function Stepped<T>({
+  what,
+  ladder,
+  value,
+  onStep,
+  children,
+}: {
+  /** What the buttons move, as their names say it: "level", "star rating". */
+  what: string;
+  /** Every value the field may take, lowest first. */
+  ladder: readonly T[];
+  value: T;
+  onStep: (next: T) => void;
+  children: ReactNode;
+}) {
+  const at = ladder.indexOf(value);
+  const end = (verb: string, next: T | undefined, Icon: typeof Plus) => (
+    <ActionIcon
+      variant="default"
+      size={36}
+      aria-label={`${verb} ${what}`}
+      {...(next === undefined ? { 'data-disabled': true, 'aria-disabled': true } : {})}
+      onClick={() => {
+        if (next !== undefined) onStep(next);
+      }}
+    >
+      <Icon size={16} aria-hidden />
+    </ActionIcon>
+  );
+  return (
+    <Group gap="xs" align="flex-end" wrap="nowrap">
+      {end('Lower', ladder[at - 1], Minus)}
+      <Box flex={1} miw={0}>
+        {children}
+      </Box>
+      {end('Raise', ladder[at + 1], Plus)}
+    </Group>
+  );
+}
+
+/** `entry` with line `index` set. The other lines stay, those the star hides too. */
+function withLine(entry: ArtifactEntry, index: number, next: ArtifactLine): ArtifactEntry {
+  const { lines = [], ...rest } = entry;
+  const written = Array.from({ length: Math.max(lines.length, index + 1) }, (_, at) =>
+    at === index ? next : (lines[at] ?? null),
+  );
+  while (written.at(-1) === null) written.pop();
+  return written.length === 0 ? rest : { ...rest, lines: written };
+}
+
+/**
+ * One random bonus: which of the artifact's options it rolled, then which of that option's three values. An
+ * option that moves no total on this page stays selectable and says so (B-42).
+ */
+function RandomLine({
+  number,
+  options,
+  line,
+  marchType,
+  onChange,
+}: {
+  number: number;
+  options: readonly ArtifactRandomOption[];
+  line: ArtifactLine;
+  marchType: SetupMarchType;
+  onChange: (next: ArtifactLine) => void;
+}) {
+  const name = `Random bonus ${String(number)}`;
+  const picked = options.find((option) => option.id === line?.option);
+  const note = picked === undefined ? null : optionNote(picked, marchType).note;
+  const notCounted = new Set(
+    options.filter((option) => !optionNote(option, marchType).counted).map((option) => option.id),
+  );
+
+  return (
+    <Stack gap={4}>
+      <Select
+        aria-label={name}
+        // Under the field, and read with it: a long option is cut off inside, so the note names its kind.
+        description={note}
+        inputWrapperOrder={['input', 'description']}
+        data={[
+          { value: '', label: 'Empty' },
+          ...options.map((option) => ({ value: option.id, label: humanizeOption(option.id) })),
+        ]}
+        value={picked?.id ?? ''}
+        allowDeselect={false}
+        comboboxProps={{ withinPortal: false }}
+        renderOption={({ option, checked }) => (
+          <Group gap="xs" wrap="nowrap" justify="space-between" w="100%">
+            <Stack gap={0}>
+              <span>{option.label}</span>
+              {notCounted.has(option.value) && (
+                <Text size="xs" c="dimmed">
+                  Not counted
+                </Text>
+              )}
+            </Stack>
+            {checked === true && <Check size={14} aria-hidden />}
+          </Group>
+        )}
+        onChange={(next) => {
+          // A new line starts on the smallest value, the bottom of the ladder; a change of option keeps it.
+          onChange(next === null || next === '' ? null : { option: next, rarity: line?.rarity ?? 'rare' });
+        }}
+      />
+      {picked !== undefined && line !== null && (
+        <SegmentedControl
+          fullWidth
+          aria-label={`${name} value`}
+          data={ARTIFACT_RARITIES.map((rarity) => ({
+            value: rarity,
+            label: (
+              <>
+                <Text span size="sm" display="block">
+                  {formatPercent(optionFigure(picked.values[rarity]))}
+                </Text>
+                <Text span size="xs" c="dimmed" display="block">
+                  {RARITY_LABELS[rarity]}
+                </Text>
+              </>
+            ),
+          }))}
+          value={line.rarity}
+          onChange={(next) => {
+            onChange({ option: picked.id, rarity: next as ArtifactRarity });
+          }}
+        />
+      )}
+    </Stack>
+  );
+}
+
 function ArtifactEditor({ artifactId }: { artifactId: string }) {
   const profile = useStore(selectActiveProfile);
+  const marchType = useBoundMarchType();
+  // The level field wiped to be retyped: nothing is saved until it holds a figure again.
+  const [levelEmptied, setLevelEmptied] = useState(false);
   if (profile === undefined) return null;
 
   const record = artifactRecord(artifactId);
@@ -44,113 +186,105 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
     }));
   };
 
-  const manualField = (bucket: 'health' | 'strength', key: BonusKey) => (
-    <NumberField
-      key={`${bucket}-${key}`}
-      label={`${BONUS_LABELS[key]} ${bucket}`}
-      leftSection={<Glyph kind={BONUS_KEY_GLYPHS[key]} />}
-      allowEmpty
-      allowDecimal
-      value={entry.manual?.[bucket]?.[key] ?? null}
-      onChange={(next) => {
-        patch((current) => ({ ...current, manual: { ...current.manual, [bucket]: singleKey(key, next) } }));
-      }}
-    />
-  );
-
-  const worth = rowValue(artifactWorth(record, entry));
-  const specialKey = record?.special?.key;
+  // The table's own ladders: levels from 1, star steps from 0.1.
+  const levels = Object.keys(record?.levels ?? {}).map(Number);
+  const topLevel = levels.length;
+  const starSteps = Object.keys(record?.stars ?? {});
+  const lineCount = artifactLineCount(entry.star);
+  const worth = [
+    ...rowLines(artifactWorth(record, entry, marchType)),
+    ...artifactUncountedLines(record, entry, marchType),
+  ];
 
   return (
     <Stack gap="xs" w={240}>
       <Text size="sm" fw={600}>
         {record?.name ?? artifactId}
       </Text>
-      <NumberField
-        label="Level"
+      <Stepped
+        what="level"
+        ladder={levels}
         value={entry.level}
-        min={0}
-        max={60}
-        onChange={(next) => {
-          patch((current) => ({ ...current, level: next ?? 0 }));
+        onStep={(level) => {
+          patch((current) => ({ ...current, level }));
         }}
-      />
-      <Select
-        label="Star rating"
-        size="xs"
-        data={starKeys(record).map((star) => ({ value: star, label: `★ ${star}` }))}
+      >
+        <NumberField
+          label="Level"
+          value={levelEmptied ? null : entry.level}
+          min={1}
+          max={topLevel}
+          allowEmpty
+          onChange={(next) => {
+            setLevelEmptied(next === null);
+            if (next === null) return;
+            // The field reports what is typed before it clamps; the saved level never leaves the ladder.
+            const level = Math.min(topLevel, Math.max(1, next));
+            patch((current) => ({ ...current, level }));
+          }}
+          onBlur={() => {
+            setLevelEmptied(false);
+          }}
+        />
+      </Stepped>
+      <Stepped
+        what="star rating"
+        ladder={starSteps}
         value={entry.star}
-        allowDeselect={false}
-        comboboxProps={{ withinPortal: false }}
-        onChange={(next) => {
-          patch((current) => ({ ...current, star: next ?? '0.0' }));
+        onStep={(star) => {
+          patch((current) => ({ ...current, star }));
         }}
-      />
-      {!artifactHasLevels(record) && (
-        <>
-          {record?.health && manualField('health', record.health.key)}
-          {record?.strength && manualField('strength', record.strength.key)}
-          {specialKey !== undefined && (
-            <NumberField
-              label={SPECIAL_LABELS[specialKey]}
-              allowEmpty
-              allowDecimal
-              value={entry.manual?.special?.[specialKey] ?? null}
+      >
+        <Select
+          label="Star rating"
+          data={starSteps.map((star) => ({ value: star, label: `★ ${star}` }))}
+          value={entry.star}
+          allowDeselect={false}
+          comboboxProps={{ withinPortal: false }}
+          onChange={(next) => {
+            if (next !== null) patch((current) => ({ ...current, star: next }));
+          }}
+        />
+      </Stepped>
+      <Divider />
+      {lineCount === 0 ? (
+        <Text size="xs" c="dimmed">
+          Random bonus lines open from star 1.0.
+        </Text>
+      ) : (
+        // Wider apart than the two controls of one line, so each line reads as one.
+        <Stack gap="md">
+          <Text size="sm" fw={500}>
+            Random bonuses
+          </Text>
+          {Array.from({ length: lineCount }, (_, index) => (
+            <RandomLine
+              key={index}
+              number={index + 1}
+              options={record?.randomOptions ?? []}
+              line={entry.lines?.[index] ?? null}
+              marchType={marchType}
               onChange={(next) => {
-                patch((current) => ({
-                  ...current,
-                  manual: { ...current.manual, special: singleKey(specialKey, next) },
-                }));
+                patch((current) => withLine(current, index, next));
               }}
             />
-          )}
-        </>
-      )}
-      <Disclosure title="Random bonus" summary={entry.random === undefined ? 'none' : 'set'}>
-        <Stack gap="xs">
-          <Select
-            label="Rolled on"
-            size="xs"
-            data={[
-              { value: '', label: 'None' },
-              ...(record?.randomBonusOptions ?? []).map((option) => ({
-                value: option,
-                label: humanizeOption(option),
-              })),
-            ]}
-            value={entry.random?.option ?? ''}
-            allowDeselect={false}
-            comboboxProps={{ withinPortal: false }}
-            onChange={(next) => {
-              patch((current) => {
-                if ((next ?? '') === '') {
-                  const { random: _dropped, ...rest } = current;
-                  return rest;
-                }
-                return { ...current, random: { option: next ?? '', value: current.random?.value ?? 0 } };
-              });
-            }}
-          />
-          <NumberField
-            label="Random bonus"
-            allowEmpty
-            allowDecimal
-            disabled={entry.random === undefined}
-            value={entry.random?.value ?? null}
-            onChange={(next) => {
-              patch((current) =>
-                current.random === undefined
-                  ? current
-                  : { ...current, random: { ...current.random, value: next ?? 0 } },
-              );
-            }}
-          />
+          ))}
         </Stack>
-      </Disclosure>
+      )}
       <Divider />
-      <Text size="xs" c="dimmed">
-        {worth === '' ? 'Nothing recorded yet.' : worth}
-      </Text>
+      {worth.length === 0 ? (
+        <Text size="xs" c="dimmed">
+          Nothing recorded yet.
+        </Text>
+      ) : (
+        <Stack gap={0}>
+          {worth.map((line) => (
+            <Text key={line} size="xs" c="dimmed">
+              {line}
+            </Text>
+          ))}
+        </Stack>
+      )}
     </Stack>
   );
 }

@@ -29,20 +29,26 @@ import {
 } from '@/data';
 import { QUALITIES } from '@/data/types';
 import type {
+  ArtifactRandomOption,
   ArtifactRecord,
   BonusKey,
   CaptainRecord,
   EquipmentRecord,
-  LevelTable,
   Quality,
 } from '@/data/types';
 import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
-import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
-import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
+import {
+  artifactBonus,
+  artifactCapacity,
+  captainValue,
+  resolveSources,
+  vipNeedsManual,
+} from '@/state/derive';
+import type { BattleSetup, Profile, ProfileSources, SetupMarchType } from '@/state/schema';
 
-import { describeContribution, FALLBACK_STAR_KEYS, isEmptyBonus, mergeBonus, rowValue } from './labels';
+import { describeContribution, isEmptyBonus, mergeBonus, rowLines, rowValue } from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -149,42 +155,60 @@ export function equipmentWorth(record: EquipmentRecord | undefined, entry: Equip
   return mergeBonus(record?.byQuality[entry.quality] ?? {}, entry.extra ?? {});
 }
 
-export const artifactHasLevels = (record: ArtifactRecord | undefined): boolean =>
-  (record?.health?.levels ?? record?.strength?.levels ?? record?.special?.levels) !== undefined;
-
-const levelValue = (levels: LevelTable | undefined, level: number, star: string): number =>
-  levels === undefined ? 0 : (levels.base?.[String(level)] ?? 0) + (levels.star?.[star] ?? 0);
+/**
+ * What an artifact is worth as the player has it on this kind of march, from the game's table: its level, its
+ * star and the random lines the star has opened. In the Prime Arena, what it adds to the capacity too (B-44).
+ */
+export function artifactWorth(
+  record: ArtifactRecord | undefined,
+  entry: ArtifactEntry,
+  marchType: SetupMarchType,
+): BonusLike {
+  if (record === undefined) return {};
+  const bonus = artifactBonus(record, entry, marchType);
+  return marchType === 'arena' ? { ...bonus, capacity: artifactCapacity(record, entry) } : bonus;
+}
 
 /**
- * What an artifact is worth at this level and star rating. Artifacts whose table we have not
- * measured yet carry the values typed by hand instead. The random bonus is not on this line: it is
- * one option out of forty and it belongs in the editor, next to the option it was rolled on.
+ * What an artifact's level and star give that nothing on this kind of march counts, one line each and marked, so
+ * that a press of + is seen to move something: against other players and capacity outside the Prime Arena. The
+ * random lines are left out; each says so for itself (`optionNote`).
  */
-export function artifactWorth(record: ArtifactRecord | undefined, entry: ArtifactEntry): BonusLike {
-  if (!record) return {};
-  if (!artifactHasLevels(record)) {
-    return {
-      health: entry.manual?.health ?? {},
-      strength: entry.manual?.strength ?? {},
-      special: entry.manual?.special ?? {},
-    };
+export function artifactUncountedLines(
+  record: ArtifactRecord | undefined,
+  { level, star }: ArtifactEntry,
+  marchType: SetupMarchType,
+): string[] {
+  if (record === undefined || marchType === 'arena') return [];
+  const against = mergeBonus(
+    record.levels[String(level)]?.againstPlayers ?? {},
+    record.stars[star]?.againstPlayers ?? {},
+  );
+  const capacity = artifactCapacity(record, { level, star });
+  return [
+    ...rowLines(against).map((line) => `${line} · Against other players, not counted`),
+    ...rowLines({ capacity }).map((line) => `${line} · Not counted`),
+  ];
+}
+
+/**
+ * What to say under a random option on this kind of march (B-42), or `null` for one that simply counts. An
+ * option is "not counted" when nothing on this page moves with it: against other players and capacity outside the
+ * Prime Arena (where capacity raises the maximum, B-44), authority and march speed everywhere.
+ */
+export function optionNote(
+  option: ArtifactRandomOption,
+  marchType: SetupMarchType,
+): { counted: boolean; note: string | null } {
+  // The three rarities of an option feed the same things, so any one of them tells.
+  const { health, strength, special, againstPlayers, capacity } = option.values.rare;
+  const arena = marchType === 'arena';
+  if (againstPlayers !== undefined) {
+    return { counted: arena, note: arena ? 'Against other players' : 'Against other players, not counted' };
   }
-  return {
-    ...(record.health
-      ? { health: singleKey(record.health.key, levelValue(record.health.levels, entry.level, entry.star)) }
-      : {}),
-    ...(record.strength
-      ? {
-          strength: singleKey(
-            record.strength.key,
-            levelValue(record.strength.levels, entry.level, entry.star),
-          ),
-        }
-      : {}),
-    ...(record.special
-      ? { special: singleKey(record.special.key, levelValue(record.special.levels, entry.level, entry.star)) }
-      : {}),
-  };
+  const plain = health !== undefined || strength !== undefined || special !== undefined;
+  const counted = plain || (arena && capacity !== undefined);
+  return { counted, note: counted ? null : 'Not counted' };
 }
 
 /** What VIP is worth right now: the table row, or the values typed when we have no row. */
@@ -220,14 +244,6 @@ export function qualitiesOf(record: EquipmentRecord | undefined): Quality[] {
 
 export function firstQuality(record: EquipmentRecord | undefined): Quality {
   return qualitiesOf(record)[0] ?? 'poor';
-}
-
-/** The star ratings this artifact's table knows; artifacts without a table get the full notation. */
-export function starKeys(record: ArtifactRecord | undefined): string[] {
-  const table =
-    record?.health?.levels?.star ?? record?.strength?.levels?.star ?? record?.special?.levels?.star;
-  const keys = table === undefined ? [] : Object.keys(table);
-  return keys.length === 0 ? FALLBACK_STAR_KEYS : ['0.0', ...keys.filter((key) => key !== '0.0')];
 }
 
 // ---- The groups -------------------------------------------------------------------------------
@@ -308,7 +324,7 @@ function artifactsGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       return row({
         id: entry.id,
         name: record?.name ?? entry.artifactId,
-        value: rowValue(artifactWorth(record, entry)),
+        value: rowValue(artifactWorth(record, entry, setup.marchType)),
         on,
         isDisabled: !on && atLimit,
         toggle: { list: 'artifacts', id: entry.id },

@@ -1139,4 +1139,164 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
     });
   });
+
+  describe('v22 → v23: artifact values come from the game (B-39)', () => {
+    const v22Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { sources: Record<string, unknown> }[])[0]!;
+      profile.sources.artifacts = [
+        {
+          id: 'a1',
+          artifactId: 'ruby-brooch',
+          level: 0,
+          star: '0.0',
+          manual: { health: { melee: 120 }, strength: { melee: 90 } },
+          random: { option: 'meleeHealth', value: 12 },
+        },
+        { id: 'a2', artifactId: 'heart-of-the-forest', level: 20, star: '2.1' },
+      ];
+      return { ...doc, schemaVersion: 22 };
+    };
+    const upgraded = [
+      {
+        id: 'a1',
+        artifactId: 'ruby-brooch',
+        level: 1,
+        star: '0.1',
+        // The typed random bonus goes on to be line 1 (B-42).
+        lines: [{ option: 'meleeHealth', rarity: 'rare' }],
+      },
+      { id: 'a2', artifactId: 'heart-of-the-forest', level: 20, star: '2.1' },
+    ];
+
+    it('removes the typed values, lifts a level below 1 to 1 and star 0.0 to 0.1, and keeps the rest', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      expect(migrate(v22Doc()).profiles[0]!.sources.artifacts).toEqual(upgraded);
+      // The migration removes the fields itself: nothing is left for the schema to drop and report.
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an exported v22 profile once', () => {
+      const profile = (v22Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 22);
+      expect(once.sources.artifacts).toEqual(upgraded);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
+    });
+  });
+
+  describe('v23 → v24: the arena gains the other capacity bonus % and no capacity basis (B-43)', () => {
+    const v23Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      delete profile.primeArena.otherCapacity;
+      delete profile.primeArena.capacityBasis;
+      const setup = profile.primeArena.setup as { housing: Record<string, number> };
+      setup.housing = { leadership: 700, authority: 0, dominance: 300 };
+      return { ...doc, schemaVersion: 23 };
+    };
+
+    it('adds 0 % and a null basis, and keeps the typed pools', () => {
+      const arena = migrate(v23Doc()).profiles[0]!.primeArena;
+      expect(arena).toMatchObject({ otherCapacity: 0, capacityBasis: null });
+      expect(arena.setup.housing).toEqual({ leadership: 700, authority: 0, dominance: 300 });
+    });
+
+    it('upgrades an exported v23 profile once', () => {
+      const profile = (v23Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 23);
+      expect(once.primeArena).toMatchObject({ otherCapacity: 0, capacityBasis: null });
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 23)).toEqual(once);
+    });
+  });
+
+  describe('v24 → v25: the typed random bonus becomes line 1 (B-42)', () => {
+    /** One entry per old random bonus, `a1` onwards, at level 20 ★2.1. */
+    const v24Doc = (rolls: [string, string?, number?][]): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { sources: Record<string, unknown> }[])[0]!;
+      profile.sources.artifacts = rolls.map(([artifactId, option, value], index) => ({
+        id: `a${String(index + 1)}`,
+        artifactId,
+        level: 20,
+        star: '2.1',
+        ...(option === undefined ? {} : { random: { option, value } }),
+      }));
+      return { ...doc, schemaVersion: 24 };
+    };
+    const linesOf = (rolls: [string, string?, number?][]) =>
+      migrate(v24Doc(rolls)).profiles[0]!.sources.artifacts.map((entry) => entry.lines);
+
+    it('takes the rarity whose value is nearest to the typed one', () => {
+      // Heart of the Forest rolls army strength at 20, 40 or 100.
+      const typed = [0, 12, 29, 31, 69, 71, 999];
+      expect(
+        linesOf(typed.map((value) => ['heart-of-the-forest', 'armyStrength', value])).map(
+          (lines) => lines?.[0]?.rarity,
+        ),
+      ).toEqual(['rare', 'rare', 'rare', 'epic', 'epic', 'legendary', 'legendary']);
+    });
+
+    it('takes the lower value on a tie, whatever the decimals', () => {
+      expect(
+        linesOf([
+          ['heart-of-the-forest', 'armyStrength', 30], // 20 or 40
+          ['heart-of-the-forest', 'armyStrength', 70], // 40 or 100
+          ['zeus-lightning', 'doubleDamageChance', 0.45], // 0.3 or 0.6
+          ['mars-twin-blades', 'strikeTwoSquadsChance', 0.7], // 0.4 or 1
+        ]).map((lines) => lines?.[0]?.rarity),
+      ).toEqual(['rare', 'epic', 'rare', 'epic']);
+    });
+
+    it('drops a bonus the artifact cannot roll, and keeps the level and the star', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const doc = v24Doc([
+        ['ruby-brooch', 'armyStrength', 20],
+        ['ruby-brooch', '', 20],
+        ['no-such-artifact', 'armyStrength', 20],
+        ['ruby-brooch'],
+        ['ruby-brooch', 'meleeStrength', 20],
+      ]);
+      const entry = (id: string, artifactId: string) => ({ id, artifactId, level: 20, star: '2.1' });
+      expect(migrate(doc).profiles[0]!.sources.artifacts).toEqual([
+        entry('a1', 'ruby-brooch'),
+        entry('a2', 'ruby-brooch'),
+        entry('a3', 'no-such-artifact'),
+        entry('a4', 'ruby-brooch'),
+        { ...entry('a5', 'ruby-brooch'), lines: [{ option: 'meleeStrength', rarity: 'epic' }] },
+      ]);
+      // The migration removes the old field itself: nothing is left for the schema to drop and report.
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an exported v24 profile once', () => {
+      const profile = (
+        v24Doc([['ruby-brooch', 'meleeHealth', 50]]).profiles as Record<string, unknown>[]
+      )[0]!;
+      const once = migrateProfile(profile, 24);
+      expect(once.sources.artifacts[0]?.lines).toEqual([{ option: 'meleeHealth', rarity: 'legendary' }]);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 24)).toEqual(once);
+    });
+  });
+
+  describe('v25 → v26: the capacity basis may name capacity artifacts (B-44)', () => {
+    const basis = { captains: [{ captainId: 'aydae', level: 40 }], other: 5 };
+    const v25Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      profile.primeArena.capacityBasis = basis;
+      return { ...doc, schemaVersion: 25 };
+    };
+
+    it('moves nothing: a basis without artifacts stays as it was', () => {
+      const migrated = migrate(v25Doc());
+      expect(migrated.schemaVersion).toBe(26);
+      expect(migrated.profiles[0]!.primeArena.capacityBasis).toEqual(basis);
+    });
+
+    it('upgrades an exported v25 profile once', () => {
+      const profile = (v25Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 25);
+      expect(once.primeArena.capacityBasis).toEqual(basis);
+    });
+  });
 });

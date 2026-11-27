@@ -23,17 +23,20 @@ import {
   TALENT_TREES,
 } from './types.ts';
 import type {
+  ArtifactOptionValue,
+  ArtifactRandomOption,
   ArtifactRecord,
+  ArtifactRow,
   BattleSelectionOrder,
   BonusContribution,
   BonusMap,
+  CapacityTable,
   CaptainProgression,
   CaptainRecord,
   DataVersion,
   EquipmentRecord,
   EventRecord,
   HeroRecord,
-  LevelTable,
   MatchupBonus,
   MercenaryRecord,
   MonsterRecord,
@@ -192,21 +195,39 @@ export const equipmentSchema = z.strictObject({
   byQuality: z.partialRecord(quality, bonusContributionSchema),
 }) satisfies z.ZodType<Loose<EquipmentRecord>>;
 
-/** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */
-const levelTableSchema = z.strictObject({
-  base: z.record(z.string().regex(/^\d+$/, 'level keys are whole numbers, e.g. "37"'), percent).optional(),
-  star: z
-    .record(z.string().regex(/^\d\.\d$/, 'star keys use the in-game notation, e.g. "3.2"'), percent)
+const artifactRowSchema = z.strictObject({
+  health: bonusMapSchema.optional(),
+  strength: bonusMapSchema.optional(),
+  special: specialMapSchema.optional(),
+  againstPlayers: z
+    .strictObject({ health: bonusMapSchema.optional(), strength: bonusMapSchema.optional() })
     .optional(),
-}) satisfies z.ZodType<Loose<LevelTable>>;
+  capacity: z.strictObject({ leadership: percent.optional(), dominance: percent.optional() }).optional(),
+}) satisfies z.ZodType<Loose<ArtifactRow>>;
 
+const artifactOptionValueSchema = artifactRowSchema.extend({
+  unused: z.strictObject({ authority: percent.optional(), marchSpeed: percent.optional() }).optional(),
+}) satisfies z.ZodType<Loose<ArtifactOptionValue>>;
+
+const artifactOptionSchema = z.strictObject({
+  id: z.string().min(1),
+  values: z.strictObject({
+    rare: artifactOptionValueSchema,
+    epic: artifactOptionValueSchema,
+    legendary: artifactOptionValueSchema,
+  }),
+}) satisfies z.ZodType<Loose<ArtifactRandomOption>>;
+
+/** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */
 export const artifactSchema = z.strictObject({
   id,
   name,
-  health: z.strictObject({ key: bonusKey, levels: levelTableSchema.optional() }).optional(),
-  strength: z.strictObject({ key: bonusKey, levels: levelTableSchema.optional() }).optional(),
-  special: z.strictObject({ key: specialKey, levels: levelTableSchema.optional() }).optional(),
-  randomBonusOptions: z.array(z.string().min(1)),
+  levels: z.record(z.string().regex(/^\d+$/, 'level keys are whole numbers, e.g. "37"'), artifactRowSchema),
+  stars: z.record(
+    z.string().regex(/^\d\.\d$/, 'star keys use the in-game notation, e.g. "3.2"'),
+    artifactRowSchema,
+  ),
+  randomOptions: z.array(artifactOptionSchema).min(1),
 }) satisfies z.ZodType<Loose<ArtifactRecord>>;
 
 export const titleSchema = z.strictObject({
@@ -248,6 +269,17 @@ export const vipSchema = z.strictObject({
 export const templeSchema = z.strictObject({
   multiplier: z.record(z.string().regex(/^\d+$/, 'temple levels are whole numbers'), z.number().positive()),
 }) satisfies z.ZodType<Loose<TempleTable>>;
+
+const capacityColumn = z.array(z.int().nonnegative()).length(600, 'one figure per level, 1 to 600');
+const capacityLadder = z.strictObject({
+  leadership: capacityColumn,
+  authority: capacityColumn,
+  dominance: capacityColumn,
+});
+export const capacitiesSchema = z.strictObject({
+  captain: capacityLadder,
+  hero: capacityLadder,
+}) satisfies z.ZodType<Loose<CapacityTable>>;
 
 export const ordersSchema = z.strictObject({
   troops: z.array(id),
@@ -310,6 +342,7 @@ export const vipTableSchema = z.array(vipSchema);
 export const TABLE_SCHEMAS = {
   'artifacts.json': artifactsTableSchema,
   'battleSelection.json': battleSelectionSchema,
+  'capacities.json': capacitiesSchema,
   'captains.json': captainsTableSchema,
   'equipment.json': equipmentTableSchema,
   'events.json': eventsTableSchema,

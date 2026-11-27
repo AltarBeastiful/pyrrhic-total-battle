@@ -18,6 +18,8 @@
     "tools/theorycraft",
     "scripts/plan-baseline-review.ts",
     "scripts/talents-convert.ts",
+    "scripts/artifacts-convert.ts",
+    "scripts/capacities-convert.ts",
     "scripts/data-tables.ts"
   ]
 }
