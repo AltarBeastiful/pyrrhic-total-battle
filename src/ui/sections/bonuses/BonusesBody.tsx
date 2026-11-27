@@ -8,6 +8,7 @@ import { Alert, Stack } from '@mantine/core';
 import { useMemo, useRef, useState } from 'react';
 
 import { equipment as equipmentTable } from '@/data';
+import type { ResolvedSource } from '@/engine/types';
 import { mintSourceId, setActiveFlag, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import type { Profile } from '@/state/schema';
@@ -55,9 +56,14 @@ export interface BonusesBodyProps {
   profile: Profile;
   binding: SetupBinding;
   scope?: BodyScope;
+  /**
+   * The sources another fight counts, already resolved (the Prime Arena): the Summary fold reads these, and is
+   * drawn even where the scope leaves the calculator's audit out.
+   */
+  sources?: ResolvedSource[];
 }
 
-export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBodyProps) {
+export function BonusesBody({ profile, binding, scope = FULL_SCOPE, sources }: BonusesBodyProps) {
   const { setup, caps } = binding;
   const maxCaptains = caps.captains;
   const maxArtifacts = caps.artifacts;
@@ -345,9 +351,9 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
         {/* Renamed from "Every key and what feeds it" (owner, 2026-09-28: *"this section should be
             renamed Summary"*): it already recaps the hero and the captains under every key they
             feed, so the name says what the block is rather than what it contains. */}
-        {scope.audit && (
+        {(scope.audit || sources !== undefined) && (
           <Disclosure title="Summary">
-            <TotalsBreakdown profile={profile} setup={setup} />
+            <TotalsBreakdown {...(sources === undefined ? { profile, setup } : { sources })} />
           </Disclosure>
         )}
       </Stack>

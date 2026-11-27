@@ -104,13 +104,13 @@ export function artifactChips(profile: Profile, setup: BattleSetup): ArtifactChi
   return artifactTable.map((record) => {
     const entry = byArtifact.get(record.id);
     const on = entry !== undefined && active.includes(entry.id);
-    const worth = entry === undefined ? '' : rowValue(artifactWorth(record, entry));
+    const worth = entry === undefined ? {} : artifactWorth(record, entry, setup.marchType);
     return {
       id: record.id,
       name: record.name,
       on,
-      levelSet: entry !== undefined && worth !== '',
-      value: entry === undefined ? '' : chipValue(artifactWorth(record, entry), 1).text,
+      levelSet: rowValue(worth) !== '',
+      value: chipValue(worth, 1).text,
     };
   });
 }

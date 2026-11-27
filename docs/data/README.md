@@ -28,7 +28,8 @@ One table is deliberately incomplete and marked as such:
 game's own data (see [Artifacts](#artifacts-artifactsjson) and [Talents](#talents-talentsjson)).
 
 Player-versus-player values (everything the game labels "against players") are **not** kept: Pyrrhic is an
-epic-monster calculator and PvP is out of scope.
+epic-monster calculator and PvP is out of scope. One exception: **artifact** values against other players are
+kept, marked `againstPlayers`, and apply in Prime Arena only. The march calculator ignores them.
 
 ## The tables
 
@@ -159,9 +160,17 @@ stats:
 }
 ```
 
+A row that gives something against other players (Forest Crown, Mars' Twin Blades) holds it apart:
+
+```json
+{ "againstPlayers": { "health": { "army": 42 }, "strength": { "army": 42 } } }
+```
+
 - `levels` keys are artifact levels `"1"`…`"60"`; `stars` keys use the in-game star notation
   `"0.1"`…`"5.0"` (there is no 0.0; step 5 is `"1.0"`). A row holds `health`, `strength` and `special`
   maps, and is empty when the app carries none of its effects.
+- `againstPlayers` holds the `health` and `strength` maps the row gives against other players only. In Prime
+  Arena they are added to the others in the same additive bracket; nowhere else do they count.
 - `randomBonusOptions` lists the bonuses the artifact's random slot can roll that the app counts.
 
 How the converter reads the export:
@@ -170,8 +179,9 @@ How the converter reads the export:
   value in the scale coefficient, in tenths of a percent.
 - The export names a unit set only by its size. Which size is which bonus key is learned from the random
   option texts of the same export ("Guardsmen's health"), so no size is written in the code.
-- Effects against other players, Leadership and Dominance capacity, authority and march speed are understood
-  but not carried yet.
+- Level and star effects against other players go into the row's `againstPlayers`.
+- Random options against other players, Leadership and Dominance capacity, authority and march speed are
+  understood but not carried yet.
 - It stops, naming the record, on an unknown effect kind, a unit set no text names or two keys claim, a
   missing artifact, and a level or star step that is missing or out of order.
 

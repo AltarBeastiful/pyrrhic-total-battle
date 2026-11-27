@@ -252,13 +252,21 @@ function addRandomBonus(target: Draft, option: string, value: number): boolean {
 }
 
 /**
- * What an artifact gives at this level and star: its level row plus its star row, the game's own figures.
- * The random bonus is the player's roll and is not part of it.
+ * What an artifact gives at this level and star on this kind of march: its level row plus its star row, the
+ * game's own figures. What a row gives against other players is added in the Prime Arena only, in the same
+ * additive bracket (B-41). The random bonus is the player's roll and is not part of it.
  */
-export function artifactBonus(record: ArtifactRecord, level: number, star: string): ArtifactRow {
+export function artifactBonus(
+  record: ArtifactRecord,
+  level: number,
+  star: string,
+  marchType: SetupMarchType,
+): Omit<ArtifactRow, 'againstPlayers'> {
   const value = draft();
-  addContribution(value, record.levels[String(level)]);
-  addContribution(value, record.stars[star]);
+  for (const row of [record.levels[String(level)], record.stars[star]]) {
+    addContribution(value, row);
+    if (marchType === 'arena') addContribution(value, row?.againstPlayers);
+  }
   return { health: value.health, strength: value.strength, special: value.special };
 }
 
@@ -338,7 +346,7 @@ export function resolveSources(
   for (const entry of activeEntries(sources.artifacts, active.artifacts)) {
     const record = byId(tables.artifacts, entry.artifactId);
     const value = draft();
-    if (record) addContribution(value, artifactBonus(record, entry.level, entry.star));
+    if (record) addContribution(value, artifactBonus(record, entry.level, entry.star, setup.marchType));
     if (entry.random) addRandomBonus(value, entry.random.option, entry.random.value);
     const name = record?.name ?? entry.artifactId;
     const id = nextId(`artifact:${entry.artifactId}`, entry.id);

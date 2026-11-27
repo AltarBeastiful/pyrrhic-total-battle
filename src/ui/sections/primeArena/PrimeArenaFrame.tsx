@@ -53,7 +53,7 @@ const ARENA_POOLS: readonly Pool[] = ['leadership', 'dominance'];
 /**
  * What the arena counts of the Bonuses card: captains (no hero, no march type), equipment, the permanent sources
  * it has switches for with the talents and the dragon beside them, and the artifacts fold. Titles, events, the
- * temple, VIP and the audit never count there.
+ * temple, VIP and the caveats never count there; the Summary reads the arena's own resolved sources.
  */
 const ARENA_SCOPE_BASE: Omit<BodyScope, 'counting'> = {
   families: ['captains', 'equipment', 'permanent'],
@@ -79,10 +79,11 @@ export function ArenaSetup() {
     open(march);
   }, [profile, march, open]);
 
-  // The arena's rules, as the shared body's binding: its own squad, five captains.
+  // The arena's rules, as the shared body's binding: its own squad, five captains, read as an Arena fight (the
+  // saved squad names no march type), so an artifact shows what it gives against other players.
   const binding = useMemo<SetupBinding>(
     () => ({
-      setup,
+      setup: { ...setup, marchType: 'arena' },
       update: (edit) => {
         updateSetup(edit);
       },

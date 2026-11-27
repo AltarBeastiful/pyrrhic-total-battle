@@ -443,6 +443,14 @@
         },
         "strength": {
           "army": 17.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 17.5
+          },
+          "strength": {
+            "army": 17.5
+          }
         }
       },
       "2": {
@@ -451,6 +459,14 @@
         },
         "strength": {
           "army": 20.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 20.5
+          },
+          "strength": {
+            "army": 20.5
+          }
         }
       },
       "3": {
@@ -459,6 +475,14 @@
         },
         "strength": {
           "army": 23
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 23
+          },
+          "strength": {
+            "army": 23
+          }
         }
       },
       "4": {
@@ -467,6 +491,14 @@
         },
         "strength": {
           "army": 26
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 26
+          },
+          "strength": {
+            "army": 26
+          }
         }
       },
       "5": {
@@ -475,6 +507,14 @@
         },
         "strength": {
           "army": 28.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 28.5
+          },
+          "strength": {
+            "army": 28.5
+          }
         }
       },
       "6": {
@@ -483,6 +523,14 @@
         },
         "strength": {
           "army": 31.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 31.5
+          },
+          "strength": {
+            "army": 31.5
+          }
         }
       },
       "7": {
@@ -491,6 +539,14 @@
         },
         "strength": {
           "army": 34
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 34
+          },
+          "strength": {
+            "army": 34
+          }
         }
       },
       "8": {
@@ -499,6 +555,14 @@
         },
         "strength": {
           "army": 37
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 37
+          },
+          "strength": {
+            "army": 37
+          }
         }
       },
       "9": {
@@ -507,6 +571,14 @@
         },
         "strength": {
           "army": 39.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 39.5
+          },
+          "strength": {
+            "army": 39.5
+          }
         }
       },
       "10": {
@@ -515,6 +587,14 @@
         },
         "strength": {
           "army": 42.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 42.5
+          },
+          "strength": {
+            "army": 42.5
+          }
         }
       },
       "11": {
@@ -523,6 +603,14 @@
         },
         "strength": {
           "army": 45
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 45
+          },
+          "strength": {
+            "army": 45
+          }
         }
       },
       "12": {
@@ -531,6 +619,14 @@
         },
         "strength": {
           "army": 48
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 48
+          },
+          "strength": {
+            "army": 48
+          }
         }
       },
       "13": {
@@ -539,6 +635,14 @@
         },
         "strength": {
           "army": 50.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 50.5
+          },
+          "strength": {
+            "army": 50.5
+          }
         }
       },
       "14": {
@@ -547,6 +651,14 @@
         },
         "strength": {
           "army": 53.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 53.5
+          },
+          "strength": {
+            "army": 53.5
+          }
         }
       },
       "15": {
@@ -555,6 +667,14 @@
         },
         "strength": {
           "army": 56
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 56
+          },
+          "strength": {
+            "army": 56
+          }
         }
       },
       "16": {
@@ -563,6 +683,14 @@
         },
         "strength": {
           "army": 59
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 59
+          },
+          "strength": {
+            "army": 59
+          }
         }
       },
       "17": {
@@ -571,6 +699,14 @@
         },
         "strength": {
           "army": 61.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 61.5
+          },
+          "strength": {
+            "army": 61.5
+          }
         }
       },
       "18": {
@@ -579,6 +715,14 @@
         },
         "strength": {
           "army": 64.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 64.5
+          },
+          "strength": {
+            "army": 64.5
+          }
         }
       },
       "19": {
@@ -587,6 +731,14 @@
         },
         "strength": {
           "army": 67
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 67
+          },
+          "strength": {
+            "army": 67
+          }
         }
       },
       "20": {
@@ -595,6 +747,14 @@
         },
         "strength": {
           "army": 70
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 70
+          },
+          "strength": {
+            "army": 70
+          }
         }
       },
       "21": {
@@ -603,6 +763,14 @@
         },
         "strength": {
           "army": 72.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 72.5
+          },
+          "strength": {
+            "army": 72.5
+          }
         }
       },
       "22": {
@@ -611,6 +779,14 @@
         },
         "strength": {
           "army": 75.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 75.5
+          },
+          "strength": {
+            "army": 75.5
+          }
         }
       },
       "23": {
@@ -619,6 +795,14 @@
         },
         "strength": {
           "army": 78
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 78
+          },
+          "strength": {
+            "army": 78
+          }
         }
       },
       "24": {
@@ -627,6 +811,14 @@
         },
         "strength": {
           "army": 81
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 81
+          },
+          "strength": {
+            "army": 81
+          }
         }
       },
       "25": {
@@ -635,6 +827,14 @@
         },
         "strength": {
           "army": 83.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 83.5
+          },
+          "strength": {
+            "army": 83.5
+          }
         }
       },
       "26": {
@@ -643,6 +843,14 @@
         },
         "strength": {
           "army": 86.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 86.5
+          },
+          "strength": {
+            "army": 86.5
+          }
         }
       },
       "27": {
@@ -651,6 +859,14 @@
         },
         "strength": {
           "army": 89
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 89
+          },
+          "strength": {
+            "army": 89
+          }
         }
       },
       "28": {
@@ -659,6 +875,14 @@
         },
         "strength": {
           "army": 92
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 92
+          },
+          "strength": {
+            "army": 92
+          }
         }
       },
       "29": {
@@ -667,6 +891,14 @@
         },
         "strength": {
           "army": 94.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 94.5
+          },
+          "strength": {
+            "army": 94.5
+          }
         }
       },
       "30": {
@@ -675,6 +907,14 @@
         },
         "strength": {
           "army": 97.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 97.5
+          },
+          "strength": {
+            "army": 97.5
+          }
         }
       },
       "31": {
@@ -683,6 +923,14 @@
         },
         "strength": {
           "army": 100
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 100
+          },
+          "strength": {
+            "army": 100
+          }
         }
       },
       "32": {
@@ -691,6 +939,14 @@
         },
         "strength": {
           "army": 103
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 103
+          },
+          "strength": {
+            "army": 103
+          }
         }
       },
       "33": {
@@ -699,6 +955,14 @@
         },
         "strength": {
           "army": 105.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 105.5
+          },
+          "strength": {
+            "army": 105.5
+          }
         }
       },
       "34": {
@@ -707,6 +971,14 @@
         },
         "strength": {
           "army": 108.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 108.5
+          },
+          "strength": {
+            "army": 108.5
+          }
         }
       },
       "35": {
@@ -715,6 +987,14 @@
         },
         "strength": {
           "army": 111
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 111
+          },
+          "strength": {
+            "army": 111
+          }
         }
       },
       "36": {
@@ -723,6 +1003,14 @@
         },
         "strength": {
           "army": 114
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 114
+          },
+          "strength": {
+            "army": 114
+          }
         }
       },
       "37": {
@@ -731,6 +1019,14 @@
         },
         "strength": {
           "army": 116.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 116.5
+          },
+          "strength": {
+            "army": 116.5
+          }
         }
       },
       "38": {
@@ -739,6 +1035,14 @@
         },
         "strength": {
           "army": 119.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 119.5
+          },
+          "strength": {
+            "army": 119.5
+          }
         }
       },
       "39": {
@@ -747,6 +1051,14 @@
         },
         "strength": {
           "army": 122
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 122
+          },
+          "strength": {
+            "army": 122
+          }
         }
       },
       "40": {
@@ -755,6 +1067,14 @@
         },
         "strength": {
           "army": 125
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 125
+          },
+          "strength": {
+            "army": 125
+          }
         }
       },
       "41": {
@@ -763,6 +1083,14 @@
         },
         "strength": {
           "army": 127.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 127.5
+          },
+          "strength": {
+            "army": 127.5
+          }
         }
       },
       "42": {
@@ -771,6 +1099,14 @@
         },
         "strength": {
           "army": 130.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 130.5
+          },
+          "strength": {
+            "army": 130.5
+          }
         }
       },
       "43": {
@@ -779,6 +1115,14 @@
         },
         "strength": {
           "army": 133
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 133
+          },
+          "strength": {
+            "army": 133
+          }
         }
       },
       "44": {
@@ -787,6 +1131,14 @@
         },
         "strength": {
           "army": 136
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 136
+          },
+          "strength": {
+            "army": 136
+          }
         }
       },
       "45": {
@@ -795,6 +1147,14 @@
         },
         "strength": {
           "army": 138.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 138.5
+          },
+          "strength": {
+            "army": 138.5
+          }
         }
       },
       "46": {
@@ -803,6 +1163,14 @@
         },
         "strength": {
           "army": 141.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 141.5
+          },
+          "strength": {
+            "army": 141.5
+          }
         }
       },
       "47": {
@@ -811,6 +1179,14 @@
         },
         "strength": {
           "army": 144
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 144
+          },
+          "strength": {
+            "army": 144
+          }
         }
       },
       "48": {
@@ -819,6 +1195,14 @@
         },
         "strength": {
           "army": 147
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 147
+          },
+          "strength": {
+            "army": 147
+          }
         }
       },
       "49": {
@@ -827,6 +1211,14 @@
         },
         "strength": {
           "army": 149.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 149.5
+          },
+          "strength": {
+            "army": 149.5
+          }
         }
       },
       "50": {
@@ -835,6 +1227,14 @@
         },
         "strength": {
           "army": 152.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 152.5
+          },
+          "strength": {
+            "army": 152.5
+          }
         }
       },
       "51": {
@@ -843,6 +1243,14 @@
         },
         "strength": {
           "army": 155
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 155
+          },
+          "strength": {
+            "army": 155
+          }
         }
       },
       "52": {
@@ -851,6 +1259,14 @@
         },
         "strength": {
           "army": 158
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 158
+          },
+          "strength": {
+            "army": 158
+          }
         }
       },
       "53": {
@@ -859,6 +1275,14 @@
         },
         "strength": {
           "army": 160.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 160.5
+          },
+          "strength": {
+            "army": 160.5
+          }
         }
       },
       "54": {
@@ -867,6 +1291,14 @@
         },
         "strength": {
           "army": 163.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 163.5
+          },
+          "strength": {
+            "army": 163.5
+          }
         }
       },
       "55": {
@@ -875,6 +1307,14 @@
         },
         "strength": {
           "army": 166
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 166
+          },
+          "strength": {
+            "army": 166
+          }
         }
       },
       "56": {
@@ -883,6 +1323,14 @@
         },
         "strength": {
           "army": 169
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 169
+          },
+          "strength": {
+            "army": 169
+          }
         }
       },
       "57": {
@@ -891,6 +1339,14 @@
         },
         "strength": {
           "army": 171.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 171.5
+          },
+          "strength": {
+            "army": 171.5
+          }
         }
       },
       "58": {
@@ -899,6 +1355,14 @@
         },
         "strength": {
           "army": 174.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 174.5
+          },
+          "strength": {
+            "army": 174.5
+          }
         }
       },
       "59": {
@@ -907,6 +1371,14 @@
         },
         "strength": {
           "army": 177
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 177
+          },
+          "strength": {
+            "army": 177
+          }
         }
       },
       "60": {
@@ -915,6 +1387,14 @@
         },
         "strength": {
           "army": 180
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 180
+          },
+          "strength": {
+            "army": 180
+          }
         }
       }
     },
@@ -925,6 +1405,14 @@
         },
         "strength": {
           "army": 18
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 18
+          },
+          "strength": {
+            "army": 18
+          }
         }
       },
       "0.2": {
@@ -933,6 +1421,14 @@
         },
         "strength": {
           "army": 25
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 25
+          },
+          "strength": {
+            "army": 25
+          }
         }
       },
       "0.3": {
@@ -941,6 +1437,14 @@
         },
         "strength": {
           "army": 31.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 31.5
+          },
+          "strength": {
+            "army": 31.5
+          }
         }
       },
       "0.4": {
@@ -949,6 +1453,14 @@
         },
         "strength": {
           "army": 38.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 38.5
+          },
+          "strength": {
+            "army": 38.5
+          }
         }
       },
       "1.0": {
@@ -957,6 +1469,14 @@
         },
         "strength": {
           "army": 45
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 45
+          },
+          "strength": {
+            "army": 45
+          }
         }
       },
       "1.1": {
@@ -965,6 +1485,14 @@
         },
         "strength": {
           "army": 52
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 52
+          },
+          "strength": {
+            "army": 52
+          }
         }
       },
       "1.2": {
@@ -973,6 +1501,14 @@
         },
         "strength": {
           "army": 58.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 58.5
+          },
+          "strength": {
+            "army": 58.5
+          }
         }
       },
       "1.3": {
@@ -981,6 +1517,14 @@
         },
         "strength": {
           "army": 65.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 65.5
+          },
+          "strength": {
+            "army": 65.5
+          }
         }
       },
       "1.4": {
@@ -989,6 +1533,14 @@
         },
         "strength": {
           "army": 72
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 72
+          },
+          "strength": {
+            "army": 72
+          }
         }
       },
       "2.0": {
@@ -997,6 +1549,14 @@
         },
         "strength": {
           "army": 79
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 79
+          },
+          "strength": {
+            "army": 79
+          }
         }
       },
       "2.1": {
@@ -1005,6 +1565,14 @@
         },
         "strength": {
           "army": 85.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 85.5
+          },
+          "strength": {
+            "army": 85.5
+          }
         }
       },
       "2.2": {
@@ -1013,6 +1581,14 @@
         },
         "strength": {
           "army": 92.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 92.5
+          },
+          "strength": {
+            "army": 92.5
+          }
         }
       },
       "2.3": {
@@ -1021,6 +1597,14 @@
         },
         "strength": {
           "army": 99
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 99
+          },
+          "strength": {
+            "army": 99
+          }
         }
       },
       "2.4": {
@@ -1029,6 +1613,14 @@
         },
         "strength": {
           "army": 106
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 106
+          },
+          "strength": {
+            "army": 106
+          }
         }
       },
       "3.0": {
@@ -1037,6 +1629,14 @@
         },
         "strength": {
           "army": 112.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 112.5
+          },
+          "strength": {
+            "army": 112.5
+          }
         }
       },
       "3.1": {
@@ -1045,6 +1645,14 @@
         },
         "strength": {
           "army": 119.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 119.5
+          },
+          "strength": {
+            "army": 119.5
+          }
         }
       },
       "3.2": {
@@ -1053,6 +1661,14 @@
         },
         "strength": {
           "army": 126
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 126
+          },
+          "strength": {
+            "army": 126
+          }
         }
       },
       "3.3": {
@@ -1061,6 +1677,14 @@
         },
         "strength": {
           "army": 133
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 133
+          },
+          "strength": {
+            "army": 133
+          }
         }
       },
       "3.4": {
@@ -1069,6 +1693,14 @@
         },
         "strength": {
           "army": 139.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 139.5
+          },
+          "strength": {
+            "army": 139.5
+          }
         }
       },
       "4.0": {
@@ -1077,6 +1709,14 @@
         },
         "strength": {
           "army": 146.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 146.5
+          },
+          "strength": {
+            "army": 146.5
+          }
         }
       },
       "4.1": {
@@ -1085,6 +1725,14 @@
         },
         "strength": {
           "army": 153
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 153
+          },
+          "strength": {
+            "army": 153
+          }
         }
       },
       "4.2": {
@@ -1093,6 +1741,14 @@
         },
         "strength": {
           "army": 160
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 160
+          },
+          "strength": {
+            "army": 160
+          }
         }
       },
       "4.3": {
@@ -1101,6 +1757,14 @@
         },
         "strength": {
           "army": 166.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 166.5
+          },
+          "strength": {
+            "army": 166.5
+          }
         }
       },
       "4.4": {
@@ -1109,6 +1773,14 @@
         },
         "strength": {
           "army": 173.5
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 173.5
+          },
+          "strength": {
+            "army": 173.5
+          }
         }
       },
       "5.0": {
@@ -1117,6 +1789,14 @@
         },
         "strength": {
           "army": 180
+        },
+        "againstPlayers": {
+          "health": {
+            "army": 180
+          },
+          "strength": {
+            "army": 180
+          }
         }
       }
     },
@@ -4061,66 +4741,606 @@
     "id": "mars-twin-blades",
     "name": "Mars' Twin Blades",
     "levels": {
-      "1": {},
-      "2": {},
-      "3": {},
-      "4": {},
-      "5": {},
-      "6": {},
-      "7": {},
-      "8": {},
-      "9": {},
-      "10": {},
-      "11": {},
-      "12": {},
-      "13": {},
-      "14": {},
-      "15": {},
-      "16": {},
-      "17": {},
-      "18": {},
-      "19": {},
-      "20": {},
-      "21": {},
-      "22": {},
-      "23": {},
-      "24": {},
-      "25": {},
-      "26": {},
-      "27": {},
-      "28": {},
-      "29": {},
-      "30": {},
-      "31": {},
-      "32": {},
-      "33": {},
-      "34": {},
-      "35": {},
-      "36": {},
-      "37": {},
-      "38": {},
-      "39": {},
-      "40": {},
-      "41": {},
-      "42": {},
-      "43": {},
-      "44": {},
-      "45": {},
-      "46": {},
-      "47": {},
-      "48": {},
-      "49": {},
-      "50": {},
-      "51": {},
-      "52": {},
-      "53": {},
-      "54": {},
-      "55": {},
-      "56": {},
-      "57": {},
-      "58": {},
-      "59": {},
-      "60": {}
+      "1": {
+        "againstPlayers": {
+          "health": {
+            "army": 42
+          },
+          "strength": {
+            "army": 42
+          }
+        }
+      },
+      "2": {
+        "againstPlayers": {
+          "health": {
+            "army": 44
+          },
+          "strength": {
+            "army": 44
+          }
+        }
+      },
+      "3": {
+        "againstPlayers": {
+          "health": {
+            "army": 46
+          },
+          "strength": {
+            "army": 46
+          }
+        }
+      },
+      "4": {
+        "againstPlayers": {
+          "health": {
+            "army": 48
+          },
+          "strength": {
+            "army": 48
+          }
+        }
+      },
+      "5": {
+        "againstPlayers": {
+          "health": {
+            "army": 50
+          },
+          "strength": {
+            "army": 50
+          }
+        }
+      },
+      "6": {
+        "againstPlayers": {
+          "health": {
+            "army": 52
+          },
+          "strength": {
+            "army": 52
+          }
+        }
+      },
+      "7": {
+        "againstPlayers": {
+          "health": {
+            "army": 54
+          },
+          "strength": {
+            "army": 54
+          }
+        }
+      },
+      "8": {
+        "againstPlayers": {
+          "health": {
+            "army": 56
+          },
+          "strength": {
+            "army": 56
+          }
+        }
+      },
+      "9": {
+        "againstPlayers": {
+          "health": {
+            "army": 58
+          },
+          "strength": {
+            "army": 58
+          }
+        }
+      },
+      "10": {
+        "againstPlayers": {
+          "health": {
+            "army": 60
+          },
+          "strength": {
+            "army": 60
+          }
+        }
+      },
+      "11": {
+        "againstPlayers": {
+          "health": {
+            "army": 62
+          },
+          "strength": {
+            "army": 62
+          }
+        }
+      },
+      "12": {
+        "againstPlayers": {
+          "health": {
+            "army": 64
+          },
+          "strength": {
+            "army": 64
+          }
+        }
+      },
+      "13": {
+        "againstPlayers": {
+          "health": {
+            "army": 66
+          },
+          "strength": {
+            "army": 66
+          }
+        }
+      },
+      "14": {
+        "againstPlayers": {
+          "health": {
+            "army": 68
+          },
+          "strength": {
+            "army": 68
+          }
+        }
+      },
+      "15": {
+        "againstPlayers": {
+          "health": {
+            "army": 70
+          },
+          "strength": {
+            "army": 70
+          }
+        }
+      },
+      "16": {
+        "againstPlayers": {
+          "health": {
+            "army": 72
+          },
+          "strength": {
+            "army": 72
+          }
+        }
+      },
+      "17": {
+        "againstPlayers": {
+          "health": {
+            "army": 74
+          },
+          "strength": {
+            "army": 74
+          }
+        }
+      },
+      "18": {
+        "againstPlayers": {
+          "health": {
+            "army": 76
+          },
+          "strength": {
+            "army": 76
+          }
+        }
+      },
+      "19": {
+        "againstPlayers": {
+          "health": {
+            "army": 78
+          },
+          "strength": {
+            "army": 78
+          }
+        }
+      },
+      "20": {
+        "againstPlayers": {
+          "health": {
+            "army": 80
+          },
+          "strength": {
+            "army": 80
+          }
+        }
+      },
+      "21": {
+        "againstPlayers": {
+          "health": {
+            "army": 84
+          },
+          "strength": {
+            "army": 84
+          }
+        }
+      },
+      "22": {
+        "againstPlayers": {
+          "health": {
+            "army": 88
+          },
+          "strength": {
+            "army": 88
+          }
+        }
+      },
+      "23": {
+        "againstPlayers": {
+          "health": {
+            "army": 92
+          },
+          "strength": {
+            "army": 92
+          }
+        }
+      },
+      "24": {
+        "againstPlayers": {
+          "health": {
+            "army": 96
+          },
+          "strength": {
+            "army": 96
+          }
+        }
+      },
+      "25": {
+        "againstPlayers": {
+          "health": {
+            "army": 100
+          },
+          "strength": {
+            "army": 100
+          }
+        }
+      },
+      "26": {
+        "againstPlayers": {
+          "health": {
+            "army": 104
+          },
+          "strength": {
+            "army": 104
+          }
+        }
+      },
+      "27": {
+        "againstPlayers": {
+          "health": {
+            "army": 108
+          },
+          "strength": {
+            "army": 108
+          }
+        }
+      },
+      "28": {
+        "againstPlayers": {
+          "health": {
+            "army": 112
+          },
+          "strength": {
+            "army": 112
+          }
+        }
+      },
+      "29": {
+        "againstPlayers": {
+          "health": {
+            "army": 116
+          },
+          "strength": {
+            "army": 116
+          }
+        }
+      },
+      "30": {
+        "againstPlayers": {
+          "health": {
+            "army": 120
+          },
+          "strength": {
+            "army": 120
+          }
+        }
+      },
+      "31": {
+        "againstPlayers": {
+          "health": {
+            "army": 126
+          },
+          "strength": {
+            "army": 126
+          }
+        }
+      },
+      "32": {
+        "againstPlayers": {
+          "health": {
+            "army": 132
+          },
+          "strength": {
+            "army": 132
+          }
+        }
+      },
+      "33": {
+        "againstPlayers": {
+          "health": {
+            "army": 138
+          },
+          "strength": {
+            "army": 138
+          }
+        }
+      },
+      "34": {
+        "againstPlayers": {
+          "health": {
+            "army": 144
+          },
+          "strength": {
+            "army": 144
+          }
+        }
+      },
+      "35": {
+        "againstPlayers": {
+          "health": {
+            "army": 150
+          },
+          "strength": {
+            "army": 150
+          }
+        }
+      },
+      "36": {
+        "againstPlayers": {
+          "health": {
+            "army": 156
+          },
+          "strength": {
+            "army": 156
+          }
+        }
+      },
+      "37": {
+        "againstPlayers": {
+          "health": {
+            "army": 162
+          },
+          "strength": {
+            "army": 162
+          }
+        }
+      },
+      "38": {
+        "againstPlayers": {
+          "health": {
+            "army": 168
+          },
+          "strength": {
+            "army": 168
+          }
+        }
+      },
+      "39": {
+        "againstPlayers": {
+          "health": {
+            "army": 174
+          },
+          "strength": {
+            "army": 174
+          }
+        }
+      },
+      "40": {
+        "againstPlayers": {
+          "health": {
+            "army": 180
+          },
+          "strength": {
+            "army": 180
+          }
+        }
+      },
+      "41": {
+        "againstPlayers": {
+          "health": {
+            "army": 188
+          },
+          "strength": {
+            "army": 188
+          }
+        }
+      },
+      "42": {
+        "againstPlayers": {
+          "health": {
+            "army": 196
+          },
+          "strength": {
+            "army": 196
+          }
+        }
+      },
+      "43": {
+        "againstPlayers": {
+          "health": {
+            "army": 204
+          },
+          "strength": {
+            "army": 204
+          }
+        }
+      },
+      "44": {
+        "againstPlayers": {
+          "health": {
+            "army": 212
+          },
+          "strength": {
+            "army": 212
+          }
+        }
+      },
+      "45": {
+        "againstPlayers": {
+          "health": {
+            "army": 220
+          },
+          "strength": {
+            "army": 220
+          }
+        }
+      },
+      "46": {
+        "againstPlayers": {
+          "health": {
+            "army": 228
+          },
+          "strength": {
+            "army": 228
+          }
+        }
+      },
+      "47": {
+        "againstPlayers": {
+          "health": {
+            "army": 236
+          },
+          "strength": {
+            "army": 236
+          }
+        }
+      },
+      "48": {
+        "againstPlayers": {
+          "health": {
+            "army": 244
+          },
+          "strength": {
+            "army": 244
+          }
+        }
+      },
+      "49": {
+        "againstPlayers": {
+          "health": {
+            "army": 252
+          },
+          "strength": {
+            "army": 252
+          }
+        }
+      },
+      "50": {
+        "againstPlayers": {
+          "health": {
+            "army": 260
+          },
+          "strength": {
+            "army": 260
+          }
+        }
+      },
+      "51": {
+        "againstPlayers": {
+          "health": {
+            "army": 270
+          },
+          "strength": {
+            "army": 270
+          }
+        }
+      },
+      "52": {
+        "againstPlayers": {
+          "health": {
+            "army": 280
+          },
+          "strength": {
+            "army": 280
+          }
+        }
+      },
+      "53": {
+        "againstPlayers": {
+          "health": {
+            "army": 290
+          },
+          "strength": {
+            "army": 290
+          }
+        }
+      },
+      "54": {
+        "againstPlayers": {
+          "health": {
+            "army": 300
+          },
+          "strength": {
+            "army": 300
+          }
+        }
+      },
+      "55": {
+        "againstPlayers": {
+          "health": {
+            "army": 310
+          },
+          "strength": {
+            "army": 310
+          }
+        }
+      },
+      "56": {
+        "againstPlayers": {
+          "health": {
+            "army": 320
+          },
+          "strength": {
+            "army": 320
+          }
+        }
+      },
+      "57": {
+        "againstPlayers": {
+          "health": {
+            "army": 330
+          },
+          "strength": {
+            "army": 330
+          }
+        }
+      },
+      "58": {
+        "againstPlayers": {
+          "health": {
+            "army": 340
+          },
+          "strength": {
+            "army": 340
+          }
+        }
+      },
+      "59": {
+        "againstPlayers": {
+          "health": {
+            "army": 350
+          },
+          "strength": {
+            "army": 350
+          }
+        }
+      },
+      "60": {
+        "againstPlayers": {
+          "health": {
+            "army": 360
+          },
+          "strength": {
+            "army": 360
+          }
+        }
+      }
     },
     "stars": {
       "0.1": {

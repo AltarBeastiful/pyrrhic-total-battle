@@ -18,6 +18,7 @@ import classes from './bonuses.module.css';
 import type { ArtifactChipRow } from './chips';
 import { humanizeOption, rowValue } from './labels';
 import { artifactRecord, artifactWorth } from './rows';
+import { useBoundMarchType } from './SetupBindingContext';
 import { SourceChip } from './SourceChip';
 
 /** What the card says when a fourth artifact is tapped. */
@@ -27,6 +28,7 @@ type ArtifactEntry = ProfileSources['artifacts'][number];
 
 function ArtifactEditor({ artifactId }: { artifactId: string }) {
   const profile = useStore(selectActiveProfile);
+  const marchType = useBoundMarchType();
   if (profile === undefined) return null;
 
   const record = artifactRecord(artifactId);
@@ -43,7 +45,7 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
   // The table's own ladders: levels from 1, star steps from 0.1.
   const topLevel = Object.keys(record?.levels ?? {}).length;
   const starSteps = Object.keys(record?.stars ?? {});
-  const worth = rowValue(artifactWorth(record, entry));
+  const worth = rowValue(artifactWorth(record, entry, marchType));
 
   return (
     <Stack gap="xs" w={240}>

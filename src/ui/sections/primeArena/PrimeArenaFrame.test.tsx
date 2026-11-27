@@ -173,6 +173,28 @@ test('keeps at most five captains, over the calculator’s own captain chips', a
   expect(screen.queryByText('Titles')).toBeNull();
 });
 
+test('artifacts read with what they give against other players, and the Summary lists strike two squads', async () => {
+  const user = userEvent.setup();
+  renderArena();
+  await user.click(await screen.findByRole('button', { name: /^Artifacts/ }));
+  await user.click(await screen.findByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  // The chip rides the arena's figure: level 1 gives army health and strength against other players only.
+  expect(screen.getByText(/42 % HP \/ \+42 % STR army/)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  expect(
+    within(screen.getByRole('dialog')).getByText('+42 % health and strength (army) and 1 more'),
+  ).toBeTruthy();
+  await user.keyboard('{Escape}');
+
+  await user.click(screen.getByRole('button', { name: 'Summary' }));
+  const special = await screen.findByRole('region', { name: 'Special' });
+  expect(within(special).getByText('Strike two squads chance')).toBeTruthy();
+  expect(within(special).getAllByText('+1.1 %').length).toBeGreaterThan(0);
+  // The Summary reads the arena's sources: what the artifact gives against other players is in it.
+  const strength = screen.getByRole('region', { name: 'Strength' });
+  expect(within(strength).getByText("Mars' Twin Blades L1 ★0.1")).toBeTruthy();
+});
+
 test('Generate waits for a Leadership or Dominance budget, and says so', async () => {
   renderArena();
   const bar = await screen.findByRole('form', { name: 'This match' });

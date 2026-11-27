@@ -95,7 +95,7 @@ export function BonusesSection({ frame }: { frame?: BonusesFrame } = {}) {
           <BonusesBody
             profile={profile}
             binding={binding}
-            {...(frame === undefined ? {} : { scope: frame.scope })}
+            {...(frame === undefined ? {} : { scope: frame.scope, sources: frame.sources })}
           />
           {/* The battle setup closes the form (owner, 2026-09-17: "experiment with moving the battle
               setup at the end of the form"; it stood first, one 16 px gap over the captains, "too
