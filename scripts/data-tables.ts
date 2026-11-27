@@ -46,6 +46,7 @@ function byNumericKey(value: Json): Json {
 }
 
 const CONTRIBUTION_KEYS = ['health', 'strength', 'special', 'matchup'] as const;
+const ARTIFACT_ROW_KEYS = [...CONTRIBUTION_KEYS, 'againstPlayers'] as const;
 
 function contribution(value: Json): Json {
   if (!isObject(value)) return value;
@@ -63,7 +64,14 @@ function contribution(value: Json): Json {
 function artifactRows(value: Json): Json {
   const out = byNumericKey(value);
   if (!isObject(out)) return out;
-  for (const key of Object.keys(out)) out[key] = contribution(out[key] as Json);
+  for (const key of Object.keys(out)) out[key] = artifactRow(out[key] as Json);
+  return out;
+}
+
+function artifactRow(value: Json): Json {
+  if (!isObject(value)) return value;
+  const out = order(contribution(value), ARTIFACT_ROW_KEYS) as JsonObject;
+  if ('againstPlayers' in out) out.againstPlayers = contribution(out.againstPlayers as Json);
   return out;
 }
 

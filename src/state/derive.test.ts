@@ -19,7 +19,7 @@ import {
   sourceCaveats,
   vipNeedsManual,
 } from './derive';
-import type { BattleSetup, Profile } from './schema';
+import type { BattleSetup, Profile, SetupMarchType } from './schema';
 
 /** A fresh profile and its implicit setup, both mutable, for one test. */
 function fixture(): { profile: Profile; setup: BattleSetup } {
@@ -371,9 +371,15 @@ describe('resolveSources — artifacts', () => {
     expect(sourceCaveats(profile, setup)).toHaveLength(0);
   });
 
-  /** One artifact at (level, star), switched on and resolved. */
-  const resolved = (artifactId: string, level: number, star: string) => {
+  /** One artifact at (level, star), switched on and resolved for a march of this type. */
+  const resolved = (
+    artifactId: string,
+    level: number,
+    star: string,
+    marchType: SetupMarchType = 'unspecified',
+  ) => {
     const { profile, setup } = fixture();
+    setup.marchType = marchType;
     profile.sources.artifacts = [{ id: 'a1', artifactId, level, star }];
     setup.active.artifacts = ['a1'];
     return sourceById(resolveSources(profile, setup), `artifact:${artifactId}`);
@@ -399,11 +405,26 @@ describe('resolveSources — artifacts', () => {
     expect(zeus?.health).toBeUndefined();
   });
 
-  it('gives Mars’ Twin Blades its strike-two-squads chance, and nothing against other players', () => {
-    const blades = resolved('mars-twin-blades', 20, '5.0');
+  it('ignores bonuses against other players on every march of the calculator', () => {
+    for (const marchType of ['unspecified', 'solo', 'group', 'epic'] as const) {
+      const crown = resolved('forest-crown', 1, '0.1', marchType);
+      expect(crown?.health).toEqual({ army: 35.5 }); // level 1: 17.5, star 0.1: 18
+      expect(crown?.strength).toEqual({ army: 35.5 });
+      const blades = resolved('mars-twin-blades', 60, '5.0', marchType);
+      expect(blades?.special).toEqual({ strikeTwoSquadsChance: 10 });
+      expect(blades?.health).toBeUndefined();
+      expect(blades?.strength).toBeUndefined();
+    }
+  });
+
+  it('adds bonuses against other players to the same bracket in the Arena', () => {
+    const crown = resolved('forest-crown', 1, '0.1', 'arena');
+    expect(crown?.health).toEqual({ army: 71 }); // 17.5 + 18, and the same again against players
+    expect(crown?.strength).toEqual({ army: 71 });
+    const blades = resolved('mars-twin-blades', 60, '5.0', 'arena');
+    expect(blades?.health).toEqual({ army: 360 }); // its levels give nothing else
+    expect(blades?.strength).toEqual({ army: 360 });
     expect(blades?.special).toEqual({ strikeTwoSquadsChance: 10 });
-    expect(blades?.strength).toBeUndefined();
-    expect(blades?.health).toBeUndefined();
   });
 
   it('feeds the unit set an artifact is for', () => {

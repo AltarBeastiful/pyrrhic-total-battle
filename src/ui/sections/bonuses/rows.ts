@@ -33,7 +33,7 @@ import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
 import { artifactBonus, captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
-import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
+import type { BattleSetup, Profile, ProfileSources, SetupMarchType } from '@/state/schema';
 
 import { describeContribution, isEmptyBonus, mergeBonus, rowValue } from './labels';
 import type { BonusLike } from './labels';
@@ -143,11 +143,16 @@ export function equipmentWorth(record: EquipmentRecord | undefined, entry: Equip
 }
 
 /**
- * What an artifact is worth at this level and star rating, from the game's table. The random bonus is not on
- * this line: it is one option out of forty and it belongs in the editor, next to the option it was rolled on.
+ * What an artifact is worth at this level and star rating on this kind of march, from the game's table. The
+ * random bonus is not on this line: it is one option out of forty and it belongs in the editor, next to the
+ * option it was rolled on.
  */
-export function artifactWorth(record: ArtifactRecord | undefined, entry: ArtifactEntry): BonusLike {
-  return record ? artifactBonus(record, entry.level, entry.star) : {};
+export function artifactWorth(
+  record: ArtifactRecord | undefined,
+  entry: ArtifactEntry,
+  marchType: SetupMarchType,
+): BonusLike {
+  return record ? artifactBonus(record, entry.level, entry.star, marchType) : {};
 }
 
 /** What VIP is worth right now: the table row, or the values typed when we have no row. */
@@ -263,7 +268,7 @@ function artifactsGroup(profile: Profile, setup: BattleSetup): SourceGroup {
       return row({
         id: entry.id,
         name: record?.name ?? entry.artifactId,
-        value: rowValue(artifactWorth(record, entry)),
+        value: rowValue(artifactWorth(record, entry, setup.marchType)),
         on,
         isDisabled: !on && atLimit,
         toggle: { list: 'artifacts', id: entry.id },

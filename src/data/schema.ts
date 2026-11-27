@@ -197,6 +197,9 @@ const artifactRowSchema = z.strictObject({
   health: bonusMapSchema.optional(),
   strength: bonusMapSchema.optional(),
   special: specialMapSchema.optional(),
+  againstPlayers: z
+    .strictObject({ health: bonusMapSchema.optional(), strength: bonusMapSchema.optional() })
+    .optional(),
 }) satisfies z.ZodType<Loose<ArtifactRow>>;
 
 /** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */

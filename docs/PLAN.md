@@ -44,7 +44,8 @@ Goals
    kill order, priority search, unlimited profiles) is available to everyone.
 
 Non-goals (v1)
-- Accounts, sync, billing, chatbot, clan tools, other calculators/data pages, PvP.
+- Accounts, sync, billing, chatbot, clan tools, other calculators/data pages, PvP. Amended for Prime Arena
+  (B-41): artifact values against other players are kept and apply in Prime Arena only.
 - "By Battle Report" mode (health-only fallback). Can be added later as a thin input mode.
 
 ## 2. Architecture
@@ -132,7 +133,8 @@ Sources → contributions (all additive percentages, same as TotalStack):
 - Captains: bonus% = baseLevel × baseMultiplier + starBonuses[star] on `bonusKey`, separately for health and
   strength (data in `captains.json`; Sofia/Amanitore/Skadi multipliers included).
 - Equipment: `bonusesByQuality[quality]` per piece (`equipment.json`), up to 15 pieces, plus gem/enchant fields.
-- Artifacts: level tables (`artifact-*-by-level.json`) + random bonus with rarity, up to 3.
+- Artifacts: level tables (`artifact-*-by-level.json`) + random bonus with rarity, up to 3. Values against
+  other players are kept (`againstPlayers` in `artifacts.json`) and apply in Prime Arena only (B-41).
 - Titles: fixed tables (`titles.json`), PvP-only keys ignored.
 - Other: VIP level → army%, Dragon (13-key editor), hero (Svyatogor +50/+50 only when marching alone),
   Personal/Clan/Kingdom +25 pills, custom. VIP and the Dragon start switched **off** and TotalStack's

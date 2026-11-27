@@ -138,9 +138,13 @@ function learnUnitSets(dump: ArtifactDump): UnitSets {
 
 /** One decoded effect: what it feeds and by how much, or `null` when the app carries nothing of it yet. */
 type Decoded =
-  | { bucket: 'health' | 'strength'; key: BonusKey; value: number }
+  | { bucket: 'health' | 'strength'; key: BonusKey; value: number; againstPlayers: boolean }
   | { bucket: 'special'; key: SpecialKey; value: number }
   | null;
+
+/** A health or strength bonus the game gives against other players only. */
+const isAgainstPlayers = (bonus: Decoded): boolean =>
+  bonus !== null && bonus.bucket !== 'special' && bonus.againstPlayers;
 
 function decode(effect: DumpEffect, sets: UnitSets, record: string): Decoded {
   const kind = KINDS[effect.typeName];
@@ -166,8 +170,7 @@ function decode(effect: DumpEffect, sets: UnitSets, record: string): Decoded {
   const value = inScale ? effect.C / 10 : (effect.B - 10000) / 100;
 
   if ('bucket' in kind) {
-    // Bonuses against other players are not carried yet (B-41).
-    return kind.againstPlayers ? null : { bucket: kind.bucket, key: key!, value };
+    return { bucket: kind.bucket, key: key!, value, againstPlayers: kind.againstPlayers === true };
   }
   if ('special' in kind) {
     if (key !== undefined && key !== 'army') {
@@ -184,7 +187,8 @@ function row(effects: DumpEffect[], sets: UnitSets, record: string): ArtifactRow
   for (const effect of effects) {
     const bonus = decode(effect, sets, record);
     if (bonus === null) continue;
-    const map: Partial<Record<string, number>> = (out[bonus.bucket] ??= {});
+    const into: ArtifactRow = isAgainstPlayers(bonus) ? (out.againstPlayers ??= {}) : out;
+    const map: Partial<Record<string, number>> = (into[bonus.bucket] ??= {});
     map[bonus.key] = (map[bonus.key] ?? 0) + bonus.value;
   }
   return out;
@@ -199,7 +203,10 @@ const OPTION_PREFIXES: Partial<Record<BonusKey, string>> = {
 /** The id of a random option as saved profiles name it, or `null` when the app counts nothing of it. */
 function optionId(effects: DumpEffect[], sets: UnitSets, record: string): string | null {
   const decoded = effects.map((effect) => decode(effect, sets, record));
-  const counted = decoded.filter((bonus) => bonus !== null);
+  // Random options against other players are not offered yet (B-42).
+  const counted = decoded.filter(
+    (bonus): bonus is Exclude<Decoded, null> => bonus !== null && !isAgainstPlayers(bonus),
+  );
   const [first, ...rest] = counted;
   if (first === undefined) return null;
   if (counted.length === decoded.length) {

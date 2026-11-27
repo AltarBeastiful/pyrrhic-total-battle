@@ -201,26 +201,46 @@ describe('convertArtifacts', () => {
     expect(rows.get('zeus-lightning')?.stars['0.1']).toEqual({ special: { doubleDamageChance: 0.7 } });
   });
 
-  it('carries no bonus yet for capacity, authority, march speed and effects against other players', () => {
+  it('carries the bonuses against other players on level and star rows, marked as such', () => {
+    const dump = handMade();
+    everyRow(
+      dump,
+      'Forest Crown',
+      [effect('UNIT_POWER', ARMY, 10100), effect('UNIT_POWER_PVP', ARMY, 14200)],
+      [effect('UNIT_HEALTH_PVP', ARMY, 10950)],
+    );
+    everyRow(
+      dump,
+      "Mars' Twin Blades",
+      [effect('UNIT_POWER_PVP', ARMY, 14200), effect('UNIT_HEALTH_PVP', ARMY, 14300)],
+      [effect('UNIT_DOUBLE_TURN_PROBABILITY', ARMY, 0, 11)],
+    );
+
+    const rows = rowsById(dump);
+    expect(rows.get('forest-crown')?.levels['1']).toEqual({
+      strength: { army: 1 },
+      againstPlayers: { strength: { army: 42 } },
+    });
+    expect(rows.get('forest-crown')?.stars['0.1']).toEqual({ againstPlayers: { health: { army: 9.5 } } });
+    expect(rows.get('mars-twin-blades')?.levels['1']).toEqual({
+      againstPlayers: { health: { army: 43 }, strength: { army: 42 } },
+    });
+    // The strike-two chance is not one against other players: it counts everywhere.
+    expect(rows.get('mars-twin-blades')?.stars['0.1']).toEqual({ special: { strikeTwoSquadsChance: 1.1 } });
+  });
+
+  it('carries no bonus yet for capacity, authority and march speed', () => {
     const dump = handMade();
     everyRow(
       dump,
       "Zeus' Lightning",
       [effect('HERO_LEADERSHIP', 0, 10250), effect('HERO_DOMINANCE', 0, 10250)],
-      [effect('UNIT_CRIT', 0, 10070), effect('HERO_MASTERY', 0, 10250)],
-    );
-    everyRow(
-      dump,
-      "Mars' Twin Blades",
-      [effect('UNIT_POWER_PVP', ARMY, 14200), effect('UNIT_HEALTH_PVP', ARMY, 14200)],
-      [effect('MARCH_SPEED_PVE', 0, 12000)],
+      [effect('UNIT_CRIT', 0, 10070), effect('HERO_MASTERY', 0, 10250), effect('MARCH_SPEED_PVE', 0, 12000)],
     );
 
     const rows = rowsById(dump);
     expect(rows.get('zeus-lightning')?.levels['1']).toEqual({});
     expect(rows.get('zeus-lightning')?.stars['0.1']).toEqual({ special: { doubleDamageChance: 0.7 } });
-    expect(rows.get('mars-twin-blades')?.levels['1']).toEqual({});
-    expect(rows.get('mars-twin-blades')?.stars['0.1']).toEqual({});
   });
 
   it('lists the random options the app counts, named as saved profiles name them', () => {

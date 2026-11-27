@@ -178,7 +178,10 @@ export interface EquipmentRecord {
  * What one row of an artifact (a level, or a star step) gives, in the game's own values (B-39). Empty when
  * the app carries none of the row's effects.
  */
-export type ArtifactRow = Pick<BonusContribution, 'health' | 'strength' | 'special'>;
+export interface ArtifactRow extends Pick<BonusContribution, 'health' | 'strength' | 'special'> {
+  /** Bonuses the game gives against other players only: they count in Prime Arena and nowhere else (B-41). */
+  againstPlayers?: Pick<BonusContribution, 'health' | 'strength'>;
+}
 
 /** Built from the game export by `scripts/artifacts-convert.ts`; never edited by hand. */
 export interface ArtifactRecord {

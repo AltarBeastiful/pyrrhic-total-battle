@@ -6,6 +6,7 @@
 import { createContext, useContext, useMemo } from 'react';
 
 import { selectActiveSetup, useStore } from '@/state/store';
+import type { SetupMarchType } from '@/state/schema';
 import { storeSetupWriter, type SetupBinding, type SetupWriter } from '@/state/setupBinding';
 
 import { MAX_ACTIVE_ARTIFACTS, MAX_ACTIVE_CAPTAINS, MAX_EQUIPMENT } from './rows';
@@ -17,6 +18,11 @@ export const SetupBindingProvider = SetupBindingContext.Provider;
 /** How the chips below write the setup they sit on. */
 export function useSetupWriter(): SetupWriter {
   return useContext(SetupBindingContext) ?? storeSetupWriter;
+}
+
+/** The kind of march the chips above are read for; outside a provider the march names none. */
+export function useBoundMarchType(): SetupMarchType {
+  return useContext(SetupBindingContext)?.setup.marchType ?? 'unspecified';
 }
 
 /** The calculator's limits: three captains, three artifacts, fifteen pieces. */

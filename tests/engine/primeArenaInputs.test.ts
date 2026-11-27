@@ -5,9 +5,11 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { aggregateBonuses } from '../../src/engine/bonuses';
 import { PRIME_ARENA_SOURCES, primeArenaInputs, primeArenaPool } from '../../src/engine/primeArenaInputs';
 import type { PrimeArenaInput } from '../../src/engine/primeArenaInputs';
 import { defaultSetup, newProfile } from '../../src/state/defaults';
+import { resolveSources } from '../../src/state/derive';
 import type { BattleSetup, Profile, ProfileTroops } from '../../src/state/schema';
 
 function account(): Profile {
@@ -172,6 +174,26 @@ describe('primeArenaInputs', () => {
     expect(out.sources.map((s) => s.kind)).not.toContain('custom');
     expect(out.sources.map((s) => s.kind)).not.toContain('title');
     expect(out.totals.strength.army).toBe(11);
+  });
+
+  it('counts artifact bonuses against other players, in the same bracket as the others', () => {
+    const profile = account();
+    profile.sources.artifacts = [
+      { id: 'crown', artifactId: 'forest-crown', level: 1, star: '0.1' }, // army 35.5, and 35.5 against players
+      { id: 'blades', artifactId: 'mars-twin-blades', level: 1, star: '0.1' }, // army 42 against players, strike two 1.1
+    ];
+    const setup = squad({ artifacts: ['crown', 'blades'] });
+    const { totals } = primeArenaInputs(base({ profile, setup }));
+    expect(totals.strength.army).toBe(11 + 71 + 42); // dragon and Hall of Fame, then the two artifacts
+    expect(totals.health.army).toBe(8 + 71 + 42);
+    expect(totals.special.strikeTwoSquadsChance).toBe(1.1);
+
+    // The calculator reads the same artifacts without what they give against other players.
+    const march = aggregateBonuses(resolveSources(profile, setup));
+    const without = aggregateBonuses(resolveSources(profile, squad()));
+    expect(march.strength.army - without.strength.army).toBe(35.5);
+    expect(march.health.army - without.health.army).toBe(35.5);
+    expect(march.special.strikeTwoSquadsChance).toBe(1.1);
   });
 
   it('counts no captain limited to a march kind, only the unconditional ones', () => {

@@ -447,6 +447,22 @@ test('an artifact is equipped from its chip and levelled from its gear', async (
   expect(profile()?.sources.artifacts[0]?.level).toBe(1);
 });
 
+test('the march ignores what an artifact gives against other players, and its Summary lists strike two squads', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  openGroup('Artifacts');
+  await user.click(within(card()).getByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  await user.click(within(card()).getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  expect(within(screen.getByRole('dialog')).getByText('+1.1 % strike two squads chance')).toBeTruthy();
+  await user.keyboard('{Escape}');
+
+  await user.click(within(card()).getByRole('button', { name: 'Summary' }));
+  const special = within(card()).getByRole('region', { name: 'Special' });
+  expect(within(special).getByText('Strike two squads chance')).toBeTruthy();
+  const strength = within(card()).getByRole('region', { name: 'Strength' });
+  expect(within(strength).queryByText("Mars' Twin Blades L1 ★0.1")).toBeNull();
+});
+
 /** The editor behind an artifact's gear, and its buttons by name. */
 async function artifactEditor(user: ReturnType<typeof userEvent.setup>, name: string) {
   openGroup('Artifacts');
