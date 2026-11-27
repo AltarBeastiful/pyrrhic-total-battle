@@ -2,13 +2,13 @@
 type: reference
 title: "B-43 Prime Arena capacity maxes from the squad"
 created: 2026-11-27
-tags: [backlog, prime-arena, data]
+tags: [backlog, prime-arena, data, done]
 related: ['[[B-38-game-data-artifacts-arena-capacity]]', '[[design-rules]]']
 ---
 
 # B-43 Prime Arena capacity maxes from the squad
 
-Status: `ready-for-agent`. From [[B-38-game-data-artifacts-arena-capacity]] (read "Prime Arena capacity"). Cite [[design-rules]] in any UI brief. New UI strings use no em dashes.
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From [[B-38-game-data-artifacts-arena-capacity]] (read "Prime Arena capacity"). Cite [[design-rules]] in any UI brief. New UI strings use no em dashes.
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 

@@ -2,13 +2,13 @@
 type: reference
 title: "B-42 Five random artifact bonus lines"
 created: 2026-11-27
-tags: [backlog, artifacts]
+tags: [backlog, artifacts, done]
 related: ['[[B-38-game-data-artifacts-arena-capacity]]', '[[design-rules]]']
 ---
 
 # B-42 Five random artifact bonus lines
 
-Status: `ready-for-agent`. From [[B-38-game-data-artifacts-arena-capacity]]. Cite [[design-rules]] in any UI brief. New UI strings use no em dashes.
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From [[B-38-game-data-artifacts-arena-capacity]]. Cite [[design-rules]] in any UI brief. New UI strings use no em dashes.
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 

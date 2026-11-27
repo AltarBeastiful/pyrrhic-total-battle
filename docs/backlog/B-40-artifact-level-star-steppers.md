@@ -2,13 +2,13 @@
 type: reference
 title: "B-40 + and − on artifact level and star"
 created: 2026-11-27
-tags: [backlog, artifacts]
+tags: [backlog, artifacts, done]
 related: ['[[B-38-game-data-artifacts-arena-capacity]]', '[[design-rules]]']
 ---
 
 # B-40 + and − on artifact level and star
 
-Status: `ready-for-agent`. From [[B-38-game-data-artifacts-arena-capacity]]. Cite [[design-rules]] (rules 10, 23 and 24) in any UI brief.
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From [[B-38-game-data-artifacts-arena-capacity]]. Cite [[design-rules]] (rules 10, 23 and 24) in any UI brief.
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 

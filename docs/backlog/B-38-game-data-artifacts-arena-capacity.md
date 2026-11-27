@@ -2,13 +2,13 @@
 type: reference
 title: "B-38 Game-extracted artifacts, Arena capacity and captain quick select"
 created: 2026-11-27
-tags: [backlog, artifacts, prime-arena, data]
+tags: [backlog, artifacts, prime-arena, data, done]
 related: ['[[B-33-prime-arena-input-model]]', '[[B-37-prime-arena-report-faithful-planner]]', '[[design-rules]]']
 ---
 
 # B-38 Game-extracted artifacts, Arena capacity and captain quick select
 
-Status: `ready-for-agent`. From the 2026-11-27 grilling. Pyrrhic changes only: the extraction itself lives in `tb-analyze` and is the owner's. Cite [[design-rules]] in any UI brief (rules 10, 12, 23 and 24 apply directly).
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From the 2026-11-27 grilling. Pyrrhic changes only: the extraction itself lives in `tb-analyze` and is the owner's. Cite [[design-rules]] in any UI brief (rules 10, 12, 23 and 24 apply directly).
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 

@@ -2,13 +2,13 @@
 type: reference
 title: "B-41 Bonuses against other players count in Prime Arena"
 created: 2026-11-27
-tags: [backlog, artifacts, prime-arena]
+tags: [backlog, artifacts, prime-arena, done]
 related: ['[[B-38-game-data-artifacts-arena-capacity]]', '[[design-rules]]']
 ---
 
 # B-41 Bonuses against other players count in Prime Arena
 
-Status: `ready-for-agent`. From [[B-38-game-data-artifacts-arena-capacity]].
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From [[B-38-game-data-artifacts-arena-capacity]].
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 

@@ -2,13 +2,13 @@
 type: reference
 title: "B-39 Artifact values from the game, by level and star"
 created: 2026-11-27
-tags: [backlog, artifacts, data]
+tags: [backlog, artifacts, data, done]
 related: ['[[B-38-game-data-artifacts-arena-capacity]]', '[[design-rules]]']
 ---
 
 # B-39 Artifact values from the game, by level and star
 
-Status: `ready-for-agent`. From [[B-38-game-data-artifacts-arena-capacity]] (read it for the data and migration decisions). Cite [[design-rules]] in any UI brief.
+Status: `done` (2026-11-27, merged on branch `b38-game-artifacts`, not pushed). From [[B-38-game-data-artifacts-arena-capacity]] (read it for the data and migration decisions). Cite [[design-rules]] in any UI brief.
 
 Standing criteria: the benchmark rating does not regress; tests are written once and run on TS and kernel, red on both first.
 
