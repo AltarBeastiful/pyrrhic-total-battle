@@ -24,8 +24,9 @@ One table is deliberately incomplete and marked as such:
   VIP screen in game (each level lists its army health and army strength bonus) and fill them in. Until then
   the app lets you type the total by hand.
 
-`artifacts.json` and `talents.json` are not hand-edited at all: they are **generated** from exports of the
-game's own data (see [Artifacts](#artifacts-artifactsjson) and [Talents](#talents-talentsjson)).
+`artifacts.json`, `capacities.json` and `talents.json` are not hand-edited at all: they are **generated** from
+exports of the game's own data (see [Artifacts](#artifacts-artifactsjson),
+[Capacities](#capacities-capacitiesjson) and [Talents](#talents-talentsjson)).
 
 Player-versus-player values (everything the game labels "against players") are **not** kept: Pyrrhic is an
 epic-monster calculator and PvP is out of scope. One exception: **artifact** values against other players are
@@ -41,6 +42,7 @@ kept, marked `againstPlayers`, and apply in Prime Arena only. The march calculat
 | `captains.json`   | Captain health / strength / special progressions           | Captain screen, level and star rows                          |
 | `equipment.json`  | Equipment pieces, bonuses per quality                      | Equipment item popup, quality by quality                     |
 | `artifacts.json`  | Artifacts: what each level and star step gives (generated) | Artifact popup (rebuilt from the game export)                |
+| `capacities.json` | What a captain and the hero lead at each level (generated) | Captain and hero screens (rebuilt from the game export)      |
 | `titles.json`     | Titles and their army bonuses                              | Titles screen                                                |
 | `heroes.json`     | The three heroes                                           | Hero screen                                                  |
 | `otherPills.json` | The fixed "+25 %" Personal / Clan / Kingdom bonuses        | Bonus list on the march screen                               |
@@ -201,6 +203,33 @@ How the converter reads the export:
 - It stops, naming the record, on an unknown effect kind, a unit set no text names or two keys claim, a
   missing artifact, a level or star step that is missing or out of order, an artifact with no random option,
   an option that cannot be named, and an option without exactly one value per rarity.
+
+### Capacities (`capacities.json`)
+
+**Generated, not hand-edited**: `pnpm data:artifacts <directory>` rebuilds it, with `artifacts.json`, from the
+same export (`hero_levels.csv` in that directory). With `HEROES_ARTIFACTS_EXPORT` set, `pnpm test` checks that
+the committed table still equals the rebuild. A wrong value is fixed in the export or in
+`scripts/capacities-convert.ts`, never in the table.
+
+It holds two sets, `captain` (every captain leads the same figures) and `hero`, each with three lists of 600
+whole numbers, one per level: index 0 is level 1.
+
+| Field        | Meaning                                                                  |
+| ------------ | ------------------------------------------------------------------------ |
+| `leadership` | Leadership at that level.                                                |
+| `authority`  | Authority at that level; the export calls it `mastery`.                  |
+| `dominance`  | Dominance at that level.                                                 |
+
+Prime Arena reads the captains' Leadership and Dominance to work out a squad's maximum. Nothing reads authority
+or the hero's set yet, and the march calculator reads none of it.
+
+How the converter reads the export:
+
+- Each line is one character at one level: the columns `id`, `kind` (`HERO` or `CAPTAIN`), `level`,
+  `leadership`, `mastery` and `dominance` are read.
+- It stops, naming the record, on a missing column, an unknown kind, a level that is missing or out of order, a
+  character without exactly 600 levels, an empty figure or one that is not a whole number, two captains that
+  differ, no captain, or anything but one hero.
 
 ### `titles.json`, `heroes.json`, `otherPills.json`
 

@@ -48,7 +48,7 @@ import {
 } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources, SetupMarchType } from '@/state/schema';
 
-import { describeContribution, isEmptyBonus, mergeBonus, rowValue } from './labels';
+import { describeContribution, isEmptyBonus, mergeBonus, rowLines, rowValue } from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -167,6 +167,28 @@ export function artifactWorth(
   if (record === undefined) return {};
   const bonus = artifactBonus(record, entry, marchType);
   return marchType === 'arena' ? { ...bonus, capacity: artifactCapacity(record, entry) } : bonus;
+}
+
+/**
+ * What an artifact's level and star give that nothing on this kind of march counts, one line each and marked, so
+ * that a press of + is seen to move something: against other players and capacity outside the Prime Arena. The
+ * random lines are left out; each says so for itself (`optionNote`).
+ */
+export function artifactUncountedLines(
+  record: ArtifactRecord | undefined,
+  { level, star }: ArtifactEntry,
+  marchType: SetupMarchType,
+): string[] {
+  if (record === undefined || marchType === 'arena') return [];
+  const against = mergeBonus(
+    record.levels[String(level)]?.againstPlayers ?? {},
+    record.stars[star]?.againstPlayers ?? {},
+  );
+  const capacity = artifactCapacity(record, { level, star });
+  return [
+    ...rowLines(against).map((line) => `${line} · Against other players, not counted`),
+    ...rowLines({ capacity }).map((line) => `${line} · Not counted`),
+  ];
 }
 
 /**

@@ -67,6 +67,7 @@ import type {
 } from '../engine/types';
 import { ARTIFACT_LINES } from './schema';
 import type {
+  ArtifactRoll,
   BattleSetup,
   Profile,
   ProfileSources,
@@ -221,19 +222,20 @@ const MARCH_TYPE_PHRASES: Record<Exclude<SetupMarchType, 'unspecified'>, string>
 // ---- Artifacts -------------------------------------------------------------------------------------
 type ArtifactEntry = ProfileSources['artifacts'][number];
 
+/** What of a saved artifact its figures come from. */
+export type ArtifactState = Pick<ArtifactEntry, 'level' | 'star' | 'lines'>;
+
 /** The random lines a star has opened: one per whole star reached, so line k counts from star k.0 (B-42). */
 export const artifactLineCount = (star: string): number => Math.min(ARTIFACT_LINES, Math.floor(Number(star)));
 
+/** The random bonuses that count at this star: the lines it has opened, the empty ones left out. */
+export function openRolls({ star, lines = [] }: Pick<ArtifactEntry, 'star' | 'lines'>): ArtifactRoll[] {
+  return lines.slice(0, artifactLineCount(star)).filter((line) => line !== null);
+}
+
 /** What an artifact's figures add up from: its level row, its star row and the random lines its star has opened. */
-function artifactRows(
-  record: ArtifactRecord,
-  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
-): (ArtifactRow | undefined)[] {
-  const rolled = (entry.lines ?? [])
-    .slice(0, artifactLineCount(entry.star))
-    .map((line) =>
-      line === null ? undefined : byId(record.randomOptions, line.option)?.values[line.rarity],
-    );
+function artifactRows(record: ArtifactRecord, entry: ArtifactState): (ArtifactRow | undefined)[] {
+  const rolled = openRolls(entry).map((roll) => byId(record.randomOptions, roll.option)?.values[roll.rarity]);
   return [record.levels[String(entry.level)], record.stars[entry.star], ...rolled];
 }
 
@@ -246,7 +248,7 @@ function artifactRows(
  */
 export function artifactBonus(
   record: ArtifactRecord,
-  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
+  entry: ArtifactState,
   marchType: SetupMarchType,
 ): Pick<ArtifactRow, 'health' | 'strength' | 'special'> {
   const value = draft();
@@ -261,10 +263,7 @@ export function artifactBonus(
  * The percent an artifact adds to what a squad can lead, per pool (B-44): the same rows and open lines. It
  * counts in the Prime Arena maximum only (`arenaMaximum`), never in a march's housing.
  */
-export function artifactCapacity(
-  record: ArtifactRecord,
-  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
-): ArtifactCapacity {
+export function artifactCapacity(record: ArtifactRecord, entry: ArtifactState): ArtifactCapacity {
   const value: ArtifactCapacity = {};
   for (const row of artifactRows(record, entry)) addInto(value, row?.capacity);
   return value;

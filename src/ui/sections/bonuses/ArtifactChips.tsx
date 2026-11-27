@@ -21,7 +21,7 @@ import { NumberField, useRovingTabs } from '@/ui/kit';
 import classes from './bonuses.module.css';
 import type { ArtifactChipRow } from './chips';
 import { formatPercent, humanizeOption, optionFigure, RARITY_LABELS, rowLines } from './labels';
-import { artifactRecord, artifactWorth, optionNote } from './rows';
+import { artifactRecord, artifactUncountedLines, artifactWorth, optionNote } from './rows';
 import { useBoundMarchType } from './SetupBindingContext';
 import { SourceChip } from './SourceChip';
 
@@ -171,6 +171,8 @@ function RandomLine({
 function ArtifactEditor({ artifactId }: { artifactId: string }) {
   const profile = useStore(selectActiveProfile);
   const marchType = useBoundMarchType();
+  // The level field wiped to be retyped: nothing is saved until it holds a figure again.
+  const [levelEmptied, setLevelEmptied] = useState(false);
   if (profile === undefined) return null;
 
   const record = artifactRecord(artifactId);
@@ -189,7 +191,10 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
   const topLevel = levels.length;
   const starSteps = Object.keys(record?.stars ?? {});
   const lineCount = artifactLineCount(entry.star);
-  const worth = rowLines(artifactWorth(record, entry, marchType));
+  const worth = [
+    ...rowLines(artifactWorth(record, entry, marchType)),
+    ...artifactUncountedLines(record, entry, marchType),
+  ];
 
   return (
     <Stack gap="xs" w={240}>
@@ -206,13 +211,19 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
       >
         <NumberField
           label="Level"
-          value={entry.level}
+          value={levelEmptied ? null : entry.level}
           min={1}
           max={topLevel}
+          allowEmpty
           onChange={(next) => {
+            setLevelEmptied(next === null);
+            if (next === null) return;
             // The field reports what is typed before it clamps; the saved level never leaves the ladder.
-            const level = Math.min(topLevel, Math.max(1, next ?? 1));
+            const level = Math.min(topLevel, Math.max(1, next));
             patch((current) => ({ ...current, level }));
+          }}
+          onBlur={() => {
+            setLevelEmptied(false);
           }}
         />
       </Stepped>

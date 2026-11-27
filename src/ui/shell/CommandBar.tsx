@@ -20,7 +20,7 @@
  * Generate. `Ctrl`/`⌘ + Enter` still generates from anywhere; so does a plain `Enter`, because the
  * bar is a form and Generate is the button it submits with.
  */
-import { Button, Select, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Select, Text, UnstyledButton } from '@mantine/core';
 
 import { Glyph } from '@/ui/domain';
 import { NumberField } from '@/ui/kit';
@@ -112,16 +112,21 @@ export function CommandBarView({ frame, onOpenRecap, pulse = 0 }: CommandBarProp
                   maximum.setPercent(value ?? 0);
                 }}
               />
-              {/* `type="button"`: pressing it fills the pools, it does not generate. */}
-              <Button
+              {/* `type="button"`: pressing it fills the pools, it does not generate. As tall as the wells
+                  (40 px): an ActionIcon, so the bar's rule for its buttons (44 px, for Generate) leaves it alone. */}
+              <ActionIcon
                 type="button"
                 variant="default"
-                className={classes.maxButton}
+                size={40}
+                w={64}
+                flex="0 0 auto"
                 aria-label={maximum.fillLabel}
                 onClick={maximum.fill}
               >
-                Max
-              </Button>
+                <Text span size="sm" fw={600}>
+                  Max
+                </Text>
+              </ActionIcon>
             </>
           )}
           {/* Five objectives and "no priority", each a short line: the one control on the page a

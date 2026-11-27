@@ -197,8 +197,11 @@ interface PrimeArenaState extends ArenaInputs {
   updateSetup: (patch: (setup: BattleSetup) => Partial<BattleSetup>) => void;
   /** Clones the active march's setup into the squad (at most five captains), once. */
   seedFrom: (active: BattleSetup) => void;
-  /** True once this opening of the page filled the captain slots; leaving the page forgets it. View state. */
-  filled: boolean;
+  /**
+   * True once this opening of the page filled the active profile's captain slots; leaving the page or switching
+   * profile forgets it. View state.
+   */
+  captainsAutoFilled: boolean;
   /**
    * The page is open: seed the squad from the march if it never was, then, once per opening, fill its empty captain
    * slots with the strongest owned captains (B-45). Then, each time, apply the capacity rule (B-43). Safe to call
@@ -328,16 +331,16 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
         : filled;
     });
   },
-  filled: false,
+  captainsAutoFilled: false,
   open: (march) => {
     get().seedFrom(march);
     const profile = selectActiveProfile(useStore.getState());
     if (profile === undefined) return;
-    if (get().filled) {
+    if (get().captainsAutoFilled) {
       commit(pickInputs(get()));
       return;
     }
-    set({ filled: true });
+    set({ captainsAutoFilled: true });
     // An id whose entry the account no longer has is nobody: its slot is empty.
     const owned = new Map(profile.sources.captains.map((entry) => [entry.id, entry.captainId]));
     const chosen = get().setup.active.captains.filter((id) => owned.has(id));
@@ -399,7 +402,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     generation += 1;
     set({
       ...fresh,
-      filled: false,
+      captainsAutoFilled: false,
       shining: [],
       running: false,
       failed: false,
@@ -446,12 +449,16 @@ useStore.subscribe((state, previous) => {
   ) {
     return;
   }
+  // Another profile on the open page is an opening for it: its own captain slots are filled, after its seed.
+  if (profile?.id !== selectActiveProfile(previous)?.id) {
+    usePrimeArenaStore.setState({ captainsAutoFilled: false });
+  }
   hydrate(profile);
 });
 
 // Leaving the page ends the opening and any shine: the next one fills the squad's empty captain slots again.
 useUiStore.subscribe((state, previous) => {
   if (previous.page === 'primeArena' && state.page !== 'primeArena') {
-    usePrimeArenaStore.setState({ filled: false, shining: [] });
+    usePrimeArenaStore.setState({ captainsAutoFilled: false, shining: [] });
   }
 });

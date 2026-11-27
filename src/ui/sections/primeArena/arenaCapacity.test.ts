@@ -56,7 +56,7 @@ const type = (leadership: number, dominance: number): void => {
 
 /** The document as it comes back from storage, to a page that has not been opened yet. */
 function reload(): void {
-  usePrimeArenaStore.setState({ filled: false });
+  usePrimeArenaStore.setState({ captainsAutoFilled: false });
   const stored = JSON.parse(JSON.stringify(useStore.getState().doc)) as RootDocument;
   useStore.getState().replaceDocument(newRoot());
   useStore.getState().replaceDocument(migrate(stored));

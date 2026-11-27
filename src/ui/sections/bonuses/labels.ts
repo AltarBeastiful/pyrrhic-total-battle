@@ -39,6 +39,13 @@ const CAPACITY_LABELS: Record<keyof ArtifactCapacity, string> = {
   dominance: 'Dominance',
 };
 
+/** The pools a bonus raises, each under its name; one it adds nothing to is left out. */
+function capacityFigures(bonus: BonusLike): { pool: string; label: string; value: number }[] {
+  return Object.entries(bonus.capacity ?? {}).flatMap(([pool, value]) =>
+    value ? [{ pool, label: CAPACITY_LABELS[pool as keyof ArtifactCapacity], value }] : [],
+  );
+}
+
 export const BONUS_LABELS: Record<BonusKey, string> = {
   melee: 'Melee',
   ranged: 'Ranged',
@@ -145,8 +152,8 @@ function collect(bonus: BonusLike, short: boolean): { label: string; parts: stri
       formatPercent(entry.value),
     );
   }
-  for (const [key, value] of Object.entries(bonus.capacity ?? {})) {
-    if (value) add(`capacity:${key}`, CAPACITY_LABELS[key as keyof ArtifactCapacity], formatPercent(value));
+  for (const { pool, label, value } of capacityFigures(bonus)) {
+    add(`capacity:${pool}`, label, formatPercent(value));
   }
 
   return [...byKey.values()];
@@ -277,10 +284,8 @@ export function rowLines(bonus: BonusLike): string[] {
     const against = `${BONUS_LABELS[entry.attacker].toLowerCase()} against ${AGAINST_LABELS[entry.target]}`;
     lines.push(`${formatPercent(entry.value)} strength (${against})`);
   }
-  for (const [key, value] of Object.entries(bonus.capacity ?? {})) {
-    if (value) {
-      lines.push(`${formatPercent(value)} ${CAPACITY_LABELS[key as keyof ArtifactCapacity].toLowerCase()}`);
-    }
+  for (const { label, value } of capacityFigures(bonus)) {
+    lines.push(`${formatPercent(value)} ${label.toLowerCase()}`);
   }
   return lines;
 }

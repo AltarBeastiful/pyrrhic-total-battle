@@ -441,18 +441,11 @@ export function dropArenaTroops(profile: Record<string, unknown>): Record<string
  * game does not have) becomes 0.1. The random bonus is left for `randomBonusBecomesLine`.
  */
 export function artifactsFollowTable(profile: Record<string, unknown>): Record<string, unknown> {
-  const sources = profile.sources;
-  if (!isPlainObject(sources) || !Array.isArray(sources.artifacts)) return profile;
-  const artifacts = sources.artifacts.map((entry) => {
-    if (!isPlainObject(entry)) return entry;
-    const { manual: _manual, ...rest } = entry;
-    return {
-      ...rest,
-      ...(typeof rest.level === 'number' && rest.level < 1 ? { level: 1 } : {}),
-      ...(rest.star === '0.0' ? { star: '0.1' } : {}),
-    };
-  });
-  return { ...profile, sources: { ...sources, artifacts } };
+  return mapArtifacts(profile, ({ manual: _manual, ...rest }) => ({
+    ...rest,
+    ...(typeof rest.level === 'number' && rest.level < 1 ? { level: 1 } : {}),
+    ...(rest.star === '0.0' ? { star: '0.1' } : {}),
+  }));
 }
 
 /**
@@ -471,14 +464,22 @@ export function addArenaCapacity(profile: Record<string, unknown>): Record<strin
  * cannot roll is dropped.
  */
 export function randomBonusBecomesLine(profile: Record<string, unknown>): Record<string, unknown> {
-  const sources = profile.sources;
-  if (!isPlainObject(sources) || !Array.isArray(sources.artifacts)) return profile;
-  const artifacts = sources.artifacts.map((entry) => {
-    if (!isPlainObject(entry) || !('random' in entry)) return entry;
+  return mapArtifacts(profile, (entry) => {
+    if (!('random' in entry)) return entry;
     const { random, ...rest } = entry;
     const line = nearestRoll(rest.artifactId, random);
     return line === null ? rest : { ...rest, lines: [line] };
   });
+}
+
+/** The profile with each of its artifact entries rewritten by `step`; anything of another shape stays as it is. */
+function mapArtifacts(
+  profile: Record<string, unknown>,
+  step: (entry: Record<string, unknown>) => Record<string, unknown>,
+): Record<string, unknown> {
+  const sources = profile.sources;
+  if (!isPlainObject(sources) || !Array.isArray(sources.artifacts)) return profile;
+  const artifacts = sources.artifacts.map((entry: unknown) => (isPlainObject(entry) ? step(entry) : entry));
   return { ...profile, sources: { ...sources, artifacts } };
 }
 

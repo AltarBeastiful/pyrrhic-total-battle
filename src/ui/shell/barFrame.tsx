@@ -32,6 +32,8 @@ export interface BarObjective {
 export interface BarMaximum {
   /** The bonus field's name. */
   label: string;
+  /** The name read aloud before the figure, which brings its own "%". */
+  spokenName: string;
   /** The same in a phone chip's worth of room. */
   short: string;
   percent: number;

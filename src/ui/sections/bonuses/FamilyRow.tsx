@@ -25,7 +25,7 @@ export interface FamilyRowProps {
 
 export function FamilyRow({ title, count, action, children }: FamilyRowProps) {
   return (
-    <div className={action === undefined ? classes.family : `${classes.family} ${classes.familyWithAction}`}>
+    <div className={classes.family}>
       <Stack gap={2} className={classes.familyLabel}>
         <Text size="sm" fw={600}>
           {title}

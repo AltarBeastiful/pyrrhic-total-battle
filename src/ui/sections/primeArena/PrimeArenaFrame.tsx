@@ -102,6 +102,8 @@ export function ArenaSetup() {
             variant="light"
             size="compact-xs"
             w="fit-content"
+            // On the phone the heading stands over its chips, whose corner gears reach 10 px above their row.
+            mb="sm"
             disabled={nobodyToPick}
             onClick={pickStrongest}
           >
@@ -190,6 +192,7 @@ function useArenaBar(): { frame: BarFrame; press: () => void } {
     },
     maximum: {
       label: 'Other capacity bonus %',
+      spokenName: 'Other capacity bonus',
       short: 'Bonus',
       percent: inputs.otherCapacity,
       max: MAX_OTHER_CAPACITY,

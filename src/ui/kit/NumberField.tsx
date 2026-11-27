@@ -21,6 +21,8 @@ export interface NumberFieldProps {
   /** `null` is an empty field; only reachable when `allowEmpty`. */
   value: number | null;
   onChange: (value: number | null) => void;
+  /** Focus left the field; for a caller that holds an emptied field until then. */
+  onBlur?: () => void;
   min?: number;
   max?: number;
   /** An empty field reports `null` instead of falling back to `min` (or 0). */
@@ -52,6 +54,7 @@ export function NumberField({
   accessibleName,
   value,
   onChange,
+  onBlur,
   min = 0,
   max,
   allowEmpty = false,
@@ -91,6 +94,7 @@ export function NumberField({
       }}
       {...(enterKeyHint === undefined ? {} : { enterKeyHint })}
       {...(max === undefined ? {} : { max })}
+      {...(onBlur === undefined ? {} : { onBlur })}
       {...(placeholder === undefined ? {} : { placeholder })}
       {...(w === undefined ? {} : { w })}
       onChange={(next) => {

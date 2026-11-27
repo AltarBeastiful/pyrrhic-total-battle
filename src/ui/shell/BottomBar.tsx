@@ -27,7 +27,7 @@
  * honoured only where the player has not asked for stillness (`prefers-reduced-motion`), and the
  * sentence the shell announces says the same thing without it.
  */
-import { NumberInput, Popover, UnstyledButton } from '@mantine/core';
+import { ActionIcon, NumberInput, Popover, Text, UnstyledButton } from '@mantine/core';
 import { ChevronDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
@@ -88,22 +88,28 @@ export function BottomBarView({ frame, onOpenRecap, pulse = 0 }: BottomBarProps 
             <>
               <FigureChip
                 label={maximum.label}
+                spokenName={maximum.spokenName}
                 short={maximum.short}
                 value={maximum.percent}
                 shown={`${String(maximum.percent)} %`}
-                spoken={`${String(maximum.percent)} %`}
                 decimal
                 max={maximum.max}
                 onChange={maximum.setPercent}
               />
-              <UnstyledButton
+              {/* As tall as the chips (44 px). An ActionIcon, so the bar's rule for its buttons (48 px, for
+                  Generate) leaves it alone. */}
+              <ActionIcon
                 type="button"
-                className={classes.maxChip}
+                variant="default"
+                size={44}
+                flex="0 0 auto"
                 aria-label={maximum.fillLabel}
                 onClick={maximum.fill}
               >
-                Max
-              </UnstyledButton>
+                <Text span size="xs" fw={600}>
+                  Max
+                </Text>
+              </ActionIcon>
             </>
           )}
           {objective !== null && (
@@ -158,7 +164,6 @@ function HousingChip({ pool, value, problem, onChange }: HousingChipProps) {
       glyph={<Glyph kind={pool} />}
       value={value}
       shown={amount(value)}
-      spoken={amount(value)}
       empty={value === 0}
       problem={problem}
       onChange={onChange}
@@ -175,7 +180,8 @@ interface FigureChipProps {
   value: number;
   /** The figure as the chip prints it, and as it is read aloud. */
   shown: string;
-  spoken: string;
+  /** The name read aloud before the figure, where `label` says something the figure already does. */
+  spokenName?: string;
   /** A chip with nothing in it yet writes its figure in the muted ink. */
   empty?: boolean;
   /** What is wrong with the figure, or `null`; the words are the bar's one message line. */
@@ -193,7 +199,7 @@ function FigureChip({
   glyph,
   value,
   shown,
-  spoken,
+  spokenName = label,
   empty = false,
   problem = null,
   decimal = false,
@@ -256,7 +262,7 @@ function FigureChip({
       data-error={problem === null ? undefined : true}
       // The glyph and the short word are what the eye reads; the full name is what a screen
       // reader is given, with the figure, because "Lead" is not a word for anybody's ears.
-      aria-label={`${label.replace(/ %$/, '')} ${spoken}`}
+      aria-label={`${spokenName} ${shown}`}
       onClick={() => {
         setEditing(true);
       }}

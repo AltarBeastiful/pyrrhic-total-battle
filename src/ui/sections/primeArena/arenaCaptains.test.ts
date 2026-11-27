@@ -242,7 +242,7 @@ test('a hand-made selection does not shine, and the shine is never saved', () =>
   expect(usePrimeArenaStore.getState().shining).toHaveLength(5);
   const document = JSON.stringify(useStore.getState().doc);
   expect(document).not.toContain('shining');
-  expect(document).not.toContain('filled');
+  expect(document).not.toContain('captainsAutoFilled');
 });
 
 test('leaving the page ends a shine', () => {
@@ -251,4 +251,36 @@ test('leaving the page ends a shine', () => {
   expect(usePrimeArenaStore.getState().shining).toHaveLength(5);
   useUiStore.getState().setPage('calculator');
   expect(usePrimeArenaStore.getState().shining).toEqual([]);
+});
+
+test('a switch to another profile counts as an opening of the page for it, after its squad is seeded', () => {
+  own([['aydae', 40]]);
+  open();
+  // A profile never seeded, with captains owned and none on its march.
+  const other = useStore.getState().createProfile('other');
+  useStore.getState().setActiveProfile(other);
+  own(SEVEN);
+  // The setup column asks again with the new profile, the page never having been left.
+  open();
+  expect(saved()).toEqual(STRONGEST);
+  // The squad was seeded first, so the pools are its maximum, not 0/0.
+  const { leadership, dominance } = selectActiveProfile(useStore.getState())!.primeArena.setup.housing;
+  expect(leadership).toBeGreaterThan(0);
+  expect(dominance).toBeGreaterThan(0);
+});
+
+test('switching back to a profile fills its empty slots again and keeps the chosen captains', () => {
+  const first = useStore.getState().doc.activeProfileId;
+  own([
+    ['aydae', 40],
+    ['beowulf', 30],
+  ]);
+  open();
+  usePrimeArenaStore.getState().updateSetup((s) => ({ active: { ...s.active, captains: ['e-beowulf'] } }));
+  const other = useStore.getState().createProfile('other');
+  useStore.getState().setActiveProfile(other);
+  open();
+  useStore.getState().setActiveProfile(first);
+  open();
+  expect(saved()).toEqual(['e-beowulf', 'e-aydae']);
 });

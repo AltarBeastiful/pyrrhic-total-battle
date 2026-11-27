@@ -13,27 +13,24 @@
  */
 import { artifacts as artifactTable, capacities } from '../data';
 import type { ArtifactRecord } from '../data/types';
-import { activeEntries, artifactCapacity, artifactLineCount } from '../state/derive';
+import { activeEntries, artifactCapacity, openRolls, type ArtifactState } from '../state/derive';
 import type { ArenaCapacityBasis, ArtifactRoll, BattleSetup, Profile } from '../state/schema';
 import type { Housing } from './types';
 
 /** The two pools the arena has. */
 export type ArenaPools = Pick<Housing, 'leadership' | 'dominance'>;
 
-type ArtifactEntry = Profile['sources']['artifacts'][number];
 type BasisArtifact = NonNullable<ArenaCapacityBasis['artifacts']>[number];
 
 const artifactRecord = (id: string): ArtifactRecord | undefined =>
   artifactTable.find((record) => record.id === id);
 
 /** The open random lines of an artifact that raise capacity, in an order of their own: their places mean nothing. */
-function capacityLines(record: ArtifactRecord, entry: ArtifactEntry): ArtifactRoll[] {
-  return (entry.lines ?? [])
-    .slice(0, artifactLineCount(entry.star))
-    .flatMap((line) => {
-      if (line === null) return [];
-      const option = record.randomOptions.find((candidate) => candidate.id === line.option);
-      return option?.values[line.rarity].capacity === undefined ? [] : [line];
+function capacityLines(record: ArtifactRecord, entry: ArtifactState): ArtifactRoll[] {
+  return openRolls(entry)
+    .filter((roll) => {
+      const option = record.randomOptions.find((candidate) => candidate.id === roll.option);
+      return option?.values[roll.rarity].capacity !== undefined;
     })
     .sort((a, b) => a.option.localeCompare(b.option) || a.rarity.localeCompare(b.rarity));
 }

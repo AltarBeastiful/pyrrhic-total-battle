@@ -674,7 +674,7 @@ test('the march marks the options it does not count, and leaves them selectable'
   expect(lineNote(editor, 1)).toBe('Not counted');
   await pickLine(user, editor, 1, /^Double damage chance$/);
   expect(lineNote(editor, 1)).toBeNull();
-  // The march's housing takes no capacity (B-44), so the editor's figures show none, level bonus included.
+  // The march's housing takes no capacity (B-44), so no capacity figure reads as one that counts.
   expect(within(editor).queryByText(/% (leadership|dominance)$/)).toBeNull();
 });
 
@@ -686,6 +686,53 @@ test('the march marks a line against other players as not counted', async () => 
   await pickLine(user, editor, 1, /^Melee strength and health against other players\s*Not counted$/);
   expect(lineNote(editor, 1)).toBe('Against other players, not counted');
   expect(within(editor).getByText('+23 % health and strength (melee)')).toBeTruthy();
+});
+
+test('the march shows what a level gives that it does not count, marked, so + is seen to move it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, "Zeus' Lightning");
+  // Zeus' levels raise capacity alone, which no march counts.
+  expect(within(editor).getByText('+2.5 % leadership · Not counted')).toBeTruthy();
+  expect(within(editor).getByText('+2.5 % dominance · Not counted')).toBeTruthy();
+  typeNumber(editor, 'Level', '59');
+  await user.click(button('Raise level'));
+  expect(within(editor).getByText('+25 % leadership · Not counted')).toBeTruthy();
+  expect(within(editor).getByText('+0.7 % double damage chance')).toBeTruthy();
+});
+
+test.each([
+  // Level 1 and star 0.1: Mars against other players from the level alone; Forest Crown 17.5 + 18, both ways.
+  ["Mars' Twin Blades", '+42 % health and strength (army)', []],
+  ['Forest Crown', '+35.5 % health and strength (army)', ['+35.5 % health and strength (army)']],
+])('the march shows what %s gives against other players, marked', async (name, against, counted) => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, name);
+  expect(within(editor).getByText(`${against} · Against other players, not counted`)).toBeTruthy();
+  for (const line of counted) expect(within(editor).getByText(line)).toBeTruthy();
+});
+
+test('an emptied level field saves nothing, so a new level can be typed into it', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Ruby Brooch');
+  const level = () => profile()?.sources.artifacts[0]?.level;
+  const field = within(editor).getByRole('textbox', { name: 'Level' });
+  typeNumber(editor, 'Level', '35');
+
+  await user.clear(field);
+  expect(field).toHaveProperty('value', '');
+  expect(level()).toBe(35);
+  await user.type(field, '42');
+  expect(level()).toBe(42);
+  expect(field).toHaveProperty('value', '42');
+
+  // Left empty, the field goes back to the level that is saved.
+  await user.clear(field);
+  await user.tab();
+  expect(field).toHaveProperty('value', '42');
+  expect(level()).toBe(42);
 });
 
 test('a captain’s editor has no + and − buttons', async () => {

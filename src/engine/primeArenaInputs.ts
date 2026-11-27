@@ -84,10 +84,11 @@ export function primeArenaLevel(troops: ProfileTroops): number {
   return troops.guardsmen?.max ?? 0;
 }
 
+const isGuardsman = (unit: UnitDef): boolean => unit.kind === 'troop' && unit.group === 'guardsmen';
+
 /** Whether some squad could field this unit, at a high enough level and with nothing dropped. */
 function canEverFight(unit: UnitDef): boolean {
-  const isGuardsman = unit.kind === 'troop' && unit.group === 'guardsmen';
-  return (isGuardsman || isPrimeArenaUnit(unit)) && unit.tier >= PRIME_ARENA_MIN_TIER;
+  return (isGuardsman(unit) || isPrimeArenaUnit(unit)) && unit.tier >= PRIME_ARENA_MIN_TIER;
 }
 
 /**
@@ -101,12 +102,11 @@ export function primeArenaPool(troops: ProfileTroops): UnitDef[] {
     if (!canEverFight(unit) || unit.tier > level) return false;
     if (troops.excludedUnitIds.includes(unit.id)) return false;
     if (unit.tier === level && unit.category !== undefined) {
-      const dropped =
-        unit.kind === 'troop' && unit.group === 'guardsmen'
-          ? troops.topTierExcluded.guardsmen
-          : unit.group === 'specialist'
-            ? troops.topTierExcluded.specialists
-            : [];
+      const dropped = isGuardsman(unit)
+        ? troops.topTierExcluded.guardsmen
+        : unit.group === 'specialist'
+          ? troops.topTierExcluded.specialists
+          : [];
       if (dropped.includes(unit.category)) return false;
     }
     return true;
