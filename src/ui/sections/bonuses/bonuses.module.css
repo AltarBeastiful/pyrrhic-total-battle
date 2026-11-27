@@ -58,4 +58,9 @@
     gap: 0.5rem;
     padding-top: 0;
   }
+
+  /* A heading that carries a control: the first chips' corner gears stand 10 px above their row. */
+  .familyWithAction {
+    row-gap: 0.875rem;
+  }
 }

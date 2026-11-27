@@ -17,6 +17,7 @@ import {
   PRIME_ARENA_CAPTAINS,
   PRIME_ARENA_SOURCES,
   primeArenaInputs,
+  rankArenaCaptains,
   type PrimeArenaToggles,
 } from '@/engine/primeArenaInputs';
 import type { PrimeArenaPlan, PrimeArenaRole } from '@/engine/primeArenaPlanner';
@@ -24,6 +25,7 @@ import { defaultPrimeArena } from '@/state/defaults';
 import { DEFAULT_ARENA_STACKS, MAX_ARENA_STACKS } from '@/state/schema';
 import type { BattleSetup, PrimeArenaSaved, Profile } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
+import { useUiStore } from '@/ui/uiStore';
 import { createCalcClient, isAbortError, type CalcClient } from '@/worker/client';
 
 export interface PlanBudget {
@@ -136,8 +138,45 @@ interface PrimeArenaState extends ArenaInputs {
   updateSetup: (patch: (setup: BattleSetup) => Partial<BattleSetup>) => void;
   /** Clones the active march's setup into the squad (at most five captains), once. */
   seedFrom: (active: BattleSetup) => void;
+  /** True once this opening of the page filled the captain slots; leaving the page forgets it. View state. */
+  filled: boolean;
+  /**
+   * The page is open: seed the squad from the march if it never was, then, once per opening, fill its empty captain
+   * slots with the strongest owned captains (B-45). Safe to call again while the page stays open.
+   */
+  open: (march: BattleSetup) => void;
+  /** Replaces the whole selection with the strongest owned captains, five at most; nothing when none is owned. */
+  pickStrongest: () => void;
+  /** The captains (table ids) the last automatic selection added, for one short shine. View state, never saved. */
+  shining: readonly string[];
   generate: (profile: Profile, budget?: PlanBudget) => void;
   reset: () => void;
+}
+
+/** How long a newly selected captain is marked to shine; the animation itself is a little shorter. */
+export const CAPTAIN_SHINE_MS = 1200;
+let shineTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * The one way an automatic selection (an opening, "Pick 5 strongest") is written: `entryIds` go into the squad through
+ * `updateSetup`, as a hand edit does, so whatever follows a selection change follows both; the captains it adds
+ * shine. Nothing is written when the same entries are already aboard: their order means nothing.
+ */
+function selectCaptains(profile: Profile, entryIds: string[]): void {
+  const { setup, updateSetup } = usePrimeArenaStore.getState();
+  const before = setup.active.captains;
+  if (entryIds.length === before.length && entryIds.every((id) => before.includes(id))) return;
+  const captainsOf = (ids: string[]): string[] =>
+    ids.flatMap((id) => profile.sources.captains.find((entry) => entry.id === id)?.captainId ?? []);
+  const aboard = new Set(captainsOf(before));
+  const added = captainsOf(entryIds).filter((captainId) => !aboard.has(captainId));
+  updateSetup((s) => ({ active: { ...s.active, captains: entryIds } }));
+  if (added.length === 0) return;
+  clearTimeout(shineTimer);
+  usePrimeArenaStore.setState({ shining: added });
+  shineTimer = setTimeout(() => {
+    usePrimeArenaStore.setState({ shining: [] });
+  }, CAPTAIN_SHINE_MS);
 }
 
 export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
@@ -193,6 +232,34 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     set({ seeded: true, setup });
     save({ ...get(), setup, seeded: true });
   },
+  filled: false,
+  open: (march) => {
+    get().seedFrom(march);
+    const profile = selectActiveProfile(useStore.getState());
+    if (profile === undefined || get().filled) return;
+    set({ filled: true });
+    // An id whose entry the account no longer has is nobody: its slot is empty.
+    const owned = new Map(profile.sources.captains.map((entry) => [entry.id, entry.captainId]));
+    const chosen = get().setup.active.captains.filter((id) => owned.has(id));
+    const aboard = new Set(chosen.map((id) => owned.get(id)));
+    const picks = rankArenaCaptains(profile.sources.captains)
+      .filter((entry) => !aboard.has(entry.captainId))
+      .slice(0, PRIME_ARENA_CAPTAINS - chosen.length)
+      .map((entry) => entry.id);
+    // With nobody to add the squad stays exactly as saved.
+    if (picks.length > 0) selectCaptains(profile, [...chosen, ...picks]);
+  },
+  shining: [],
+  pickStrongest: () => {
+    const profile = selectActiveProfile(useStore.getState());
+    if (profile === undefined) return;
+    const strongest = rankArenaCaptains(profile.sources.captains).slice(0, PRIME_ARENA_CAPTAINS);
+    if (strongest.length === 0) return;
+    selectCaptains(
+      profile,
+      strongest.map((entry) => entry.id),
+    );
+  },
   generate: (profile, given) => {
     if (get().running) return;
     const inputs = pickInputs(get());
@@ -229,7 +296,16 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   reset: () => {
     const fresh = freshInputs();
     generation += 1;
-    set({ ...fresh, running: false, failed: false, plan: null, planLevel: null, planKey: null });
+    set({
+      ...fresh,
+      filled: false,
+      shining: [],
+      running: false,
+      failed: false,
+      plan: null,
+      planLevel: null,
+      planKey: null,
+    });
     save(fresh);
   },
 }));
@@ -249,6 +325,7 @@ function hydrate(profile: Profile | undefined): void {
   generation += 1;
   usePrimeArenaStore.setState({
     ...loaded,
+    shining: [],
     running: false,
     failed: false,
     plan: null,
@@ -267,4 +344,11 @@ useStore.subscribe((state, previous) => {
     return;
   }
   hydrate(profile);
+});
+
+// Leaving the page ends the opening and any shine: the next one fills the squad's empty captain slots again.
+useUiStore.subscribe((state, previous) => {
+  if (previous.page === 'primeArena' && state.page !== 'primeArena') {
+    usePrimeArenaStore.setState({ filled: false, shining: [] });
+  }
 });

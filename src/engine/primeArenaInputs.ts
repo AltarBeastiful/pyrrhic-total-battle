@@ -10,9 +10,9 @@
  * read from the rank table through `talentSource`. The output types are standalone: the match engine (B-32)
  * reads `pool`, `housing` and `totals`.
  */
-import { getUnits, talents as talentTable } from '../data';
-import type { UnitDef } from '../data/types';
-import { resolveSources } from '../state/derive';
+import { captains as captainTable, getUnits, talents as talentTable } from '../data';
+import type { BonusKey, CaptainRecord, UnitDef } from '../data/types';
+import { captainCounts, captainValue, resolveSources } from '../state/derive';
 import type { BattleSetup, BuiltinPermanentSource, Profile, ProfileTroops } from '../state/schema';
 import { aggregateBonuses } from './bonuses';
 import { talentSource } from './talentAnalysis';
@@ -84,6 +84,12 @@ export function primeArenaLevel(troops: ProfileTroops): number {
   return troops.guardsmen?.max ?? 0;
 }
 
+/** Whether some squad could field this unit, at a high enough level and with nothing dropped. */
+function canEverFight(unit: UnitDef): boolean {
+  const isGuardsman = unit.kind === 'troop' && unit.group === 'guardsmen';
+  return (isGuardsman || isPrimeArenaUnit(unit)) && unit.tier >= PRIME_ARENA_MIN_TIER;
+}
+
 /**
  * The troops a squad may field, in one place: the Guardsmen, the Specialists and the Monsters from tier 2 up to
  * the Guardsmen level (G2, S2 and M3 are the lowest), minus what the Troops card drops: the top tier's dropped
@@ -92,20 +98,58 @@ export function primeArenaLevel(troops: ProfileTroops): number {
 export function primeArenaPool(troops: ProfileTroops): UnitDef[] {
   const level = primeArenaLevel(troops);
   return getUnits().filter((unit) => {
-    const isGuardsman = unit.kind === 'troop' && unit.group === 'guardsmen';
-    if (!isGuardsman && !isPrimeArenaUnit(unit)) return false;
-    if (unit.tier < PRIME_ARENA_MIN_TIER || unit.tier > level) return false;
+    if (!canEverFight(unit) || unit.tier > level) return false;
     if (troops.excludedUnitIds.includes(unit.id)) return false;
     if (unit.tier === level && unit.category !== undefined) {
-      const dropped = isGuardsman
-        ? troops.topTierExcluded.guardsmen
-        : unit.group === 'specialist'
-          ? troops.topTierExcluded.specialists
-          : [];
+      const dropped =
+        unit.kind === 'troop' && unit.group === 'guardsmen'
+          ? troops.topTierExcluded.guardsmen
+          : unit.group === 'specialist'
+            ? troops.topTierExcluded.specialists
+            : [];
       if (dropped.includes(unit.category)) return false;
     }
     return true;
   });
+}
+
+type OwnedCaptain = Profile['sources']['captains'][number];
+
+/**
+ * The bonus points of a captain that count in the arena at this level and star: none for one limited to a kind of
+ * march (`captainCounts`), and none on a key no arena unit reads (Brann's engineers never fight there).
+ */
+function arenaPoints(record: CaptainRecord, { level, star }: OwnedCaptain, read: Set<BonusKey>): number {
+  if (!captainCounts(record, 'arena')) return 0;
+  let points = 0;
+  for (const progression of [record.health, record.strength]) {
+    if (progression !== undefined && read.has(progression.key)) {
+      points += captainValue(progression, level, star);
+    }
+  }
+  if (record.special !== undefined) points += captainValue(record.special, level, star);
+  return points;
+}
+
+/**
+ * The owned captains (level 1 and above, the first entry of each, the one its chip shows) from the strongest down:
+ * the highest level first, then the most points that count in the arena, then the picker's order (B-45).
+ */
+export function rankArenaCaptains(owned: readonly OwnedCaptain[]): OwnedCaptain[] {
+  const read = new Set(
+    getUnits()
+      .filter(canEverFight)
+      .flatMap((unit) => unit.keys),
+  );
+  return captainTable
+    .flatMap((record) => {
+      const entry = owned.find((candidate) => candidate.captainId === record.id);
+      return entry === undefined || entry.level < 1
+        ? []
+        : [{ entry, points: arenaPoints(record, entry, read) }];
+    })
+    .sort((a, b) => b.entry.level - a.entry.level || b.points - a.points)
+    .map((ranked) => ranked.entry);
 }
 
 function talentSources(ranks: Readonly<Record<string, number>>): ResolvedSource[] {

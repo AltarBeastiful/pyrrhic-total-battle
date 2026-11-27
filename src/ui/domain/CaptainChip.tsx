@@ -38,6 +38,8 @@ export interface CaptainChipProps {
   star?: number;
   /** What the captain is worth as recorded, one line each: shown on hover and on focus. */
   details?: string[];
+  /** Just put aboard by an automatic selection: one short glow, gone with the flag. */
+  shine?: boolean;
   /** Opens the level editor. Left out for a captain with nothing to set. */
   onEditLevel?: () => void;
   /** The editor itself. `CornerGear` anchors it on the gear's own button, never on the chip. */
@@ -57,6 +59,7 @@ export function CaptainChip({
   level = 0,
   star = 0,
   details = [],
+  shine = false,
   onEditLevel,
   levelEditor,
   levelEditorOpened,
@@ -70,6 +73,7 @@ export function CaptainChip({
       color="brass"
       aria-label={enlisted ? `${name}, riding with this march` : `Send ${name} on this march`}
       onChange={onToggle}
+      {...(shine ? { classNames: { label: classes.shine }, wrapperProps: { 'data-shine': true } } : {})}
     >
       <Group gap={5} wrap="nowrap" component="span">
         {bonusKey !== undefined && <Glyph kind={bonusKey} />}

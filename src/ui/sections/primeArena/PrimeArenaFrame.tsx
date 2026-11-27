@@ -9,11 +9,16 @@
  * - **the bars** (`ArenaBars`): the calculator's command bar and phone bar over a frame config with the two
  *   pools the arena has, no objective, and a Generate that plans the attack.
  */
-import { Stack, Text, VisuallyHidden } from '@mantine/core';
+import { Button, Stack, Text, VisuallyHidden } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { PRIME_ARENA_PERMANENT, primeArenaInputs } from '@/engine/primeArenaInputs';
+import {
+  PRIME_ARENA_CAPTAINS,
+  PRIME_ARENA_PERMANENT,
+  primeArenaInputs,
+  rankArenaCaptains,
+} from '@/engine/primeArenaInputs';
 import type { Pool } from '@/engine/types';
 import { SOURCE_LABELS } from '@/state/defaults';
 import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS } from '@/state/schema';
@@ -63,12 +68,16 @@ export function ArenaSetup() {
   const march = useStore(selectActiveSetup);
   const inputs = useArenaInputs();
   const { toggles, setup } = inputs;
-  const { setToggle, updateSetup, seedFrom } = usePrimeArenaStore();
+  const { setToggle, updateSetup, open, pickStrongest, shining } = usePrimeArenaStore();
+  const nobodyToPick = useMemo(
+    () => rankArenaCaptains(profile?.sources.captains ?? []).length === 0,
+    [profile],
+  );
 
   useEffect(() => {
     if (profile === undefined || march === undefined) return;
-    seedFrom(march);
-  }, [profile, march, seedFrom]);
+    open(march);
+  }, [profile, march, open]);
 
   // The arena's rules, as the shared body's binding: its own squad, five captains.
   const binding = useMemo<SetupBinding>(
@@ -84,6 +93,20 @@ export function ArenaSetup() {
   const scope = useMemo<BodyScope>(
     () => ({
       ...ARENA_SCOPE_BASE,
+      captains: {
+        shining,
+        action: (
+          <Button
+            variant="light"
+            size="compact-xs"
+            w="fit-content"
+            disabled={nobodyToPick}
+            onClick={pickStrongest}
+          >
+            {`Pick ${String(PRIME_ARENA_CAPTAINS)} strongest`}
+          </Button>
+        ),
+      },
       counting: {
         builtins: PRIME_ARENA_PERMANENT,
         extras: [
@@ -97,7 +120,7 @@ export function ArenaSetup() {
         },
       },
     }),
-    [setup.active.dragon, toggles, setToggle, updateSetup],
+    [setup.active.dragon, toggles, setToggle, updateSetup, shining, nobodyToPick, pickStrongest],
   );
   const sources = useMemo(
     () =>

@@ -223,16 +223,18 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
 
   const panels: Record<
     (typeof ORDER)[number] | (typeof FOLDED)[number],
-    { title: string; summary: React.ReactNode; body: React.ReactNode }
+    { title: string; summary: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }
   > = {
     captains: {
       title: 'Hero and captains',
+      action: scope.captains?.action,
       summary: `${String(setup.active.captains.length)}/${String(maxCaptains)}`,
       body: (
         <CaptainChips
           chips={captains}
           isRefused={refusedCaptain && setup.active.captains.length >= maxCaptains}
           refusal={captainRefusal(maxCaptains)}
+          {...(scope.captains === undefined ? {} : { shining: scope.captains.shining })}
           onEnlist={enlist}
           onConfigure={configureCaptain}
           marchType={setup.marchType}
@@ -318,7 +320,7 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
         ))}
       <Stack gap="md">
         {scope.families.map((id) => (
-          <FamilyRow key={id} title={panels[id].title} count={panels[id].summary}>
+          <FamilyRow key={id} title={panels[id].title} count={panels[id].summary} action={panels[id].action}>
             {panels[id].body}
           </FamilyRow>
         ))}
