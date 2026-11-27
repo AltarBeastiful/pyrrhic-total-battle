@@ -6,8 +6,9 @@
  * shows, which is all it takes: the bonuses are the game's own (B-39). The bonus the artifact rolled sits
  * behind a fold — it is one option out of forty and it belongs next to the option it was rolled on.
  */
-import { Divider, Group, Select, Stack, Text } from '@mantine/core';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ActionIcon, Box, Divider, Group, Select, Stack, Text } from '@mantine/core';
+import { Minus, Plus } from 'lucide-react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { updateSources } from '@/state/actions/bonuses';
 import type { ProfileSources } from '@/state/schema';
@@ -25,6 +26,51 @@ export const ARTIFACT_CAP_MESSAGE = 'Three artifacts at most. Take one out first
 
 type ArtifactEntry = ProfileSources['artifacts'][number];
 
+/**
+ * A field between its − and its + (B-40, design rule 10: sixty levels, twenty-five star steps). A press moves
+ * one place along the table's ladder. At an end the button is marked off with `data-disabled`, not `disabled`:
+ * a natively disabled button drops a keyboard player's focus to the page, out of the editor.
+ */
+function Stepped<T>({
+  what,
+  ladder,
+  value,
+  onStep,
+  children,
+}: {
+  /** What the buttons move, as their names say it: "level", "star rating". */
+  what: string;
+  /** Every value the field may take, lowest first. */
+  ladder: readonly T[];
+  value: T;
+  onStep: (next: T) => void;
+  children: ReactNode;
+}) {
+  const at = ladder.indexOf(value);
+  const end = (verb: string, next: T | undefined, Icon: typeof Plus) => (
+    <ActionIcon
+      variant="default"
+      size={36}
+      aria-label={`${verb} ${what}`}
+      {...(next === undefined ? { 'data-disabled': true, 'aria-disabled': true } : {})}
+      onClick={() => {
+        if (next !== undefined) onStep(next);
+      }}
+    >
+      <Icon size={16} aria-hidden />
+    </ActionIcon>
+  );
+  return (
+    <Group gap="xs" align="flex-end" wrap="nowrap">
+      {end('Lower', ladder[at - 1], Minus)}
+      <Box flex={1} miw={0}>
+        {children}
+      </Box>
+      {end('Raise', ladder[at + 1], Plus)}
+    </Group>
+  );
+}
+
 function ArtifactEditor({ artifactId }: { artifactId: string }) {
   const profile = useStore(selectActiveProfile);
   if (profile === undefined) return null;
@@ -41,7 +87,8 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
   };
 
   // The table's own ladders: levels from 1, star steps from 0.1.
-  const topLevel = Object.keys(record?.levels ?? {}).length;
+  const levels = Object.keys(record?.levels ?? {}).map(Number);
+  const topLevel = levels.length;
   const starSteps = Object.keys(record?.stars ?? {});
   const worth = rowValue(artifactWorth(record, entry));
 
@@ -50,28 +97,45 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
       <Text size="sm" fw={600}>
         {record?.name ?? artifactId}
       </Text>
-      <NumberField
-        label="Level"
+      <Stepped
+        what="level"
+        ladder={levels}
         value={entry.level}
-        min={1}
-        max={topLevel}
-        onChange={(next) => {
-          // The field reports what is typed before it clamps; the saved level never leaves the ladder.
-          const level = Math.min(topLevel, Math.max(1, next ?? 1));
+        onStep={(level) => {
           patch((current) => ({ ...current, level }));
         }}
-      />
-      <Select
-        label="Star rating"
-        size="xs"
-        data={starSteps.map((star) => ({ value: star, label: `★ ${star}` }))}
+      >
+        <NumberField
+          label="Level"
+          value={entry.level}
+          min={1}
+          max={topLevel}
+          onChange={(next) => {
+            // The field reports what is typed before it clamps; the saved level never leaves the ladder.
+            const level = Math.min(topLevel, Math.max(1, next ?? 1));
+            patch((current) => ({ ...current, level }));
+          }}
+        />
+      </Stepped>
+      <Stepped
+        what="star rating"
+        ladder={starSteps}
         value={entry.star}
-        allowDeselect={false}
-        comboboxProps={{ withinPortal: false }}
-        onChange={(next) => {
-          if (next !== null) patch((current) => ({ ...current, star: next }));
+        onStep={(star) => {
+          patch((current) => ({ ...current, star }));
         }}
-      />
+      >
+        <Select
+          label="Star rating"
+          data={starSteps.map((star) => ({ value: star, label: `★ ${star}` }))}
+          value={entry.star}
+          allowDeselect={false}
+          comboboxProps={{ withinPortal: false }}
+          onChange={(next) => {
+            if (next !== null) patch((current) => ({ ...current, star: next }));
+          }}
+        />
+      </Stepped>
       <Disclosure title="Random bonus" summary={entry.random === undefined ? 'none' : 'set'}>
         <Stack gap="xs">
           <Select
