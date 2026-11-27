@@ -18,13 +18,14 @@ has re-read in game can be wrong: if a table disagrees with your unit sheet, the
 request with a screenshot. `version.json` records the date the tables were last verified, and the app shows
 it in its About panel.
 
-Two tables are deliberately incomplete and marked as such:
+One table is deliberately incomplete and marked as such:
 
 - **`vip.json`** — the VIP bonuses were not in the capture. Every level is currently `0`. Read them off the
   VIP screen in game (each level lists its army health and army strength bonus) and fill them in. Until then
   the app lets you type the total by hand.
-- **artifact level tables** — only *Heart of the Forest* has its level and star tables. For the other
-  artifacts the app asks you to type the percentage the artifact popup shows for your own level.
+
+`artifacts.json` and `talents.json` are not hand-edited at all: they are **generated** from exports of the
+game's own data (see [Artifacts](#artifacts-artifactsjson) and [Talents](#talents-talentsjson)).
 
 Player-versus-player values (everything the game labels "against players") are **not** kept: Pyrrhic is an
 epic-monster calculator and PvP is out of scope.
@@ -38,7 +39,7 @@ epic-monster calculator and PvP is out of scope.
 | `mercenaries.json`| Authority mercenaries                                      | Unit sheet in the Mercenary Camp                             |
 | `captains.json`   | Captain health / strength / special progressions           | Captain screen, level and star rows                          |
 | `equipment.json`  | Equipment pieces, bonuses per quality                      | Equipment item popup, quality by quality                     |
-| `artifacts.json`  | Artifacts: which bonus they feed, level tables when known  | Artifact popup                                               |
+| `artifacts.json`  | Artifacts: what each level and star step gives (generated) | Artifact popup (rebuilt from the game export)                |
 | `titles.json`     | Titles and their army bonuses                              | Titles screen                                                |
 | `heroes.json`     | The three heroes                                           | Hero screen                                                  |
 | `otherPills.json` | The fixed "+25 %" Personal / Clan / Kingdom bonuses        | Bonus list on the march screen                               |
@@ -137,25 +138,42 @@ grants:
 `matchup` is the "melee strength against mounted" kind of line; `special` holds double-damage and
 strike-two-squads chances.
 
-### `artifacts.json`
+### Artifacts (`artifacts.json`)
 
-`health`, `strength` and `special` each say **which key** the artifact feeds and, when the table is known,
-the percentage per level and per star:
+**Generated, not hand-edited**: `pnpm data:artifacts <directory>` rebuilds it from the `tb-analyze` hero and
+artifact export (`artifacts.json` in that directory; the directory can also be named by
+`HEROES_ARTIFACTS_EXPORT`, which makes `pnpm test` check that the committed table still equals the rebuild).
+A wrong value is fixed in the export or in `scripts/artifacts-convert.ts`, never in the table.
+
+It holds sixteen artifacts, the ones that can change something here. Each has what its 60 levels and its 25
+star steps give; the artifact's total is **the level row plus the star row**, and the two may feed different
+stats:
 
 ```json
 {
-  "id": "heart-of-the-forest",
-  "name": "Heart of the Forest",
-  "strength": { "key": "army", "levels": { "base": { "1": 42 }, "star": { "0.1": 48 } } },
-  "randomBonusOptions": ["armyHealth", "armyStrength", "armyStrengthAndHealth"]
+  "id": "zeus-lightning",
+  "name": "Zeus' Lightning",
+  "levels": { "1": {} },
+  "stars": { "0.1": { "special": { "doubleDamageChance": 0.7 } } },
+  "randomBonusOptions": ["doubleDamageChance"]
 }
 ```
 
-- `levels.base` keys are artifact levels `"1"`…`"60"`; `levels.star` keys use the in-game star notation
-  `"0.1"`…`"5.0"`.
-- When `levels` is missing the app asks the user to type the percentage the popup shows. Adding a level
-  table is a welcome contribution: read the artifact popup at each level.
-- `randomBonusOptions` lists the bonuses the artifact's random slot can roll.
+- `levels` keys are artifact levels `"1"`…`"60"`; `stars` keys use the in-game star notation
+  `"0.1"`…`"5.0"` (there is no 0.0; step 5 is `"1.0"`). A row holds `health`, `strength` and `special`
+  maps, and is empty when the app carries none of its effects.
+- `randomBonusOptions` lists the bonuses the artifact's random slot can roll that the app counts.
+
+How the converter reads the export:
+
+- A percentage is the game's coefficient minus 10 000, divided by 100. Strike-two-squads effects carry their
+  value in the scale coefficient, in tenths of a percent.
+- The export names a unit set only by its size. Which size is which bonus key is learned from the random
+  option texts of the same export ("Guardsmen's health"), so no size is written in the code.
+- Effects against other players, Leadership and Dominance capacity, authority and march speed are understood
+  but not carried yet.
+- It stops, naming the record, on an unknown effect kind, a unit set no text names or two keys claim, a
+  missing artifact, and a level or star step that is missing or out of order.
 
 ### `titles.json`, `heroes.json`, `otherPills.json`
 
@@ -266,5 +284,7 @@ Rules of thumb:
 
 `pnpm test` adds the cross-table rules: unique ids, kill orders and the captain picker referencing units
 that exist, engineers without a category, specialists melee-only below tier 5, four monsters per tier, seven
-star steps per captain progression, contiguous artifact level tables — and a parity test proving the tables
-still carry exactly the numbers of the research capture they were reshaped from.
+star steps per captain progression, 60 levels and 25 star steps for each of the sixteen artifacts — and a
+parity test proving the tables still carry exactly the numbers of the research capture they were reshaped from
+(for artifacts, Heart of the Forest's level and star figures; the rest of that table now comes from the
+game).

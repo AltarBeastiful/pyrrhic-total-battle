@@ -23,7 +23,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -172,19 +172,16 @@ export const equipmentEntrySchema = z.object({
     .optional(),
 });
 
-/** `star` is the in-game star notation ("0.1".."5.0"), kept as a string like the data tables. */
+/**
+ * What the player says of one artifact: its level and star. The bonuses are the game table's (B-39); only
+ * the rolled random bonus is typed. `star` is the in-game star notation ("0.1".."5.0"), a string like the
+ * data tables' keys.
+ */
 export const artifactEntrySchema = z.object({
   id: nonEmpty,
   artifactId: nonEmpty,
-  level: z.int().min(0),
+  level: z.int().min(1),
   star: z.string(),
-  manual: z
-    .object({
-      health: bonusMapSchema.optional(),
-      strength: bonusMapSchema.optional(),
-      special: specialMapSchema.optional(),
-    })
-    .optional(),
   random: z.object({ option: z.string(), value: z.number() }).optional(),
 });
 

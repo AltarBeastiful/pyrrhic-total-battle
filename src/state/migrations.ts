@@ -434,6 +434,26 @@ export function dropArenaTroops(profile: Record<string, unknown>): Record<string
   return { ...profile, primeArena: rest };
 }
 
+/**
+ * `22 → 23` for one profile (B-39): artifact values come from the game's table, so the percentages typed by
+ * hand are removed. The table starts at level 1 and star 0.1: a level below 1 becomes 1, star 0.0 (which the
+ * game does not have) becomes 0.1. The random bonus is kept as it is.
+ */
+export function artifactsFollowTable(profile: Record<string, unknown>): Record<string, unknown> {
+  const sources = profile.sources;
+  if (!isPlainObject(sources) || !Array.isArray(sources.artifacts)) return profile;
+  const artifacts = sources.artifacts.map((entry) => {
+    if (!isPlainObject(entry)) return entry;
+    const { manual: _manual, ...rest } = entry;
+    return {
+      ...rest,
+      ...(typeof rest.level === 'number' && rest.level < 1 ? { level: 1 } : {}),
+      ...(rest.star === '0.0' ? { star: '0.1' } : {}),
+    };
+  });
+  return { ...profile, sources: { ...sources, artifacts } };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -457,6 +477,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `13 → 14`: the talents gain the troop-group overrides, none (B-23).
  * `14 → 15`: the typed talent points become the whole stock, which held ranks spend (B-23).
  * `15 → 16`: the Hero Talents source keeps only strength and health on the nine talent keys (B-25).
+ * `22 → 23`: typed artifact percentages are removed; level starts at 1 and star at 0.1 (B-39).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -481,6 +502,7 @@ export const migrations: MigrationTable = {
   19: (doc) => ({ ...doc, schemaVersion: 20, profiles: migrateProfiles(doc, addArenaSources) }),
   20: (doc) => ({ ...doc, schemaVersion: 21, profiles: migrateProfiles(doc, addArenaRole) }),
   21: (doc) => ({ ...doc, schemaVersion: 22, profiles: migrateProfiles(doc, dropArenaTroops) }),
+  22: (doc) => ({ ...doc, schemaVersion: 23, profiles: migrateProfiles(doc, artifactsFollowTable) }),
 };
 
 /**
@@ -514,6 +536,7 @@ export const profileMigrations: MigrationTable = {
   19: addArenaSources,
   20: addArenaRole,
   21: dropArenaTroops,
+  22: artifactsFollowTable,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -546,6 +569,7 @@ export const savedStackMigrations: MigrationTable = {
   19: identity,
   20: identity,
   21: identity,
+  22: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

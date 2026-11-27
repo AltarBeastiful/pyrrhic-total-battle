@@ -174,18 +174,20 @@ export interface EquipmentRecord {
   byQuality: Partial<Record<Quality, BonusContribution>>;
 }
 
-/** Level → percent tables; `star` keys are the in-game star notation "0.1".."5.0". */
-export interface LevelTable {
-  base?: Record<string, number>; // "1".."60"
-  star?: Record<string, number>;
-}
+/**
+ * What one row of an artifact (a level, or a star step) gives, in the game's own values (B-39). Empty when
+ * the app carries none of the row's effects.
+ */
+export type ArtifactRow = Pick<BonusContribution, 'health' | 'strength' | 'special'>;
+
+/** Built from the game export by `scripts/artifacts-convert.ts`; never edited by hand. */
 export interface ArtifactRecord {
   id: string;
   name: string;
-  /** Which key each progression feeds; the value comes from `levels` or is typed by the user when unknown. */
-  health?: { key: BonusKey; levels?: LevelTable };
-  strength?: { key: BonusKey; levels?: LevelTable };
-  special?: { key: SpecialKey; levels?: LevelTable };
+  /** Keys "1".."60". An artifact's total is its level row plus its star row. */
+  levels: Record<string, ArtifactRow>;
+  /** Keys "0.1".."5.0", the in-game star notation. The two rows may feed different stats. */
+  stars: Record<string, ArtifactRow>;
   randomBonusOptions: string[]; // option ids the random bonus can take, e.g. "armyHealth"
 }
 

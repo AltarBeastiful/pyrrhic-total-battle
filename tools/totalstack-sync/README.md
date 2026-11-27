@@ -69,7 +69,6 @@ find it again in the file) and can write each one out as JSON.
    | `mercenaries.json` | the array containing `id:"cyclops-5"`                                                |
    | `captains.json`    | the object keyed by captain names whose values carry `bonusKey`/`starBonuses`        |
    | `equipment.json`   | the array whose records carry `bonusesByQuality`                                     |
-   | `artifacts.json`   | the array whose records carry `randomBonusOptions`                                   |
    | `titles.json`      | the array whose records carry `playerOnlyHealthBonuses` (or the name "Battlemaster") |
    | `temple.json`      | the object keyed `"1"`…`"45"` whose values run 1.04 … 5.91                           |
 
@@ -92,9 +91,9 @@ field as `path | ours | theirs`.
 - `heroes.json`, `otherPills.json`, `events.json`, `vip.json`, `orders.json`, `version.json` — no content
   locator. VIP was not in the capture at all; events and the hero/pill split are our own modelling. The
   report says so, so nobody reads a silent pass as a clean bill of health.
-- Artifact **level tables** when the bundle keeps them in a shared variable the tool cannot follow. It
-  follows the reference when the same chunk assigns it (that is how `heart-of-the-forest` is compared in
-  full); otherwise the record is listed under "Not comparable" and its other fields are still compared.
+- `artifacts.json` — generated from the game's own data (`pnpm data:artifacts`, see the data README), so
+  there is nothing for TotalStack to correct. Heart of the Forest's figures are still held to the research
+  capture by `src/data/data.test.ts`.
 - `mercenaries.json` → `event`: which event a mercenary belongs to is read from the game, not from them.
 - `captains.json` → `onlyOn`: the kind of march a captain is limited to, our structured copy of its `note`
   for the derivation (W17 C5-0); the bundle only has the sentence.
@@ -104,7 +103,7 @@ field as `path | ours | theirs`.
 `compare.test.ts` (vitest, node) builds a minified-looking bundle out of
 `docs/research/totalstack-data/*.json` — bare keys, `!0`/`!1`, `3e3`, mixed quotes, a regular expression,
 a template literal and a decoy string that pretends to be the troop table — and checks that the tool finds
-all eight tables by content, reshapes them and reports **no** difference against `src/data/tables`. A second
+all seven compared tables by content, reshapes them and reports **no** difference against `src/data/tables`. A second
 bundle changes one value, adds a unit and removes a unit; the test asserts exactly those three findings.
 
 ## History

@@ -24,6 +24,7 @@ import {
 } from './types.ts';
 import type {
   ArtifactRecord,
+  ArtifactRow,
   BattleSelectionOrder,
   BonusContribution,
   BonusMap,
@@ -33,7 +34,6 @@ import type {
   EquipmentRecord,
   EventRecord,
   HeroRecord,
-  LevelTable,
   MatchupBonus,
   MercenaryRecord,
   MonsterRecord,
@@ -192,20 +192,21 @@ export const equipmentSchema = z.strictObject({
   byQuality: z.partialRecord(quality, bonusContributionSchema),
 }) satisfies z.ZodType<Loose<EquipmentRecord>>;
 
-/** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */
-const levelTableSchema = z.strictObject({
-  base: z.record(z.string().regex(/^\d+$/, 'level keys are whole numbers, e.g. "37"'), percent).optional(),
-  star: z
-    .record(z.string().regex(/^\d\.\d$/, 'star keys use the in-game notation, e.g. "3.2"'), percent)
-    .optional(),
-}) satisfies z.ZodType<Loose<LevelTable>>;
+const artifactRowSchema = z.strictObject({
+  health: bonusMapSchema.optional(),
+  strength: bonusMapSchema.optional(),
+  special: specialMapSchema.optional(),
+}) satisfies z.ZodType<Loose<ArtifactRow>>;
 
+/** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */
 export const artifactSchema = z.strictObject({
   id,
   name,
-  health: z.strictObject({ key: bonusKey, levels: levelTableSchema.optional() }).optional(),
-  strength: z.strictObject({ key: bonusKey, levels: levelTableSchema.optional() }).optional(),
-  special: z.strictObject({ key: specialKey, levels: levelTableSchema.optional() }).optional(),
+  levels: z.record(z.string().regex(/^\d+$/, 'level keys are whole numbers, e.g. "37"'), artifactRowSchema),
+  stars: z.record(
+    z.string().regex(/^\d\.\d$/, 'star keys use the in-game notation, e.g. "3.2"'),
+    artifactRowSchema,
+  ),
   randomBonusOptions: z.array(z.string().min(1)),
 }) satisfies z.ZodType<Loose<ArtifactRecord>>;
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { version } from '../data';
 import { BONUS_KEYS, QUALITIES } from '../data/types';
 import type { BonusMap } from '../data/types';
 import { CURRENT_DATA_VERSION, defaultSetup, newProfile, uuid } from '../state/defaults';
@@ -239,6 +240,30 @@ describe('profile links', () => {
     if (decoded.kind !== 'profile') throw new Error('wrong kind');
     expect('troops' in decoded.profile.primeArena).toBe(false);
     expect(decoded.profile.troops).toEqual(profile.troops);
+  });
+
+  it('a v22 link with typed artifact values opens, at level 1 and star 0.1 where it said less', async () => {
+    const profile = realisticProfile();
+    const typed = { id: 'a1', artifactId: 'ruby-brooch', level: 0, star: '0.0' };
+    const withOld = {
+      ...profile,
+      sources: { ...profile.sources, artifacts: [{ ...typed, manual: { strength: { melee: 30 } } }] },
+    };
+    const decoded = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 22,
+        dataVersion: 1,
+        profile: withOld as unknown as Profile,
+      }),
+    );
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect(decoded.profile.sources.artifacts).toEqual([{ ...typed, level: 1, star: '0.1' }]);
+  });
+
+  it('a new link carries the data version the tables ship', async () => {
+    const decoded = await decodeShare(await buildProfileLink(newProfile('Guest', DEVICE)));
+    expect(decoded.dataVersion).toBe(version.dataVersion);
   });
 
   it('round-trips a realistic profile', async () => {

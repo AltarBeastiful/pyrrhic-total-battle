@@ -96,7 +96,7 @@ export interface ArtifactChipRow {
   value: string;
 }
 
-/** All fifteen artifacts, whether or not the profile has ever recorded one. */
+/** Every artifact of the table, whether or not the profile has ever recorded one. */
 export function artifactChips(profile: Profile, setup: BattleSetup): ArtifactChipRow[] {
   const active = setup.active.artifacts;
   const byArtifact = new Map(profile.sources.artifacts.map((entry) => [entry.artifactId, entry]));

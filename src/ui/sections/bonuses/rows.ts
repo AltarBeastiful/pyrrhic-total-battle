@@ -28,21 +28,14 @@ import {
   vip as vipTable,
 } from '@/data';
 import { QUALITIES } from '@/data/types';
-import type {
-  ArtifactRecord,
-  BonusKey,
-  CaptainRecord,
-  EquipmentRecord,
-  LevelTable,
-  Quality,
-} from '@/data/types';
+import type { ArtifactRecord, BonusKey, CaptainRecord, EquipmentRecord, Quality } from '@/data/types';
 import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
-import { captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
+import { artifactBonus, captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources } from '@/state/schema';
 
-import { describeContribution, FALLBACK_STAR_KEYS, isEmptyBonus, mergeBonus, rowValue } from './labels';
+import { describeContribution, isEmptyBonus, mergeBonus, rowValue } from './labels';
 import type { BonusLike } from './labels';
 import { singleKey } from './values';
 
@@ -149,42 +142,12 @@ export function equipmentWorth(record: EquipmentRecord | undefined, entry: Equip
   return mergeBonus(record?.byQuality[entry.quality] ?? {}, entry.extra ?? {});
 }
 
-export const artifactHasLevels = (record: ArtifactRecord | undefined): boolean =>
-  (record?.health?.levels ?? record?.strength?.levels ?? record?.special?.levels) !== undefined;
-
-const levelValue = (levels: LevelTable | undefined, level: number, star: string): number =>
-  levels === undefined ? 0 : (levels.base?.[String(level)] ?? 0) + (levels.star?.[star] ?? 0);
-
 /**
- * What an artifact is worth at this level and star rating. Artifacts whose table we have not
- * measured yet carry the values typed by hand instead. The random bonus is not on this line: it is
- * one option out of forty and it belongs in the editor, next to the option it was rolled on.
+ * What an artifact is worth at this level and star rating, from the game's table. The random bonus is not on
+ * this line: it is one option out of forty and it belongs in the editor, next to the option it was rolled on.
  */
 export function artifactWorth(record: ArtifactRecord | undefined, entry: ArtifactEntry): BonusLike {
-  if (!record) return {};
-  if (!artifactHasLevels(record)) {
-    return {
-      health: entry.manual?.health ?? {},
-      strength: entry.manual?.strength ?? {},
-      special: entry.manual?.special ?? {},
-    };
-  }
-  return {
-    ...(record.health
-      ? { health: singleKey(record.health.key, levelValue(record.health.levels, entry.level, entry.star)) }
-      : {}),
-    ...(record.strength
-      ? {
-          strength: singleKey(
-            record.strength.key,
-            levelValue(record.strength.levels, entry.level, entry.star),
-          ),
-        }
-      : {}),
-    ...(record.special
-      ? { special: singleKey(record.special.key, levelValue(record.special.levels, entry.level, entry.star)) }
-      : {}),
-  };
+  return record ? artifactBonus(record, entry.level, entry.star) : {};
 }
 
 /** What VIP is worth right now: the table row, or the values typed when we have no row. */
@@ -220,14 +183,6 @@ export function qualitiesOf(record: EquipmentRecord | undefined): Quality[] {
 
 export function firstQuality(record: EquipmentRecord | undefined): Quality {
   return qualitiesOf(record)[0] ?? 'poor';
-}
-
-/** The star ratings this artifact's table knows; artifacts without a table get the full notation. */
-export function starKeys(record: ArtifactRecord | undefined): string[] {
-  const table =
-    record?.health?.levels?.star ?? record?.strength?.levels?.star ?? record?.special?.levels?.star;
-  const keys = table === undefined ? [] : Object.keys(table);
-  return keys.length === 0 ? FALLBACK_STAR_KEYS : ['0.0', ...keys.filter((key) => key !== '0.0')];
 }
 
 // ---- The groups -------------------------------------------------------------------------------

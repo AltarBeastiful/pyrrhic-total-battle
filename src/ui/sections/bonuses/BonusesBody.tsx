@@ -7,7 +7,7 @@
 import { Alert, Stack } from '@mantine/core';
 import { useMemo, useRef, useState } from 'react';
 
-import { artifacts as artifactTable, equipment as equipmentTable } from '@/data';
+import { equipment as equipmentTable } from '@/data';
 import { mintSourceId, setActiveFlag, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
 import { sourceCaveats } from '@/state/derive';
 import type { Profile } from '@/state/schema';
@@ -32,7 +32,6 @@ import {
   MAX_ACTIVE_CAPTAINS,
   MAX_EQUIPMENT,
   sourceGroups,
-  starKeys,
   totalsSummary,
 } from './rows';
 import type { AddKind, EditorTarget, SourceGroup } from './rows';
@@ -137,11 +136,10 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE }: BonusesBod
     const found = profile.sources.artifacts.find((entry) => entry.artifactId === artifactId);
     if (found !== undefined) return found.id;
     const id = mintSourceId();
-    const record = artifactTable.find((entry) => entry.id === artifactId);
-    const star = starKeys(record)[0] ?? '0.0';
+    // The bottom of the game's ladders, level 1 and star 0.1: the player raises it from there.
     updateSources(profileId, (sources) => ({
       ...sources,
-      artifacts: [...sources.artifacts, { id, artifactId, level: 1, star }],
+      artifacts: [...sources.artifacts, { id, artifactId, level: 1, star: '0.1' }],
     }));
     return id;
   };

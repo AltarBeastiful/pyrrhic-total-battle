@@ -1139,4 +1139,47 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
     });
   });
+
+  describe('v22 → v23: artifact values come from the game (B-39)', () => {
+    const v22Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { sources: Record<string, unknown> }[])[0]!;
+      profile.sources.artifacts = [
+        {
+          id: 'a1',
+          artifactId: 'ruby-brooch',
+          level: 0,
+          star: '0.0',
+          manual: { health: { melee: 120 }, strength: { melee: 90 } },
+          random: { option: 'meleeHealth', value: 12 },
+        },
+        { id: 'a2', artifactId: 'heart-of-the-forest', level: 20, star: '2.1' },
+      ];
+      return { ...doc, schemaVersion: 22 };
+    };
+    const upgraded = [
+      {
+        id: 'a1',
+        artifactId: 'ruby-brooch',
+        level: 1,
+        star: '0.1',
+        random: { option: 'meleeHealth', value: 12 },
+      },
+      { id: 'a2', artifactId: 'heart-of-the-forest', level: 20, star: '2.1' },
+    ];
+
+    it('removes the typed values, lifts a level below 1 to 1 and star 0.0 to 0.1, and keeps the rest', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      expect(migrate(v22Doc()).profiles[0]!.sources.artifacts).toEqual(upgraded);
+      // The migration removes the fields itself: nothing is left for the schema to drop and report.
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an exported v22 profile once', () => {
+      const profile = (v22Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 22);
+      expect(once.sources.artifacts).toEqual(upgraded);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
+    });
+  });
 });

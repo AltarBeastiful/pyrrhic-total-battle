@@ -371,25 +371,45 @@ describe('resolveSources — artifacts', () => {
     expect(sourceCaveats(profile, setup)).toHaveLength(0);
   });
 
-  it('falls back to the hand-typed values when the artifact has no table', () => {
+  /** One artifact at (level, star), switched on and resolved. */
+  const resolved = (artifactId: string, level: number, star: string) => {
     const { profile, setup } = fixture();
-    profile.sources.artifacts = [
-      {
-        id: 'a1',
-        artifactId: 'ruby-brooch',
-        level: 30,
-        star: '3.0',
-        manual: { health: { melee: 120 }, strength: { melee: 90 } },
-      },
-    ];
+    profile.sources.artifacts = [{ id: 'a1', artifactId, level, star }];
     setup.active.artifacts = ['a1'];
+    return sourceById(resolveSources(profile, setup), `artifact:${artifactId}`);
+  };
 
-    const artifact = sourceById(resolveSources(profile, setup), 'artifact:ruby-brooch');
-    expect(artifact?.health).toEqual({ melee: 120 });
-    expect(artifact?.strength).toEqual({ melee: 90 });
-    expect(sourceCaveats(profile, setup)).toContain(
-      'Ruby Brooch: no level table yet — the values you typed are used.',
-    );
+  it('gives Medallion of Unity guardsmen health and no army strength', () => {
+    const medallion = resolved('medallion-of-unity', 1, '0.1');
+    expect(medallion?.health).toEqual({ guardsmen: 53.5 }); // level 1: 27.5, star 0.1: 26
+    expect(medallion?.strength).toBeUndefined();
+  });
+
+  it('gives Ghostflame Lantern strength against epic monsters and no plain army strength', () => {
+    const lantern = resolved('ghostflame-lantern', 1, '0.1');
+    expect(lantern?.special).toEqual({ armyStrengthAgainstEpicMonsters: 90 }); // 42 + 48
+    expect(lantern?.strength).toBeUndefined();
+    expect(lantern?.health).toBeUndefined();
+  });
+
+  it('gives Zeus’ Lightning the double damage chance of its stars and no army strength', () => {
+    const zeus = resolved('zeus-lightning', 20, '4.0');
+    expect(zeus?.special).toEqual({ doubleDamageChance: 5.2 });
+    expect(zeus?.strength).toBeUndefined();
+    expect(zeus?.health).toBeUndefined();
+  });
+
+  it('gives Mars’ Twin Blades its strike-two-squads chance, and nothing against other players', () => {
+    const blades = resolved('mars-twin-blades', 20, '5.0');
+    expect(blades?.special).toEqual({ strikeTwoSquadsChance: 10 });
+    expect(blades?.strength).toBeUndefined();
+    expect(blades?.health).toBeUndefined();
+  });
+
+  it('feeds the unit set an artifact is for', () => {
+    const brooch = resolved('ruby-brooch', 1, '0.1');
+    expect(brooch?.health).toEqual({ melee: 18.5 }); // 9.5 + 9
+    expect(brooch?.strength).toEqual({ melee: 18.5 });
   });
 
   it('maps random-bonus options onto bonus and special keys', () => {
@@ -416,15 +436,26 @@ describe('resolveSources — artifacts', () => {
         star: '0.1',
         random: { option: 'armyStrengthAgainstEpicMonsters', value: 15 },
       },
+      {
+        id: 'a4',
+        artifactId: 'mars-twin-blades',
+        level: 1,
+        star: '0.1',
+        random: { option: 'strikeTwoSquadsChance', value: 0.4 },
+      },
     ];
-    setup.active.artifacts = ['a1', 'a2', 'a3'];
+    setup.active.artifacts = ['a1', 'a2', 'a3', 'a4'];
 
+    // Each total is the artifact's own figure at level 1, star 0.1, plus the rolled bonus.
     const sources = resolveSources(profile, setup);
-    expect(sourceById(sources, 'artifact:wardens-quiver')?.health).toEqual({ ranged: 30 });
-    expect(sourceById(sources, 'artifact:wardens-quiver')?.strength).toEqual({ ranged: 30 });
-    expect(sourceById(sources, 'artifact:zeus-lightning')?.special).toEqual({ doubleDamageChance: 4 });
+    expect(sourceById(sources, 'artifact:wardens-quiver')?.health).toEqual({ ranged: 48.5 });
+    expect(sourceById(sources, 'artifact:wardens-quiver')?.strength).toEqual({ ranged: 48.5 });
+    expect(sourceById(sources, 'artifact:zeus-lightning')?.special).toEqual({ doubleDamageChance: 4.7 });
     expect(sourceById(sources, 'artifact:ghostflame-lantern')?.special).toEqual({
-      armyStrengthAgainstEpicMonsters: 15,
+      armyStrengthAgainstEpicMonsters: 105,
+    });
+    expect(sourceById(sources, 'artifact:mars-twin-blades')?.special).toEqual({
+      strikeTwoSquadsChance: 1.5, // 1.1 + 0.4
     });
   });
 });

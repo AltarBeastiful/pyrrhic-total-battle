@@ -1,28 +1,24 @@
 /**
- * The artifacts, in the same chips the captains use (design plan §7.3, D-34): all fifteen on screen,
+ * The artifacts, in the same chips the captains use (design plan §7.3, D-34): all sixteen on screen,
  * "0/3" beside the heading, a gear on every one of them, three at a time and the fourth refused.
  *
  * The gear opens an anchored popover holding the level and the star rating the artifact's card
- * shows. Only one artifact's level curve has been measured so far, so the rest also carry the two
- * percentages read straight off the card, and the bonus the artifact rolled sits behind a fold —
- * it is one option out of forty and it belongs next to the option it was rolled on.
+ * shows, which is all it takes: the bonuses are the game's own (B-39). The bonus the artifact rolled sits
+ * behind a fold — it is one option out of forty and it belongs next to the option it was rolled on.
  */
 import { Divider, Group, Select, Stack, Text } from '@mantine/core';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
-import type { BonusKey } from '@/data/types';
 import { updateSources } from '@/state/actions/bonuses';
 import type { ProfileSources } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
-import { BONUS_KEY_GLYPHS, Glyph } from '@/ui/domain';
 import { Disclosure, NumberField, useRovingTabs } from '@/ui/kit';
 
 import classes from './bonuses.module.css';
 import type { ArtifactChipRow } from './chips';
-import { BONUS_LABELS, humanizeOption, rowValue, SPECIAL_LABELS } from './labels';
-import { artifactHasLevels, artifactRecord, artifactWorth, starKeys } from './rows';
+import { humanizeOption, rowValue } from './labels';
+import { artifactRecord, artifactWorth } from './rows';
 import { SourceChip } from './SourceChip';
-import { singleKey } from './values';
 
 /** What the card says when a fourth artifact is tapped. */
 export const ARTIFACT_CAP_MESSAGE = 'Three artifacts at most. Take one out first.';
@@ -44,22 +40,10 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
     }));
   };
 
-  const manualField = (bucket: 'health' | 'strength', key: BonusKey) => (
-    <NumberField
-      key={`${bucket}-${key}`}
-      label={`${BONUS_LABELS[key]} ${bucket}`}
-      leftSection={<Glyph kind={BONUS_KEY_GLYPHS[key]} />}
-      allowEmpty
-      allowDecimal
-      value={entry.manual?.[bucket]?.[key] ?? null}
-      onChange={(next) => {
-        patch((current) => ({ ...current, manual: { ...current.manual, [bucket]: singleKey(key, next) } }));
-      }}
-    />
-  );
-
+  // The table's own ladders: levels from 1, star steps from 0.1.
+  const topLevel = Object.keys(record?.levels ?? {}).length;
+  const starSteps = Object.keys(record?.stars ?? {});
   const worth = rowValue(artifactWorth(record, entry));
-  const specialKey = record?.special?.key;
 
   return (
     <Stack gap="xs" w={240}>
@@ -69,43 +53,25 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
       <NumberField
         label="Level"
         value={entry.level}
-        min={0}
-        max={60}
+        min={1}
+        max={topLevel}
         onChange={(next) => {
-          patch((current) => ({ ...current, level: next ?? 0 }));
+          // The field reports what is typed before it clamps; the saved level never leaves the ladder.
+          const level = Math.min(topLevel, Math.max(1, next ?? 1));
+          patch((current) => ({ ...current, level }));
         }}
       />
       <Select
         label="Star rating"
         size="xs"
-        data={starKeys(record).map((star) => ({ value: star, label: `★ ${star}` }))}
+        data={starSteps.map((star) => ({ value: star, label: `★ ${star}` }))}
         value={entry.star}
         allowDeselect={false}
         comboboxProps={{ withinPortal: false }}
         onChange={(next) => {
-          patch((current) => ({ ...current, star: next ?? '0.0' }));
+          if (next !== null) patch((current) => ({ ...current, star: next }));
         }}
       />
-      {!artifactHasLevels(record) && (
-        <>
-          {record?.health && manualField('health', record.health.key)}
-          {record?.strength && manualField('strength', record.strength.key)}
-          {specialKey !== undefined && (
-            <NumberField
-              label={SPECIAL_LABELS[specialKey]}
-              allowEmpty
-              allowDecimal
-              value={entry.manual?.special?.[specialKey] ?? null}
-              onChange={(next) => {
-                patch((current) => ({
-                  ...current,
-                  manual: { ...current.manual, special: singleKey(specialKey, next) },
-                }));
-              }}
-            />
-          )}
-        </>
-      )}
       <Disclosure title="Random bonus" summary={entry.random === undefined ? 'none' : 'set'}>
         <Stack gap="xs">
           <Select

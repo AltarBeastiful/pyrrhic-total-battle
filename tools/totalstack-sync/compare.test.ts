@@ -162,15 +162,9 @@ describe('comparing a bundle with our tables', () => {
     }
     expect(result.differences).toBe(0);
     expect(renderReport(result)).toContain('**No difference.**');
-
-    // The one artifact whose level tables our own table carries is compared in full, which means the
-    // tool followed the bare identifier the bundle stores them behind; the rest are reported as unread.
-    const artifacts = tableOf(result, 'artifacts.json');
-    expect(artifacts.notComparable.map((entry) => entry.id)).not.toContain('heart-of-the-forest');
-    expect(artifacts.notComparable).toContainEqual({
-      id: 'forest-crown',
-      paths: ['health.levels', 'strength.levels'],
-    });
+    // Artifacts come from the game's own data: the report says they are not compared.
+    expect(result.tables.map((table) => table.file)).not.toContain('artifacts.json');
+    expect(renderReport(result)).toContain('`artifacts.json` — generated');
   });
 
   test('reports a changed value, an added unit and a removed unit', async () => {

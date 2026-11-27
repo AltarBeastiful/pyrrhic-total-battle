@@ -307,16 +307,17 @@ describe('integrity', () => {
     }
   });
 
-  it('uses contiguous level keys from 1 in every artifact level table', () => {
+  it('gives every one of the sixteen artifacts 60 levels and 25 star steps, 0.1 to 5.0', () => {
+    const levels = Array.from({ length: 60 }, (_, index) => String(index + 1));
+    const steps = [
+      ...['0.1', '0.2', '0.3', '0.4'],
+      ...[1, 2, 3, 4].flatMap((star) => [0, 1, 2, 3, 4].map((part) => `${String(star)}.${String(part)}`)),
+      '5.0',
+    ];
+    expect(artifacts).toHaveLength(16);
     for (const artifact of artifacts) {
-      for (const progression of [artifact.health, artifact.strength, artifact.special]) {
-        const base = progression?.levels?.base;
-        if (!base) continue;
-        const levels = Object.keys(base).map(Number);
-        expect(Math.min(...levels), artifact.id).toBe(1);
-        expect(levels, artifact.id).toEqual(levels.map((_level, index) => index + 1));
-        expect(Math.max(...levels), artifact.id).toBe(60);
-      }
+      expect(Object.keys(artifact.levels), artifact.id).toEqual(levels);
+      expect(Object.keys(artifact.stars), artifact.id).toEqual(steps);
     }
   });
 
@@ -634,8 +635,10 @@ describe('parity with docs/research/totalstack-data', () => {
 
   it('keeps the artifact level tables that were captured', () => {
     const heart = byId(artifacts).get('heart-of-the-forest');
-    expect(heart?.strength?.levels?.base).toEqual(research<Record<string, number>>(researchArtifactBase));
-    expect(heart?.strength?.levels?.star).toEqual(research<Record<string, number>>(researchArtifactStar));
+    const army = (rows: Record<string, { strength?: { army?: number } }> = {}) =>
+      Object.fromEntries(Object.entries(rows).map(([key, row]) => [key, row.strength?.army]));
+    expect(army(heart?.levels)).toEqual(research<Record<string, number>>(researchArtifactBase));
+    expect(army(heart?.stars)).toEqual(research<Record<string, number>>(researchArtifactStar));
   });
 
   it('keeps the hero and pill bonuses', () => {

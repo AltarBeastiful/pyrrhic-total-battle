@@ -94,20 +94,6 @@ export function count(n: number, one: string, many: string): string {
   return `${String(n)} ${n === 1 ? one : many}`;
 }
 
-/**
- * Star notation of the artifact tables ("0.1" … "5.0"): full stars, then the quarter steps. Used when an
- * artifact carries no star table of its own, so the player can still record what they have.
- */
-export const FALLBACK_STAR_KEYS: string[] = (() => {
-  const keys = ['0.0'];
-  for (let full = 0; full <= 4; full += 1) {
-    const first = full === 0 ? 1 : 0;
-    for (let part = first; part <= 4; part += 1) keys.push(`${String(full)}.${String(part)}`);
-  }
-  keys.push('5.0');
-  return keys;
-})();
-
 export const AGAINST_LABELS: Record<StrengthAgainstKey, string> = {
   melee: 'melee',
   ranged: 'ranged',

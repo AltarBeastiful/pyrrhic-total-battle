@@ -4,6 +4,7 @@
  * against (ADR-0005): `SHARE_PROFILE_TEMPLATE` / `SHARE_SETUP_TEMPLATE` are the same objects built
  * with fixed ids and timestamps so they are deterministic.
  */
+import { version } from '../data';
 import {
   BUILTIN_PERMANENT_SOURCES,
   DEFAULT_ARENA_STACKS,
@@ -21,11 +22,8 @@ import type {
   SavedStack,
 } from './schema';
 
-/**
- * Game-table version the app currently ships. `src/data` is owned by another story; when it exports its
- * own `version.json` this constant becomes a re-export of it (see the report's open questions).
- */
-export const CURRENT_DATA_VERSION = 1;
+/** Game-table version the app currently ships, as `version.json` states it. */
+export const CURRENT_DATA_VERSION = version.dataVersion;
 
 /**
  * **The account's preferences as a new profile has them** (schema v9; `docs/plans/burn-ceiling.md` §3.1): a

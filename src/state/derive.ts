@@ -10,9 +10,8 @@
  * here divides by 100.
  *
  * Assumptions taken (see the story report):
- * - Artifact contribution = `levels.base[level] + levels.star[star]` (TotalStack shows the two tables side
- *   by side and the in-game sheet shows one number, so we read them as additive). Artifacts without a level
- *   table fall back to the `manual` values typed by the player.
+ * - Artifact contribution = the level row plus the star row of the game's table (B-39): the in-game sheet
+ *   shows one number, so we read the two as additive. The rows may feed different stats.
  * - VIP falls back to `sources.vipManual` whenever the table has no row for the level or the row is all
  *   zeroes (today `vip.json` is a placeholder: every level is 0).
  * - Conditional sources (Svyatogor "alone only", Amanitore "group marches only", Hercules "epic monsters
@@ -37,6 +36,7 @@ import { CAMPAIGN } from '../config';
 import { BONUS_KEYS, CATEGORIES, SPECIAL_KEYS } from '../data/types';
 import type {
   ArtifactRecord,
+  ArtifactRow,
   BonusContribution,
   BonusKey,
   CaptainProgression,
@@ -227,6 +227,7 @@ const RANDOM_OPTION_KEYS: Record<string, BonusKey> = {
 const RANDOM_OPTION_SPECIALS: Record<string, SpecialKey> = {
   doubleDamageChance: 'doubleDamageChance',
   armyStrengthAgainstEpicMonsters: 'armyStrengthAgainstEpicMonsters',
+  strikeTwoSquadsChance: 'strikeTwoSquadsChance',
 };
 
 /** Applies an artifact random bonus; returns false when the option id is not one we understand. */
@@ -250,19 +251,16 @@ function addRandomBonus(target: Draft, option: string, value: number): boolean {
   return false;
 }
 
-/** `levels.base[level] + levels.star[star]`, or 0 when the artifact carries no table (see the header). */
-function artifactLevelValue(
-  progression: { levels?: { base?: Record<string, number>; star?: Record<string, number> } } | undefined,
-  level: number,
-  star: string,
-): number {
-  const levels = progression?.levels;
-  if (!levels) return 0;
-  return (levels.base?.[String(level)] ?? 0) + (levels.star?.[star] ?? 0);
+/**
+ * What an artifact gives at this level and star: its level row plus its star row, the game's own figures.
+ * The random bonus is the player's roll and is not part of it.
+ */
+export function artifactBonus(record: ArtifactRecord, level: number, star: string): ArtifactRow {
+  const value = draft();
+  addContribution(value, record.levels[String(level)]);
+  addContribution(value, record.stars[star]);
+  return { health: value.health, strength: value.strength, special: value.special };
 }
-
-const hasLevelTable = (record: ArtifactRecord | undefined): boolean =>
-  Boolean(record?.health?.levels ?? record?.strength?.levels ?? record?.special?.levels);
 
 // ---- VIP -------------------------------------------------------------------------------------------
 const contributionIsZero = (bonus: BonusContribution): boolean =>
@@ -336,37 +334,15 @@ export function resolveSources(
     out.push(toSource(id, `${name} (${titleCase(entry.quality)})`, 'equipment', value));
   }
 
-  // Artifacts (up to 3): level tables when we have them, hand-typed values when we do not, plus the random bonus.
+  // Artifacts: what the table gives at this level and star, plus the random bonus.
   for (const entry of activeEntries(sources.artifacts, active.artifacts)) {
     const record = byId(tables.artifacts, entry.artifactId);
     const value = draft();
-    if (hasLevelTable(record)) {
-      if (record?.health) {
-        addKey(value.health, record.health.key, artifactLevelValue(record.health, entry.level, entry.star));
-      }
-      if (record?.strength) {
-        addKey(
-          value.strength,
-          record.strength.key,
-          artifactLevelValue(record.strength, entry.level, entry.star),
-        );
-      }
-      if (record?.special) {
-        addKey(
-          value.special,
-          record.special.key,
-          artifactLevelValue(record.special, entry.level, entry.star),
-        );
-      }
-    } else {
-      addInto(value.health, entry.manual?.health);
-      addInto(value.strength, entry.manual?.strength);
-      addInto(value.special, entry.manual?.special);
-    }
+    if (record) addContribution(value, artifactBonus(record, entry.level, entry.star));
     if (entry.random) addRandomBonus(value, entry.random.option, entry.random.value);
     const name = record?.name ?? entry.artifactId;
     const id = nextId(`artifact:${entry.artifactId}`, entry.id);
-    out.push(toSource(id, `${name} L${entry.level} ★${entry.star || '0'}`, 'artifact', value));
+    out.push(toSource(id, `${name} L${entry.level} ★${entry.star}`, 'artifact', value));
   }
 
   // Titles: `active.titles` holds title ids straight from `titles.json`.
@@ -461,13 +437,6 @@ export function sourceCaveats(
       notes.push(`${record.name}: ${record.note}`);
     } else if (!captainCounts(record, marchType)) {
       notes.push(`${record.name} is not counted on ${MARCH_TYPE_PHRASES[marchType]}. ${record.note}`);
-    }
-  }
-
-  for (const entry of activeEntries(sources.artifacts, setup.active.artifacts)) {
-    const record = byId(tables.artifacts, entry.artifactId);
-    if (!hasLevelTable(record)) {
-      notes.push(`${record?.name ?? entry.artifactId}: no level table yet — the values you typed are used.`);
     }
   }
 

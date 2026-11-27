@@ -192,7 +192,7 @@ interface EnlistChipProps {
 }
 
 /**
- * Memoised on purpose: thirty-one of these sit on one phone screen beside fifteen artifacts and
+ * Memoised on purpose: thirty-one of these sit on one phone screen beside sixteen artifacts and
  * twenty-eight titles, and a toggle must not re-render the lot. The editor is built only for the
  * chip whose popover is open, so the other thirty get `null` and stay put.
  */

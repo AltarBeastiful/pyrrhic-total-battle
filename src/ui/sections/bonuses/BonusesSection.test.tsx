@@ -422,18 +422,41 @@ test('an artifact is equipped from its chip and levelled from its gear', async (
   openGroup('Artifacts');
 
   const row = within(card()).getByRole('group', { name: 'Artifacts' });
-  expect(within(row).getAllByRole('checkbox')).toHaveLength(15);
+  expect(within(row).getAllByRole('checkbox')).toHaveLength(16);
+  expect(within(row).getByRole('checkbox', { name: "Equip Mars' Twin Blades" })).toBeTruthy();
 
   fireEvent.click(within(row).getByRole('checkbox', { name: 'Equip Ruby Brooch' }));
   expect(setup()?.active.artifacts).toHaveLength(1);
+  // A new artifact starts at the bottom of the game's ladders.
+  expect(profile()?.sources.artifacts[0]).toMatchObject({ level: 1, star: '0.1' });
 
   await user.click(within(card()).getByRole('button', { name: /Ruby Brooch’s level$/ }));
-  expect(screen.getByRole('textbox', { name: 'Level' })).toBeTruthy();
-  expect(screen.getByRole('combobox', { name: 'Star rating' })).toBeTruthy();
-  typeNumber(document.body, 'Melee strength', '30');
+  const editor = screen.getByRole('dialog');
+  expect(within(editor).getByRole('combobox', { name: 'Star rating' })).toBeTruthy();
+  // The level is the one figure to type: the percentages are the game's.
+  expect(
+    within(editor)
+      .getAllByRole('textbox')
+      .map((field) => field.getAttribute('inputmode')),
+  ).toEqual(['numeric']);
+  expect(within(editor).getByText('+18.5 % health and strength (melee)')).toBeTruthy();
 
-  expect(profile()?.sources.artifacts[0]?.manual?.strength).toEqual({ melee: 30 });
-  expect(totals(card()).Strength).toBe('0 %');
+  typeNumber(editor, 'Level', '20');
+  expect(within(editor).getByText('+28 % health and strength (melee)')).toBeTruthy();
+  typeNumber(editor, 'Level', '0');
+  expect(profile()?.sources.artifacts[0]?.level).toBe(1);
+});
+
+test('the star rating offers the game’s 25 steps, from 0.1 to 5.0', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  openGroup('Artifacts');
+  await user.click(within(card()).getByRole('button', { name: /Heart of the Forest’s level$/ }));
+  await user.click(screen.getByRole('combobox', { name: 'Star rating' }));
+
+  const steps = screen.getAllByRole('option').map((option) => option.textContent);
+  expect(steps).toHaveLength(25);
+  expect([steps[0], steps.at(-1)]).toEqual(['★ 0.1', '★ 5.0']);
 });
 
 test('a permanent source is on while something is recorded in it, and its gear opens the sheet that moves the TOTAL', () => {

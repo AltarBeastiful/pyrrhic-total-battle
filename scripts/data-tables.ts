@@ -59,18 +59,11 @@ function contribution(value: Json): Json {
   return out;
 }
 
-function levels(value: Json): Json {
-  if (!isObject(value)) return value;
-  const out = order(value, ['base', 'star']) as JsonObject;
-  if ('base' in out) out.base = byNumericKey(out.base as Json);
-  if ('star' in out) out.star = byNumericKey(out.star as Json);
-  return out;
-}
-
-function progression(value: Json, keys: readonly string[] = ['key', 'levels']): Json {
-  if (!isObject(value)) return value;
-  const out = order(value, keys) as JsonObject;
-  if ('levels' in out) out.levels = levels(out.levels as Json);
+/** An artifact's level or star rows: rows by number, each row's keys in the declared order. */
+function artifactRows(value: Json): Json {
+  const out = byNumericKey(value);
+  if (!isObject(out)) return out;
+  for (const key of Object.keys(out)) out[key] = contribution(out[key] as Json);
   return out;
 }
 
@@ -138,16 +131,9 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
     return out;
   },
   'artifacts.json': (value) => {
-    const out = order(value, [
-      'id',
-      'name',
-      'health',
-      'strength',
-      'special',
-      'randomBonusOptions',
-    ]) as JsonObject;
-    for (const key of ['health', 'strength', 'special'] as const) {
-      if (key in out) out[key] = progression(out[key] as Json);
+    const out = order(value, ['id', 'name', 'levels', 'stars', 'randomBonusOptions']) as JsonObject;
+    for (const key of ['levels', 'stars'] as const) {
+      if (key in out) out[key] = artifactRows(out[key] as Json);
     }
     return out;
   },
