@@ -7,6 +7,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { primeArenaInputs } from '@/engine/primeArenaInputs';
 import { newProfile, newRoot } from '@/state/defaults';
+import { primeArenaSchema } from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 
 import { arenaFingerprint, pickInputs, usePrimeArenaStore } from './primeArenaStore';
@@ -189,4 +190,20 @@ test('Generate plans at the account’s Guardsmen level, and the plan names it',
   expect(Math.max(...usePrimeArenaStore.getState().plan!.stacks.map((s) => s.unit.tier))).toBeLessThanOrEqual(
     5,
   );
+});
+
+test('the squad keeps five captains and five artifacts through a save and a reload', () => {
+  const ids = ['1', '2', '3', '4', '5'];
+  usePrimeArenaStore.getState().updateSetup((s) => ({
+    active: { ...s.active, captains: ids, artifacts: ids },
+  }));
+  const saved = selectActiveProfile(useStore.getState())?.primeArena;
+  expect(saved?.setup.active.artifacts).toEqual(ids);
+  // A reload goes through the schema: it used to cap both lists at three and would reject a fuller squad.
+  const root = JSON.parse(JSON.stringify(useStore.getState().doc)) as ReturnType<typeof newRoot>;
+  useStore.getState().replaceDocument(root);
+  const { setup } = usePrimeArenaStore.getState();
+  expect(setup.active.captains).toEqual(ids);
+  expect(setup.active.artifacts).toEqual(ids);
+  expect(primeArenaSchema.safeParse(saved).success).toBe(true);
 });

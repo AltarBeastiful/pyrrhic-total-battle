@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PRIME_ARENA_PERMANENT, primeArenaInputs } from '@/engine/primeArenaInputs';
 import type { Pool } from '@/engine/types';
 import { SOURCE_LABELS } from '@/state/defaults';
+import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS } from '@/state/schema';
 import type { SetupBinding } from '@/state/setupBinding';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
@@ -38,8 +39,8 @@ import { arenaFingerprint, useArenaInputs, usePrimeArenaStore } from './primeAre
 
 export { ArenaMatch };
 
-/** Five captains take the field; artifacts keep the calculator's three. */
-const ARENA_CAPS = { captains: 5, artifacts: 3 } as const;
+/** Five captains and five artifacts take the field (the calculator's march takes three of each). */
+const ARENA_CAPS = { captains: ARENA_MAX_CAPTAINS, artifacts: ARENA_MAX_ARTIFACTS } as const;
 
 /** The two pools the arena has: authority does not exist there. */
 const ARENA_POOLS: readonly Pool[] = ['leadership', 'dominance'];

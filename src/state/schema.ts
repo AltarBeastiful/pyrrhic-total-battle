@@ -515,9 +515,19 @@ export type Talents = z.infer<typeof talentsSchema>;
 export const DEFAULT_ARENA_STACKS = 8;
 export const MAX_ARENA_STACKS = 16;
 
+/** The arena squad takes five captains and five artifacts, where a calculator march takes three of each. */
+export const ARENA_MAX_CAPTAINS = 5;
+export const ARENA_MAX_ARTIFACTS = 5;
+export const arenaSetupSchema = battleSetupSchema.extend({
+  active: activeSourcesSchema.extend({
+    captains: z.array(z.string()).max(ARENA_MAX_CAPTAINS),
+    artifacts: z.array(z.string()).max(ARENA_MAX_ARTIFACTS),
+  }),
+});
+
 export const primeArenaSchema = z.object({
   toggles: z.record(z.string(), z.boolean()).catch({}),
-  setup: battleSetupSchema,
+  setup: arenaSetupSchema,
   seeded: z.boolean(),
   /** Which side the plan plays (schema v21); fixes the opponent panel and how it is scored. */
   role: z.enum(['attacker', 'defender']).catch('attacker'),
