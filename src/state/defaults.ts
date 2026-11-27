@@ -61,6 +61,7 @@ export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
   return {
     toggles: {},
     setup,
+    enemy: [],
     seeded: false,
     role: 'attacker',
     maxStacks: DEFAULT_ARENA_STACKS,
@@ -89,11 +90,12 @@ export const SOURCE_LABELS: Record<BuiltinPermanentSource | 'talents' | 'dragon'
   unionOfTriumph: 'Union of Triumph',
   monuments: 'Monuments',
   personalTechnologies: 'Personal Technologies',
+  otherArenaBonus: 'Other Arena bonus',
   talents: 'Talents',
   dragon: 'Dragon',
 };
 
-/** The eight always-present editors of PLAN §3.1. Their entry id is the builtin key, so the same editor
+/** The always-present editors of PLAN §3.1. Their entry id is the builtin key, so the same editor
  * keeps its identity across profiles, exports and share links. */
 export function defaultPermanentSources(): Profile['sources']['permanent'] {
   return BUILTIN_PERMANENT_SOURCES.map((builtin) => ({

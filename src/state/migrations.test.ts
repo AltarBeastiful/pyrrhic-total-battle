@@ -1289,7 +1289,7 @@ describe('migrateProfile', () => {
 
     it('moves nothing: a basis without artifacts stays as it was', () => {
       const migrated = migrate(v25Doc());
-      expect(migrated.schemaVersion).toBe(26);
+      expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
       expect(migrated.profiles[0]!.primeArena.capacityBasis).toEqual(basis);
     });
 
@@ -1297,6 +1297,48 @@ describe('migrateProfile', () => {
       const profile = (v25Doc().profiles as Record<string, unknown>[])[0]!;
       const once = migrateProfile(profile, 25);
       expect(once.primeArena.capacityBasis).toEqual(basis);
+    });
+  });
+
+  describe('v26 → v27: the other Arena bonus row and the typed enemy (B-46)', () => {
+    type Loose = Record<string, unknown> & {
+      sources: { permanent: Record<string, unknown>[] };
+      primeArena: Record<string, unknown>;
+    };
+    const v26Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as Loose[])[0]!;
+      profile.sources.permanent = profile.sources.permanent.filter(
+        (row) => row.builtin !== 'otherArenaBonus',
+      );
+      delete profile.primeArena.enemy;
+      profile.primeArena.toggles = { monuments: false };
+      profile.primeArena.maxStacks = 6;
+      return { ...doc, schemaVersion: 26 };
+    };
+
+    it('adds the empty row and an empty enemy, and keeps the squad and the switches', () => {
+      const doc = v26Doc();
+      const old = (doc.profiles as Loose[])[0]!;
+      const migrated = migrate(structuredClone(doc)).profiles[0]!;
+      expect(migrated.sources.permanent.filter((row) => row.builtin === 'otherArenaBonus')).toEqual([
+        {
+          id: 'otherArenaBonus',
+          name: 'Other Arena bonus',
+          builtin: 'otherArenaBonus',
+          health: {},
+          strength: {},
+        },
+      ]);
+      expect(migrated.sources.permanent).toHaveLength(old.sources.permanent.length + 1);
+      expect(migrated.primeArena).toEqual({ ...old.primeArena, enemy: [] });
+    });
+
+    it('upgrades an exported v26 profile once', () => {
+      const profile = (v26Doc().profiles as Loose[])[0]!;
+      const once = migrateProfile(profile, 26);
+      expect(once.primeArena.enemy).toEqual([]);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 26)).toEqual(once);
     });
   });
 });

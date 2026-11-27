@@ -192,7 +192,11 @@ describe('profile links', () => {
   it('carries the Prime Arena inputs (a battle setup; since v22 no troops of its own), and a link without them arrives with the defaults', async () => {
     const profile = realisticProfile();
     profile.primeArena = {
-      toggles: { talents: false },
+      toggles: { talents: false, monstersBoost: false },
+      enemy: [
+        { unitId: 'rider-4', count: 7_995 },
+        { unitId: 'magic-dragon', count: 233 },
+      ],
       seeded: true,
       role: 'defender',
       maxStacks: 6,
@@ -238,6 +242,7 @@ describe('profile links', () => {
     const { setup, ...rest } = v16.profile.primeArena;
     expect(rest).toEqual({
       toggles: {},
+      enemy: [],
       seeded: false,
       role: 'attacker',
       maxStacks: 8,

@@ -3,12 +3,13 @@
  * calculator's frame holds, and this file only fills what that frame asks for, in the places it asks for it.
  *
  * - **the setup column** (`ArenaSetup`): the calculator's own Troops card, showing its Guardsmen row on the account's
- *   own troops (one source with the calculator: a step on either page moves both), whose level fixes the pool, and its own Bonuses card, bound to the arena's squad through the same body the
+ *   own troops (one source with the calculator: a step on either page moves both), whose level fixes the pool, the
+ *   enemy to counter-pick (B-46), and its own Bonuses card, bound to the arena's squad through the same body the
  *   calculator uses (five captains, no hero, no march type, only the sources the arena counts);
  * - **the answer** (`ArenaMatch`, in the March pane's place and, below 1200 px, in the sheet the bar opens);
  * - **the bars** (`ArenaBars`): the calculator's command bar and phone bar over a frame config with the two
  *   pools the arena has, the other capacity bonus % and "Max" beside them (the squad's maximum fills the pools,
- *   B-43), no objective, and a Generate that plans the attack.
+ *   B-43), no objective, and a Generate that plans the squad.
  */
 import { Button, Stack, Text, VisuallyHidden } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
@@ -39,7 +40,8 @@ import { CommandDock } from '@/ui/shell/CommandDock';
 import { MarchSheet } from '@/ui/shell/MarchSheet';
 import { fabState } from '@/ui/shell/state';
 
-import { ArenaMatch, verdictOf } from './ArenaMatch';
+import { ArenaEnemySection } from './ArenaEnemySection';
+import { ArenaMatch, summaryOf } from './ArenaMatch';
 import { ArenaRoleSection } from './ArenaRoleSection';
 import { arenaFingerprint, useArenaInputs, usePrimeArenaStore } from './primeArenaStore';
 
@@ -137,6 +139,7 @@ export function ArenaSetup() {
       {/* The Guardsmen level is the only row the arena reads: it unlocks the troops of that level and below. */}
       <ArenaRoleSection />
       <TroopsSection frame={{ rows: ['guardsmen'] }} />
+      <ArenaEnemySection />
       <BonusesSection frame={{ binding, scope, sources }} />
     </Stack>
   );
@@ -209,7 +212,7 @@ function useArenaBar(): { frame: BarFrame; press: () => void } {
         hint={hint}
         running={running}
         noun="match"
-        tooltip="Plan the best attack for this match"
+        tooltip="Plan the squad for this match"
         onPress={press}
       />
     ),
@@ -232,9 +235,9 @@ function ArenaQuickSummary({ stale }: { stale: boolean }) {
   return (
     <Text component="span" size="sm" fw={700} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
       {stale && <Glyph kind="warning" label="Setup changed since this match" />}
-      {verdictOf(plan)}
+      {summaryOf(plan).headline}
       <Text span size="xs" c="dimmed" fw={400}>
-        {`· ${(plan.score.survivorShare * 50).toFixed(0)} % survive`}
+        {`· ${summaryOf(plan).detail}`}
       </Text>
       <ChevronUp size={16} aria-hidden style={{ flex: '0 0 auto' }} />
     </Text>
@@ -306,7 +309,9 @@ export function ArenaBars({ wide, barWide }: ArenaBarsProps) {
       {!wide && (
         <>
           <VisuallyHidden role="status">
-            {open || plan === null ? '' : `Match planned: ${verdictOf(plan)}. Open the match to read it.`}
+            {open || plan === null
+              ? ''
+              : `Match planned: ${summaryOf(plan).headline}. Open the match to read it.`}
           </VisuallyHidden>
           <MarchSheet
             opened={open}

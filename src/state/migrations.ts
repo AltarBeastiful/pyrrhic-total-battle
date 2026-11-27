@@ -500,6 +500,27 @@ function nearestRoll(artifactId: unknown, random: unknown): { option: string; ra
   return { option: option.id, rarity: nearest.rarity };
 }
 
+/**
+ * `26 → 27` for one profile (B-46): the permanent sources gain the empty "Other Arena bonus" row, and the arena
+ * an enemy to counter-pick, empty. A row or an enemy already present is kept as it is; the squad and the
+ * switches do not move (the switches of the two sources the arena counts again default to on).
+ */
+export function addArenaEnemy(profile: Record<string, unknown>): Record<string, unknown> {
+  let next = profile;
+  const sources = profile.sources;
+  if (isPlainObject(sources) && Array.isArray(sources.permanent)) {
+    const has = sources.permanent.some((row) => isPlainObject(row) && row.builtin === 'otherArenaBonus');
+    if (!has) {
+      const row = { id: 'otherArenaBonus', name: 'Other Arena bonus', builtin: 'otherArenaBonus' };
+      const permanent = [...sources.permanent, { ...row, health: {}, strength: {} }];
+      next = { ...next, sources: { ...sources, permanent } };
+    }
+  }
+  const arena = next.primeArena;
+  if (isPlainObject(arena)) next = { ...next, primeArena: { enemy: [], ...arena } };
+  return next;
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -528,6 +549,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `24 → 25`: the typed random bonus of an artifact becomes line 1, at the nearest value it can roll (B-42).
  * `25 → 26`: nothing moves. The arena's capacity basis may now name the squad's capacity artifacts (B-44), and
  * the version keeps an older build from dropping them.
+ * `26 → 27`: the permanent sources gain the "Other Arena bonus" row and the arena an empty enemy (B-46).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -556,6 +578,7 @@ export const migrations: MigrationTable = {
   23: (doc) => ({ ...doc, schemaVersion: 24, profiles: migrateProfiles(doc, addArenaCapacity) }),
   24: (doc) => ({ ...doc, schemaVersion: 25, profiles: migrateProfiles(doc, randomBonusBecomesLine) }),
   25: (doc) => ({ ...doc, schemaVersion: 26 }),
+  26: (doc) => ({ ...doc, schemaVersion: 27, profiles: migrateProfiles(doc, addArenaEnemy) }),
 };
 
 /**
@@ -593,6 +616,7 @@ export const profileMigrations: MigrationTable = {
   23: addArenaCapacity,
   24: randomBonusBecomesLine,
   25: identity,
+  26: addArenaEnemy,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -629,6 +653,7 @@ export const savedStackMigrations: MigrationTable = {
   23: identity,
   24: identity,
   25: identity,
+  26: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

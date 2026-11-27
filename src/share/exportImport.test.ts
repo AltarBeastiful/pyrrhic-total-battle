@@ -68,7 +68,7 @@ describe('parseImport', () => {
       setups: 1,
       savedStacks: 0,
       mercenaries: 1,
-      bonusSources: 10,
+      bonusSources: 11,
     });
   });
 

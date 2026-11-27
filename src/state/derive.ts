@@ -65,10 +65,11 @@ import type {
   StackingOptions,
   StackRequest,
 } from '../engine/types';
-import { ARTIFACT_LINES } from './schema';
+import { ARENA_ONLY_SOURCES, ARTIFACT_LINES } from './schema';
 import type {
   ArtifactRoll,
   BattleSetup,
+  BuiltinPermanentSource,
   Profile,
   ProfileSources,
   ProfileTroops,
@@ -287,10 +288,15 @@ export function vipNeedsManual(profile: Profile, tables: DeriveTables = DEFAULT_
 
 const titleCase = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
+/** Whether a permanent row exists for the Prime Arena alone, so no march counts it or shows it. */
+export const isArenaOnly = ({ builtin }: { builtin?: BuiltinPermanentSource | undefined }): boolean =>
+  builtin !== undefined && ARENA_ONLY_SOURCES.includes(builtin);
+
 // ---- resolveSources ---------------------------------------------------------------------------------
 /**
  * Every bonus source switched on for this march, resolved to plain numbers. Permanent editors are always
- * included; everything else follows `setup.active`. Order is the order the UI lists them in.
+ * included (the arena's own only for an arena setup); everything else follows `setup.active`. Order is the order
+ * the UI lists them in.
  */
 export function resolveSources(
   profile: Profile,
@@ -302,8 +308,9 @@ export function resolveSources(
   const out: ResolvedSource[] = [];
   const nextId = idFactory();
 
-  // Permanent editors: always on, custom permanent rows included.
+  // Permanent editors: always on, custom permanent rows included. A row of the arena's own counts there only.
   for (const entry of sources.permanent) {
+    if (setup.marchType !== 'arena' && isArenaOnly(entry)) continue;
     const value = draft();
     addInto(value.health, entry.health);
     addInto(value.strength, entry.strength);

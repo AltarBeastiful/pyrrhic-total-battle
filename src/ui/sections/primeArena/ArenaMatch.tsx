@@ -1,7 +1,8 @@
 /**
  * The Prime Arena's answer, in the March pane's place and, below 1200 px, in the sheet the bar opens (B-35).
  *
- * It follows the March's own shape (design rule 28): the recap first, then the army as the March's own pool blocks and tier pills, then the
+ * It follows the March's own shape (design rule 28): the recap first, naming the plan's mode (all-round or
+ * counter-pick, B-46), then the army as the March's own pool blocks and tier pills, then the
  * story folded into one log per round, in the same `Sections` rhythm the March uses. Colours are the unit's group
  * and tier colours through the shared badge (rules 20, 23), words are ours (rule 26).
  */
@@ -44,6 +45,25 @@ export function verdictOf(plan: PrimeArenaPlan): string {
   return `${word}, ${String(score.roundsWon)} to ${String(theirs)}`;
 }
 
+/** A lead in points of army share, signed: our survivors minus theirs. */
+const points = (lead: number): string => {
+  const whole = Math.round(lead * 100);
+  return `${whole > 0 ? '+' : ''}${String(whole)} points`;
+};
+
+/** The plan in a line, for the bar and its announcement: the figure its mode is judged on first. */
+export function summaryOf(plan: PrimeArenaPlan): { headline: string; detail: string } {
+  return plan.mode === 'allRound'
+    ? {
+        headline: `All-round: beats ${winShare(plan.setScore.wins)}`,
+        detail: `lead ${points(plan.setScore.lead)}`,
+      }
+    : { headline: `Counter-pick: ${verdictOf(plan)}`, detail: `lead ${points(plan.setScore.lead)}` };
+}
+
+/** A share of the matches, as a whole percentage. */
+const winShare = (wins: number): string => `${String(Math.round(wins * 100))} %`;
+
 export interface ArenaMatchProps {
   /** True where the March has a pane to put a heading in; the sheet's own header is the heading below it. */
   titled?: boolean;
@@ -63,7 +83,7 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
         )}
         {plan === null ? (
           <Text size="sm" c="dimmed">
-            Generate to plan the attack and see the two rounds.
+            Generate to plan your squad and see the two rounds.
           </Text>
         ) : (
           <Recap plan={plan} />
@@ -84,18 +104,13 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
 }
 
 function Recap({ plan }: { plan: PrimeArenaPlan }) {
-  const { score, spent, unspent, maxed } = plan;
+  const { spent, unspent, maxed } = plan;
   return (
     <Stack gap="xs">
-      <Group gap="xs">
-        <Badge variant="light" size="lg" radius="sm">
-          {verdictOf(plan)}
-        </Badge>
-      </Group>
-      <Text size="sm">
-        Your survivor share {score.survivorShare.toFixed(2)} of 2 over both rounds, against an equal army.
+      {plan.mode === 'allRound' ? <AllRoundRecap plan={plan} /> : <CounterRecap plan={plan} />}
+      <Text size="xs" c="dimmed">
+        Lead means your survivors minus theirs, as a share of each army, averaged over the two rounds.
       </Text>
-      <PanelNote plan={plan} />
       {/* The same gauge the March shows: used of available, so the owner can check the army is maxed out. */}
       <SimpleGrid cols={2} aria-label="Housing">
         {POOLS.map((pool) => (
@@ -111,6 +126,59 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
         Damage the game lists as blocked is not modelled here.
       </Text>
     </Stack>
+  );
+}
+
+/** No enemy typed: how the squad does over the assumed armies, beside the even fill the game would field. */
+function AllRoundRecap({ plan }: { plan: PrimeArenaPlan }) {
+  const { setScore, start, enemies } = plan;
+  return (
+    <>
+      <Group gap="xs">
+        <Badge variant="light" size="lg" radius="sm">
+          All-round plan
+        </Badge>
+      </Group>
+      <Text size="sm">
+        Beats {winShare(setScore.wins)} of {enemies} assumed enemies. Average lead {points(setScore.lead)}, in
+        the bad cases {points(setScore.badLead)}.
+      </Text>
+      <Text size="sm" c="dimmed">
+        The game&rsquo;s default even fill beats {winShare(start.setScore.wins)} of them, average lead{' '}
+        {points(start.setScore.lead)}.
+      </Text>
+      <Text size="sm" c="dimmed">
+        The enemies are armies of your level, some smaller and some larger than yours, carrying bonuses like
+        yours. The rounds below are against an even army of your size, with your bonuses: {verdictOf(plan)}.
+      </Text>
+    </>
+  );
+}
+
+/** What a squad does in the one match of a counter-pick. */
+const outcomeWord = (wins: number): string => (wins === 1 ? 'wins' : wins === 0 ? 'loses' : 'draws');
+
+/** An enemy typed: the match against exactly that army. */
+function CounterRecap({ plan }: { plan: PrimeArenaPlan }) {
+  const { setScore, start } = plan;
+  return (
+    <>
+      <Group gap="xs">
+        <Badge variant="light" size="lg" radius="sm">
+          Counter-pick
+        </Badge>
+        <Badge variant="outline" size="lg" radius="sm">
+          {verdictOf(plan)}
+        </Badge>
+      </Group>
+      <Text size="sm">
+        Against the enemy you typed, with your bonuses on their side. Lead {points(setScore.lead)}.
+      </Text>
+      <Text size="sm" c="dimmed">
+        The game&rsquo;s default even fill {outcomeWord(start.setScore.wins)} against it, lead{' '}
+        {points(start.setScore.lead)}.
+      </Text>
+    </>
   );
 }
 
@@ -138,25 +206,6 @@ export function housingSentence(
   if (!maxed) return `${count(unspent)} left`;
   const left = unspent > 0 ? ` (${count(unspent)} left, buys no unit)` : '';
   return `Maxed out${left}. Your ${name} is what ends the plan: every point of it that buys a unit is spent, so check that ${count(spent + unspent)} is your real maximum.`;
-}
-
-/** What the squad was ranked on: the opponent panel (sizes, fills) and how its results combine, against the even split. */
-function PanelNote({ plan }: { plan: PrimeArenaPlan }) {
-  const { panel, aggregate, panelScore, start } = plan;
-  const how = aggregate === 'mean' ? 'the average' : 'the worst case';
-  const each = aggregate === 'mean' ? 'on average' : 'in the worst of them';
-  return (
-    <Stack gap={2}>
-      <Text size="sm" c="dimmed">
-        Ranked on {how} of {panel.length} opponents: {panel.map((member) => member.label).join('; ')}.
-      </Text>
-      <Text size="sm" c="dimmed">
-        Against them the squad takes {panelScore.roundsWon.toFixed(2)} of 2 rounds {each} and keeps a survivor
-        share of {panelScore.survivorShare.toFixed(2)}; the even split takes{' '}
-        {start.panelScore.roundsWon.toFixed(2)} and {start.panelScore.survivorShare.toFixed(2)}.
-      </Text>
-    </Stack>
-  );
 }
 
 /** The planned army: the March's own pool blocks (pool figure, tier-coloured pills), without its controls. */

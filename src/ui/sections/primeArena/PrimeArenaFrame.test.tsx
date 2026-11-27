@@ -139,8 +139,11 @@ test('the permanent sources and the talents are the calculator’s chips, under 
     .getAllByRole('checkbox')
     .map((box) => box.getAttribute('aria-label'));
   expect(names).toEqual([
+    'Army Modernization, counted',
     'Hall of Fame, counted',
+    'Monsters Boost, counted',
     'Monuments, counted',
+    'Other Arena bonus, counted',
     'Personal Technologies, counted',
     'Talents, counted',
     'Dragon, not counted', // the squad is seeded from the march, whose dragon is off
@@ -278,19 +281,58 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
   expect(within(pane).getAllByText(/maxed out|left/i).length).toBeGreaterThanOrEqual(2);
   expect(within(pane).getByText(/attacker.* strikes first/i)).toBeTruthy();
   expect(within(pane).getByText(/defender.* strikes first/i)).toBeTruthy();
-  // The attacker role is the default: the answer says which side is ours, and what the squad was ranked on.
+  // The attacker role is the default: the answer says which side is ours.
   expect(within(pane).getAllByRole('table', { name: 'Attacker (you)' })).toHaveLength(2);
-  expect(within(pane).getByText(/average of \d+ opponents/i)).toBeTruthy();
-  // Panel wording is plain (rule 26): sizes against yours, no jargon letter; opponents of other mixes are listed.
-  const note = within(pane).getByText(/average of \d+ opponents/i).textContent ?? '';
-  expect(note).toMatch(/% of your size/);
-  expect(note).toMatch(/even split/);
-  expect(note).toMatch(/mostly melee/);
-  expect(note).not.toMatch(/\bk\b/);
+  // With no enemy typed the answer names itself all-round and says how the squad does over the assumed enemies.
+  expect(within(pane).getByText('All-round plan')).toBeTruthy();
+  expect(within(pane).getByText(/beats \d+ % of \d+ assumed enemies/i)).toBeTruthy();
+  expect(within(pane).getByText(/average lead [+-]?\d+ points.*bad cases [+-]?\d+ points/i)).toBeTruthy();
+  expect(within(pane).getByText(/lead.*your survivors minus theirs/i)).toBeTruthy();
+  expect(within(pane).getByText(/even army of your size, with your bonuses/i)).toBeTruthy();
   // What the match does not model, and the check of the typed housing.
   expect(within(pane).getByText(/blocked.*not modelled/i)).toBeTruthy();
   expect(within(pane).getAllByText(/real maximum/i).length).toBeGreaterThanOrEqual(1);
+  // The new wording keeps to our rule: no em dash.
+  expect(pane.textContent).not.toContain('\u2014');
+});
+
+test('the Enemy card takes the units of every type up to the Guardsmen level; typing them counter-picks (B-46)', async () => {
+  const { container } = renderArena();
+  const card = await screen.findByRole('region', { name: 'Enemy' });
+  expect(within(card).getByText('All-round')).toBeTruthy();
+  const level = useStore.getState().doc.profiles[0]!.troops.guardsmen!.max;
+  expect(level).toBe(3);
+  // The top tier is on the card; the lower tiers sit in a fold; nothing above the level is offered.
+  expect(within(card).getByRole('textbox', { name: 'Rider III' })).toBeTruthy();
+  expect(within(card).getByRole('textbox', { name: 'Water Elemental' })).toBeTruthy();
+  expect(within(card).queryByRole('textbox', { name: 'Rider IV' })).toBeNull();
+  const clear = within(card).getByRole('button', { name: 'Clear enemy' }) as HTMLButtonElement;
+  expect(clear.disabled).toBe(true);
+
+  typeInto(/^rider iii$/i, '4000');
+  expect(useStore.getState().doc.profiles[0]!.primeArena.enemy).toEqual([{ unitId: 'rider-3', count: 4000 }]);
+  expect(within(card).getByText('Counter-pick · 1 stack')).toBeTruthy();
+  typeInto(/leadership/i, '20000');
+  typeInto(/dominance/i, '3000');
+  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
+  const pane = container.querySelector('aside') as HTMLElement;
+  await within(pane).findByText('Counter-pick', undefined, { timeout: 8000 });
   expect(within(pane).getByText(/^(victory|defeat|draw)\b/i)).toBeTruthy();
+  expect(within(pane).getByText(/against the enemy you typed/i)).toBeTruthy();
+  expect(within(pane).queryByText(/assumed enemies/i)).toBeNull();
+  expect(within(pane).getByRole('heading', { name: /round 2/i })).toBeTruthy();
+
+  fireEvent.click(clear);
+  expect(useStore.getState().doc.profiles[0]!.primeArena.enemy).toEqual([]);
+  expect(within(card).getByText('All-round')).toBeTruthy();
+  expect((within(card).getByRole('textbox', { name: 'Rider III' }) as HTMLInputElement).value).toBe('');
+});
+
+test('the calculator neither shows nor offers the other Arena bonus (B-46)', async () => {
+  render(<Shell />, { wrapper: ThemeHarness });
+  const group = await screen.findByRole('group', { name: /permanent sources/i });
+  expect(within(group).getByRole('checkbox', { name: /army modernization/i })).toBeTruthy();
+  expect(within(group).queryByRole('checkbox', { name: /other arena bonus/i })).toBeNull();
 });
 
 test('a pool typed as zero says no units are fielded from it', async () => {
@@ -305,7 +347,7 @@ test('a pool typed as zero says no units are fielded from it', async () => {
   });
 });
 
-test('the role is the calculator’s segmented control, saved, and a defender plan ranks against the worst case', async () => {
+test('the role is the calculator’s segmented control, saved, and a defender plan reads from the defender’s side', async () => {
   const { container } = renderArena();
   const role = await screen.findByRole('radiogroup', { name: /role/i });
   expect((within(role).getByRole('radio', { name: 'Attacker' }) as HTMLInputElement).checked).toBe(true);
@@ -317,12 +359,11 @@ test('the role is the calculator’s segmented control, saved, and a defender pl
   typeInto(/dominance/i, '100000');
   fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
   const pane = container.querySelector('aside') as HTMLElement;
-  await within(pane).findByText(/worst case of \d+ opponents/i, undefined, { timeout: 8000 });
+  await within(pane).findByText(/assumed enemies/i, undefined, { timeout: 8000 });
   expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');
   // Our side is the defender: it is the one marked, and the verdict is read for it.
   expect(within(pane).getAllByRole('table', { name: 'Defender (you)' })).toHaveLength(2);
   expect(within(pane).queryByRole('table', { name: 'Attacker (you)' })).toBeNull();
-  expect(within(pane).getByText(/^(victory|defeat|draw)\b/i)).toBeTruthy();
   // Changing the role after a plan leaves the plan on screen but stale.
   fireEvent.click(within(role).getByRole('radio', { name: 'Attacker' }));
   expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');

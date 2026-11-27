@@ -229,11 +229,9 @@ describe('primeArenaInputs', () => {
     expect(melee(6)).toBe(none + 280);
   });
 
-  it('counts the typed Monuments and Personal Technologies, and not the stand-ins the arena used to read', () => {
+  it('counts the typed Monuments and Personal Technologies, and never Customization', () => {
     expect(PRIME_ARENA_SOURCES).toEqual(expect.arrayContaining(['monuments', 'personalTechnologies']));
-    for (const gone of ['customization', 'armyModernization', 'monstersBoost']) {
-      expect(PRIME_ARENA_SOURCES).not.toContain(gone);
-    }
+    expect(PRIME_ARENA_SOURCES).not.toContain('customization');
     const profile = account();
     profile.sources.permanent.push(
       {
@@ -257,13 +255,6 @@ describe('primeArenaInputs', () => {
         health: { army: 50 },
         strength: { army: 50 },
       },
-      {
-        id: 'p-am',
-        name: 'Army Modernization',
-        builtin: 'armyModernization',
-        health: { army: 50 },
-        strength: { army: 50 },
-      },
     );
     const { totals } = primeArenaInputs(base({ profile }));
     expect(totals.strength.melee).toBe(60 + 5); // equipment + Monuments
@@ -276,6 +267,88 @@ describe('primeArenaInputs', () => {
     expect(off.totals.strength.melee).toBe(60);
     expect(off.totals.health.mounted).toBe(50);
     expect(off.totals.strength.army).toBe(11);
+  });
+
+  /** The account with its Army Modernization, Monsters Boost and other Arena bonus rows typed. */
+  const withResearch = (): Profile => {
+    const profile = account();
+    const rows: Profile['sources']['permanent'] = [
+      {
+        id: 'armyModernization',
+        name: 'Army Modernization',
+        builtin: 'armyModernization',
+        health: { melee: 12 },
+        strength: { melee: 14 },
+      },
+      {
+        id: 'monstersBoost',
+        name: 'Monsters Boost',
+        builtin: 'monstersBoost',
+        health: { beast: 4 },
+        strength: { beast: 6 },
+      },
+      {
+        id: 'otherArenaBonus',
+        name: 'Other Arena bonus',
+        builtin: 'otherArenaBonus',
+        health: { army: 62 },
+        strength: { army: 77 },
+      },
+    ];
+    // The rows replace whatever the account already holds for these three, so none is counted twice.
+    profile.sources.permanent = [
+      ...profile.sources.permanent.filter((row) => !rows.some((r) => r.builtin === row.builtin)),
+      ...rows,
+    ];
+    return profile;
+  };
+
+  it('counts Army Modernization, Monsters Boost and the other Arena bonus, each with its switch (B-46)', () => {
+    expect(PRIME_ARENA_SOURCES).toEqual(
+      expect.arrayContaining(['armyModernization', 'monstersBoost', 'otherArenaBonus']),
+    );
+    const profile = withResearch();
+    const bare = primeArenaInputs(base()).totals;
+    const { totals } = primeArenaInputs(base({ profile }));
+    expect(totals.health.melee - bare.health.melee).toBe(12);
+    expect(totals.strength.melee - bare.strength.melee).toBe(14);
+    expect(totals.health.beast - bare.health.beast).toBe(4);
+    expect(totals.strength.beast - bare.strength.beast).toBe(6);
+    expect(totals.health.army - bare.health.army).toBe(62);
+    expect(totals.strength.army - bare.strength.army).toBe(77);
+    const off = primeArenaInputs(
+      base({ profile, toggles: { armyModernization: false, monstersBoost: false, otherArenaBonus: false } }),
+    );
+    expect(off.totals).toEqual(bare);
+  });
+
+  it('leaves the other Arena bonus out of every march of the calculator (B-46)', () => {
+    const profile = withResearch();
+    for (const marchType of ['unspecified', 'solo', 'group', 'epic'] as const) {
+      const march = { ...squad(), marchType };
+      const sources = resolveSources(profile, march);
+      expect(sources.map((s) => s.id)).not.toContain('permanent:otherArenaBonus');
+      // The research rows still count on a march, as they always did.
+      expect(sources.map((s) => s.id)).toContain('permanent:armyModernization');
+    }
+  });
+
+  it('reads the typed enemy as stacks, dropping empty rows and units that do not exist (B-46)', () => {
+    expect(primeArenaInputs(base()).enemy).toEqual([]);
+    const { enemy } = primeArenaInputs(
+      base({
+        enemy: [
+          { unitId: 'rider-4', count: 7_995 },
+          { unitId: 'archer-4', count: 0 },
+          { unitId: 'nobody', count: 5 },
+          { unitId: 'magic-dragon', count: 233 },
+        ],
+      }),
+    );
+    expect(enemy.map((s) => [s.unit.id, s.count])).toEqual([
+      ['rider-4', 7_995],
+      ['magic-dragon', 233],
+    ]);
   });
 
   it('accepts five captains', () => {

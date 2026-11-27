@@ -6,26 +6,31 @@
  * victory; a 1-1 split goes to the side with the higher surviving share (housing-cost weighted) in the round
  * that side won; equal = draw. Rules read off two logged fights (docs: prime-report transcript, F1 and F2).
  *
+ * The rules are the ones read off the two reports of 2026-11-27 (B-46), which the match replays turn by turn.
+ *
  * Round model:
  *   - sides alternate one stack per turn, the round's first side leading. On its turn a side plays its
  *     strongest not-yet-acted living stack, judged on current numbers (count x boosted strength, features
  *     excluded). When a side has no stack left to act in the pass the other keeps acting; when both are done a
  *     new pass starts and the alternation simply continues (the side that did not act last goes next);
- *   - a stack hits the enemy category it has the largest strength-against for among the categories still alive
- *     (picked inside `effectiveUnit`), at the living-unit count it has when it acts;
- *   - inside that category the hit lands on ONE stack: the living stack with the highest remaining HP pool.
- *     Damage accumulates in that stack's pool, the remainder after whole units are killed is kept for later hits,
- *     and overkill on a wipe is lost: nothing spills to another stack;
- *   - Arena-only bonuses (troops.json lacks them): a Specialist deals double damage, and +105 % strength-against
- *     non-monster troops. Double-damage chances (unit, captains) enter as an expected value; "blocked" hits are
- *     not modelled. Race-aware targeting is not modelled either;
+ *   - a stack hits, at the living-unit count it has when it acts, the ONE enemy stack it would damage most: its
+ *     hit on that target (before any double damage), capped at the health the target has left. Equal capped hits
+ *     go to the target that would hit the actor hardest in return (its living count, uncapped);
+ *   - strength-against on a hit is the sum of the entry for the target's troop type and, when the target is a
+ *     monster, the entry for its race. Arena only (troops.json lacks them): a Specialist deals double damage and
+ *     has +105 % strength-against non-monster troops. The bonus against epic monsters does not count here;
+ *   - damage accumulates in the target stack's pool, the remainder after whole units are killed is kept for
+ *     later hits, and overkill on a wipe is lost: nothing spills to another stack. Health per unit is not
+ *     rounded (no whole-point health reproduces the reports' kills);
+ *   - double-damage chances (unit, captains) enter as an expected value, unless the match is given the record of
+ *     the turns that rolled it (to replay a real report). "Blocked" hits are not modelled;
  *   - a round ends when a side is wiped, or when a whole pass deals no damage (no progress is possible). It is
  *     won by wiping the other side, else by the higher surviving share (surviving housing cost over starting
  *     housing cost), equal = draw.
  */
-import { CATEGORIES } from '../data/types';
-import type { UnitDef } from '../data/types';
-import { effectiveUnit } from './units';
+import type { Race, StrengthAgainstKey, UnitDef } from '../data/types';
+import { matchupBonus } from './bonuses';
+import { effectiveUnit, healthPercent } from './units';
 import type { BonusTotals, EnemyFormation } from './types';
 
 /** Arena-only: a Specialist deals double damage (troops.json does not carry it). */
@@ -104,16 +109,18 @@ export interface HpPool {
   taken: number;
 }
 
+/** Whole units a pool has lost. The slack absorbs the float error of a fractional health (a wipe is a wipe). */
+const dead = (pool: HpPool): number => Math.min(pool.units, Math.floor(pool.taken / pool.hpPerUnit + 1e-9));
+
 /**
  * One hit on one stack: the damage joins the stack's pool, the leftover short of a whole unit is kept for the
  * next hit, and what exceeds the remaining pool is lost (nothing spills to another stack).
  */
 export function absorbDamage(pool: HpPool, damage: number): { absorbed: number; kills: number } {
-  const before = Math.floor(pool.taken / pool.hpPerUnit);
+  const before = dead(pool);
   const absorbed = Math.max(0, Math.min(damage, pool.units * pool.hpPerUnit - pool.taken));
   pool.taken += absorbed;
-  const after = Math.min(pool.units, Math.floor(pool.taken / pool.hpPerUnit));
-  return { absorbed, kills: after - before };
+  return { absorbed, kills: dead(pool) - before };
 }
 
 /** Surviving housing cost over starting housing cost: the round percentage of the game. */
@@ -127,87 +134,114 @@ export function primeArenaShare(stacks: readonly PrimeArenaStackOutcome[]): numb
   return total > 0 ? left / total : 0;
 }
 
-const EMPTY_FORMATION: EnemyFormation = { melee: 0, ranged: 0, mounted: 0, flying: 0 };
+const NO_FORMATION: EnemyFormation = { melee: 0, ranged: 0, mounted: 0, flying: 0 };
 
-function isSpecialist(unit: UnitDef): boolean {
-  return unit.kind === 'troop' && unit.group === 'specialist';
+const RACE_TARGET: Record<Race, StrengthAgainstKey> = {
+  beast: 'beasts',
+  elemental: 'elementals',
+  dragon: 'dragons',
+  giant: 'giants',
+};
+
+/** A unit under one side's bonuses: all a battle reads of it, worked out once however many battles it fights. */
+export interface PrimeArenaFighter {
+  unit: UnitDef;
+  totals: BonusTotals;
+  /** Health of one unit with the bonuses, not rounded. */
+  hpPerUnit: number;
+  /** Boosted strength of one unit, for the turn order. */
+  strengthPerUnit: number;
+  /** Σ strength bonuses in percent, before the strength-against of a target. */
+  strengthPercent: number;
+  doubleDamageChance: number;
+  /** A Specialist: double damage, and the +105 % against troops. */
+  specialist: boolean;
+  /** Strength-against in percent per target unit, filled in as targets are met. */
+  against: Map<UnitDef, number>;
 }
 
-type Effective = ReturnType<typeof effectiveUnit>;
-
-function strikeDamage(effective: Effective, count: number, target: UnitDef): number {
-  const { unit } = effective;
-  const specialist = isSpecialist(unit);
-  const vsTroops = specialist && target.kind === 'troop' ? ARENA_SPECIALIST_VS_TROOPS : 0;
-  const scale = count * unit.strength;
-  const percent = 100 + effective.strengthPercent + effective.strengthAgainst + vsTroops;
-  const multiplier =
-    (specialist ? ARENA_SPECIALIST_DAMAGE_MULTIPLIER : 1) * (1 + effective.doubleDamageChance / 100);
-  return Math.round((scale * percent) / 100) * multiplier;
+export function primeArenaFighter(unit: UnitDef, totals: BonusTotals): PrimeArenaFighter {
+  const effective = effectiveUnit(unit, totals, NO_FORMATION, []);
+  return {
+    unit,
+    totals,
+    hpPerUnit: (unit.health * (100 + healthPercent(unit, totals))) / 100,
+    strengthPerUnit: effective.strengthPerUnit,
+    strengthPercent: effective.strengthPercent,
+    doubleDamageChance: effective.doubleDamageChance,
+    specialist: unit.kind === 'troop' && unit.group === 'specialist',
+    against: new Map(),
+  };
 }
+
+/** The strength-against of one fighter's hit on a target: its troop type, its race when a monster, the +105. */
+function strengthAgainst(fighter: PrimeArenaFighter, target: UnitDef): number {
+  let percent = fighter.against.get(target);
+  if (percent !== undefined) return percent;
+  const keys: StrengthAgainstKey[] = [];
+  if (target.category !== undefined) keys.push(target.category);
+  if (target.kind === 'monster' && target.race !== undefined) keys.push(RACE_TARGET[target.race]);
+  percent = fighter.specialist && target.kind === 'troop' ? ARENA_SPECIALIST_VS_TROOPS : 0;
+  for (const key of keys) {
+    percent +=
+      (fighter.unit.strengthAgainst[key] ?? 0) +
+      matchupBonus(fighter.totals.matchup, fighter.unit.category, key);
+  }
+  fighter.against.set(target, percent);
+  return percent;
+}
+
+/** The hit of `count` units on a target, before any double damage. */
+function strikeDamage(fighter: PrimeArenaFighter, count: number, target: UnitDef): number {
+  const percent = 100 + fighter.strengthPercent + strengthAgainst(fighter, target);
+  const multiplier = fighter.specialist ? ARENA_SPECIALIST_DAMAGE_MULTIPLIER : 1;
+  return Math.round((count * fighter.unit.strength * percent) / 100) * multiplier;
+}
+
+const expectedDouble = (fighter: PrimeArenaFighter): number => 1 + fighter.doubleDamageChance / 100;
 
 /**
  * Damage of one hit of `count` units of `unit` on a stack of `target`: the journal formula (`hitDamage`) with
- * the Arena bonuses, the double-damage chance as an expected value. The target category is the one the unit
- * picks against a formation that holds only `target`'s category (or `formation` when given).
+ * the Arena bonuses, the double-damage chance as an expected value.
  */
 export function primeArenaHitDamage(
   unit: UnitDef,
   count: number,
   totals: BonusTotals,
   target: UnitDef,
-  formation?: EnemyFormation,
 ): number {
-  const present: EnemyFormation = formation ?? {
-    ...EMPTY_FORMATION,
-    ...(target.category ? { [target.category]: 1 } : {}),
-  };
-  return strikeDamage(effectiveUnit(unit, totals, present, []), count, target);
+  const fighter = primeArenaFighter(unit, totals);
+  return strikeDamage(fighter, count, target) * expectedDouble(fighter);
 }
 
+/** A stack ready to fight: its fighter and how many march. */
+export interface PrimeArenaFielded {
+  fighter: PrimeArenaFighter;
+  count: number;
+}
+
+export const primeArenaFielded = ({ stacks, totals }: PrimeArenaArmy): PrimeArenaFielded[] =>
+  stacks.map(({ unit, count }) => ({ fighter: primeArenaFighter(unit, totals), count }));
+
 interface LiveStack {
-  unit: UnitDef;
+  fighter: PrimeArenaFighter;
   pool: HpPool;
-  /** Boosted strength of one unit, for the turn order. */
-  strengthPerUnit: number;
   acted: boolean;
 }
 
 interface Side {
-  army: PrimeArenaArmy;
   live: LiveStack[];
 }
 
-function makeSide(army: PrimeArenaArmy): Side {
-  return {
-    army,
-    live: army.stacks.map(({ unit, count }) => {
-      const effective = effectiveUnit(unit, army.totals, EMPTY_FORMATION, []);
-      return {
-        unit,
-        pool: { units: count, hpPerUnit: effective.hpPerUnit, taken: 0 },
-        strengthPerUnit: effective.strengthPerUnit,
-        acted: false,
-      };
-    }),
-  };
-}
+const makeSide = (army: readonly PrimeArenaFielded[]): Side => ({
+  live: army.map(({ fighter, count }) => ({
+    fighter,
+    pool: { units: count, hpPerUnit: fighter.hpPerUnit, taken: 0 },
+    acted: false,
+  })),
+});
 
-function living(stack: LiveStack): number {
-  return stack.pool.units - Math.floor(stack.pool.taken / stack.pool.hpPerUnit);
-}
-
-function remainingHp(stack: LiveStack): number {
-  return stack.pool.units * stack.pool.hpPerUnit - stack.pool.taken;
-}
-
-function formationOf(side: Side): EnemyFormation {
-  const formation = { ...EMPTY_FORMATION };
-  for (const stack of side.live) {
-    if (living(stack) > 0 && stack.unit.category) formation[stack.unit.category] += 1;
-  }
-  return formation;
-}
+const living = (stack: LiveStack): number => stack.pool.units - dead(stack.pool);
 
 function alive(side: Side): boolean {
   return side.live.some((stack) => living(stack) > 0);
@@ -217,45 +251,54 @@ function alive(side: Side): boolean {
 function nextActor(side: Side): number {
   let best = -1;
   let bestPower = -1;
-  side.live.forEach((stack, index) => {
+  for (let index = 0; index < side.live.length; index += 1) {
+    const stack = side.live[index]!;
+    if (stack.acted) continue;
     const n = living(stack);
-    if (n <= 0 || stack.acted) return;
-    const power = n * stack.strengthPerUnit;
+    if (n <= 0) continue;
+    const power = n * stack.fighter.strengthPerUnit;
     if (power > bestPower) {
       best = index;
       bestPower = power;
     }
-  });
+  }
   return best;
 }
 
-/** One stack's strike: pick the category, then hit the living stack of it with the largest remaining HP pool. */
-function strike(attacker: Side, index: number, defender: Side, who: PrimeArenaSide): PrimeArenaStep | null {
-  const stack = attacker.live[index]!;
-  const formation = formationOf(defender);
-  const effective = effectiveUnit(stack.unit, attacker.army.totals, formation, []);
+/** Two capped hits are equal within this share of them. */
+const EQUAL_HIT = 1e-6;
 
-  // No living squad of the chosen category (e.g. engineers' melee fallback): take any living stack.
-  const inCategory = CATEGORIES.includes(effective.target) && formation[effective.target] > 0;
+/**
+ * The stack an actor hits: the living one its hit damages most, the hit capped at the health left there; among
+ * equal capped hits, the one whose own hit on the actor (its living count, uncapped) is the largest.
+ */
+function chooseVictim(actor: LiveStack, count: number, foe: Side): number {
   let target = -1;
-  let targetHp = -1;
-  defender.live.forEach((s, i) => {
-    if (living(s) <= 0 || (inCategory && s.unit.category !== effective.target)) return;
-    const hp = remainingHp(s);
-    if (hp > targetHp) {
-      target = i;
-      targetHp = hp;
+  let bestHit = 0;
+  let bestThreat = 0;
+  for (let index = 0; index < foe.live.length; index += 1) {
+    const stack = foe.live[index]!;
+    const n = living(stack);
+    if (n <= 0) continue;
+    const left = stack.pool.units * stack.pool.hpPerUnit - stack.pool.taken;
+    const hit = Math.min(strikeDamage(actor.fighter, count, stack.fighter.unit), left);
+    if (target >= 0 && hit < bestHit * (1 - EQUAL_HIT)) continue;
+    const threat = strikeDamage(stack.fighter, n, actor.fighter.unit);
+    if (target < 0 || hit > bestHit * (1 + EQUAL_HIT) || threat > bestThreat) {
+      target = index;
+      bestHit = hit;
+      bestThreat = threat;
     }
-  });
-  if (target < 0) return null;
-  const victim = defender.live[target]!;
-  const damage = strikeDamage(effective, living(stack), victim.unit);
-  const { kills } = absorbDamage(victim.pool, damage);
-  return { side: who, stack: index, target, damage, kills };
+  }
+  return target;
 }
 
 function outcome(side: Side): PrimeArenaSideOutcome {
-  const stacks = side.live.map((s) => ({ unit: s.unit, start: s.pool.units, survivors: living(s) }));
+  const stacks = side.live.map((s) => ({
+    unit: s.fighter.unit,
+    start: s.pool.units,
+    survivors: living(s),
+  }));
   return { stacks, share: primeArenaShare(stacks) };
 }
 
@@ -263,9 +306,10 @@ export const otherSide = (who: PrimeArenaSide): PrimeArenaSide =>
   who === 'attacker' ? 'defender' : 'attacker';
 
 function playRound(
-  attackerArmy: PrimeArenaArmy,
-  defenderArmy: PrimeArenaArmy,
+  attackerArmy: readonly PrimeArenaFielded[],
+  defenderArmy: readonly PrimeArenaFielded[],
   first: PrimeArenaSide,
+  doubleTurns: readonly number[] | undefined,
 ): PrimeArenaRound {
   const sides: Record<PrimeArenaSide, Side> = {
     attacker: makeSide(attackerArmy),
@@ -290,12 +334,19 @@ function playRound(
       for (const side of [sides.attacker, sides.defender]) for (const s of side.live) s.acted = false;
       continue;
     }
-    sides[who].live[index]!.acted = true;
-    const step = strike(sides[who], index, sides[otherSide(who)], who);
-    if (step !== null) {
-      steps.push(step);
-      if (step.damage > 0) progressed = true;
-    }
+    const actor = sides[who].live[index]!;
+    actor.acted = true;
+    const count = living(actor);
+    const foe = sides[otherSide(who)];
+    // The other side is alive, so there is a stack to hit.
+    const target = chooseVictim(actor, count, foe);
+    const victim = foe.live[target]!;
+    let multiplier = expectedDouble(actor.fighter);
+    if (doubleTurns !== undefined) multiplier = doubleTurns.includes(steps.length + 1) ? 2 : 1;
+    const damage = strikeDamage(actor.fighter, count, victim.fighter.unit) * multiplier;
+    const { kills } = absorbDamage(victim.pool, damage);
+    steps.push({ side: who, stack: index, target, damage, kills });
+    if (damage > 0) progressed = true;
     turn = otherSide(who);
   }
   const attacker = outcome(sides.attacker);
@@ -308,15 +359,34 @@ function playRound(
   return { first, attacker, defender, winner, steps };
 }
 
+/** What really happened in a fight, to replay it: nothing here is used to plan one. */
+export interface PrimeArenaRecord {
+  /** Per round, the turns (counted from 1) that rolled double damage; every other turn dealt its plain hit. */
+  doubleTurns: readonly [readonly number[], readonly number[]];
+}
+
 /**
  * The two-round match: attacker strikes first in round 1, defender first in round 2. Both rounds won by one
  * side is a victory; a 1-1 split goes to the side with the higher surviving share in the round it won; equal is
  * a draw. (A win and a draw is the win; two draws a draw.)
  */
-export function primeArenaMatch(attacker: PrimeArenaArmy, defender: PrimeArenaArmy): PrimeArenaMatch {
+export function primeArenaMatch(
+  attacker: PrimeArenaArmy,
+  defender: PrimeArenaArmy,
+  record?: PrimeArenaRecord,
+): PrimeArenaMatch {
+  return primeArenaFieldedMatch(primeArenaFielded(attacker), primeArenaFielded(defender), record);
+}
+
+/** The same match between armies already fielded: for a search that fights the same units many times. */
+export function primeArenaFieldedMatch(
+  attacker: readonly PrimeArenaFielded[],
+  defender: readonly PrimeArenaFielded[],
+  record?: PrimeArenaRecord,
+): PrimeArenaMatch {
   const rounds: [PrimeArenaRound, PrimeArenaRound] = [
-    playRound(attacker, defender, 'attacker'),
-    playRound(attacker, defender, 'defender'),
+    playRound(attacker, defender, 'attacker', record?.doubleTurns[0]),
+    playRound(attacker, defender, 'defender', record?.doubleTurns[1]),
   ];
   const attackerRoundsWon = rounds.filter((r) => r.winner === 'attacker').length;
   const defenderRoundsWon = rounds.filter((r) => r.winner === 'defender').length;
@@ -335,12 +405,12 @@ export function primeArenaMatch(attacker: PrimeArenaArmy, defender: PrimeArenaAr
 export const roundsWonBy = (match: PrimeArenaMatch, side: PrimeArenaSide): number =>
   side === 'attacker' ? match.attackerRoundsWon : match.defenderRoundsWon;
 
-/** The attacker's ranking score: match result, then rounds won, then survivor share over both rounds. */
-export function primeArenaScore(match: PrimeArenaMatch): PrimeArenaScore {
+/** A side's score (the attacker's by default): match result, then rounds won, then survivor share. */
+export function primeArenaScore(match: PrimeArenaMatch, side: PrimeArenaSide = 'attacker'): PrimeArenaScore {
   return {
-    result: match.winner === 'attacker' ? 2 : match.winner === 'draw' ? 1 : 0,
-    roundsWon: match.attackerRoundsWon,
-    survivorShare: match.rounds[0].attacker.share + match.rounds[1].attacker.share,
+    result: match.winner === side ? 2 : match.winner === 'draw' ? 1 : 0,
+    roundsWon: roundsWonBy(match, side),
+    survivorShare: match.rounds[0][side].share + match.rounds[1][side].share,
   };
 }
 

@@ -1,113 +1,103 @@
 /**
- * B-34 / B-37 — Prime Arena stack planner, role-aware.
+ * B-46 — Prime Arena stack planner.
  *
- * Finds the best squad against a PANEL of opponents instead of one mirror. Every panel member is a scaled copy
- * of the candidate (same composition, same bonuses unless `opponentTotals` is given):
- *   - `strength` k scales the opponent's size: its stack counts are the candidate's times k (a k = 1.25 opponent
- *     fields a quarter more housing worth of the same units). It is the one scalar that moves with the candidate,
- *     so the panel always measures "how does this army fare against a mirror that is k times as strong";
- *   - `fill` is how much of its housing the opponent filled (players forget to fill); the opponent's counts are
- *     scaled by `strength * fill`, so an under-filled member is a weaker, lighter army.
- * Attacker role: the squad is the attacker (leads round 1); the panel is k 0.8..1.0 and the aggregate is the
- * MEAN score. Defender role: the squad is the defender (leads round 2); the panel is k 1.0..1.25 and the
- * aggregate is the WORST case. A panel score is a `PrimeArenaScore` shape (result, rounds won, survivor share
- * of OUR side) with fractional values for a mean, compared lexicographically as in `primeArena.ts`.
+ * With no typed enemy, a squad is ranked against many assumed armies (`primeArenaEnemies.ts`): the share of
+ * matches it wins, then its mean lead (our surviving share minus theirs) plus its lead in the bad cases. With a
+ * typed enemy the set is that one army, carrying our totals: the match result, then rounds won, then the lead.
+ * The role only decides who strikes first in each round: the match is the same for both sides, so is the ranking.
  *
  * A squad is up to `maxStacks` slots (default 8), each a unit and a count; every unit fills at most ONE slot (as
- * in the march calculator, a troop type is one stack) and any pool unit may be used, lower tiers included. Housing bounds the squad: troops spend Leadership, monsters
- * Dominance.
+ * in the march calculator, a troop type is one stack) and any pool unit may be used, lower tiers included.
+ * Housing bounds the squad: troops spend Leadership, monsters Dominance.
  *
- * Search: hill climbs over slot counts from the even-split start and from seeded random restarts, sharing one
- * evaluation budget and one deadline. Moves (first improvement, slice of a pool's budget halving from 1/2 to
- * 1/64): transfer money between two slots of a pool, retype a slot, split part of a slot into a new slot, merge
- * a slot into another. Each climbed squad is then filled (best-scoring top-up until no unit is affordable) and
- * the best filled squad wins; the filled even-split start is always a candidate, so the result is never worse
- * than it on the panel score.
+ * Search: hill climbs over slot counts from the default even fill (the game's own: the top tier of each pool,
+ * evenly) and from seeded random restarts, sharing one evaluation budget and one deadline. Moves (first
+ * improvement, slice of a pool's budget halving from 1/2 to 1/64): transfer money between two slots of a pool,
+ * retype a slot, split part of a slot into a new slot, merge a slot into another. Each climbed squad is then
+ * filled (best-scoring top-up until no unit is affordable) and the best filled squad wins; the filled default
+ * fill is always a candidate, so the result is never worse than it on the ranking in use.
  */
 import type { UnitDef } from '../data/types';
 import { DEFAULT_ARENA_STACKS } from '../state/schema';
-import { primeArenaMatch, roundsWonBy } from './primeArena';
+import {
+  primeArenaFielded,
+  primeArenaFieldedMatch,
+  primeArenaFighter,
+  primeArenaMatch,
+  primeArenaScore,
+  roundsWonBy,
+} from './primeArena';
 import type {
   PrimeArenaArmy,
+  PrimeArenaFielded,
+  PrimeArenaFighter,
   PrimeArenaMatch,
   PrimeArenaScore,
   PrimeArenaSide,
   PrimeArenaStack,
 } from './primeArena';
+import { assumedEnemies, evenArenaArmy, mulberry32 } from './primeArenaEnemies';
 import type { BonusTotals, Housing } from './types';
 
 export type PrimeArenaRole = PrimeArenaSide;
 
-/** What an opponent fields: a scaled copy of the candidate, an even split of the top tiers, or mostly one class. */
-export type PrimeArenaMix = 'mirror' | 'even' | 'melee' | 'ranged' | 'mounted';
+/** What a plan was ranked against: many assumed enemies, or the one the player typed. */
+export type PrimeArenaMode = 'allRound' | 'counter';
 
-/** One opponent of the panel: a scaled copy of the candidate, or an army of another type mix. */
-export interface PrimeArenaPanelMember {
-  /** `mirror` copies the candidate's composition; the others field `army`, which does not depend on the candidate. */
-  mix: PrimeArenaMix;
-  /** The opponent's stacks when its mix is not `mirror`. */
-  army?: PrimeArenaStack[];
-  /** Opponent size relative to the candidate (k): its counts are ours times `strength * fill`. */
-  strength: number;
-  /** Share of its housing the opponent filled, 0..1. */
-  fill: number;
-  label: string;
-}
-
-/** A panel score: `PrimeArenaScore` fields, fractional for a mean. */
-export interface PrimeArenaPanelScore {
-  result: number;
+/** How a squad does against a set of enemies. */
+export interface PrimeArenaSetScore {
+  /** Share of the matches won, a draw counting half. */
+  wins: number;
+  /** Mean rounds won per match, of 2. */
   roundsWon: number;
-  survivorShare: number;
-  /**
-   * Our surviving cost share minus the opponent's, summed over both rounds (-2..2), lost rounds included. The
-   * planner's tie-break below result and rounds won: it stays continuous when every match is lost.
-   */
-  margin: number;
+  /** Mean lead per round: our surviving share minus theirs (-1..1). */
+  lead: number;
+  /** The lead at the worst-tenth mark of the set; the only match's lead when the set is one army. */
+  badLead: number;
 }
 
 export interface PrimeArenaPlanInput {
   /** Units the squad may field (`primeArenaInputs(...).pool`). */
   pool: readonly UnitDef[];
+  /** The Guardsmen level (`primeArenaInputs(...).level`): the tiers of the assumed enemies. */
+  level: number;
   /** Leadership and Dominance caps (`primeArenaInputs(...).housing`); authority is not used. */
   housing: Housing;
-  /** Bonuses of our army (`primeArenaInputs(...).totals`). */
+  /** Bonuses of our army (`primeArenaInputs(...).totals`); a typed enemy carries them too. */
   totals: BonusTotals;
-  /** Which side we play (default attacker): fixes the panel and the aggregate. */
+  /** The enemy the player typed (`primeArenaInputs(...).enemy`); empty or absent plans all-round. */
+  enemy?: readonly PrimeArenaStack[];
+  /** Which side we play (default attacker): who strikes first in each round of the match shown. */
   role?: PrimeArenaRole;
   /** Most stacks in the squad (default 8; the real limit is unknown). A unit is never in two stacks. */
   maxStacks?: number;
-  /**
-   * Opponent bonuses. The default is `armyWideTotals(totals)`: our army-wide health and strength and nothing
-   * category-, group- or race-specific (a captain such as Leonidas is ours alone), no specials, no matchups.
-   */
-  opponentTotals?: BonusTotals;
   /** Hard cap on search evaluations (default: none). */
   maxEvaluations?: number;
   /** Wall-clock cap in milliseconds (default 60 000). */
   maxMillis?: number;
-  /** Random restarts after the even-split climb (default 4). */
+  /** Random restarts after the climb from the default fill (default 4). */
   restarts?: number;
 }
 
 export interface PrimeArenaPlan {
   role: PrimeArenaRole;
+  mode: PrimeArenaMode;
   /** The squad's stacks, pool order, zero counts dropped. */
   stacks: PrimeArenaStack[];
   /**
-   * The headline match: our squad against the full-strength full-fill mirror (k = 1, fill 1), with our side in
-   * `role` (so for a defender plan `match.defender` is us).
+   * The match shown, with our side in `role` (so for a defender plan `match.defender` is us): against the typed
+   * enemy, or, all-round, against an even army of our own size with our bonuses (`opponent`).
    */
   match: PrimeArenaMatch;
-  /** The headline match's score for OUR side (attacker or defender score, per `role`). */
+  /** That match's score for OUR side. */
   score: PrimeArenaScore;
-  /** The panel the squad was ranked on, and how its scores combine. */
-  panel: PrimeArenaPanelMember[];
-  aggregate: 'mean' | 'worst';
-  /** The squad's score over the panel. */
-  panelScore: PrimeArenaPanelScore;
-  /** The even-split start (filled), scored on the same panel. */
-  start: { stacks: PrimeArenaStack[]; panelScore: PrimeArenaPanelScore };
+  opponent: PrimeArenaStack[];
+  /** How many enemies the squad was ranked on. */
+  enemies: number;
+  /** The squad's score over them. */
+  setScore: PrimeArenaSetScore;
+  /** The default even fill, scored on the same enemies. */
+  start: { stacks: PrimeArenaStack[]; setScore: PrimeArenaSetScore };
   spent: { leadership: number; dominance: number };
   /** Housing the army leaves empty, per pool (Leadership and Dominance). */
   unspent: { leadership: number; dominance: number };
@@ -126,209 +116,61 @@ const DEFAULT_RESTARTS = 4;
 const FIRST_SLICE = 0.5;
 const LAST_SLICE = 1 / 64;
 
-/** An opponent's size against ours, in plain words. */
-const sizeWords = (strength: number): string =>
-  strength === 1 ? 'same size as yours' : `${String(Math.round(strength * 100))} % of your size`;
+const NO_SCORE: PrimeArenaSetScore = { wins: 0, roundsWon: 0, lead: 0, badLead: 0 };
 
-/** The panel of a role: mirrors of the candidate (full and under-filled) and one army per other mix. */
-const ROLE_PANELS: Record<
-  PrimeArenaRole,
-  {
-    mirrors: readonly (readonly [number, number])[];
-    /** Size of the armies of other mixes: a typical opponent, full housing. */
-    mixStrength: number;
-    aggregate: 'mean' | 'worst';
-  }
-> = {
-  attacker: {
-    mirrors: [
-      [0.8, 1],
-      [0.9, 1],
-      [1.0, 1],
-      [1.0, 0.85],
-      [0.9, 0.7],
-    ],
-    mixStrength: 0.9,
-    aggregate: 'mean',
-  },
-  defender: {
-    mirrors: [
-      [1.0, 1],
-      [1.125, 1],
-      [1.25, 1],
-      [1.25, 0.85],
-      [1.0, 0.7],
-    ],
-    mixStrength: 1.25,
-    aggregate: 'worst',
-  },
-};
-
-/** The classes an opponent may be heavy in. */
-const HEAVY_CLASSES = ['melee', 'ranged', 'mounted'] as const;
-/** Share of a heavy opponent's Leadership spent on its class. */
-const HEAVY_SHARE = 0.7;
-
-type OtherMix = Exclude<PrimeArenaMix, 'mirror'>;
-
-/** What the opponents of other mixes are built from: the units a squad may field and the housing they share. */
-export interface PrimeArenaField {
-  pool: readonly UnitDef[];
-  housing: Housing;
+/** Positive when `a` ranks above `b` in a plan of this mode. */
+export function comparePrimeArenaSetScore(
+  a: PrimeArenaSetScore,
+  b: PrimeArenaSetScore,
+  mode: PrimeArenaMode,
+): number {
+  if (mode === 'counter') return a.wins - b.wins || a.roundsWon - b.roundsWon || a.lead - b.lead;
+  return a.wins - b.wins || a.lead + a.badLead - (b.lead + b.badLead);
 }
 
-/**
- * An opponent army of one mix: each pool's housing times `size`, spread over the pool's top-tier units, evenly
- * (`even`), or with `HEAVY_SHARE` of the Leadership on the top-tier units of one class and the rest evenly over
- * the others. Dominance, which has no such class split, is always even.
- */
-function opponentArmy(field: PrimeArenaField, mix: OtherMix, size: number): PrimeArenaStack[] {
-  const stacks: PrimeArenaStack[] = [];
-  for (const pool of ['leadership', 'dominance'] as const) {
-    const budget = field.housing[pool] * size;
-    const own = field.pool.filter((u) => u.pool === pool && u.cost > 0);
-    const top = Math.max(0, ...own.map((u) => u.tier));
-    const units = own.filter((u) => u.tier === top);
-    const heavy = pool === 'leadership' && mix !== 'even' ? units.filter((u) => u.category === mix) : [];
-    const rest = units.filter((u) => !heavy.includes(u));
-    const groups: [UnitDef[], number][] =
-      heavy.length === 0 || rest.length === 0
-        ? [[units, 1]]
-        : [
-            [heavy, HEAVY_SHARE],
-            [rest, 1 - HEAVY_SHARE],
-          ];
-    for (const [members, share] of groups) {
-      for (const unit of members) {
-        const count = Math.floor((budget * share) / members.length / unit.cost);
-        if (count > 0) stacks.push({ unit, count });
-      }
-    }
-  }
-  return stacks;
-}
+/** The match with our side in `role`. */
+const matchFor = (
+  role: PrimeArenaRole,
+  ours: readonly PrimeArenaFielded[],
+  theirs: readonly PrimeArenaFielded[],
+): PrimeArenaMatch =>
+  role === 'attacker' ? primeArenaFieldedMatch(ours, theirs) : primeArenaFieldedMatch(theirs, ours);
 
-/**
- * The opponent panel of a role. With a `field` it adds an army of an even split and one heavy in each class the
- * pool can field, besides the mirrors (which keep the under-filled opponents).
- */
-export function primeArenaPanel(role: PrimeArenaRole, field?: PrimeArenaField): PrimeArenaPanelMember[] {
-  const { mirrors, mixStrength } = ROLE_PANELS[role];
-  const panel: PrimeArenaPanelMember[] = mirrors.map(([strength, fill]) => ({
-    mix: 'mirror',
-    strength,
-    fill,
-    label: `${sizeWords(strength)}${fill < 1 ? `, ${Math.round(fill * 100)} % filled` : ''}`,
-  }));
-  if (field === undefined) return panel;
-  const classes = HEAVY_CLASSES.filter((c) =>
-    field.pool.some((u) => u.pool === 'leadership' && u.category === c),
-  );
-  const mixes: [OtherMix, string][] = [
-    ['even', 'even split'],
-    ...classes.map((c): [OtherMix, string] => [c, `mostly ${c}`]),
-  ];
-  for (const [mix, words] of mixes) {
-    panel.push({
-      mix,
-      strength: mixStrength,
-      fill: 1,
-      label: `${sizeWords(mixStrength)}, ${words}`,
-      army: opponentArmy(field, mix, mixStrength),
-    });
-  }
-  return panel;
-}
-
-function scaled(stacks: readonly PrimeArenaStack[], factor: number): PrimeArenaStack[] {
-  return stacks.flatMap((s) => {
-    const count = Math.floor(s.count * factor);
-    return count > 0 ? [{ unit: s.unit, count }] : [];
-  });
-}
-
-function shareMargin(match: PrimeArenaMatch, role: PrimeArenaRole): number {
+function scoreFielded(
+  ours: readonly PrimeArenaFielded[],
+  role: PrimeArenaRole,
+  enemies: readonly (readonly PrimeArenaFielded[])[],
+): PrimeArenaSetScore {
+  if (enemies.length === 0) return NO_SCORE;
   const other = role === 'attacker' ? 'defender' : 'attacker';
-  return match.rounds.reduce((a, r) => a + r[role].share - r[other].share, 0);
+  let wins = 0;
+  let roundsWon = 0;
+  const leads = enemies.map((theirs) => {
+    const match = matchFor(role, ours, theirs);
+    if (match.winner === role) wins += 1;
+    else if (match.winner === 'draw') wins += 0.5;
+    roundsWon += roundsWonBy(match, role);
+    const [first, second] = match.rounds;
+    return (first[role].share - first[other].share + (second[role].share - second[other].share)) / 2;
+  });
+  const n = leads.length;
+  const lead = leads.reduce((sum, value) => sum + value, 0) / n;
+  leads.sort((a, b) => a - b);
+  return { wins: wins / n, roundsWon: roundsWon / n, lead, badLead: leads[Math.floor(n / 10)]! };
 }
 
-/** Our side's score of a match: attacker or defender perspective. */
-function headlineScore(match: PrimeArenaMatch, role: PrimeArenaRole): PrimeArenaScore {
-  const { margin: _margin, ...score } = sideScore(match, role);
-  return score;
-}
-
-function sideScore(match: PrimeArenaMatch, role: PrimeArenaRole): PrimeArenaScore & { margin: number } {
-  return {
-    result: match.winner === role ? 2 : match.winner === 'draw' ? 1 : 0,
-    roundsWon: roundsWonBy(match, role),
-    survivorShare: match.rounds[0][role].share + match.rounds[1][role].share,
-    margin: shareMargin(match, role),
-  };
-}
-
-function matchAgainst(
+/** A squad's score over a set of enemies. */
+export function scorePrimeArenaSet(
   stacks: readonly PrimeArenaStack[],
   totals: BonusTotals,
   role: PrimeArenaRole,
-  member: PrimeArenaPanelMember,
-  opponentTotals: BonusTotals,
-): PrimeArenaMatch {
-  const ours: PrimeArenaArmy = { stacks: [...stacks], totals };
-  const theirs: PrimeArenaArmy = {
-    stacks: member.army ?? scaled(stacks, member.strength * member.fill),
-    totals: opponentTotals,
-  };
-  return role === 'attacker' ? primeArenaMatch(ours, theirs) : primeArenaMatch(theirs, ours);
-}
-
-export function comparePanelScore(a: PrimeArenaPanelScore, b: PrimeArenaPanelScore): number {
-  return (
-    a.result - b.result ||
-    a.roundsWon - b.roundsWon ||
-    a.margin - b.margin ||
-    a.survivorShare - b.survivorShare
+  enemies: readonly PrimeArenaArmy[],
+): PrimeArenaSetScore {
+  return scoreFielded(
+    primeArenaFielded({ stacks: [...stacks], totals }),
+    role,
+    enemies.map(primeArenaFielded),
   );
-}
-
-/** A squad's score over a panel: the mean for an attacker, the worst member for a defender. */
-export function scorePrimeArenaPanel(
-  stacks: readonly PrimeArenaStack[],
-  totals: BonusTotals,
-  role: PrimeArenaRole,
-  panel: readonly PrimeArenaPanelMember[],
-  opponentTotals: BonusTotals = armyWideTotals(totals),
-): PrimeArenaPanelScore {
-  const scores = panel.map((m) => sideScore(matchAgainst(stacks, totals, role, m, opponentTotals), role));
-  if (ROLE_PANELS[role].aggregate === 'worst') {
-    return scores.reduce((worst, s) => (comparePanelScore(s, worst) < 0 ? s : worst));
-  }
-  const n = scores.length;
-  return {
-    result: scores.reduce((a, s) => a + s.result, 0) / n,
-    roundsWon: scores.reduce((a, s) => a + s.roundsWon, 0) / n,
-    survivorShare: scores.reduce((a, s) => a + s.survivorShare, 0) / n,
-    margin: scores.reduce((a, s) => a + s.margin, 0) / n,
-  };
-}
-
-/** The bonuses every opponent is assumed to have: ours, restricted to the army-wide health and strength. */
-export function armyWideTotals(totals: BonusTotals): BonusTotals {
-  const only = (rec: BonusTotals['health']): BonusTotals['health'] => {
-    const out = {} as BonusTotals['health'];
-    for (const key of Object.keys(rec) as (keyof typeof rec)[]) out[key] = key === 'army' ? rec[key] : 0;
-    return out;
-  };
-  const special = {} as BonusTotals['special'];
-  for (const key of Object.keys(totals.special) as (keyof typeof totals.special)[]) special[key] = 0;
-  return {
-    health: only(totals.health),
-    strength: only(totals.strength),
-    special,
-    matchup: [],
-    eventStrength: 0,
-    breakdown: { health: {}, strength: {}, special: {} },
-  };
 }
 
 interface Slot {
@@ -337,18 +179,6 @@ interface Slot {
   n: number;
 }
 type Squad = Slot[];
-
-/** Small seeded generator so restarts are reproducible. */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function budgetOf(unit: UnitDef, housing: Housing): number {
   if (unit.pool === 'leadership') return housing.leadership;
@@ -362,10 +192,17 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   const maxEvaluations = input.maxEvaluations ?? Infinity;
   const deadline = Date.now() + (input.maxMillis ?? DEFAULT_MILLIS);
   const restarts = input.restarts ?? DEFAULT_RESTARTS;
-  const opponentTotals = input.opponentTotals ?? armyWideTotals(input.totals);
   // Only units a budget can pay for, and never a free one (a zero cost would be an unbounded stack).
   const units = input.pool.filter((u) => u.cost > 0 && budgetOf(u, input.housing) >= u.cost);
-  const panel = primeArenaPanel(role, { pool: units, housing: input.housing });
+  const typed = (input.enemy ?? []).filter((s) => s.count > 0);
+  const mode: PrimeArenaMode = typed.length > 0 ? 'counter' : 'allRound';
+  const enemies: PrimeArenaArmy[] =
+    mode === 'counter'
+      ? [{ stacks: [...typed], totals: input.totals }]
+      : assumedEnemies({ level: input.level, housing: input.housing, totals: input.totals });
+  // Every unit's figures are worked out once for the whole search: ours here, each enemy's with its army.
+  const fighters: PrimeArenaFighter[] = units.map((u) => primeArenaFighter(u, input.totals));
+  const fielded = enemies.map(primeArenaFielded);
   const budget = (u: number): number => budgetOf(units[u]!, input.housing);
   const poolOf = (u: number): string => units[u]!.pool;
   const costOf = (u: number): number => units[u]!.cost;
@@ -381,13 +218,16 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     squad.reduce((a, s) => (poolOf(s.u) === pool ? a + costOf(s.u) * s.n : a), 0);
 
   let evaluations = 0;
-  const memo = new Map<string, PrimeArenaPanelScore>();
-  const score = (squad: Squad, counted = true): PrimeArenaPanelScore => {
+  const memo = new Map<string, PrimeArenaSetScore>();
+  const compare = (a: PrimeArenaSetScore, b: PrimeArenaSetScore): number =>
+    comparePrimeArenaSetScore(a, b, mode);
+  const score = (squad: Squad, counted = true): PrimeArenaSetScore => {
     const key = keyOf(squad);
     let found = memo.get(key);
     if (found === undefined) {
       if (counted) evaluations += 1;
-      found = scorePrimeArenaPanel(stacksOf(squad), input.totals, role, panel, opponentTotals);
+      const ours = squad.map((s) => ({ fighter: fighters[s.u]!, count: s.n }));
+      found = scoreFielded(ours, role, fielded);
       memo.set(key, found);
     }
     return found;
@@ -401,24 +241,27 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
       .flatMap((u, i) => (u.pool === pool ? [i] : []))
       .sort((a, b) => units[b]!.tier - units[a]!.tier || a - b);
 
-  /** Slots per pool: all units when they fit, else a split of the cap in proportion to the units each pool has. */
+  /** The units of a pool at its highest tier: what the game's default fill fields. */
+  const topOf = (pool: string): number[] => {
+    const all = unitsOf(pool);
+    return all.filter((u) => units[u]!.tier === units[all[0]!]!.tier);
+  };
+
+  /** Slots per pool: all top units when they fit, else a split of the cap in proportion to what each pool has. */
   const slotShare = (): Record<string, number> => {
     const share: Record<string, number> = {};
-    const total = pools.reduce((a, p) => a + unitsOf(p).length, 0);
+    const total = pools.reduce((a, p) => a + topOf(p).length, 0);
     if (total <= maxStacks) {
-      for (const p of pools) share[p] = unitsOf(p).length;
+      for (const p of pools) share[p] = topOf(p).length;
       return share;
     }
     if (pools.length === 1 || maxStacks === 1) {
-      share[pools[0]!] = Math.min(maxStacks, unitsOf(pools[0]!).length);
+      share[pools[0]!] = Math.min(maxStacks, topOf(pools[0]!).length);
       return share;
     }
     let left = maxStacks;
     for (const p of pools) {
-      share[p] = Math.max(
-        1,
-        Math.min(unitsOf(p).length, Math.round((maxStacks * unitsOf(p).length) / total)),
-      );
+      share[p] = Math.max(1, Math.min(topOf(p).length, Math.round((maxStacks * topOf(p).length) / total)));
       left -= share[p]!;
     }
     // Rounding may overshoot the cap: take the surplus from the pool with the most slots.
@@ -430,12 +273,12 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     return share;
   };
 
+  /** The default even fill: each pool's budget spread evenly over its top units. */
   const evenStart = (): Squad => {
     const share = slotShare();
     const squad: Squad = [];
     for (const p of pools) {
-      const k = share[p] ?? 0;
-      const chosen = unitsOf(p).slice(0, k);
+      const chosen = topOf(p).slice(0, share[p] ?? 0);
       for (const u of chosen) squad.push({ u, n: Math.floor(budget(u) / chosen.length / costOf(u)) });
     }
     return canon(squad);
@@ -514,7 +357,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
           if (keyOf(trial) === keyOf(current)) continue;
           // Never exceed a pool's budget (a move pays for what it buys with what it frees).
           const result = score(trial);
-          if (comparePanelScore(result, best) > 0) {
+          if (compare(result, best) > 0) {
             current = trial;
             best = result;
             improved = true;
@@ -533,11 +376,11 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     for (const p of pools) {
       for (;;) {
         const left = budget(unitsOf(p)[0]!) - spentIn(squad, p);
-        let pick: { squad: Squad; s: PrimeArenaPanelScore } | null = null;
+        let pick: { squad: Squad; s: PrimeArenaSetScore } | null = null;
         const consider = (trial: Squad): void => {
           const next = canon(trial);
           const s = score(next, false);
-          if (pick === null || comparePanelScore(s, pick.s) > 0) pick = { squad: next, s };
+          if (pick === null || compare(s, pick.s) > 0) pick = { squad: next, s };
         };
         squad.forEach((slot, i) => {
           if (poolOf(slot.u) !== p || costOf(slot.u) > left) return;
@@ -567,7 +410,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   const consider = (squad: Squad): void => {
     const filled = fill(squad);
     const s = score(filled, false);
-    if (comparePanelScore(s, bestScore) > 0) {
+    if (compare(s, bestScore) > 0) {
       bestSquad = filled;
       bestScore = s;
     }
@@ -588,17 +431,20 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     const costs = input.pool.filter((u) => u.pool === pool && u.cost > 0).map((u) => u.cost);
     return costs.length === 0 ? unspent[pool] <= 0 : unspent[pool] < Math.min(...costs);
   };
-  const headline = panel.find((m) => m.mix === 'mirror' && m.strength === 1 && m.fill === 1)!;
-  const match = matchAgainst(stacks, input.totals, role, headline, opponentTotals);
+  const opponent = mode === 'counter' ? [...typed] : evenArenaArmy(input.level, input.housing);
+  const ours = { stacks, totals: input.totals };
+  const theirs = { stacks: opponent, totals: input.totals };
+  const match = role === 'attacker' ? primeArenaMatch(ours, theirs) : primeArenaMatch(theirs, ours);
   return {
     role,
+    mode,
     stacks,
     match,
-    score: headlineScore(match, role),
-    panel,
-    aggregate: ROLE_PANELS[role].aggregate,
-    panelScore: bestScore,
-    start: { stacks: stacksOf(start), panelScore: startScore },
+    score: primeArenaScore(match, role),
+    opponent,
+    enemies: enemies.length,
+    setScore: bestScore,
+    start: { stacks: stacksOf(start), setScore: startScore },
     spent,
     unspent,
     maxed: { leadership: maxedIn('leadership'), dominance: maxedIn('dominance') },

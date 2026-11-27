@@ -61,6 +61,7 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 31 | [[B-43-arena-capacity-from-squad]] | Prime Arena capacity maxes from the squad — **done** | M | needs the converter | B-39 |
 | 32 | [[B-44-zeus-raises-arena-capacity]] | Zeus' Lightning raises Prime Arena capacity — **done** | S | last slice | B-42, B-43 |
 | 33 | [[B-45-arena-captain-quick-select]] | Prime Arena captain quick select — **done** | M | independent, can start now | none |
+| 34 | [[B-46-prime-arena-real-rules-all-round-planner]] | Prime Arena: the game's battle rules, counted bonuses, all-round planner and counter-pick | L | 2026-11-27 grilling on two battle reports; battle rules can start now | sources and planner: b38-game-artifacts merge |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 

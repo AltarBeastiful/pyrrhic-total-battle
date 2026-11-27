@@ -103,6 +103,7 @@ describe('inline client', () => {
     const client = createInlineClient();
     const plan = await client.arena({
       pool,
+      level: 2,
       housing: { leadership: 4100, authority: 0, dominance: 0 },
       totals: emptyTotals(),
       role: 'defender',
@@ -110,7 +111,7 @@ describe('inline client', () => {
       maxEvaluations: 20,
     });
     expect(plan.role).toBe('defender');
-    expect(plan.aggregate).toBe('worst');
+    expect(plan.mode).toBe('allRound');
     expect(plan.stacks.length).toBeLessThanOrEqual(2);
   });
 
@@ -227,6 +228,7 @@ describe('createCalcClient', () => {
           'arena',
           client.arena({
             pool: [],
+            level: 0,
             housing: { leadership: 0, authority: 0, dominance: 0 },
             totals: emptyTotals(),
           }),

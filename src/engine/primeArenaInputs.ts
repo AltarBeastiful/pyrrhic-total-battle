@@ -3,7 +3,7 @@
  *
  * In: the arena's troops card and a battle setup (Leadership and Dominance typed by hand, up to five captains with one
  * shared gear and artifact loadout, the dragon), and a toggle per permanent source and for talents. Out: the troop pool (Guardsmen, Specialists and Monsters from tier 2 up to the Guardsmen level, no scouts, siege or
- * mercenaries) and the aggregated bonuses.
+ * mercenaries), the aggregated bonuses and the stacks of the enemy the player typed, if any (B-46).
  *
  * Pure. The sources are resolved by the same `resolveSources` the march calculator uses, then filtered by the
  * arena's rules; talents do not go through it (the profile's Hero Talents row is typed by hand there), they are
@@ -13,8 +13,15 @@
 import { captains as captainTable, getUnits, talents as talentTable } from '../data';
 import type { BonusKey, CaptainRecord, UnitDef } from '../data/types';
 import { captainCounts, captainValue, resolveSources } from '../state/derive';
-import type { BattleSetup, BuiltinPermanentSource, Profile, ProfileTroops } from '../state/schema';
+import type {
+  ArenaEnemyStack,
+  BattleSetup,
+  BuiltinPermanentSource,
+  Profile,
+  ProfileTroops,
+} from '../state/schema';
 import { aggregateBonuses } from './bonuses';
+import type { PrimeArenaStack } from './primeArena';
 import { talentSource } from './talentAnalysis';
 import type { BonusTotals, Housing, ResolvedSource } from './types';
 
@@ -23,13 +30,18 @@ export const PRIME_ARENA_CAPTAINS = 5;
 
 /**
  * The switches left once captains, equipment, artifacts and the dragon are the setup's own lists: the talents
- * (read from the rank table) and the permanent sources the rules count (Hall of Fame, Monuments, Personal Technologies: typed by hand). Titles, clan, kingdom, events,
- * temporary bonuses, the hero and VIP have no switch; they never count.
+ * (read from the rank table) and the permanent sources the rules count, all typed by hand: Hall of Fame, Army
+ * Modernization, Monsters Boost, Monuments, Personal Technologies, and the arena's own "Other Arena bonus" for
+ * what the app has no source for. Titles, Customization, clan, kingdom, events, temporary bonuses, the hero and
+ * VIP have no switch; they never count.
  */
 export const PRIME_ARENA_PERMANENT = [
   'hallOfFame',
+  'armyModernization',
+  'monstersBoost',
   'monuments',
   'personalTechnologies',
+  'otherArenaBonus',
 ] as const satisfies readonly BuiltinPermanentSource[];
 export const PRIME_ARENA_SOURCES = ['talents', ...PRIME_ARENA_PERMANENT] as const;
 export type PrimeArenaSource = (typeof PRIME_ARENA_SOURCES)[number];
@@ -39,8 +51,11 @@ export type PrimeArenaToggles = Record<PrimeArenaSource, boolean>;
 export const DEFAULT_PRIME_ARENA_TOGGLES: Readonly<PrimeArenaToggles> = {
   talents: true,
   hallOfFame: true,
+  armyModernization: true,
+  monstersBoost: true,
   monuments: true,
   personalTechnologies: true,
+  otherArenaBonus: true,
 };
 
 export interface PrimeArenaInput {
@@ -59,6 +74,8 @@ export interface PrimeArenaInput {
   toggles?: Partial<PrimeArenaToggles>;
   /** Talent ranks by game id; the profile's own ranks when absent. */
   talentRanks?: Readonly<Record<string, number>>;
+  /** The enemy the player typed, as saved; none when absent. */
+  enemy?: readonly ArenaEnemyStack[];
 }
 
 export interface PrimeArenaInputs {
@@ -69,6 +86,8 @@ export interface PrimeArenaInputs {
   housing: Housing;
   sources: ResolvedSource[];
   totals: BonusTotals;
+  /** The typed enemy's stacks: rows of no unit the arena knows, or of nobody, are left out. */
+  enemy: PrimeArenaStack[];
 }
 
 /** Whether a unit can be in an arena squad: a Specialist or a Monster, never guardsmen, siege, scouts or mercenaries. */
@@ -110,6 +129,31 @@ export function primeArenaPool(troops: ProfileTroops): UnitDef[] {
       if (dropped.includes(unit.category)) return false;
     }
     return true;
+  });
+}
+
+/**
+ * The units a typed enemy may field: every unit of every type an arena squad may hold, up to the Guardsmen level,
+ * whatever the player's own Troops card drops.
+ */
+export function primeArenaEnemyUnits(troops: ProfileTroops): UnitDef[] {
+  return arenaUnitsUpTo(primeArenaLevel(troops));
+}
+
+/** Every unit an arena squad may hold at a Guardsmen level, nothing dropped. */
+export function arenaUnitsUpTo(level: number): UnitDef[] {
+  return getUnits().filter((unit) => canEverFight(unit) && unit.tier <= level);
+}
+
+/**
+ * A saved enemy as stacks, in the tables' order (so the order of typing never moves a plan). A row stays even
+ * above today's level, since it was read off the game; an empty one, or one of a unit that cannot fight, goes.
+ */
+function enemyStacks(saved: readonly ArenaEnemyStack[]): PrimeArenaStack[] {
+  const counts = new Map(saved.map(({ unitId, count }) => [unitId, count]));
+  return getUnits().flatMap((unit) => {
+    const count = counts.get(unit.id) ?? 0;
+    return count > 0 && canEverFight(unit) ? [{ unit, count }] : [];
   });
 }
 
@@ -202,5 +246,6 @@ export function primeArenaInputs(input: PrimeArenaInput): PrimeArenaInputs {
     housing: { leadership: setup.housing.leadership, authority: 0, dominance: setup.housing.dominance },
     sources,
     totals: aggregateBonuses(sources),
+    enemy: enemyStacks(input.enemy ?? []),
   };
 }

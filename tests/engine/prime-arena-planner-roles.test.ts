@@ -1,235 +1,122 @@
+/** B-46 — what the planner ranks on: many assumed enemies, or the one the player typed; and the two roles. */
 import { describe, expect, it } from 'vitest';
 
-import { planPrimeArena, primeArenaPanel, scorePrimeArenaPanel } from '../../src/engine/primeArenaPlanner';
-import type { PrimeArenaPlanInput } from '../../src/engine/primeArenaPlanner';
-import { primeArenaPool } from '../../src/engine/primeArenaInputs';
-import { totalsFrom } from '../helpers/request';
-import { monsterSet, troopSet } from '../helpers/units';
+import { unitById } from '../../src/data';
+import type { PrimeArenaStack } from '../../src/engine/primeArena';
+import { assumedEnemies, evenArenaArmy } from '../../src/engine/primeArenaEnemies';
+import {
+  comparePrimeArenaSetScore,
+  planPrimeArena,
+  scorePrimeArenaSet,
+} from '../../src/engine/primeArenaPlanner';
+import { ARENA_BONUS, ARENA_HOUSING, arenaInput, spentIn, squadKey } from '../helpers/primeArenaPlanner';
 
-const TROOPS = troopSet('SW1', 'ARC1', 'RD1');
-const MONSTERS = monsterSet('WE');
-const POOL = [...TROOPS, ...MONSTERS];
-const BONUS = totalsFrom({ strength: { army: 80 }, health: { army: 60 } });
-const HOUSING = { leadership: 20_000, authority: 0, dominance: 3_000 };
+const stack = (id: string, count: number): PrimeArenaStack => ({ unit: unitById(id)!, count });
+/** A lopsided enemy, far from the even armies the all-round plan is built against. */
+const TYPED = [stack('rider-4', 20_000), stack('spearman-4', 12_000), stack('many-armed-guardian', 900)];
+const SEARCH = { maxEvaluations: 3_000 };
+const full = planPrimeArena(arenaInput(SEARCH));
 
-const input = (over: Partial<PrimeArenaPlanInput> = {}): PrimeArenaPlanInput => ({
-  pool: POOL,
-  housing: HOUSING,
-  totals: BONUS,
-  maxMillis: 1_500,
-  maxEvaluations: 3_000,
-  ...over,
-});
-
-type Plan = ReturnType<typeof planPrimeArena>;
-
-const meleeShare = (plan: Plan): number => {
-  const cost = (s: Plan['stacks'][number]): number => s.unit.cost * s.count;
-  const all = plan.stacks.reduce((a, s) => a + cost(s), 0);
-  const melee = plan.stacks.filter((s) => s.unit.category === 'melee').reduce((a, s) => a + cost(s), 0);
-  return melee / all;
-};
-
-const FIELD = { pool: POOL, housing: HOUSING };
-
-const key = (p: Plan): string => p.stacks.map((s) => `${s.unit.id}:${s.count}`).join();
-
-describe('the panel has opponents of other type mixes', () => {
-  const cost = (
-    army: readonly { unit: { cost: number; pool: string }; count: number }[],
-    pool: string,
-  ): number => army.filter((s) => s.unit.pool === pool).reduce((a, s) => a + s.unit.cost * s.count, 0);
-
-  it.each(['attacker', 'defender'] as const)(
-    '%s: an even split and a heavy army of each class, besides the mirrors',
-    (role) => {
-      const panel = primeArenaPanel(role, FIELD);
-      const mixes = new Set(panel.map((m) => m.mix));
-      for (const mix of ['mirror', 'even', 'melee', 'ranged']) expect(mixes.has(mix as never)).toBe(true);
-      // Mirrors keep the under-filled members; every other mix is an army of its own, independent of the candidate.
-      expect(panel.some((m) => m.mix === 'mirror' && m.fill < 1)).toBe(true);
-      for (const m of panel)
-        expect(m.mix === 'mirror' ? m.army === undefined : m.army !== undefined).toBe(true);
-    },
-  );
-
-  it('skips a class the pool has no troop of', () => {
-    const panel = primeArenaPanel('attacker', { pool: troopSet('SW1', 'ARC1'), housing: HOUSING });
-    expect(panel.some((m) => m.mix === 'mounted')).toBe(false);
-    expect(panel.some((m) => m.mix === 'melee')).toBe(true);
+describe('without a typed enemy: one squad against many assumed ones', () => {
+  it('names its mode, its enemies and the log it shows: an even army of our own size', () => {
+    expect(full.mode).toBe('allRound');
+    expect(full.enemies).toBeGreaterThanOrEqual(16);
+    expect(full.opponent).toEqual(evenArenaArmy(4, ARENA_HOUSING));
+    const [first] = full.match.rounds;
+    expect(first.defender.stacks.map((s) => s.start)).toEqual(full.opponent.map((s) => s.count));
+    expect(first.attacker.stacks.map((s) => s.start)).toEqual(full.stacks.map((s) => s.count));
   });
 
-  it('a class-heavy army puts most of its leadership in that class and spends at most its scaled housing', () => {
-    const panel = primeArenaPanel('attacker', FIELD);
-    const melee = panel.find((m) => m.mix === 'melee')!;
-    const army = melee.army!;
-    const total = cost(army, 'leadership');
-    const inClass = army
-      .filter((s) => s.unit.category === 'melee')
-      .reduce((a, s) => a + s.unit.cost * s.count, 0);
-    expect(inClass / total).toBeGreaterThan(0.6);
-    expect(total).toBeLessThanOrEqual(HOUSING.leadership * melee.strength * melee.fill);
-    const even = panel.find((m) => m.mix === 'even')!.army!;
-    const shares = even.filter((s) => s.unit.pool === 'leadership').map((s) => s.unit.cost * s.count);
-    expect(Math.max(...shares) / Math.min(...shares)).toBeLessThan(1.1);
+  it('beats the default even fill on enemies it never searched against', () => {
+    const heldOut = assumedEnemies({
+      level: 4,
+      housing: ARENA_HOUSING,
+      totals: ARENA_BONUS,
+      seed: 987_654,
+      count: 200,
+    });
+    const planned = scorePrimeArenaSet(full.stacks, ARENA_BONUS, 'attacker', heldOut);
+    const fill = scorePrimeArenaSet(full.start.stacks, ARENA_BONUS, 'attacker', heldOut);
+    expect(comparePrimeArenaSetScore(planned, fill, 'allRound')).toBeGreaterThan(0);
+    expect(planned.wins).toBeGreaterThanOrEqual(fill.wins);
+    expect(planned.lead).toBeGreaterThan(fill.lead);
   });
 
-  it('the headline match is still the full-strength mirror, and the panel score uses every member', () => {
-    const plan = planPrimeArena(input({ maxEvaluations: 40 }));
-    expect(plan.panel.length).toBeGreaterThan(5);
-    const again = scorePrimeArenaPanel(plan.stacks, BONUS, 'attacker', plan.panel);
-    expect(again.result).toBeCloseTo(plan.panelScore.result, 9);
-  });
-});
-
-describe('planPrimeArena: panel and role', () => {
-  it('never ranks below the even-split start, on the same panel score', () => {
-    for (const role of ['attacker', 'defender'] as const) {
-      const plan = planPrimeArena(input({ role }));
-      expect(plan.panelScore.result).toBeGreaterThanOrEqual(plan.start.panelScore.result - 1e-9);
-      if (Math.abs(plan.panelScore.result - plan.start.panelScore.result) < 1e-9) {
-        expect(plan.panelScore.roundsWon).toBeGreaterThanOrEqual(plan.start.panelScore.roundsWon - 1e-9);
-      }
-      // The start is also reproducible from outside: an even split of each pool, scored by the exported scorer.
-      const even = [
-        ...TROOPS.map((unit) => ({ unit, count: Math.floor(HOUSING.leadership / 3 / unit.cost) })),
-        ...MONSTERS.map((unit) => ({ unit, count: Math.floor(HOUSING.dominance / unit.cost) })),
-      ];
-      const outside = scorePrimeArenaPanel(even, BONUS, role, plan.panel);
-      expect(plan.panelScore.result).toBeGreaterThanOrEqual(outside.result - 1e-9);
+  it('is never worse than the default even fill on its own ranking', () => {
+    for (const maxEvaluations of [1, 40, 600]) {
+      const plan = planPrimeArena(arenaInput({ maxEvaluations }));
+      expect(comparePrimeArenaSetScore(plan.setScore, plan.start.setScore, plan.mode)).toBeGreaterThanOrEqual(
+        0,
+      );
     }
+  });
+
+  it('ranks wins first, then how far ahead it finishes and how it does in the bad cases', () => {
+    const base = { wins: 0.5, roundsWon: 1, lead: 0.2, badLead: -0.1 };
+    const better = (other: Partial<typeof base>): number =>
+      comparePrimeArenaSetScore({ ...base, ...other }, base, 'allRound');
+    expect(better({ wins: 0.6, lead: -1, badLead: -1 })).toBeGreaterThan(0);
+    expect(better({ lead: 0.3 })).toBeGreaterThan(0);
+    expect(better({ badLead: 0 })).toBeGreaterThan(0);
+    expect(better({ lead: 0.3, badLead: -0.3 })).toBeLessThan(0);
+    expect(better({ roundsWon: 2 })).toBe(0);
+  });
+
+  it('plans the same squad for both roles: the role only decides who strikes first', () => {
+    const attack = planPrimeArena(arenaInput({ role: 'attacker' }));
+    const defence = planPrimeArena(arenaInput({ role: 'defender' }));
+    expect(squadKey(defence.stacks)).toBe(squadKey(attack.stacks));
+    expect(defence.setScore).toEqual(attack.setScore);
+    expect(defence.role).toBe('defender');
+    // As the defender we are the other side of the match, and strike first in round 2.
+    const [, second] = defence.match.rounds;
+    expect(second.first).toBe('defender');
+    expect(second.defender.stacks.map((s) => s.start)).toEqual(defence.stacks.map((s) => s.count));
   });
 
   it('spends all housing: what is left buys no unit of the pool', () => {
-    const plan = planPrimeArena(input({ housing: { leadership: 20_003, authority: 0, dominance: 3_007 } }));
-    const cheapest = (p: string): number => Math.min(...POOL.filter((u) => u.pool === p).map((u) => u.cost));
-    expect(plan.unspent.leadership).toBeLessThan(cheapest('leadership'));
-    expect(plan.unspent.dominance).toBeLessThan(cheapest('dominance'));
-  });
-
-  it('describes the panel: attacker 0.8..1.0 mean, defender 1.0..1.25 worst, under-filled members present', () => {
-    const attacker = planPrimeArena(input({ role: 'attacker', maxEvaluations: 20 }));
-    const defender = planPrimeArena(input({ role: 'defender', maxEvaluations: 20 }));
-    expect(attacker.panel).toEqual(primeArenaPanel('attacker', FIELD));
-    expect(defender.panel).toEqual(primeArenaPanel('defender', FIELD));
-    const strengths = (p: typeof attacker.panel): number[] => p.map((m) => m.strength);
-    expect(Math.min(...strengths(attacker.panel))).toBeCloseTo(0.8);
-    expect(Math.max(...strengths(attacker.panel))).toBeCloseTo(1.0);
-    expect(Math.min(...strengths(defender.panel))).toBeCloseTo(1.0);
-    expect(Math.max(...strengths(defender.panel))).toBeCloseTo(1.25);
-    expect(attacker.panel.some((m) => m.fill < 1 && m.fill >= 0.7)).toBe(true);
-    expect(defender.panel.some((m) => m.fill < 1 && m.fill >= 0.7)).toBe(true);
-    expect(attacker.aggregate).toBe('mean');
-    expect(defender.aggregate).toBe('worst');
-  });
-
-  it('defaults to the attacker role', () => {
-    expect(planPrimeArena(input({ maxEvaluations: 20 })).role).toBe('attacker');
-  });
-
-  it('role changes the panel and so what the plan is judged on', () => {
-    const a = planPrimeArena(input({ role: 'attacker' }));
-    const d = planPrimeArena(input({ role: 'defender' }));
-    expect(a.panel).not.toEqual(d.panel);
-    expect(key(a) !== key(d) || a.panelScore.survivorShare !== d.panelScore.survivorShare).toBe(true);
-  });
-
-  it('respects maxStacks', () => {
-    for (const maxStacks of [1, 2, 3]) {
-      const plan = planPrimeArena(input({ maxStacks, maxEvaluations: 800 }));
-      expect(plan.stacks.length).toBeLessThanOrEqual(maxStacks);
-      expect(plan.stacks.length).toBeGreaterThan(0);
-    }
-    const wide = planPrimeArena(input({ pool: troopSet('SW1'), maxStacks: 4, maxEvaluations: 800 }));
-    expect(wide.stacks.length).toBeLessThanOrEqual(4);
-  });
-
-  it('fields each unit at most once: no two stacks of the same troop or monster', () => {
-    const many = [...troopSet('SW1', 'SW2', 'SW3', 'ARC1', 'ARC2', 'RD1', 'RD2'), ...monsterSet('WE', 'BB')];
-    for (const role of ['attacker', 'defender'] as const) {
-      for (const pool of [many, troopSet('SW1'), troopSet('SW1', 'SW2'), POOL]) {
-        for (const maxStacks of [2, 4, 8]) {
-          const plan = planPrimeArena(input({ pool, role, maxStacks, maxEvaluations: 1_500 }));
-          const ids = plan.stacks.map((s) => s.unit.id);
-          expect(new Set(ids).size).toBe(ids.length);
-          expect(new Set(plan.start.stacks.map((s) => s.unit.id)).size).toBe(plan.start.stacks.length);
-        }
-      }
-    }
-  });
-
-  it('defaults the stack cap to 8', () => {
-    const many = troopSet('SW1', 'SW2', 'SW3', 'ARC1', 'ARC2', 'ARC3', 'RD1', 'RD2', 'RD3', 'RD4');
-    const plan = planPrimeArena(input({ pool: many, maxEvaluations: 300 }));
-    expect(plan.stacks.length).toBeLessThanOrEqual(8);
-  });
-
-  it('fields melee when a Leonidas-style +280 % melee health is in the totals', () => {
-    const troopsOnly = { pool: TROOPS, housing: { leadership: 20_000, authority: 0, dominance: 0 } };
-    const base = planPrimeArena(input({ ...troopsOnly, maxEvaluations: 2_500 }));
-    const leonidas = planPrimeArena(
-      input({
-        ...troopsOnly,
-        totals: totalsFrom({ strength: { army: 80 }, health: { army: 60, melee: 280 } }),
-      }),
+    const pool = arenaInput().pool;
+    const plan = planPrimeArena(
+      arenaInput({ housing: { leadership: 52_001, authority: 0, dominance: 13_007 } }),
     );
-    expect(meleeShare(leonidas)).toBeGreaterThan(meleeShare(base) + 0.15);
-  });
-
-  it('a captain health bonus on one category changes the plan', () => {
-    const base = planPrimeArena(input({ maxEvaluations: 2_500 }));
-    const boosted = planPrimeArena(
-      input({ totals: totalsFrom({ strength: { army: 80 }, health: { army: 60, ranged: 200 } }) }),
-    );
-    expect(key(boosted)).not.toBe(key(base));
-  });
-
-  it('is deterministic under an evaluation budget', () => {
-    const a = planPrimeArena(input({ maxMillis: 60_000, maxEvaluations: 600 }));
-    const b = planPrimeArena(input({ maxMillis: 60_000, maxEvaluations: 600 }));
-    expect(key(b)).toBe(key(a));
-  });
-
-  it('honours the wall-clock cap', () => {
-    const started = Date.now();
-    planPrimeArena(input({ maxMillis: 300, maxEvaluations: Infinity }));
-    expect(Date.now() - started).toBeLessThan(2_000);
+    const cheapest = (p: string): number => Math.min(...pool.filter((u) => u.pool === p).map((u) => u.cost));
+    expect(52_001 - spentIn(plan.stacks, 'leadership')).toBeLessThan(cheapest('leadership'));
+    expect(13_007 - spentIn(plan.stacks, 'dominance')).toBeLessThan(cheapest('dominance'));
   });
 });
 
-describe('defender search climbs when every panel member is lost', () => {
-  const troops = {
-    guardsmen: { min: 1, max: 4 },
-    specialists: null,
-    engineers: null,
-    monsters: null,
-    topTierExcluded: { guardsmen: [], specialists: [] },
-    excludedUnitIds: [],
-  } as unknown as Parameters<typeof primeArenaPool>[0];
-  const pool = primeArenaPool(troops);
-  const housing = { leadership: 3_000_000, authority: 0, dominance: 400_000 };
-  const bonus = (key: 'melee' | 'mounted' | null): ReturnType<typeof totalsFrom> =>
-    totalsFrom({
-      strength: { army: 80 },
-      health: { army: 60, ...(key ? { [key]: 100 } : {}) },
-    } as never);
+describe('with a typed enemy: a counter-pick', () => {
+  const counter = planPrimeArena(arenaInput({ ...SEARCH, enemy: TYPED }));
 
-  it.each([null, 'melee', 'mounted'] as const)(
-    'bonus %s: the plan beats the even-split start on the continuous margin',
-    (key) => {
-      const plan = planPrimeArena({
-        pool,
-        housing,
-        totals: bonus(key),
-        role: 'defender',
-        maxStacks: 8,
-        maxMillis: 3_000,
-        maxEvaluations: 3_000,
-      });
-      const k = (s: typeof plan.stacks): string => s.map((x) => `${x.unit.id}:${x.count}`).join();
-      expect(k(plan.stacks)).not.toBe(k(plan.start.stacks));
-      expect(plan.panelScore.margin).toBeGreaterThan(plan.start.panelScore.margin);
-      expect(plan.panelScore.result).toBeGreaterThanOrEqual(plan.start.panelScore.result - 1e-9);
-    },
-  );
+  it('fights exactly that army, carrying our own totals', () => {
+    expect(counter.mode).toBe('counter');
+    expect(counter.enemies).toBe(1);
+    expect(counter.opponent).toEqual(TYPED);
+    expect(counter.match.rounds[0].defender.stacks.map((s) => s.start)).toEqual(TYPED.map((s) => s.count));
+    const army = { stacks: TYPED, totals: ARENA_BONUS };
+    expect(counter.setScore).toEqual(scorePrimeArenaSet(counter.stacks, ARENA_BONUS, 'attacker', [army]));
+  });
+
+  it('does at least as well against it as the all-round squad', () => {
+    const army = { stacks: TYPED, totals: ARENA_BONUS };
+    const allRound = scorePrimeArenaSet(full.stacks, ARENA_BONUS, 'attacker', [army]);
+    expect(comparePrimeArenaSetScore(counter.setScore, allRound, 'counter')).toBeGreaterThanOrEqual(0);
+    expect(
+      comparePrimeArenaSetScore(counter.setScore, counter.start.setScore, 'counter'),
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('ranks the match result, then rounds won, then the lead', () => {
+    const base = { wins: 0.5, roundsWon: 1, lead: 0.2, badLead: 0.2 };
+    const better = (other: Partial<typeof base>): number =>
+      comparePrimeArenaSetScore({ ...base, ...other }, base, 'counter');
+    expect(better({ wins: 1, roundsWon: 0, lead: -1 })).toBeGreaterThan(0);
+    expect(better({ roundsWon: 2, lead: -1 })).toBeGreaterThan(0);
+    expect(better({ lead: 0.3 })).toBeGreaterThan(0);
+  });
+
+  it('is all-round again once the typed rows hold nobody', () => {
+    const plan = planPrimeArena(arenaInput({ enemy: [], maxEvaluations: 20 }));
+    expect(plan.mode).toBe('allRound');
+  });
 });

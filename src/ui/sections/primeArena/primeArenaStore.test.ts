@@ -35,6 +35,7 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   const profile = newProfile('saved');
   profile.primeArena = {
     toggles: { clanTechnologies: true, talents: false, hallOfFame: false },
+    enemy: [{ unitId: 'rider-4', count: 12 }],
     setup: {
       ...profile.primeArena.setup,
       active: { ...profile.primeArena.setup.active, captains: ['a', 'b'], equipment: ['e'], dragon: false },
@@ -52,6 +53,7 @@ test('inputs saved in a profile fill the store when that document arrives', () =
   const { setup, toggles, seeded, role, maxStacks } = usePrimeArenaStore.getState();
   expect(role).toBe('defender');
   expect(maxStacks).toBe(5);
+  expect(usePrimeArenaStore.getState().enemy).toEqual([{ unitId: 'rider-4', count: 12 }]);
   expect(usePrimeArenaStore.getState().otherCapacity).toBe(25);
   expect(usePrimeArenaStore.getState().capacityBasis).toEqual({ captains: [], other: 25 });
   expect(setup.active).toMatchObject({ captains: ['a', 'b'], equipment: ['e'], dragon: false });
@@ -149,8 +151,7 @@ test('the role and the stack cap are saved with the account and default to attac
 
 test('the fingerprint moves with the role and the cap, so the bar calls the plan stale', () => {
   const key = () => {
-    const { toggles, setup, role, maxStacks } = usePrimeArenaStore.getState();
-    return arenaFingerprint(selectActiveProfile(useStore.getState())!, { toggles, setup, role, maxStacks });
+    return arenaFingerprint(selectActiveProfile(useStore.getState())!, usePrimeArenaStore.getState());
   };
   const before = key();
   usePrimeArenaStore.getState().setRole('defender');
@@ -163,8 +164,7 @@ test('the fingerprint moves with the role and the cap, so the bar calls the plan
 test('the fingerprint moves with the account’s Guardsmen level, so the plan made at another level is stale', () => {
   const profile = selectActiveProfile(useStore.getState())!;
   const key = () => {
-    const { toggles, setup, role, maxStacks } = usePrimeArenaStore.getState();
-    return arenaFingerprint(selectActiveProfile(useStore.getState())!, { toggles, setup, role, maxStacks });
+    return arenaFingerprint(selectActiveProfile(useStore.getState())!, usePrimeArenaStore.getState());
   };
   const before = key();
   useStore
@@ -194,6 +194,66 @@ test('Generate plans at the account’s Guardsmen level, and the plan names it',
   expect(Math.max(...usePrimeArenaStore.getState().plan!.stacks.map((s) => s.unit.tier))).toBeLessThanOrEqual(
     5,
   );
+});
+
+test('the typed enemy is saved with the account, changed row by row and cleared in one action (B-46)', () => {
+  const saved = () => selectActiveProfile(useStore.getState())!.primeArena.enemy;
+  const { setEnemyCount, clearEnemy } = usePrimeArenaStore.getState();
+  expect(usePrimeArenaStore.getState().enemy).toEqual([]);
+  setEnemyCount('rider-4', 7_995);
+  setEnemyCount('magic-dragon', 233);
+  setEnemyCount('rider-4', 8_000);
+  expect(saved()).toEqual([
+    { unitId: 'rider-4', count: 8_000 },
+    { unitId: 'magic-dragon', count: 233 },
+  ]);
+  expect(selectActiveProfile(useStore.getState())?.sectionUpdatedAt?.primeArena).toBeGreaterThan(0);
+  // An emptied or zeroed field takes the row away.
+  setEnemyCount('magic-dragon', null);
+  setEnemyCount('archer-4', 0);
+  expect(saved()).toEqual([{ unitId: 'rider-4', count: 8_000 }]);
+  // Kept after a reload.
+  useStore
+    .getState()
+    .replaceDocument(JSON.parse(JSON.stringify(useStore.getState().doc)) as ReturnType<typeof newRoot>);
+  expect(usePrimeArenaStore.getState().enemy).toEqual([{ unitId: 'rider-4', count: 8_000 }]);
+  clearEnemy();
+  expect(saved()).toEqual([]);
+  expect(usePrimeArenaStore.getState().enemy).toEqual([]);
+});
+
+test('the fingerprint moves with the typed enemy, so the plan made without it is stale (B-46)', () => {
+  const key = () =>
+    arenaFingerprint(selectActiveProfile(useStore.getState())!, usePrimeArenaStore.getState());
+  const before = key();
+  usePrimeArenaStore.getState().setEnemyCount('rider-4', 10);
+  expect(key()).not.toBe(before);
+  usePrimeArenaStore.getState().clearEnemy();
+  expect(key()).toBe(before);
+});
+
+test('Generate counter-picks the typed enemy, and plans all-round without one (B-46)', async () => {
+  usePrimeArenaStore
+    .getState()
+    .updateSetup((s) => ({ housing: { ...s.housing, leadership: 5000, dominance: 500 } }));
+  const plan = async () => {
+    usePrimeArenaStore.setState({ plan: null });
+    usePrimeArenaStore
+      .getState()
+      .generate(selectActiveProfile(useStore.getState())!, { maxEvaluations: 20, maxMillis: 500 });
+    await vi.waitFor(
+      () => {
+        expect(usePrimeArenaStore.getState().plan).not.toBeNull();
+      },
+      { timeout: 10_000 },
+    );
+    return usePrimeArenaStore.getState().plan!;
+  };
+  expect((await plan()).mode).toBe('allRound');
+  usePrimeArenaStore.getState().setEnemyCount('rider-2', 100);
+  const counter = await plan();
+  expect(counter.mode).toBe('counter');
+  expect(counter.opponent.map((s) => [s.unit.id, s.count])).toEqual([['rider-2', 100]]);
 });
 
 test('the squad keeps five captains and five artifacts through a save and a reload', () => {

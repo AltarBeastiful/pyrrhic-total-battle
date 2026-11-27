@@ -32,7 +32,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 26;
+export const SCHEMA_VERSION = 27;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -128,8 +128,12 @@ export const BUILTIN_PERMANENT_SOURCES = [
   'unionOfTriumph',
   'monuments',
   'personalTechnologies',
+  'otherArenaBonus',
 ] as const;
 export type BuiltinPermanentSource = (typeof BUILTIN_PERMANENT_SOURCES)[number];
+
+/** The permanent sources that exist for the Prime Arena alone (schema v27, B-46): no march counts or shows them. */
+export const ARENA_ONLY_SOURCES: readonly BuiltinPermanentSource[] = ['otherArenaBonus'];
 
 /**
  * The nine keys the hero talent tree can touch (B-25). The "Hero Talents" source carries strength and
@@ -147,7 +151,7 @@ export const HERO_TALENT_KEYS = [
   'engineers',
 ] as const;
 
-/** Free-form 13-key editors (PLAN §3.1). The eight builtin ones always exist; extra rows are custom. */
+/** Free-form 13-key editors (PLAN §3.1). The builtin ones always exist; extra rows are custom. */
 export const permanentSourceSchema = z.object({
   id: nonEmpty,
   name: z.string(),
@@ -568,11 +572,17 @@ export const arenaCapacityBasisSchema = z.object({
 });
 export type ArenaCapacityBasis = z.infer<typeof arenaCapacityBasisSchema>;
 
+/** One stack of the enemy the player typed: a unit and how many of it. */
+export const arenaEnemyStackSchema = z.object({ unitId: nonEmpty, count: z.int().min(0) });
+export type ArenaEnemyStack = z.infer<typeof arenaEnemyStackSchema>;
+
 export const primeArenaSchema = z.object({
   toggles: z.record(z.string(), z.boolean()).catch({}),
   setup: arenaSetupSchema,
+  /** The enemy to counter-pick (schema v27, B-46); empty means the plan is built against many assumed enemies. */
+  enemy: z.array(arenaEnemyStackSchema).catch([]),
   seeded: z.boolean(),
-  /** Which side the plan plays (schema v21); fixes the opponent panel and how it is scored. */
+  /** Which side the plan plays (schema v21); fixes who strikes first in each round. */
   role: z.enum(['attacker', 'defender']).catch('attacker'),
   /** Most stacks in the squad (schema v21); the real limit is unknown, 8 is the planner's default. */
   maxStacks: z.number().int().min(1).max(MAX_ARENA_STACKS).catch(DEFAULT_ARENA_STACKS),

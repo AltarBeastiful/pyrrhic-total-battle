@@ -43,6 +43,7 @@ import {
   artifactBonus,
   artifactCapacity,
   captainValue,
+  isArenaOnly,
   resolveSources,
   vipNeedsManual,
 } from '@/state/derive';
@@ -357,7 +358,8 @@ function titlesGroup(profile: Profile, setup: BattleSetup): SourceGroup {
 }
 
 function permanentGroup(profile: Profile): SourceGroup {
-  const entries = profile.sources.permanent;
+  // The calculator's rows: the arena's own are neither listed nor counted on a march.
+  const entries = profile.sources.permanent.filter((entry) => !isArenaOnly(entry));
   return {
     id: 'permanent',
     title: 'Permanent',
@@ -588,6 +590,8 @@ export const PERMANENT_WHERE: Record<string, string> = {
     'Your Monuments, the Minerva Monument from the arena included: the army bonuses they grant. Type the totals the game lists; the Prime Arena counts them.',
   personalTechnologies:
     'Your Personal Technologies: the army bonuses they grant. Type the totals the game lists; the Prime Arena counts them.',
+  otherArenaBonus:
+    'Army health and strength the game gives you in the arena and no other source here covers. Type what is missing; only the Prime Arena counts it.',
 };
 
 export { artifactRecord, captainRecord, equipmentRecord, isEmptyBonus };

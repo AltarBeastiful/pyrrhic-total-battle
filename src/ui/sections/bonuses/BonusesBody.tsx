@@ -10,7 +10,7 @@ import { useMemo, useRef, useState } from 'react';
 import { equipment as equipmentTable } from '@/data';
 import type { ResolvedSource } from '@/engine/types';
 import { mintSourceId, setActiveFlag, toggleActiveSource, updateSources } from '@/state/actions/bonuses';
-import { sourceCaveats } from '@/state/derive';
+import { isArenaOnly, sourceCaveats } from '@/state/derive';
 import type { Profile } from '@/state/schema';
 import type { SetupBinding } from '@/state/setupBinding';
 import { Disclosure } from '@/ui/kit';
@@ -95,7 +95,11 @@ export function BonusesBody({ profile, binding, scope = FULL_SCOPE, sources }: B
     [profile, setup, scope.hero],
   );
   const artifacts = useMemo(() => artifactChips(profile, setup), [profile, setup]);
-  const permanent = useMemo(() => permanentChips(profile), [profile]);
+  // A source of the arena's own is drawn only where a fight chooses its sources, which only the arena does.
+  const permanent = useMemo(
+    () => permanentChips(profile).filter((chip) => scope.counting !== undefined || !isArenaOnly(chip)),
+    [profile, scope.counting],
+  );
   const titles = useMemo(() => titleChips(setup), [setup]);
   const caveats = useMemo(() => sourceCaveats(profile, setup), [profile, setup]);
   const profileId = profile.id;

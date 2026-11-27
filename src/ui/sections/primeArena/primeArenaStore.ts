@@ -12,7 +12,8 @@
  * `generate` plans on a calculation worker of the arena's own (B-37): the planner may search for up to a minute,
  * so the page flips to `running` and stays responsive while the job runs. Where the platform has no worker the
  * client runs the same job on the main thread (tests, old browsers). The role and the stack cap are inputs like the
- * rest: saved with the account, part of the fingerprint.
+ * rest: saved with the account, part of the fingerprint. So is the typed enemy (B-46): empty plans all-round,
+ * otherwise Generate counter-picks it.
  */
 import { useMemo } from 'react';
 import { create } from 'zustand';
@@ -29,7 +30,13 @@ import {
 import type { PrimeArenaPlan, PrimeArenaRole } from '@/engine/primeArenaPlanner';
 import { defaultPrimeArena } from '@/state/defaults';
 import { DEFAULT_ARENA_STACKS, MAX_ARENA_STACKS, MAX_OTHER_CAPACITY } from '@/state/schema';
-import type { ArenaCapacityBasis, BattleSetup, PrimeArenaSaved, Profile } from '@/state/schema';
+import type {
+  ArenaCapacityBasis,
+  ArenaEnemyStack,
+  BattleSetup,
+  PrimeArenaSaved,
+  Profile,
+} from '@/state/schema';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { useUiStore } from '@/ui/uiStore';
 import { createCalcClient, isAbortError, type CalcClient } from '@/worker/client';
@@ -48,7 +55,9 @@ export interface ArenaInputs {
   setup: BattleSetup;
   /** True once the setup was first cloned from the active march, so a later visit keeps what was typed. */
   seeded: boolean;
-  /** Which side the plan plays: fixes the opponent panel and how it is scored. */
+  /** The enemy to counter-pick, row by row; empty plans against many assumed enemies. */
+  enemy: ArenaEnemyStack[];
+  /** Which side the plan plays: who strikes first in each round. */
   role: PrimeArenaRole;
   /** Most stacks in the squad; the game's real limit is unknown. */
   maxStacks: number;
@@ -60,16 +69,17 @@ export interface ArenaInputs {
 
 /** The inputs out of the store's state. */
 export function pickInputs(from: ArenaInputs): ArenaInputs {
-  const { toggles, setup, seeded, role, maxStacks, otherCapacity, capacityBasis } = from;
-  return { toggles, setup, seeded, role, maxStacks, otherCapacity, capacityBasis };
+  const { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis } = from;
+  return { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis };
 }
 
 /** The inputs as one object that changes only when one of them does, for hooks that depend on them. */
 export function useArenaInputs(): ArenaInputs {
-  const { toggles, setup, seeded, role, maxStacks, otherCapacity, capacityBasis } = usePrimeArenaStore();
+  const { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis } =
+    usePrimeArenaStore();
   return useMemo(
-    () => ({ toggles, setup, seeded, role, maxStacks, otherCapacity, capacityBasis }),
-    [toggles, setup, seeded, role, maxStacks, otherCapacity, capacityBasis],
+    () => ({ toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis }),
+    [toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis],
   );
 }
 
@@ -98,12 +108,13 @@ function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
  */
 export function arenaFingerprint(
   profile: Profile,
-  inputs: Pick<ArenaInputs, 'toggles' | 'setup' | 'role' | 'maxStacks'>,
+  inputs: Pick<ArenaInputs, 'toggles' | 'setup' | 'enemy' | 'role' | 'maxStacks'>,
 ): string {
   return JSON.stringify([
     profile.troops,
     inputs.toggles,
     inputs.setup,
+    inputs.enemy,
     inputs.role,
     inputs.maxStacks,
     profile.sources,
@@ -123,6 +134,7 @@ function freshInputs(): ArenaInputs {
   return {
     toggles: { ...DEFAULT_PRIME_ARENA_TOGGLES },
     setup: fresh.setup,
+    enemy: [],
     seeded: false,
     role: 'attacker',
     maxStacks: DEFAULT_ARENA_STACKS,
@@ -187,6 +199,10 @@ interface PrimeArenaState extends ArenaInputs {
   /** What the plan was made from (`arenaFingerprint`), so the bar can say the inputs moved under it. */
   planKey: string | null;
   setRole: (role: PrimeArenaRole) => void;
+  /** Types one unit of the enemy: how many of it; empty or zero takes the unit out. */
+  setEnemyCount: (unitId: string, count: number | null) => void;
+  /** Takes the whole typed enemy away: back to the all-round plan. */
+  clearEnemy: () => void;
   setMaxStacks: (maxStacks: number) => void;
   /** The other capacity bonus %, held to two decimals between 0 and `MAX_OTHER_CAPACITY`. */
   setOtherCapacity: (percent: number) => void;
@@ -285,6 +301,20 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     set({ maxStacks });
     save({ ...get(), maxStacks });
   },
+  setEnemyCount: (unitId, count) => {
+    const held = get().enemy;
+    const kept = count !== null && count > 0 ? { unitId, count: Math.round(count) } : null;
+    // A row keeps its place, so the saved enemy reads in the order it was typed.
+    const enemy = held.some((row) => row.unitId === unitId)
+      ? held.flatMap((row) => (row.unitId !== unitId ? [row] : kept === null ? [] : [kept]))
+      : [...held, ...(kept === null ? [] : [kept])];
+    set({ enemy });
+    save({ ...get(), enemy });
+  },
+  clearEnemy: () => {
+    set({ enemy: [] });
+    save({ ...get(), enemy: [] });
+  },
   setToggle: (key, on) => {
     const toggles = { ...get().toggles, [key]: on };
     set({ toggles });
@@ -375,6 +405,8 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
     arenaClient()
       .arena({
         pool: prepared.pool,
+        level: prepared.level,
+        enemy: prepared.enemy,
         housing: prepared.housing,
         totals: prepared.totals,
         role,
@@ -421,6 +453,7 @@ function hydrate(profile: Profile | undefined): void {
   const loaded: ArenaInputs = {
     toggles: savedToggles(saved.toggles),
     setup: saved.setup,
+    enemy: saved.enemy,
     seeded: saved.seeded,
     role: saved.role,
     maxStacks: saved.maxStacks,

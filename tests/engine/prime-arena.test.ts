@@ -115,21 +115,6 @@ describe('primeArenaMatch', () => {
     expect(vsMelee.share).toBeGreaterThan(vsRanged.share);
   });
 
-  it('targets the living stack with the highest total HP first', () => {
-    const attacker: PrimeArenaArmy = { totals: NO_BONUS, stacks: [{ unit: SW1!, count: 50 }] };
-    const defender: PrimeArenaArmy = {
-      totals: NO_BONUS,
-      stacks: [
-        { unit: SW1!, count: 10 },
-        { unit: SW1!, count: 1000 },
-      ],
-    };
-    const round = primeArenaMatch(attacker, defender).rounds[0]!;
-    const [small, big] = round.defender.stacks;
-    expect(big!.survivors).toBeLessThan(big!.start);
-    expect(small!.survivors).toBe(small!.start);
-  });
-
   it('is deterministic', () => {
     expect(primeArenaMatch(army(), army(STRONG))).toEqual(primeArenaMatch(army(), army(STRONG)));
   });
@@ -334,5 +319,152 @@ describe('primeArenaScore', () => {
     expect(comparePrimeArenaScore(better, worse)).toBeGreaterThan(0);
     expect(comparePrimeArenaScore(better, sameRounds)).toBeGreaterThan(0);
     expect(comparePrimeArenaScore(sameRounds, better)).toBeLessThan(0);
+  });
+});
+
+/** A unit made for one rule: a table unit with its figures replaced, so a hit is easy to work out by hand. */
+const made = (id: string, over: Partial<UnitDef>): UnitDef => ({
+  ...U('swordsman-4'),
+  id,
+  name: id,
+  group: 'guardsmen',
+  category: 'melee',
+  health: 100,
+  strength: 10,
+  strengthAgainst: {},
+  doubleDamageChance: 0,
+  ...over,
+});
+const monster = (id: string, over: Partial<UnitDef>): UnitDef =>
+  made(id, { kind: 'monster', group: 'monster', race: 'beast', ...over });
+const side = (...stacks: [UnitDef, number][]): PrimeArenaArmy => ({
+  totals: NO_BONUS,
+  stacks: stacks.map(([unit, count]) => ({ unit, count })),
+});
+/** The stack the attacker's first turn of round 1 hit. */
+const firstTarget = (attacker: PrimeArenaArmy, defender: PrimeArenaArmy): number =>
+  primeArenaMatch(attacker, defender).rounds[0].steps[0]!.target;
+
+describe('target choice: the stack the hit would damage most, up to what it has left (B-46)', () => {
+  // 100 units of strength 10: 1,000 damage, 2,000 on a flying stack (+100 %).
+  const hitter = made('hitter', { strengthAgainst: { flying: 100 } });
+
+  it('takes the larger hit over the larger stack', () => {
+    const attacker = side([hitter, 100]);
+    const defender = side([made('wall', {}), 1_000], [made('bird', { category: 'flying' }), 100]);
+    expect(firstTarget(attacker, defender)).toBe(1);
+  });
+
+  it('counts only the damage a stack can still take', () => {
+    // The flying stack holds 5 x 100 = 500 health: 500 of the 2,000 would count, less than 1,000 on the wall.
+    const attacker = side([hitter, 100]);
+    const defender = side([made('wall', {}), 1_000], [made('bird', { category: 'flying' }), 5]);
+    expect(firstTarget(attacker, defender)).toBe(0);
+  });
+
+  it('breaks an equal hit toward the stack that would hit back hardest', () => {
+    const attacker = side([hitter, 100]);
+    const weak = made('weak', { strength: 5 });
+    const strong = made('strong', { strength: 50 });
+    expect(firstTarget(attacker, side([weak, 1_000], [strong, 1_000]))).toBe(1);
+    expect(firstTarget(attacker, side([strong, 1_000], [weak, 1_000]))).toBe(0);
+  });
+
+  it('weighs what the target would hit back for against the actor, strength-against included', () => {
+    const attacker = side([hitter, 100]);
+    const plain = made('plain', { strength: 15 });
+    const counter = made('counter', { strength: 10, strengthAgainst: { melee: 100 } });
+    expect(firstTarget(attacker, side([plain, 1_000], [counter, 1_000]))).toBe(1);
+  });
+});
+
+describe('strength-against in the Arena (B-46)', () => {
+  const dragonBane = made('bane', { strengthAgainst: { flying: 20, dragons: 300, epicMonsters: 500 } });
+
+  it('adds the monster race to the troop type on one hit', () => {
+    const dragon = monster('dragon', { category: 'flying', race: 'dragon' });
+    expect(primeArenaHitDamage(dragonBane, 100, NO_BONUS, dragon)).toBe(100 * 10 * 4.2);
+    const beast = monster('beast', { category: 'flying' });
+    expect(primeArenaHitDamage(dragonBane, 100, NO_BONUS, beast)).toBe(100 * 10 * 1.2);
+  });
+
+  it('reads no race on a troop', () => {
+    const griffin = made('griffin', { category: 'flying', race: 'dragon' });
+    expect(primeArenaHitDamage(dragonBane, 100, NO_BONUS, griffin)).toBe(100 * 10 * 1.2);
+  });
+
+  it('counts an equipment matchup against the race as well as against the troop type', () => {
+    const dragon = monster('dragon', { category: 'flying', race: 'dragon' });
+    const totals = totalsFrom({
+      matchup: [
+        { attacker: 'melee', target: 'dragons', value: 30 },
+        { attacker: 'melee', target: 'flying', value: 50 },
+      ],
+    });
+    expect(primeArenaHitDamage(dragonBane, 100, totals, dragon)).toBe(100 * 10 * 5);
+  });
+
+  it('adds no bonus against epic monsters, from the unit or from the army', () => {
+    const totals = totalsFrom({
+      special: { armyStrengthAgainstEpicMonsters: 400 },
+      matchup: [{ attacker: 'melee', target: 'epicMonsters', value: 200 }],
+    });
+    const target = monster('beast', { category: 'mounted' });
+    expect(primeArenaHitDamage(dragonBane, 100, totals, target)).toBe(100 * 10);
+  });
+
+  it('turns the hit to the monster the race bonus favours', () => {
+    const attacker = side([dragonBane, 100]);
+    const defender = side(
+      [monster('beast', {}), 1_000],
+      [monster('dragon', { category: 'mounted', race: 'dragon' }), 1_000],
+    );
+    expect(firstTarget(attacker, defender)).toBe(1);
+  });
+});
+
+describe('health per unit is not rounded in the Arena (B-46)', () => {
+  it('kills by the exact health: 870 with +478.2 % is 5,030.34, so 5,030 units of damage kill nobody', () => {
+    const attacker = side([made('one', { strength: 5_030 }), 1]);
+    const target = made('tough', { health: 870, strength: 1 });
+    const defender: PrimeArenaArmy = {
+      totals: totalsFrom({ health: { army: 478.2 } }),
+      stacks: [{ unit: target, count: 3 }],
+    };
+    expect(primeArenaMatch(attacker, defender).rounds[0].steps[0]!.kills).toBe(0);
+  });
+
+  it('a stack of fractional health is wiped whole by a hit large enough', () => {
+    const attacker = side([made('big', { strength: 1_000_000 }), 1]);
+    const defender: PrimeArenaArmy = {
+      totals: totalsFrom({ health: { army: 0.1 } }),
+      stacks: [{ unit: made('thin', { health: 3 }), count: 7 }],
+    };
+    const [first] = primeArenaMatch(attacker, defender).rounds;
+    expect(first.steps[0]!.kills).toBe(7);
+    expect(first.defender.stacks[0]!.survivors).toBe(0);
+  });
+});
+
+describe('the record of double damage replays a real round (B-46)', () => {
+  const lucky = made('lucky', { doubleDamageChance: 50 });
+  const damages = (doubleTurns?: [number[], number[]]): number[] =>
+    primeArenaMatch(
+      side([lucky, 100]),
+      side([made('wall', { strength: 1 }), 1_000]),
+      doubleTurns === undefined ? undefined : { doubleTurns },
+    ).rounds[0].steps.map((s) => s.damage);
+
+  it('plans on the expected value when there is no record', () => {
+    expect(damages()[0]).toBe(1_000 * 1.5);
+  });
+
+  it('doubles exactly the recorded turns, counted from 1, and no other', () => {
+    const plain = damages([[], []]);
+    const recorded = damages([[3], []]);
+    expect(recorded[0]).toBe(1_000);
+    expect(plain[0]).toBe(1_000);
+    // Turn 3 is our second hit: the same living count in both, so exactly twice the damage.
+    expect(recorded[2]).toBe(2 * plain[2]!);
   });
 });
