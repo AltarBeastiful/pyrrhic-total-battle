@@ -17,7 +17,7 @@ import { Shell } from '@/ui/shell/Shell';
 import { TWO_PANES } from '@/ui/shell/useMediaQuery';
 import { useUiStore } from '@/ui/uiStore';
 
-import { usePrimeArenaStore } from './primeArenaStore';
+import { CAPTAIN_SHINE_MS, usePrimeArenaStore } from './primeArenaStore';
 
 vi.setConfig({ testTimeout: 30_000 });
 
@@ -73,6 +73,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   useUiStore.setState({ page: 'calculator' });
   Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: realMatchMedia });
 });
@@ -343,25 +344,45 @@ function chipNames(): { riding: string[]; shining: string[] } {
   };
 }
 
+/**
+ * Holds the shine's own timeout, so a shine lasts until the test ends it, however slow the machine draws the page.
+ * Every other timeout runs as usual (fake timers would stall Testing Library's own waits).
+ */
+function holdShine(): () => void {
+  const real = globalThis.setTimeout;
+  let finish: (() => void) | undefined;
+  vi.spyOn(globalThis, 'setTimeout').mockImplementation(((handler: () => void, ms?: number) => {
+    if (ms !== CAPTAIN_SHINE_MS) return real(handler, ms);
+    finish = handler;
+    return real(() => undefined, 0);
+  }) as typeof setTimeout);
+  return () => {
+    act(() => finish?.());
+  };
+}
+
 test('opening the page fills the squad with the strongest captains, which shine once (B-45)', async () => {
+  const endShine = holdShine();
   seedRoster();
   renderArena();
   await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
   const strongest = ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Skadi'];
-  await waitFor(() => expect(chipNames().riding).toEqual(strongest));
+  await waitFor(() => expect(chipNames().riding).toEqual(strongest), { timeout: 8000 });
   expect(chipNames().shining).toEqual(strongest);
   // Once: the mark goes by itself and the chips stay on.
-  await waitFor(() => expect(chipNames().shining).toEqual([]), { timeout: 3000 });
+  endShine();
+  expect(chipNames().shining).toEqual([]);
   expect(chipNames().riding).toEqual(strongest);
 });
 
 test('"Pick 5 strongest" stands beside the captains heading and replaces the selection at once (B-45)', async () => {
+  const endShine = holdShine();
   seedRoster();
   renderArena();
   const button = await screen.findByRole('button', { name: 'Pick 5 strongest' });
   // Beside the heading: the same label column as the family's name and its count.
   expect(button.parentElement?.textContent).toMatch(/^Hero and captains5\/5/);
-  await waitFor(() => expect(chipNames().shining).toEqual([]), { timeout: 3000 });
+  endShine();
   // A hand edit swaps Skadi for Carter, without a shine and without being undone.
   fireEvent.click(screen.getByRole('checkbox', { name: 'Skadi, riding with this march' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Send Carter on this march' }));
