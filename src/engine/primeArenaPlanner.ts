@@ -14,8 +14,8 @@
  * evenly) and from seeded random restarts, sharing one evaluation budget and one deadline. Moves (first
  * improvement, slice of a pool's budget halving from 1/2 to 1/64): transfer money between two slots of a pool,
  * retype a slot, split part of a slot into a new slot, merge a slot into another. Each climbed squad is then
- * filled (best-scoring top-up until no unit is affordable) and the best filled squad wins; the filled default
- * fill is always a candidate, so the result is never worse than it on the ranking in use.
+ * filled (best-scoring top-up until no unit is affordable) and the best filled squad wins; the default fill
+ * itself is a candidate too, so the result is never worse than it on the ranking in use.
  */
 import type { UnitDef } from '../data/types';
 import { DEFAULT_ARENA_STACKS } from '../state/schema';
@@ -46,8 +46,10 @@ export type PrimeArenaMode = 'allRound' | 'counter';
 
 /** How a squad does against a set of enemies. */
 export interface PrimeArenaSetScore {
-  /** Share of the matches won, a draw counting half. */
+  /** Share of the matches won, a draw counting half: what the ranking reads. */
   wins: number;
+  /** Share of the matches drawn, so the matches really won can be told apart (`wins - draws / 2`). */
+  draws: number;
   /** Mean rounds won per match, of 2. */
   roundsWon: number;
   /** Mean lead per round: our surviving share minus theirs (-1..1). */
@@ -116,7 +118,7 @@ const DEFAULT_RESTARTS = 4;
 const FIRST_SLICE = 0.5;
 const LAST_SLICE = 1 / 64;
 
-const NO_SCORE: PrimeArenaSetScore = { wins: 0, roundsWon: 0, lead: 0, badLead: 0 };
+const NO_SCORE: PrimeArenaSetScore = { wins: 0, draws: 0, roundsWon: 0, lead: 0, badLead: 0 };
 
 /** Positive when `a` ranks above `b` in a plan of this mode. */
 export function comparePrimeArenaSetScore(
@@ -144,11 +146,15 @@ function scoreFielded(
   if (enemies.length === 0) return NO_SCORE;
   const other = role === 'attacker' ? 'defender' : 'attacker';
   let wins = 0;
+  let draws = 0;
   let roundsWon = 0;
   const leads = enemies.map((theirs) => {
     const match = matchFor(role, ours, theirs);
     if (match.winner === role) wins += 1;
-    else if (match.winner === 'draw') wins += 0.5;
+    else if (match.winner === 'draw') {
+      wins += 0.5;
+      draws += 1;
+    }
     roundsWon += roundsWonBy(match, role);
     const [first, second] = match.rounds;
     return (first[role].share - first[other].share + (second[role].share - second[other].share)) / 2;
@@ -156,7 +162,13 @@ function scoreFielded(
   const n = leads.length;
   const lead = leads.reduce((sum, value) => sum + value, 0) / n;
   leads.sort((a, b) => a - b);
-  return { wins: wins / n, roundsWon: roundsWon / n, lead, badLead: leads[Math.floor(n / 10)]! };
+  return {
+    wins: wins / n,
+    draws: draws / n,
+    roundsWon: roundsWon / n,
+    lead,
+    badLead: leads[Math.floor(n / 10)]!,
+  };
 }
 
 /** A squad's score over a set of enemies. */
@@ -370,8 +382,11 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   };
 
   // ---- fill ---------------------------------------------------------------------------------------------
-  /** Spend what is left: while a pool can pay for a unit, add the best-scoring top-up. Outside the budget. */
-  const fill = (start: Squad): Squad => {
+  /**
+   * Spend what is left: while a pool can pay for a unit, add the best-scoring top-up, to a stack of the squad or,
+   * unless `newStacks` is off, as a new one. Outside the evaluation budget.
+   */
+  const fill = (start: Squad, newStacks = true): Squad => {
     let squad = canon(start);
     for (const p of pools) {
       for (;;) {
@@ -388,7 +403,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
           trial[i]!.n += Math.floor(left / costOf(slot.u));
           consider(trial);
         });
-        if (squad.length < maxStacks) {
+        if (newStacks && squad.length < maxStacks) {
           for (const u of unitsOf(p)) {
             if (costOf(u) <= left && !squad.some((s) => s.u === u))
               consider([...squad.map((x) => ({ ...x })), { u, n: Math.floor(left / costOf(u)) }]);
@@ -403,7 +418,8 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
 
   // ---- run ----------------------------------------------------------------------------------------------
   const empty: Squad = [];
-  const start = fill(units.length === 0 ? empty : evenStart());
+  // The even fill tops up the stacks it has and opens no other: the game's own fill adds no unit.
+  const start = fill(units.length === 0 ? empty : evenStart(), false);
   const startScore = score(start, false);
   let bestSquad = start;
   let bestScore = startScore;
@@ -416,6 +432,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     }
   };
   if (units.length > 0) {
+    consider(start);
     consider(climb(evenStart()));
     const rand = mulberry32(0x5eed);
     for (let r = 0; r < restarts && budgetLeft(); r += 1) consider(climb(randomStart(rand)));

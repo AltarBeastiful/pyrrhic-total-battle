@@ -16,7 +16,7 @@ import type {
   PrimeArenaSideOutcome,
   PrimeArenaStep,
 } from '@/engine/primeArena';
-import type { PrimeArenaPlan } from '@/engine/primeArenaPlanner';
+import type { PrimeArenaPlan, PrimeArenaSetScore } from '@/engine/primeArenaPlanner';
 import { PoolGauge, TierBadge } from '@/ui/domain';
 import { count } from '@/ui/domain/format';
 import { Disclosure, Sections } from '@/ui/kit';
@@ -51,18 +51,28 @@ const points = (lead: number): string => {
   return `${whole > 0 ? '+' : ''}${String(whole)} points`;
 };
 
-/** The plan in a line, for the bar and its announcement: the figure its mode is judged on first. */
-export function summaryOf(plan: PrimeArenaPlan): { headline: string; detail: string } {
-  return plan.mode === 'allRound'
-    ? {
-        headline: `All-round: beats ${winShare(plan.setScore.wins)}`,
-        detail: `lead ${points(plan.setScore.lead)}`,
-      }
-    : { headline: `Counter-pick: ${verdictOf(plan)}`, detail: `lead ${points(plan.setScore.lead)}` };
-}
-
 /** A share of the matches, as a whole percentage. */
-const winShare = (wins: number): string => `${String(Math.round(wins * 100))} %`;
+const matchShare = (share: number): string => `${String(Math.round(share * 100))} %`;
+
+/** The share of the matches really won: a draw, which the ranking counts as half, beats nobody. */
+const beatenShare = ({ wins, draws }: PrimeArenaSetScore): string => matchShare(wins - draws / 2);
+
+/** What to add after "beats X of them" when some matches were drawn. */
+const drawnWords = ({ draws }: PrimeArenaSetScore): string =>
+  draws > 0 ? ` and draws ${matchShare(draws)}` : '';
+
+/** A squad nobody is in: nothing to rate and no battle to read. */
+const fieldsNobody = (plan: PrimeArenaPlan): boolean => plan.stacks.length === 0;
+
+/** The plan in a line, for the bar and its announcement: the figure its mode is judged on first. */
+export function summaryOf(plan: PrimeArenaPlan): { headline: string; detail: string | null } {
+  if (fieldsNobody(plan)) return { headline: 'No unit to field', detail: null };
+  const headline =
+    plan.mode === 'allRound'
+      ? `All-round: beats ${beatenShare(plan.setScore)}`
+      : `Counter-pick: ${verdictOf(plan)}`;
+  return { headline, detail: `lead ${points(plan.setScore.lead)}` };
+}
 
 export interface ArenaMatchProps {
   /** True where the March has a pane to put a heading in; the sheet's own header is the heading below it. */
@@ -85,12 +95,17 @@ export function ArenaMatch({ titled = true }: ArenaMatchProps = {}) {
           <Text size="sm" c="dimmed">
             Generate to plan your squad and see the two rounds.
           </Text>
+        ) : fieldsNobody(plan) ? (
+          <Text size="sm">
+            No unit to field. The arena starts at tier II: raise the Guardsmen level on the Troops card, or
+            add more housing.
+          </Text>
         ) : (
           <Recap plan={plan} />
         )}
       </Stack>
-      {plan !== null && <ArmyBlocks plan={plan} />}
-      {plan !== null && (
+      {plan !== null && !fieldsNobody(plan) && <ArmyBlocks plan={plan} />}
+      {plan !== null && !fieldsNobody(plan) && (
         <Disclosure title="Battle log" summary="two rounds" defaultOpened>
           <Stack gap="md">
             {plan.match.rounds.map((round, i) => (
@@ -129,7 +144,7 @@ function Recap({ plan }: { plan: PrimeArenaPlan }) {
   );
 }
 
-/** No enemy typed: how the squad does over the assumed armies, beside the even fill the game would field. */
+/** No enemy typed: how the squad does over the assumed armies, beside an even fill of the top tier. */
 function AllRoundRecap({ plan }: { plan: PrimeArenaPlan }) {
   const { setScore, start, enemies } = plan;
   return (
@@ -140,12 +155,12 @@ function AllRoundRecap({ plan }: { plan: PrimeArenaPlan }) {
         </Badge>
       </Group>
       <Text size="sm">
-        Beats {winShare(setScore.wins)} of {enemies} assumed enemies. Average lead {points(setScore.lead)}, in
-        the bad cases {points(setScore.badLead)}.
+        Beats {beatenShare(setScore)} of {enemies} assumed enemies{drawnWords(setScore)}. Average lead{' '}
+        {points(setScore.lead)}, in the bad cases {points(setScore.badLead)}.
       </Text>
       <Text size="sm" c="dimmed">
-        The game&rsquo;s default even fill beats {winShare(start.setScore.wins)} of them, average lead{' '}
-        {points(start.setScore.lead)}.
+        An even fill of your top tier beats {beatenShare(start.setScore)} of them
+        {drawnWords(start.setScore)}, average lead {points(start.setScore.lead)}.
       </Text>
       <Text size="sm" c="dimmed">
         The enemies are armies of your level, some smaller and some larger than yours, carrying bonuses like
@@ -175,7 +190,7 @@ function CounterRecap({ plan }: { plan: PrimeArenaPlan }) {
         Against the enemy you typed, with your bonuses on their side. Lead {points(setScore.lead)}.
       </Text>
       <Text size="sm" c="dimmed">
-        The game&rsquo;s default even fill {outcomeWord(start.setScore.wins)} against it, lead{' '}
+        An even fill of your top tier {outcomeWord(start.setScore.wins)} against it, lead{' '}
         {points(start.setScore.lead)}.
       </Text>
     </>

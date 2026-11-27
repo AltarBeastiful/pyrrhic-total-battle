@@ -51,8 +51,15 @@ describe('without a typed enemy: one squad against many assumed ones', () => {
     }
   });
 
+  it('counts the drawn matches apart, as half a win in the ranking', () => {
+    const mirror = { stacks: full.stacks, totals: ARENA_BONUS };
+    const drawn = scorePrimeArenaSet(full.stacks, ARENA_BONUS, 'attacker', [mirror]);
+    expect(drawn).toMatchObject({ wins: 0.5, draws: 1 });
+    expect(scorePrimeArenaSet(full.stacks, ARENA_BONUS, 'attacker', [mirror, mirror]).draws).toBe(1);
+  });
+
   it('ranks wins first, then how far ahead it finishes and how it does in the bad cases', () => {
-    const base = { wins: 0.5, roundsWon: 1, lead: 0.2, badLead: -0.1 };
+    const base = { wins: 0.5, draws: 0, roundsWon: 1, lead: 0.2, badLead: -0.1 };
     const better = (other: Partial<typeof base>): number =>
       comparePrimeArenaSetScore({ ...base, ...other }, base, 'allRound');
     expect(better({ wins: 0.6, lead: -1, badLead: -1 })).toBeGreaterThan(0);
@@ -107,7 +114,7 @@ describe('with a typed enemy: a counter-pick', () => {
   });
 
   it('ranks the match result, then rounds won, then the lead', () => {
-    const base = { wins: 0.5, roundsWon: 1, lead: 0.2, badLead: 0.2 };
+    const base = { wins: 0.5, draws: 0, roundsWon: 1, lead: 0.2, badLead: 0.2 };
     const better = (other: Partial<typeof base>): number =>
       comparePrimeArenaSetScore({ ...base, ...other }, base, 'counter');
     expect(better({ wins: 1, roundsWon: 0, lead: -1 })).toBeGreaterThan(0);

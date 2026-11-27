@@ -56,6 +56,17 @@ describe('planPrimeArena', () => {
     }
   });
 
+  it('adds no unit to the even fill when the top tiers leave room under the stack cap', () => {
+    // Eight top-tier units under a cap of twelve, and a leftover a lower-tier monster could be bought with.
+    const housing = { leadership: 20_038, authority: 0, dominance: 3_024 };
+    const { start } = planPrimeArena(arenaInput({ housing, maxStacks: 12, maxEvaluations: 1 }));
+    expect(start.stacks.map((s) => s.unit.id).sort()).toEqual(
+      evenArenaArmy(4, housing)
+        .map((s) => s.unit.id)
+        .sort(),
+    );
+  });
+
   it('is deterministic', () => {
     expect(squadKey(planPrimeArena(arenaInput()).stacks)).toBe(squadKey(planPrimeArena(arenaInput()).stacks));
   });
@@ -82,6 +93,6 @@ describe('planPrimeArena', () => {
       arenaInput({ pool: [...troopSet('SW1'), ...monsterSet('WE')], level: 0, maxEvaluations: 50 }),
     );
     expect(plan.enemies).toBe(0);
-    expect(plan.setScore).toEqual({ wins: 0, roundsWon: 0, lead: 0, badLead: 0 });
+    expect(plan.setScore).toEqual({ wins: 0, draws: 0, roundsWon: 0, lead: 0, badLead: 0 });
   });
 });

@@ -8,7 +8,7 @@ import { Button, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useId, useMemo, useState } from 'react';
 
 import type { UnitDef } from '@/data/types';
-import { primeArenaEnemyUnits, primeArenaLevel } from '@/engine/primeArenaInputs';
+import { arenaUnitsUpTo, primeArenaEnemyUnits, primeArenaLevel } from '@/engine/primeArenaInputs';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { TierBadge } from '@/ui/domain';
 import { Disclosure, NumberField, Panel } from '@/ui/kit';
@@ -25,8 +25,12 @@ export function ArenaEnemySection() {
 
   const level = profile === undefined ? 0 : primeArenaLevel(profile.troops);
   const units = useMemo(() => (profile === undefined ? [] : primeArenaEnemyUnits(profile.troops)), [profile]);
-  // The top tier, and any unit typed above the level (the Guardsmen level may have moved since).
-  const top = units.filter((unit) => unit.tier === level);
+  // The top tier, and any unit typed above the level (the Guardsmen level may have moved since): a typed stack
+  // counts in the plan whatever the level, so it keeps its field.
+  const above = arenaUnitsUpTo(Number.POSITIVE_INFINITY).filter(
+    (unit) => unit.tier > level && counts.has(unit.id),
+  );
+  const top = [...units.filter((unit) => unit.tier === level), ...above];
   const lower = units.filter((unit) => unit.tier < level).sort((a, b) => b.tier - a.tier);
   const typedLower = lower.filter((unit) => counts.has(unit.id)).length;
   const [opened, setOpened] = useState(typedLower > 0);

@@ -286,6 +286,7 @@ test('Generate in the bar plans an attack stack and logs both rounds in the pane
   // With no enemy typed the answer names itself all-round and says how the squad does over the assumed enemies.
   expect(within(pane).getByText('All-round plan')).toBeTruthy();
   expect(within(pane).getByText(/beats \d+ % of \d+ assumed enemies/i)).toBeTruthy();
+  expect(within(pane).getByText(/an even fill of your top tier beats/i)).toBeTruthy();
   expect(within(pane).getByText(/average lead [+-]?\d+ points.*bad cases [+-]?\d+ points/i)).toBeTruthy();
   expect(within(pane).getByText(/lead.*your survivors minus theirs/i)).toBeTruthy();
   expect(within(pane).getByText(/even army of your size, with your bonuses/i)).toBeTruthy();
@@ -326,6 +327,44 @@ test('the Enemy card takes the units of every type up to the Guardsmen level; ty
   expect(useStore.getState().doc.profiles[0]!.primeArena.enemy).toEqual([]);
   expect(within(card).getByText('All-round')).toBeTruthy();
   expect((within(card).getByRole('textbox', { name: 'Rider III' }) as HTMLInputElement).value).toBe('');
+});
+
+test('a unit typed above the level stays on the card, to be read, changed or emptied (B-46)', async () => {
+  renderArena();
+  const card = await screen.findByRole('region', { name: 'Enemy' });
+  typeInto(/^rider iii$/i, '4000');
+  const setLevel = (max: number | null): void => {
+    act(() => {
+      useStore.getState().updateProfile(useStore.getState().doc.activeProfileId, (p) => ({
+        troops: { ...p.troops, guardsmen: max === null ? null : { min: 1, max } },
+      }));
+    });
+  };
+  // The level moves down past the typed unit, then the Guardsmen row goes out of use altogether.
+  for (const level of [2, null]) {
+    setLevel(level);
+    const field = within(card).getByRole('textbox', { name: 'Rider III' }) as HTMLInputElement;
+    expect(field.value.replace(/\D/g, '')).toBe('4000');
+    expect(within(card).getByText('Counter-pick · 1 stack')).toBeTruthy();
+  }
+  typeInto(/^rider iii$/i, '');
+  expect(useStore.getState().doc.profiles[0]!.primeArena.enemy).toEqual([]);
+});
+
+test('with no unit to field the answer says so instead of rating an empty squad (B-46)', async () => {
+  const { container } = renderArena();
+  await screen.findByRole('form', { name: 'This match' });
+  act(() => {
+    useStore.getState().updateProfile(useStore.getState().doc.activeProfileId, (p) => ({
+      troops: { ...p.troops, guardsmen: { min: 1, max: 1 } },
+    }));
+  });
+  typeInto(/leadership/i, '2000');
+  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
+  const pane = container.querySelector('aside') as HTMLElement;
+  await within(pane).findByText(/no unit to field/i, undefined, { timeout: 8000 });
+  expect(within(pane).queryByText(/beats/i)).toBeNull();
+  expect(within(pane).queryByRole('heading', { name: /round 1/i })).toBeNull();
 });
 
 test('the calculator neither shows nor offers the other Arena bonus (B-46)', async () => {

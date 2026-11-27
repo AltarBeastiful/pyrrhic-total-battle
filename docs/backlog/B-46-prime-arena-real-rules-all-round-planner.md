@@ -8,7 +8,7 @@ related: ['[[B-37-prime-arena-report-faithful-planner]]', '[[B-38-game-data-arti
 
 # B-46 Prime Arena: the game's own battle rules and an all-round planner
 
-Status: `built, review pending` (see Comments). From the 2026-11-27 grilling on two battle reports against one defender: the planner's squad lost 0-2, the game's default fill won 2-0. Evidence: theory-craft experiments 370 to 375 (transcript of the four rounds, fitted bonuses, target rule, forward replay, squad search). Cite [[design-rules]] in any UI brief. Supersedes the targeting, Arena source and opponent panel decisions of [[B-37-prime-arena-report-faithful-planner]].
+Status: `done` (see Comments; one question open for the owner). From the 2026-11-27 grilling on two battle reports against one defender: the planner's squad lost 0-2, the game's default fill won 2-0. Evidence: theory-craft experiments 370 to 375 (transcript of the four rounds, fitted bonuses, target rule, forward replay, squad search). Cite [[design-rules]] in any UI brief. Supersedes the targeting, Arena source and opponent panel decisions of [[B-37-prime-arena-report-faithful-planner]].
 
 Standing criteria: the benchmark rating does not regress (only the owner re-bases it); tests are written once, red first, then green.
 
@@ -154,5 +154,14 @@ target = max effective; equal effective (relative 1e-6) → max threat
 - `PrimeArenaFrame.test.tsx`: permanent chips list, panel wording and "worst case" replaced by the mode wording. `primeArenaStore.test.ts`: the enemy joins the saved inputs and the fingerprint.
 - `worker/client.test.ts`: level, and mode instead of aggregate. `store.test.ts`, `exportImport.test.ts`: eleven permanent rows. `migrations.test.ts` v25 case reads the current version. `codec.test.ts`: the enemy round trip.
 
-**Still open.** The two-axis code review was stopped before it reported. The page was not checked in a real browser (rule 31: 1400 and 390 px, both schemes). Experiments 370 to 375 are untracked; 370 and 371 use the removed panel API and 372 to 374 did not typecheck before, so `pnpm typecheck` fails in a checkout that holds them.
+### Review fixes, 2026-11-27
 
+- A unit typed above the Guardsmen level keeps its field on the Enemy card.
+- The even fill the plan is compared with opens no stack outside the top tier; the page calls it "an even fill of your top tier".
+- "Beats X %" counts matches really won; draws are listed apart. A plan with nobody to field says so.
+
+Checked: unit suite (2917 pass), end-to-end (71 pass; "what to upgrade next" and "talents journey" fail on phone and desktop, as before this work), and the page at 1400 and 390 px in both schemes with no console error and no sideways overflow.
+
+**Open question for the owner.** From Guardsmen level V up, an assumed enemy (and the even army of the battle log) fields all its top-tier stacks, 12 at levels V and VI, while our squad is held to "Most stacks" (8 by default). How many stacks may a squad field in game at those levels? If the limit binds both sides, the enemies need the same cap, and so does the order in which the even fill drops units under it. Quality on unseen enemies was measured at level IV only.
+
+**Left as found.** Experiments 370 to 375 are untracked; 370 and 371 use the removed panel API and 372 to 374 did not typecheck before, so `pnpm typecheck` fails in a checkout that holds them.

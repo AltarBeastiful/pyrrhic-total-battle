@@ -236,9 +236,11 @@ function ArenaQuickSummary({ stale }: { stale: boolean }) {
     <Text component="span" size="sm" fw={700} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
       {stale && <Glyph kind="warning" label="Setup changed since this match" />}
       {summaryOf(plan).headline}
-      <Text span size="xs" c="dimmed" fw={400}>
-        {`· ${summaryOf(plan).detail}`}
-      </Text>
+      {summaryOf(plan).detail !== null && (
+        <Text span size="xs" c="dimmed" fw={400}>
+          {`· ${String(summaryOf(plan).detail)}`}
+        </Text>
+      )}
       <ChevronUp size={16} aria-hidden style={{ flex: '0 0 auto' }} />
     </Text>
   );
