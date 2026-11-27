@@ -190,6 +190,27 @@
   }
 }
 
+/* A captain an automatic selection has just put aboard (B-45): one short brass glow and nothing after it.
+   Motion-safe (design rule 24); the chip's own checked state is what says the captain is aboard. */
+@media (prefers-reduced-motion: no-preference) {
+  .shine {
+    animation: chip-shine 900ms ease-out 1;
+  }
+}
+
+@keyframes chip-shine {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
+  }
+
+  35% {
+    box-shadow: 0 0 0.625rem 0.1875rem var(--mantine-color-brass-5);
+    filter: brightness(1.25);
+  }
+}
+
 /* The march as pills: the row holds as many as fit and wraps.
 
    The track floor is **88 px**, which is what the spacing contract's "four across" costs at the

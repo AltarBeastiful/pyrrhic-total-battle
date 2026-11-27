@@ -155,6 +155,7 @@ test('the permanent sources and the talents are the calculator’s chips, under 
 });
 
 test('keeps at most five captains, over the calculator’s own captain chips', async () => {
+  seed(0); // nobody owned, so the opening fills nothing and every chip starts off
   renderArena();
   await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
   const chips = captainTable
@@ -307,4 +308,88 @@ test('an equipment set switches on in the arena squad, not on the calculator mar
   expect(selectActiveSetup(useStore.getState())!.active.equipment).toEqual(marchBefore);
   await user.click(await screen.findByRole('checkbox', { name: /2 of 2 on/ }));
   expect(usePrimeArenaStore.getState().setup.active.equipment).toEqual([]);
+});
+
+/** Seven captains at levels that rank them Skadi, Aydae, Beowulf, Bernard, Brunhild, Carter; Aurora is not owned. */
+function seedRoster(): void {
+  const profile = selectActiveProfile(useStore.getState())!;
+  const levels: [string, number][] = [
+    ['aurora', 0],
+    ['aydae', 40],
+    ['beowulf', 30],
+    ['bernard', 20],
+    ['brunhild', 10],
+    ['carter', 1],
+    ['skadi', 99],
+  ];
+  useStore.getState().updateProfile(profile.id, {
+    sources: {
+      ...profile.sources,
+      captains: levels.map(([captainId, level]) => ({ id: `e-${captainId}`, captainId, level, star: 0 })),
+    },
+  });
+}
+
+/** The names of the captain chips that are on, and of those marked to shine. */
+function chipNames(): { riding: string[]; shining: string[] } {
+  const chips = within(screen.getByRole('group', { name: 'Captains and hero' })).getAllByRole(
+    'checkbox',
+  ) as HTMLInputElement[];
+  const nameOf = (chip: HTMLInputElement): string =>
+    (chip.getAttribute('aria-label') ?? '').replace(/^Send | on this march$|, riding with this march$/g, '');
+  return {
+    riding: chips.filter((chip) => chip.checked).map(nameOf),
+    shining: chips.filter((chip) => chip.closest('[data-shine]') !== null).map(nameOf),
+  };
+}
+
+test('opening the page fills the squad with the strongest captains, which shine once (B-45)', async () => {
+  seedRoster();
+  renderArena();
+  await screen.findByRole('heading', { level: 2, name: 'Bonuses' });
+  const strongest = ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Skadi'];
+  await waitFor(() => expect(chipNames().riding).toEqual(strongest));
+  expect(chipNames().shining).toEqual(strongest);
+  // Once: the mark goes by itself and the chips stay on.
+  await waitFor(() => expect(chipNames().shining).toEqual([]), { timeout: 3000 });
+  expect(chipNames().riding).toEqual(strongest);
+});
+
+test('"Pick 5 strongest" stands beside the captains heading and replaces the selection at once (B-45)', async () => {
+  seedRoster();
+  renderArena();
+  const button = await screen.findByRole('button', { name: 'Pick 5 strongest' });
+  // Beside the heading: the same label column as the family's name and its count.
+  expect(button.parentElement?.textContent).toMatch(/^Hero and captains5\/5/);
+  await waitFor(() => expect(chipNames().shining).toEqual([]), { timeout: 3000 });
+  // A hand edit swaps Skadi for Carter, without a shine and without being undone.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Skadi, riding with this march' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Send Carter on this march' }));
+  expect(chipNames()).toEqual({
+    riding: ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Carter'],
+    shining: [],
+  });
+  fireEvent.click(button);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(chipNames()).toEqual({
+    riding: ['Aydae', 'Beowulf', 'Bernard', 'Brunhild', 'Skadi'],
+    shining: ['Skadi'],
+  });
+  expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
+});
+
+test('with no captain owned "Pick 5 strongest" cannot be pressed (B-45)', async () => {
+  seed(0);
+  renderArena();
+  const button = await screen.findByRole('button', { name: 'Pick 5 strongest' });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('the calculator keeps its own captain selection: nothing filled, no quick pick (B-45)', async () => {
+  seedRoster();
+  render(<Shell />, { wrapper: ThemeHarness });
+  await screen.findByRole('group', { name: 'Captains and hero' });
+  expect(screen.queryByRole('button', { name: 'Pick 5 strongest' })).toBeNull();
+  expect(chipNames()).toEqual({ riding: [], shining: [] });
+  expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
 });
