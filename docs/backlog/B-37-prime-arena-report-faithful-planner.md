@@ -35,7 +35,7 @@ A match engine that reproduces the logged steps of the real report, a winner rul
 13. As a defender, I want the plan to maximise the worst case over opponents at strength 1.0 to 1.25, so that I am safe against strong attackers.
 14. As a player, I want the panel to include under-filled armies, so that opponents who forgot to fill their housing are covered.
 15. As a player, I want the result to show the panel it was tested against, so that I can judge the plan.
-16. As a player, I want up to a configurable number of stacks (default 8), with repeats and lower tiers allowed, so that I can field what real players field.
+16. As a player, I want up to a configurable number of stacks (default 8), with lower tiers allowed and each unit in at most one stack, so that I can field what real players field.
 17. As a player, I want the stack cap to be a setting, so that I can change it when the real limit differs.
 18. As a player, I want the planner to spend all my housing with the best-scoring fill, so that no capacity is wasted.
 19. As a player, I want a plan never worse than the even-split start, so that Generate does not make things worse.

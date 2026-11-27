@@ -13,8 +13,8 @@
  * aggregate is the WORST case. A panel score is a `PrimeArenaScore` shape (result, rounds won, survivor share
  * of OUR side) with fractional values for a mean, compared lexicographically as in `primeArena.ts`.
  *
- * A squad is up to `maxStacks` slots (default 8), each a unit and a count; a unit may repeat in several slots and
- * any pool unit may be used, lower tiers included. Housing bounds the squad: troops spend Leadership, monsters
+ * A squad is up to `maxStacks` slots (default 8), each a unit and a count; every unit fills at most ONE slot (as
+ * in the march calculator, a troop type is one stack) and any pool unit may be used, lower tiers included. Housing bounds the squad: troops spend Leadership, monsters
  * Dominance.
  *
  * Search: hill climbs over slot counts from the even-split start and from seeded random restarts, sharing one
@@ -75,7 +75,7 @@ export interface PrimeArenaPlanInput {
   totals: BonusTotals;
   /** Which side we play (default attacker): fixes the panel and the aggregate. */
   role?: PrimeArenaRole;
-  /** Most stacks in the squad (default 8; the real limit is unknown). Repeats of one unit are allowed. */
+  /** Most stacks in the squad (default 8; the real limit is unknown). A unit is never in two stacks. */
   maxStacks?: number;
   /**
    * Opponent bonuses. The default is `armyWideTotals(totals)`: our army-wide health and strength and nothing
@@ -448,11 +448,13 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
       const reserve = pools.length - idx - 1;
       const room = Math.max(1, slotsLeft - reserve);
       if (slotsLeft <= 0) return;
-      const k = Math.min(slotsLeft, 1 + Math.floor(rand() * Math.min(room, 5)));
+      const k = Math.min(slotsLeft, unitsOf(p).length, 1 + Math.floor(rand() * Math.min(room, 5)));
       slotsLeft -= k;
-      const members = Array.from({ length: k }, () => {
-        const list = unitsOf(p);
-        return { u: list[Math.floor(rand() * list.length)]!, w: 0.2 + rand() };
+      // Distinct units: a draw without replacement.
+      const list = [...unitsOf(p)];
+      const members = Array.from({ length: Math.min(k, list.length) }, () => {
+        const [u] = list.splice(Math.floor(rand() * list.length), 1);
+        return { u: u!, w: 0.2 + rand() };
       });
       const total = members.reduce((a, m) => a + m.w, 0);
       for (const m of members)
@@ -480,15 +482,14 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
         trial[b]!.n += give;
         yield canon(trial);
       }
-      // Retype the whole slot, and split a slice of it into a new slot (room permitting).
+      // Retype the whole slot, and split a slice of it into a new slot (room permitting). Both only to a unit
+      // the squad does not field yet: a unit is one stack.
       for (let u = 0; u < units.length; u += 1) {
-        if (poolOf(u) !== pool) continue;
-        if (u !== from.u) {
-          const trial = squad.map((s) => ({ ...s }));
-          trial[a]!.u = u;
-          trial[a]!.n = Math.floor(fromMoney / costOf(u));
-          if (trial[a]!.n > 0) yield canon(trial);
-        }
+        if (poolOf(u) !== pool || squad.some((s) => s.u === u)) continue;
+        const retyped = squad.map((s) => ({ ...s }));
+        retyped[a]!.u = u;
+        retyped[a]!.n = Math.floor(fromMoney / costOf(u));
+        if (retyped[a]!.n > 0) yield canon(retyped);
         if (squad.length < maxStacks) {
           const give = Math.floor((take * costOf(from.u)) / costOf(u));
           if (give <= 0) continue;
@@ -546,7 +547,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
         });
         if (squad.length < maxStacks) {
           for (const u of unitsOf(p)) {
-            if (costOf(u) <= left)
+            if (costOf(u) <= left && !squad.some((s) => s.u === u))
               consider([...squad.map((x) => ({ ...x })), { u, n: Math.floor(left / costOf(u)) }]);
           }
         }

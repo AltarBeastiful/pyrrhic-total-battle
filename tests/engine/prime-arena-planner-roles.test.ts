@@ -134,7 +134,7 @@ describe('planPrimeArena: panel and role', () => {
     expect(key(a) !== key(d) || a.panelScore.survivorShare !== d.panelScore.survivorShare).toBe(true);
   });
 
-  it('respects maxStacks, with repeats of a unit allowed', () => {
+  it('respects maxStacks', () => {
     for (const maxStacks of [1, 2, 3]) {
       const plan = planPrimeArena(input({ maxStacks, maxEvaluations: 800 }));
       expect(plan.stacks.length).toBeLessThanOrEqual(maxStacks);
@@ -142,6 +142,20 @@ describe('planPrimeArena: panel and role', () => {
     }
     const wide = planPrimeArena(input({ pool: troopSet('SW1'), maxStacks: 4, maxEvaluations: 800 }));
     expect(wide.stacks.length).toBeLessThanOrEqual(4);
+  });
+
+  it('fields each unit at most once: no two stacks of the same troop or monster', () => {
+    const many = [...troopSet('SW1', 'SW2', 'SW3', 'ARC1', 'ARC2', 'RD1', 'RD2'), ...monsterSet('WE', 'BB')];
+    for (const role of ['attacker', 'defender'] as const) {
+      for (const pool of [many, troopSet('SW1'), troopSet('SW1', 'SW2'), POOL]) {
+        for (const maxStacks of [2, 4, 8]) {
+          const plan = planPrimeArena(input({ pool, role, maxStacks, maxEvaluations: 1_500 }));
+          const ids = plan.stacks.map((s) => s.unit.id);
+          expect(new Set(ids).size).toBe(ids.length);
+          expect(new Set(plan.start.stacks.map((s) => s.unit.id)).size).toBe(plan.start.stacks.length);
+        }
+      }
+    }
   });
 
   it('defaults the stack cap to 8', () => {
