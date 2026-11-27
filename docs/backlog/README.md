@@ -53,6 +53,14 @@ Rule of the order: a wrong number beats a missing nicety; then cheap items with 
 | 23 | [[B-35-prime-arena-battle-type]] | Prime Arena: sixth battle type in the UI — **done** | M | the demoable slice | B-34 |
 | 24 | [[B-36-prime-arena-persistence]] | Prime Arena: save and share link — **done** | S | deferrable | B-35 |
 | 25 | [[B-37-prime-arena-report-faithful-planner]] | Prime Arena: report-faithful match, role-aware planner — **done** | L | 2026-11-26 grill-me + real battle report | B-32 to B-36 |
+| 26 | [[B-38-game-data-artifacts-arena-capacity]] | Game-extracted artifacts, Arena capacity and captain quick select | L | 2026-11-27 grilling, design settled | none |
+| 27 | [[B-39-artifact-values-from-game]] | Artifact values from the game, by level and star | L | first slice of B-38 | none |
+| 28 | [[B-40-artifact-level-star-steppers]] | + and − on artifact level and star | S | follows B-39 | B-39 |
+| 29 | [[B-41-arena-against-players-bonuses]] | Bonuses against other players count in Prime Arena | S | follows B-39 | B-39 |
+| 30 | [[B-42-artifact-random-lines]] | Five random artifact bonus lines | M | needs the against-other-players gate | B-41 |
+| 31 | [[B-43-arena-capacity-from-squad]] | Prime Arena capacity maxes from the squad | M | needs the converter | B-39 |
+| 32 | [[B-44-zeus-raises-arena-capacity]] | Zeus' Lightning raises Prime Arena capacity | S | last slice | B-42, B-43 |
+| 33 | [[B-45-arena-captain-quick-select]] | Prime Arena captain quick select | M | independent, can start now | none |
 
 T-18, T-19 and T-20 are sub-asks of the equipment revamp and live inside B-12.
 
