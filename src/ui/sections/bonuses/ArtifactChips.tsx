@@ -235,23 +235,30 @@ function ArtifactEditor({ artifactId }: { artifactId: string }) {
           }}
         />
       </Stepped>
+      <Divider />
       {lineCount === 0 ? (
         <Text size="xs" c="dimmed">
           Random bonus lines open from star 1.0.
         </Text>
       ) : (
-        Array.from({ length: lineCount }, (_, index) => (
-          <RandomLine
-            key={index}
-            number={index + 1}
-            options={record?.randomOptions ?? []}
-            line={entry.lines?.[index] ?? null}
-            marchType={marchType}
-            onChange={(next) => {
-              patch((current) => withLine(current, index, next));
-            }}
-          />
-        ))
+        // Wider apart than the two controls of one line, so each line reads as one.
+        <Stack gap="md">
+          <Text size="sm" fw={500}>
+            Random bonuses
+          </Text>
+          {Array.from({ length: lineCount }, (_, index) => (
+            <RandomLine
+              key={index}
+              number={index + 1}
+              options={record?.randomOptions ?? []}
+              line={entry.lines?.[index] ?? null}
+              marchType={marchType}
+              onChange={(next) => {
+                patch((current) => withLine(current, index, next));
+              }}
+            />
+          ))}
+        </Stack>
       )}
       <Divider />
       {worth.length === 0 ? (
