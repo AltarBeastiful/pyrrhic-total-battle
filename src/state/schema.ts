@@ -32,7 +32,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 25;
+export const SCHEMA_VERSION = 26;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -550,6 +550,20 @@ export const MAX_OTHER_CAPACITY = 1000;
  */
 export const arenaCapacityBasisSchema = z.object({
   captains: z.array(z.object({ captainId: nonEmpty, level: z.int().min(0) })),
+  /**
+   * Each squad artifact that raises capacity (Zeus' Lightning; schema v26, B-44): its level, its star and the open
+   * random lines that raise capacity. Absent while none is aboard.
+   */
+  artifacts: z
+    .array(
+      z.object({
+        artifactId: nonEmpty,
+        level: z.int().min(1),
+        star: z.string(),
+        lines: z.array(artifactRollSchema),
+      }),
+    )
+    .optional(),
   other: z.number().min(0),
 });
 export type ArenaCapacityBasis = z.infer<typeof arenaCapacityBasisSchema>;

@@ -674,6 +674,8 @@ test('the march marks the options it does not count, and leaves them selectable'
   expect(lineNote(editor, 1)).toBe('Not counted');
   await pickLine(user, editor, 1, /^Double damage chance$/);
   expect(lineNote(editor, 1)).toBeNull();
+  // The march's housing takes no capacity (B-44), so the editor's figures show none, level bonus included.
+  expect(within(editor).queryByText(/% (leadership|dominance)$/)).toBeNull();
 });
 
 test('the march marks a line against other players as not counted', async () => {

@@ -7,6 +7,7 @@
  * and stay here so the section owns its own wording.
  */
 import type {
+  ArtifactCapacity,
   ArtifactOptionValue,
   ArtifactRarity,
   BonusKey,
@@ -29,7 +30,14 @@ export interface BonusLike {
   strength?: BonusMap | undefined;
   special?: SpecialMap | undefined;
   matchup?: readonly MatchupBonus[] | undefined;
+  /** Percent added to a Prime Arena pool; no total of a march. */
+  capacity?: ArtifactCapacity | undefined;
 }
+
+const CAPACITY_LABELS: Record<keyof ArtifactCapacity, string> = {
+  leadership: 'Leadership',
+  dominance: 'Dominance',
+};
 
 export const BONUS_LABELS: Record<BonusKey, string> = {
   melee: 'Melee',
@@ -136,6 +144,9 @@ function collect(bonus: BonusLike, short: boolean): { label: string; parts: stri
       `${BONUS_LABELS[entry.attacker]} against ${AGAINST_LABELS[entry.target]}`,
       formatPercent(entry.value),
     );
+  }
+  for (const [key, value] of Object.entries(bonus.capacity ?? {})) {
+    if (value) add(`capacity:${key}`, CAPACITY_LABELS[key as keyof ArtifactCapacity], formatPercent(value));
   }
 
   return [...byKey.values()];
@@ -265,6 +276,11 @@ export function rowLines(bonus: BonusLike): string[] {
   for (const entry of bonus.matchup ?? []) {
     const against = `${BONUS_LABELS[entry.attacker].toLowerCase()} against ${AGAINST_LABELS[entry.target]}`;
     lines.push(`${formatPercent(entry.value)} strength (${against})`);
+  }
+  for (const [key, value] of Object.entries(bonus.capacity ?? {})) {
+    if (value) {
+      lines.push(`${formatPercent(value)} ${CAPACITY_LABELS[key as keyof ArtifactCapacity].toLowerCase()}`);
+    }
   }
   return lines;
 }

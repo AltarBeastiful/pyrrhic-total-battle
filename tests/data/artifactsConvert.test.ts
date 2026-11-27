@@ -250,17 +250,19 @@ describe('convertArtifacts', () => {
     expect(rows.get('mars-twin-blades')?.stars['0.1']).toEqual({ special: { strikeTwoSquadsChance: 1.1 } });
   });
 
-  it('carries no bonus yet for capacity, authority and march speed', () => {
+  it('carries the capacity bonus of a level or star row, and no authority or march speed', () => {
     const dump = handMade();
     everyRow(
       dump,
       "Zeus' Lightning",
-      [effect('HERO_LEADERSHIP', 0, 10250), effect('HERO_DOMINANCE', 0, 10250)],
+      [effect('HERO_LEADERSHIP', 0, 10250), effect('HERO_DOMINANCE', 0, 10270)],
       [effect('UNIT_CRIT', 0, 10070), effect('HERO_MASTERY', 0, 10250), effect('MARCH_SPEED_PVE', 0, 12000)],
     );
 
     const rows = rowsById(dump);
-    expect(rows.get('zeus-lightning')?.levels['1']).toEqual({});
+    expect(rows.get('zeus-lightning')?.levels['1']).toEqual({
+      capacity: { leadership: 2.5, dominance: 2.7 },
+    });
     expect(rows.get('zeus-lightning')?.stars['0.1']).toEqual({ special: { doubleDamageChance: 0.7 } });
   });
 

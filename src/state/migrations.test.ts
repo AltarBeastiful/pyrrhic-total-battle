@@ -1277,4 +1277,26 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 24)).toEqual(once);
     });
   });
+
+  describe('v25 → v26: the capacity basis may name capacity artifacts (B-44)', () => {
+    const basis = { captains: [{ captainId: 'aydae', level: 40 }], other: 5 };
+    const v25Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      profile.primeArena.capacityBasis = basis;
+      return { ...doc, schemaVersion: 25 };
+    };
+
+    it('moves nothing: a basis without artifacts stays as it was', () => {
+      const migrated = migrate(v25Doc());
+      expect(migrated.schemaVersion).toBe(26);
+      expect(migrated.profiles[0]!.primeArena.capacityBasis).toEqual(basis);
+    });
+
+    it('upgrades an exported v25 profile once', () => {
+      const profile = (v25Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 25);
+      expect(once.primeArena.capacityBasis).toEqual(basis);
+    });
+  });
 });

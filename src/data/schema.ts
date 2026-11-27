@@ -202,10 +202,10 @@ const artifactRowSchema = z.strictObject({
   againstPlayers: z
     .strictObject({ health: bonusMapSchema.optional(), strength: bonusMapSchema.optional() })
     .optional(),
+  capacity: z.strictObject({ leadership: percent.optional(), dominance: percent.optional() }).optional(),
 }) satisfies z.ZodType<Loose<ArtifactRow>>;
 
 const artifactOptionValueSchema = artifactRowSchema.extend({
-  capacity: z.strictObject({ leadership: percent.optional(), dominance: percent.optional() }).optional(),
   unused: z.strictObject({ authority: percent.optional(), marchSpeed: percent.optional() }).optional(),
 }) satisfies z.ZodType<Loose<ArtifactOptionValue>>;
 

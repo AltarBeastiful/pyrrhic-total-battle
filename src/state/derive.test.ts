@@ -483,7 +483,7 @@ describe('resolveSources — artifacts', () => {
       { option: 'leadership', rarity: 'legendary' },
     ]);
     expect(zeus?.special).toEqual({ doubleDamageChance: 3.5 }); // star 2.0: 2, the line: 1.5
-    // Capacity is no total here (B-44).
+    // Capacity is no total: it only raises the Prime Arena maximum (B-44).
     expect(zeus?.health).toBeUndefined();
     expect(zeus?.strength).toBeUndefined();
 

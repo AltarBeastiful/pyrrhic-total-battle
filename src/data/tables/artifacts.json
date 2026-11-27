@@ -11594,66 +11594,366 @@
     "id": "zeus-lightning",
     "name": "Zeus' Lightning",
     "levels": {
-      "1": {},
-      "2": {},
-      "3": {},
-      "4": {},
-      "5": {},
-      "6": {},
-      "7": {},
-      "8": {},
-      "9": {},
-      "10": {},
-      "11": {},
-      "12": {},
-      "13": {},
-      "14": {},
-      "15": {},
-      "16": {},
-      "17": {},
-      "18": {},
-      "19": {},
-      "20": {},
-      "21": {},
-      "22": {},
-      "23": {},
-      "24": {},
-      "25": {},
-      "26": {},
-      "27": {},
-      "28": {},
-      "29": {},
-      "30": {},
-      "31": {},
-      "32": {},
-      "33": {},
-      "34": {},
-      "35": {},
-      "36": {},
-      "37": {},
-      "38": {},
-      "39": {},
-      "40": {},
-      "41": {},
-      "42": {},
-      "43": {},
-      "44": {},
-      "45": {},
-      "46": {},
-      "47": {},
-      "48": {},
-      "49": {},
-      "50": {},
-      "51": {},
-      "52": {},
-      "53": {},
-      "54": {},
-      "55": {},
-      "56": {},
-      "57": {},
-      "58": {},
-      "59": {},
-      "60": {}
+      "1": {
+        "capacity": {
+          "leadership": 2.5,
+          "dominance": 2.5
+        }
+      },
+      "2": {
+        "capacity": {
+          "leadership": 2.6,
+          "dominance": 2.6
+        }
+      },
+      "3": {
+        "capacity": {
+          "leadership": 2.7,
+          "dominance": 2.7
+        }
+      },
+      "4": {
+        "capacity": {
+          "leadership": 2.8,
+          "dominance": 2.8
+        }
+      },
+      "5": {
+        "capacity": {
+          "leadership": 2.9,
+          "dominance": 2.9
+        }
+      },
+      "6": {
+        "capacity": {
+          "leadership": 3,
+          "dominance": 3
+        }
+      },
+      "7": {
+        "capacity": {
+          "leadership": 3.1,
+          "dominance": 3.1
+        }
+      },
+      "8": {
+        "capacity": {
+          "leadership": 3.2,
+          "dominance": 3.2
+        }
+      },
+      "9": {
+        "capacity": {
+          "leadership": 3.3,
+          "dominance": 3.3
+        }
+      },
+      "10": {
+        "capacity": {
+          "leadership": 3.5,
+          "dominance": 3.5
+        }
+      },
+      "11": {
+        "capacity": {
+          "leadership": 3.7,
+          "dominance": 3.7
+        }
+      },
+      "12": {
+        "capacity": {
+          "leadership": 3.9,
+          "dominance": 3.9
+        }
+      },
+      "13": {
+        "capacity": {
+          "leadership": 4.1,
+          "dominance": 4.1
+        }
+      },
+      "14": {
+        "capacity": {
+          "leadership": 4.3,
+          "dominance": 4.3
+        }
+      },
+      "15": {
+        "capacity": {
+          "leadership": 4.5,
+          "dominance": 4.5
+        }
+      },
+      "16": {
+        "capacity": {
+          "leadership": 4.7,
+          "dominance": 4.7
+        }
+      },
+      "17": {
+        "capacity": {
+          "leadership": 4.9,
+          "dominance": 4.9
+        }
+      },
+      "18": {
+        "capacity": {
+          "leadership": 5.1,
+          "dominance": 5.1
+        }
+      },
+      "19": {
+        "capacity": {
+          "leadership": 5.3,
+          "dominance": 5.3
+        }
+      },
+      "20": {
+        "capacity": {
+          "leadership": 5.6,
+          "dominance": 5.6
+        }
+      },
+      "21": {
+        "capacity": {
+          "leadership": 5.9,
+          "dominance": 5.9
+        }
+      },
+      "22": {
+        "capacity": {
+          "leadership": 6.2,
+          "dominance": 6.2
+        }
+      },
+      "23": {
+        "capacity": {
+          "leadership": 6.5,
+          "dominance": 6.5
+        }
+      },
+      "24": {
+        "capacity": {
+          "leadership": 6.8,
+          "dominance": 6.8
+        }
+      },
+      "25": {
+        "capacity": {
+          "leadership": 7.1,
+          "dominance": 7.1
+        }
+      },
+      "26": {
+        "capacity": {
+          "leadership": 7.4,
+          "dominance": 7.4
+        }
+      },
+      "27": {
+        "capacity": {
+          "leadership": 7.7,
+          "dominance": 7.7
+        }
+      },
+      "28": {
+        "capacity": {
+          "leadership": 8,
+          "dominance": 8
+        }
+      },
+      "29": {
+        "capacity": {
+          "leadership": 8.3,
+          "dominance": 8.3
+        }
+      },
+      "30": {
+        "capacity": {
+          "leadership": 8.7,
+          "dominance": 8.7
+        }
+      },
+      "31": {
+        "capacity": {
+          "leadership": 9.1,
+          "dominance": 9.1
+        }
+      },
+      "32": {
+        "capacity": {
+          "leadership": 9.5,
+          "dominance": 9.5
+        }
+      },
+      "33": {
+        "capacity": {
+          "leadership": 9.9,
+          "dominance": 9.9
+        }
+      },
+      "34": {
+        "capacity": {
+          "leadership": 10.3,
+          "dominance": 10.3
+        }
+      },
+      "35": {
+        "capacity": {
+          "leadership": 10.7,
+          "dominance": 10.7
+        }
+      },
+      "36": {
+        "capacity": {
+          "leadership": 11.1,
+          "dominance": 11.1
+        }
+      },
+      "37": {
+        "capacity": {
+          "leadership": 11.5,
+          "dominance": 11.5
+        }
+      },
+      "38": {
+        "capacity": {
+          "leadership": 11.9,
+          "dominance": 11.9
+        }
+      },
+      "39": {
+        "capacity": {
+          "leadership": 12.3,
+          "dominance": 12.3
+        }
+      },
+      "40": {
+        "capacity": {
+          "leadership": 12.8,
+          "dominance": 12.8
+        }
+      },
+      "41": {
+        "capacity": {
+          "leadership": 13.3,
+          "dominance": 13.3
+        }
+      },
+      "42": {
+        "capacity": {
+          "leadership": 13.8,
+          "dominance": 13.8
+        }
+      },
+      "43": {
+        "capacity": {
+          "leadership": 14.3,
+          "dominance": 14.3
+        }
+      },
+      "44": {
+        "capacity": {
+          "leadership": 14.8,
+          "dominance": 14.8
+        }
+      },
+      "45": {
+        "capacity": {
+          "leadership": 15.3,
+          "dominance": 15.3
+        }
+      },
+      "46": {
+        "capacity": {
+          "leadership": 15.8,
+          "dominance": 15.8
+        }
+      },
+      "47": {
+        "capacity": {
+          "leadership": 16.3,
+          "dominance": 16.3
+        }
+      },
+      "48": {
+        "capacity": {
+          "leadership": 16.8,
+          "dominance": 16.8
+        }
+      },
+      "49": {
+        "capacity": {
+          "leadership": 17.3,
+          "dominance": 17.3
+        }
+      },
+      "50": {
+        "capacity": {
+          "leadership": 18,
+          "dominance": 18
+        }
+      },
+      "51": {
+        "capacity": {
+          "leadership": 18.7,
+          "dominance": 18.7
+        }
+      },
+      "52": {
+        "capacity": {
+          "leadership": 19.4,
+          "dominance": 19.4
+        }
+      },
+      "53": {
+        "capacity": {
+          "leadership": 20.1,
+          "dominance": 20.1
+        }
+      },
+      "54": {
+        "capacity": {
+          "leadership": 20.8,
+          "dominance": 20.8
+        }
+      },
+      "55": {
+        "capacity": {
+          "leadership": 21.5,
+          "dominance": 21.5
+        }
+      },
+      "56": {
+        "capacity": {
+          "leadership": 22.2,
+          "dominance": 22.2
+        }
+      },
+      "57": {
+        "capacity": {
+          "leadership": 22.9,
+          "dominance": 22.9
+        }
+      },
+      "58": {
+        "capacity": {
+          "leadership": 23.6,
+          "dominance": 23.6
+        }
+      },
+      "59": {
+        "capacity": {
+          "leadership": 24.3,
+          "dominance": 24.3
+        }
+      },
+      "60": {
+        "capacity": {
+          "leadership": 25,
+          "dominance": 25
+        }
+      }
     },
     "stars": {
       "0.1": {

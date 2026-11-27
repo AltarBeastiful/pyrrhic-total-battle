@@ -139,7 +139,7 @@ function withPools(setup: BattleSetup, { leadership, dominance }: ArenaPools): B
 }
 
 const basisOf = (profile: Profile, inputs: ArenaInputs): ArenaCapacityBasis =>
-  arenaCapacityBasis(profile.sources.captains, inputs.setup.active.captains, inputs.otherCapacity);
+  arenaCapacityBasis(profile.sources, inputs.setup.active, inputs.otherCapacity);
 
 /** One text per basis, whatever order a stored copy keeps its keys in. */
 const basisText = (basis: ArenaCapacityBasis | null): string =>

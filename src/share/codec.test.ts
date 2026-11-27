@@ -197,7 +197,18 @@ describe('profile links', () => {
       role: 'defender',
       maxStacks: 6,
       otherCapacity: 12.5,
-      capacityBasis: { captains: [{ captainId: 'aydae', level: 40 }], other: 12.5 },
+      capacityBasis: {
+        captains: [{ captainId: 'aydae', level: 40 }],
+        artifacts: [
+          {
+            artifactId: 'zeus-lightning',
+            level: 20,
+            star: '1.0',
+            lines: [{ option: 'leadership', rarity: 'epic' }],
+          },
+        ],
+        other: 12.5,
+      },
       setup: {
         ...profile.primeArena.setup,
         active: {

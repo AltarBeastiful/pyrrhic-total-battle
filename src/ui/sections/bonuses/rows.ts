@@ -39,7 +39,13 @@ import type {
 import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
-import { artifactBonus, captainValue, resolveSources, vipNeedsManual } from '@/state/derive';
+import {
+  artifactBonus,
+  artifactCapacity,
+  captainValue,
+  resolveSources,
+  vipNeedsManual,
+} from '@/state/derive';
 import type { BattleSetup, Profile, ProfileSources, SetupMarchType } from '@/state/schema';
 
 import { describeContribution, isEmptyBonus, mergeBonus, rowValue } from './labels';
@@ -151,33 +157,36 @@ export function equipmentWorth(record: EquipmentRecord | undefined, entry: Equip
 
 /**
  * What an artifact is worth as the player has it on this kind of march, from the game's table: its level, its
- * star and the random lines the star has opened.
+ * star and the random lines the star has opened. In the Prime Arena, what it adds to the capacity too (B-44).
  */
 export function artifactWorth(
   record: ArtifactRecord | undefined,
   entry: ArtifactEntry,
   marchType: SetupMarchType,
 ): BonusLike {
-  return record ? artifactBonus(record, entry, marchType) : {};
+  if (record === undefined) return {};
+  const bonus = artifactBonus(record, entry, marchType);
+  return marchType === 'arena' ? { ...bonus, capacity: artifactCapacity(record, entry) } : bonus;
 }
 
 /**
  * What to say under a random option on this kind of march (B-42), or `null` for one that simply counts. An
- * option is "not counted" when no total of this march moves with it: against other players outside the Prime
- * Arena; capacity (until B-44 counts it in the Arena), authority and march speed everywhere.
+ * option is "not counted" when nothing on this page moves with it: against other players and capacity outside the
+ * Prime Arena (where capacity raises the maximum, B-44), authority and march speed everywhere.
  */
 export function optionNote(
   option: ArtifactRandomOption,
   marchType: SetupMarchType,
 ): { counted: boolean; note: string | null } {
   // The three rarities of an option feed the same things, so any one of them tells.
-  const { health, strength, special, againstPlayers } = option.values.rare;
-  const plain = health !== undefined || strength !== undefined || special !== undefined;
+  const { health, strength, special, againstPlayers, capacity } = option.values.rare;
+  const arena = marchType === 'arena';
   if (againstPlayers !== undefined) {
-    const counted = marchType === 'arena';
-    return { counted, note: counted ? 'Against other players' : 'Against other players, not counted' };
+    return { counted: arena, note: arena ? 'Against other players' : 'Against other players, not counted' };
   }
-  return { counted: plain, note: plain ? null : 'Not counted' };
+  const plain = health !== undefined || strength !== undefined || special !== undefined;
+  const counted = plain || (arena && capacity !== undefined);
+  return { counted, note: counted ? null : 'Not counted' };
 }
 
 /** What VIP is worth right now: the table row, or the values typed when we have no row. */

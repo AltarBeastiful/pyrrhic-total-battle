@@ -8,6 +8,15 @@ How to read a line: **what changed** — how it was verified.
 
 ## v2 — 2026-11-27
 
+- **Zeus' Lightning raises Prime Arena capacity (B-44)** — its level rows now carry `capacity` (the same percentage
+  for Leadership and Dominance, 2.5 at level 1 to 25 at level 60). In Prime Arena it and the open Leadership and
+  Dominance lines are added to the other capacity bonus %, each pool taking its own, when Zeus is in the squad;
+  march housing and march totals do not move. Part of v2, which had not shipped yet, so no further bump. No
+  existing value or id changed. The capacity basis of a saved profile may now name the artifact (schema 25 to 26,
+  nothing else moves): a squad already carrying Zeus gets the new maximum when the page next opens. Verified by
+  `artifactsConvert.test.ts` (rebuilds the table from the export), `arenaCapacity.test.ts` and
+  `migrations.test.ts`.
+
 - **Five random artifact bonus lines (B-42)** — every artifact now carries all the bonuses it can roll as
   `randomOptions`, each with its rare, epic and legendary value; it replaces the list of option names
   `randomBonusOptions`. New option ids: those ending in `AgainstPlayers`, `leadership`, `dominance`,

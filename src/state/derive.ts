@@ -35,6 +35,7 @@ import {
 import { CAMPAIGN } from '../config';
 import { BONUS_KEYS, CATEGORIES, SPECIAL_KEYS } from '../data/types';
 import type {
+  ArtifactCapacity,
   ArtifactRecord,
   ArtifactRow,
   BonusContribution,
@@ -223,28 +224,50 @@ type ArtifactEntry = ProfileSources['artifacts'][number];
 /** The random lines a star has opened: one per whole star reached, so line k counts from star k.0 (B-42). */
 export const artifactLineCount = (star: string): number => Math.min(ARTIFACT_LINES, Math.floor(Number(star)));
 
-/**
- * What an artifact gives as the player has it, on this kind of march: its level row, its star row and the
- * random lines its star has opened, each read from the game's table (B-39, B-42). What any of them gives
- * against other players is added in the Prime Arena only, in the same additive bracket (B-41). A line's
- * capacity, authority or march speed is no total, and an option the artifact cannot roll gives nothing.
- */
-export function artifactBonus(
+/** What an artifact's figures add up from: its level row, its star row and the random lines its star has opened. */
+function artifactRows(
   record: ArtifactRecord,
   entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
-  marchType: SetupMarchType,
-): Omit<ArtifactRow, 'againstPlayers'> {
+): (ArtifactRow | undefined)[] {
   const rolled = (entry.lines ?? [])
     .slice(0, artifactLineCount(entry.star))
     .map((line) =>
       line === null ? undefined : byId(record.randomOptions, line.option)?.values[line.rarity],
     );
+  return [record.levels[String(entry.level)], record.stars[entry.star], ...rolled];
+}
+
+/**
+ * What an artifact gives as the player has it, on this kind of march: its level row, its star row and the
+ * random lines its star has opened, each read from the game's table (B-39, B-42). What any of them gives
+ * against other players is added in the Prime Arena only, in the same additive bracket (B-41). Capacity,
+ * authority and march speed are no total (capacity: `artifactCapacity`), and an option the artifact cannot
+ * roll gives nothing.
+ */
+export function artifactBonus(
+  record: ArtifactRecord,
+  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
+  marchType: SetupMarchType,
+): Pick<ArtifactRow, 'health' | 'strength' | 'special'> {
   const value = draft();
-  for (const row of [record.levels[String(entry.level)], record.stars[entry.star], ...rolled]) {
+  for (const row of artifactRows(record, entry)) {
     addContribution(value, row);
     if (marchType === 'arena') addContribution(value, row?.againstPlayers);
   }
   return { health: value.health, strength: value.strength, special: value.special };
+}
+
+/**
+ * The percent an artifact adds to what a squad can lead, per pool (B-44): the same rows and open lines. It
+ * counts in the Prime Arena maximum only (`arenaMaximum`), never in a march's housing.
+ */
+export function artifactCapacity(
+  record: ArtifactRecord,
+  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
+): ArtifactCapacity {
+  const value: ArtifactCapacity = {};
+  for (const row of artifactRows(record, entry)) addInto(value, row?.capacity);
+  return value;
 }
 
 // ---- VIP -------------------------------------------------------------------------------------------

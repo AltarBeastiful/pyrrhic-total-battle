@@ -181,7 +181,12 @@ export interface EquipmentRecord {
 export interface ArtifactRow extends Pick<BonusContribution, 'health' | 'strength' | 'special'> {
   /** Bonuses the game gives against other players only: they count in Prime Arena and nowhere else (B-41). */
   againstPlayers?: Pick<BonusContribution, 'health' | 'strength'>;
+  /** Percent added to what the squad can lead. No total of a march: it raises the Prime Arena maximum (B-44). */
+  capacity?: ArtifactCapacity;
 }
+
+/** The capacity pools an artifact can raise, in percent. */
+export type ArtifactCapacity = Partial<Record<'leadership' | 'dominance', number>>;
 
 /** The three values the game can roll for a random bonus, the smallest first (B-42). */
 export const ARTIFACT_RARITIES = ['rare', 'epic', 'legendary'] as const;
@@ -189,8 +194,6 @@ export type ArtifactRarity = (typeof ARTIFACT_RARITIES)[number];
 
 /** What one rolled random bonus gives: a row, plus the kinds only a random bonus carries so far. */
 export interface ArtifactOptionValue extends ArtifactRow {
-  /** Percent added to the army's capacity. No total counts it yet (B-44 counts it in Prime Arena). */
-  capacity?: Partial<Record<'leadership' | 'dominance', number>>;
   /** Figures the app never counts, kept so the option can be shown. */
   unused?: Partial<Record<'authority' | 'marchSpeed', number>>;
 }

@@ -525,6 +525,8 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `22 → 23`: typed artifact percentages are removed; level starts at 1 and star at 0.1 (B-39).
  * `23 → 24`: the arena gains the other capacity bonus % and an empty capacity basis (B-43).
  * `24 → 25`: the typed random bonus of an artifact becomes line 1, at the nearest value it can roll (B-42).
+ * `25 → 26`: nothing moves. The arena's capacity basis may now name the squad's capacity artifacts (B-44), and
+ * the version keeps an older build from dropping them.
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -552,6 +554,7 @@ export const migrations: MigrationTable = {
   22: (doc) => ({ ...doc, schemaVersion: 23, profiles: migrateProfiles(doc, artifactsFollowTable) }),
   23: (doc) => ({ ...doc, schemaVersion: 24, profiles: migrateProfiles(doc, addArenaCapacity) }),
   24: (doc) => ({ ...doc, schemaVersion: 25, profiles: migrateProfiles(doc, randomBonusBecomesLine) }),
+  25: (doc) => ({ ...doc, schemaVersion: 26 }),
 };
 
 /**
@@ -588,6 +591,7 @@ export const profileMigrations: MigrationTable = {
   22: artifactsFollowTable,
   23: addArenaCapacity,
   24: randomBonusBecomesLine,
+  25: identity,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -623,6 +627,7 @@ export const savedStackMigrations: MigrationTable = {
   22: identity,
   23: identity,
   24: identity,
+  25: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

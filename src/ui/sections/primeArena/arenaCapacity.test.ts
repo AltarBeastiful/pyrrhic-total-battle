@@ -8,7 +8,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { migrate } from '@/state/migrations';
-import type { RootDocument } from '@/state/schema';
+import type { ArtifactLine, ProfileSources, RootDocument } from '@/state/schema';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 
 import { usePrimeArenaStore } from './primeArenaStore';
@@ -260,4 +260,118 @@ test('the first opening over a march with captains fills their maximum, not the 
   });
   open();
   expect(pools()).toEqual([1500, 450]);
+});
+
+// ---- Zeus' Lightning (B-44): its levels give both pools 2.5 % at level 1, 5.6 % at 20 and 25 % at 60; a Leadership
+// or Dominance line gives its own pool 1, 2 or 5 % (rare, epic, legendary).
+
+type ArtifactEntry = ProfileSources['artifacts'][number];
+
+/** Records artifacts on the account, as an edit of any page does. */
+function ownArtifacts(...artifacts: ArtifactEntry[]): void {
+  useStore.getState().updateProfile(profile().id, { sources: { ...profile().sources, artifacts } });
+}
+
+/** Zeus' Lightning under the entry id `e-zeus`. */
+const zeus = (level: number, star = '0.1', lines?: ArtifactLine[]): ArtifactEntry => ({
+  id: 'e-zeus',
+  artifactId: 'zeus-lightning',
+  level,
+  star,
+  ...(lines === undefined ? {} : { lines }),
+});
+
+const equip = (...entryIds: string[]): void => {
+  arena().updateSetup((s) => ({ active: { ...s.active, artifacts: entryIds } }));
+};
+
+/** Aydae at level 100 (14000 / 3500) in an open arena. */
+function aydaeAboard(): void {
+  own([['aydae', 100]]);
+  open();
+}
+
+test('equipping Zeus raises both pools by its level bonus, and removing it lowers them again', () => {
+  ownArtifacts(zeus(20));
+  aydaeAboard();
+  expect(pools()).toEqual([14_000, 3500]);
+  equip('e-zeus');
+  expect(pools()).toEqual([14_784, 3696]);
+  equip();
+  expect(pools()).toEqual([14_000, 3500]);
+});
+
+const leadershipLine: ArtifactLine = { option: 'leadership', rarity: 'legendary' }; // 5 %
+const dominanceLine: ArtifactLine = { option: 'dominance', rarity: 'epic' }; // 2 %
+const damageLine: ArtifactLine = { option: 'doubleDamageChance', rarity: 'rare' };
+
+test('each pool takes Zeus’ level bonus, its own open lines and the other %, all added', () => {
+  ownArtifacts(zeus(1, '3.0', [leadershipLine, dominanceLine, leadershipLine]));
+  aydaeAboard();
+  arena().setOtherCapacity(10);
+  equip('e-zeus');
+  // Leadership: 2.5 + 5 + 5 + 10 = 22.5 %. Dominance: 2.5 + 2 + 10 = 14.5 %, 4007.5 floored.
+  expect(pools()).toEqual([17_150, 4007]);
+});
+
+test('a line the star has not opened does not count', () => {
+  ownArtifacts(zeus(1, '1.4', [dominanceLine, leadershipLine]));
+  aydaeAboard();
+  equip('e-zeus');
+  expect(pools()).toEqual([14_350, 3657]); // 2.5 %, and 4.5 % with line 1: 3657.5
+});
+
+test('a new level, star or capacity line of an equipped Zeus fills the new maximum', () => {
+  ownArtifacts(zeus(1));
+  aydaeAboard();
+  equip('e-zeus');
+  expect(pools()).toEqual([14_350, 3587]); // 2.5 %: 3587.5
+
+  /** The pools after typing over them and then editing the account, which the open page hears of. */
+  const after = (entry: ArtifactEntry): [number, number] => {
+    type(1, 2);
+    ownArtifacts(entry);
+    open();
+    return pools();
+  };
+  expect(after(zeus(20))).toEqual([14_784, 3696]);
+  expect(after(zeus(20, '1.0'))).toEqual([14_784, 3696]);
+  expect(after(zeus(20, '1.0', [leadershipLine]))).toEqual([15_484, 3696]); // 10.6 %
+  expect(after(zeus(20, '1.0', [dominanceLine]))).toEqual([14_784, 3766]); // 7.6 % for Dominance
+});
+
+test('typed values stay while Zeus’ capacity inputs do, a reload included', () => {
+  ownArtifacts(zeus(1, '3.0', [leadershipLine, damageLine]));
+  aydaeAboard();
+  equip('e-zeus');
+  type(1234, 77);
+  reload();
+  open();
+  expect(pools()).toEqual([1234, 77]);
+  // Another double damage line, a hidden line and the same capacity line in another place move no pool.
+  ownArtifacts(zeus(1, '3.0', [damageLine, damageLine, leadershipLine, dominanceLine]));
+  open();
+  expect(pools()).toEqual([1234, 77]);
+});
+
+test('Zeus on the march and not in the squad does not count, and the march’s housing is never written', () => {
+  const march = selectActiveSetup(useStore.getState())!;
+  const housing = { leadership: 900, authority: 50, dominance: 400 };
+  ownArtifacts(zeus(20));
+  aydaeAboard(); // seeds the squad from a march without artifacts
+  useStore.getState().updateActiveSetup({ housing, active: { ...march.active, artifacts: ['e-zeus'] } });
+  open();
+  arena().fillMaximum();
+  expect(pools()).toEqual([14_000, 3500]);
+  equip('e-zeus');
+  expect(pools()).toEqual([14_784, 3696]);
+  expect(selectActiveSetup(useStore.getState())!.housing).toEqual(housing);
+});
+
+test('an artifact without a capacity bonus moves no pool', () => {
+  ownArtifacts({ id: 'e-heart', artifactId: 'heart-of-the-forest', level: 20, star: '2.0' });
+  aydaeAboard();
+  type(1234, 77);
+  equip('e-heart');
+  expect(pools()).toEqual([1234, 77]);
 });

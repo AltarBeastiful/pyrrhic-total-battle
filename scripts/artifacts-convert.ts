@@ -201,12 +201,10 @@ function sum(bonuses: Decoded[]): ArtifactOptionValue {
   return out;
 }
 
-/** What a level or star row gives. Capacity (B-44), authority and march speed are not carried on a row. */
+/** What a level or star row gives. Authority and march speed are not carried on a row. */
 function row(effects: DumpEffect[], sets: UnitSets, record: string): ArtifactRow {
   return sum(
-    effects
-      .map((effect) => decode(effect, sets, record))
-      .filter((bonus) => bonus.bucket !== 'capacity' && bonus.bucket !== 'unused'),
+    effects.map((effect) => decode(effect, sets, record)).filter((bonus) => bonus.bucket !== 'unused'),
   );
 }
 

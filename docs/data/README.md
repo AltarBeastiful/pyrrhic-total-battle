@@ -180,10 +180,13 @@ A row that gives something against other players (Forest Crown, Mars' Twin Blade
   maps, and is empty when the app carries none of its effects.
 - `againstPlayers` holds the `health` and `strength` maps the row gives against other players only. In Prime
   Arena they are added to the others in the same additive bracket; nowhere else do they count.
+- `capacity` holds the percent the row adds to Leadership and Dominance (Zeus' Lightning's levels and two of its
+  random options). It raises the Prime Arena maximum of the squad carrying the artifact; it is no bonus total, and
+  no march's housing moves with it.
 - `randomOptions` lists every bonus the artifact can roll at random, each with exactly three values. A saved
   profile stores the option `id` and the rarity, never the figure, so **an `id` is never changed**. A value is
-  a row (`health`, `strength`, `special`, `againstPlayers`) or one of two kinds only these carry: `capacity`
-  (Leadership and Dominance, not counted yet) and `unused` (authority and march speed, never counted).
+  a row (`health`, `strength`, `special`, `againstPlayers`, `capacity`) or `unused` (authority and march speed,
+  never counted), a kind only these carry.
 
 How the converter reads the export:
 
@@ -192,8 +195,7 @@ How the converter reads the export:
 - The export names a unit set only by its size. Which size is which bonus key is learned from the random
   option texts of the same export ("Guardsmen's health"), so no size is written in the code.
 - Effects against other players go into `againstPlayers`.
-- On level and star rows, Leadership and Dominance capacity, authority and march speed are understood but not
-  carried yet.
+- On level and star rows, authority and march speed are understood but not carried.
 - An option's `id` is made from its effects (`armyStrengthAndHealth`, `armyStrengthAgainstPlayers`,
   `leadership`); the export's three entries of an option, one per rarity, become its three values.
 - It stops, naming the record, on an unknown effect kind, a unit set no text names or two keys claim, a
