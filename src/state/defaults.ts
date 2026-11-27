@@ -5,12 +5,7 @@
  * with fixed ids and timestamps so they are deterministic.
  */
 import versionJson from '../data/tables/version.json';
-import {
-  BUILTIN_PERMANENT_SOURCES,
-  DEFAULT_ARENA_STACKS,
-  DEFAULT_TALENT_GOAL_ORDER,
-  SCHEMA_VERSION,
-} from './schema';
+import { BUILTIN_PERMANENT_SOURCES, DEFAULT_TALENT_GOAL_ORDER, SCHEMA_VERSION } from './schema';
 import type {
   BattleSetup,
   BuiltinPermanentSource,
@@ -64,7 +59,6 @@ export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
     enemy: [],
     seeded: false,
     role: 'attacker',
-    maxStacks: DEFAULT_ARENA_STACKS,
     otherCapacity: 0,
     capacityBasis: null,
   };

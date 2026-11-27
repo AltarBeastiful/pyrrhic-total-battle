@@ -521,6 +521,17 @@ export function addArenaEnemy(profile: Record<string, unknown>): Record<string, 
   return next;
 }
 
+/**
+ * `27 → 28` for one profile: the arena's stack cap is dropped. The game has none of its own: a squad may field a
+ * stack of every troop type it has.
+ */
+export function dropArenaStackCap(profile: Record<string, unknown>): Record<string, unknown> {
+  const arena = profile.primeArena;
+  if (!isPlainObject(arena) || !('maxStacks' in arena)) return profile;
+  const { maxStacks: _maxStacks, ...rest } = arena;
+  return { ...profile, primeArena: rest };
+}
+
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
   if (!Array.isArray(doc.profiles)) return doc.profiles;
   return doc.profiles.map((profile) => (isPlainObject(profile) ? step(profile) : profile));
@@ -550,6 +561,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `25 → 26`: nothing moves. The arena's capacity basis may now name the squad's capacity artifacts (B-44), and
  * the version keeps an older build from dropping them.
  * `26 → 27`: the permanent sources gain the "Other Arena bonus" row and the arena an empty enemy (B-46).
+ * `27 → 28`: the arena's stack cap is dropped.
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -579,6 +591,7 @@ export const migrations: MigrationTable = {
   24: (doc) => ({ ...doc, schemaVersion: 25, profiles: migrateProfiles(doc, randomBonusBecomesLine) }),
   25: (doc) => ({ ...doc, schemaVersion: 26 }),
   26: (doc) => ({ ...doc, schemaVersion: 27, profiles: migrateProfiles(doc, addArenaEnemy) }),
+  27: (doc) => ({ ...doc, schemaVersion: 28, profiles: migrateProfiles(doc, dropArenaStackCap) }),
 };
 
 /**
@@ -617,6 +630,7 @@ export const profileMigrations: MigrationTable = {
   24: randomBonusBecomesLine,
   25: identity,
   26: addArenaEnemy,
+  27: dropArenaStackCap,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -654,6 +668,7 @@ export const savedStackMigrations: MigrationTable = {
   24: identity,
   25: identity,
   26: identity,
+  27: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

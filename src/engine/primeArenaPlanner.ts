@@ -6,9 +6,10 @@
  * typed enemy the set is that one army, carrying our totals: the match result, then rounds won, then the lead.
  * The role only decides who strikes first in each round: the match is the same for both sides, so is the ranking.
  *
- * A squad is up to `maxStacks` slots (default 8), each a unit and a count; every unit fills at most ONE slot (as
- * in the march calculator, a troop type is one stack) and any pool unit may be used, lower tiers included.
- * Housing bounds the squad: troops spend Leadership, monsters Dominance.
+ * A squad is a set of slots, each a unit and a count; every unit fills at most ONE slot (as in the march
+ * calculator, a troop type is one stack), any pool unit may be used, lower tiers included, and the game sets no
+ * other limit: there are as many stacks as troop types to field. Housing bounds the squad: troops spend
+ * Leadership, monsters Dominance.
  *
  * Search: hill climbs over slot counts from the default even fill (the game's own: the top tier of each pool,
  * evenly) and from seeded random restarts, sharing one evaluation budget and one deadline. Moves (first
@@ -18,7 +19,6 @@
  * itself is a candidate too, so the result is never worse than it on the ranking in use.
  */
 import type { UnitDef } from '../data/types';
-import { DEFAULT_ARENA_STACKS } from '../state/schema';
 import {
   primeArenaFielded,
   primeArenaFieldedMatch,
@@ -71,9 +71,7 @@ export interface PrimeArenaPlanInput {
   enemy?: readonly PrimeArenaStack[];
   /** Which side we play (default attacker): who strikes first in each round of the match shown. */
   role?: PrimeArenaRole;
-  /** Most stacks in the squad (default 8; the real limit is unknown). A unit is never in two stacks. */
-  maxStacks?: number;
-  /** Hard cap on search evaluations (default: none). */
+  /** Hard cap on search evaluations (default 20,000). */
   maxEvaluations?: number;
   /** Wall-clock cap in milliseconds (default 60 000). */
   maxMillis?: number;
@@ -113,10 +111,18 @@ export interface PrimeArenaPlan {
 }
 
 const DEFAULT_MILLIS = 60_000;
+/**
+ * Squads a search may score: the cap that binds first on any ordinary machine, so equal inputs give an equal plan
+ * whatever the machine's speed. It only bites from Guardsmen VI or so, where the troop types, and so the stacks a
+ * squad may have, multiply; theory-craft 376 loses no quality to it.
+ */
+const DEFAULT_EVALUATIONS = 20_000;
 const DEFAULT_RESTARTS = 4;
 /** Slice of a pool's budget moved per step, halved until it reaches the floor. */
 const FIRST_SLICE = 0.5;
 const LAST_SLICE = 1 / 64;
+/** Most units of one pool a random restart begins with: the climb adds the rest as they pay. */
+const RANDOM_START_UNITS = 5;
 
 const NO_SCORE: PrimeArenaSetScore = { wins: 0, draws: 0, roundsWon: 0, lead: 0, badLead: 0 };
 
@@ -200,8 +206,7 @@ function budgetOf(unit: UnitDef, housing: Housing): number {
 
 export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   const role = input.role ?? 'attacker';
-  const maxStacks = Math.max(1, Math.floor(input.maxStacks ?? DEFAULT_ARENA_STACKS));
-  const maxEvaluations = input.maxEvaluations ?? Infinity;
+  const maxEvaluations = input.maxEvaluations ?? DEFAULT_EVALUATIONS;
   const deadline = Date.now() + (input.maxMillis ?? DEFAULT_MILLIS);
   const restarts = input.restarts ?? DEFAULT_RESTARTS;
   // Only units a budget can pay for, and never a free one (a zero cost would be an unbounded stack).
@@ -259,62 +264,29 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     return all.filter((u) => units[u]!.tier === units[all[0]!]!.tier);
   };
 
-  /** Slots per pool: all top units when they fit, else a split of the cap in proportion to what each pool has. */
-  const slotShare = (): Record<string, number> => {
-    const share: Record<string, number> = {};
-    const total = pools.reduce((a, p) => a + topOf(p).length, 0);
-    if (total <= maxStacks) {
-      for (const p of pools) share[p] = topOf(p).length;
-      return share;
-    }
-    if (pools.length === 1 || maxStacks === 1) {
-      share[pools[0]!] = Math.min(maxStacks, topOf(pools[0]!).length);
-      return share;
-    }
-    let left = maxStacks;
-    for (const p of pools) {
-      share[p] = Math.max(1, Math.min(topOf(p).length, Math.round((maxStacks * topOf(p).length) / total)));
-      left -= share[p]!;
-    }
-    // Rounding may overshoot the cap: take the surplus from the pool with the most slots.
-    while (left < 0) {
-      const biggest = pools.reduce((a, p) => (share[p]! > share[a]! ? p : a));
-      share[biggest]! -= 1;
-      left += 1;
-    }
-    return share;
-  };
-
   /** The default even fill: each pool's budget spread evenly over its top units. */
-  const evenStart = (): Squad => {
-    const share = slotShare();
-    const squad: Squad = [];
-    for (const p of pools) {
-      const chosen = topOf(p).slice(0, share[p] ?? 0);
-      for (const u of chosen) squad.push({ u, n: Math.floor(budget(u) / chosen.length / costOf(u)) });
-    }
-    return canon(squad);
-  };
+  const evenStart = (): Squad =>
+    canon(
+      pools.flatMap((p) => {
+        const top = topOf(p);
+        return top.map((u) => ({ u, n: Math.floor(budget(u) / top.length / costOf(u)) }));
+      }),
+    );
 
   const randomStart = (rand: () => number): Squad => {
     const squad: Squad = [];
-    let slotsLeft = maxStacks;
-    pools.forEach((p, idx) => {
-      const reserve = pools.length - idx - 1;
-      const room = Math.max(1, slotsLeft - reserve);
-      if (slotsLeft <= 0) return;
-      const k = Math.min(slotsLeft, unitsOf(p).length, 1 + Math.floor(rand() * Math.min(room, 5)));
-      slotsLeft -= k;
+    for (const p of pools) {
+      const k = Math.min(unitsOf(p).length, 1 + Math.floor(rand() * RANDOM_START_UNITS));
       // Distinct units: a draw without replacement.
       const list = [...unitsOf(p)];
-      const members = Array.from({ length: Math.min(k, list.length) }, () => {
+      const members = Array.from({ length: k }, () => {
         const [u] = list.splice(Math.floor(rand() * list.length), 1);
         return { u: u!, w: 0.2 + rand() };
       });
       const total = members.reduce((a, m) => a + m.w, 0);
       for (const m of members)
         squad.push({ u: m.u, n: Math.floor((budget(m.u) * (m.w / total)) / costOf(m.u)) });
-    });
+    }
     return canon(squad);
   };
 
@@ -337,22 +309,20 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
         trial[b]!.n += give;
         yield canon(trial);
       }
-      // Retype the whole slot, and split a slice of it into a new slot (room permitting). Both only to a unit
-      // the squad does not field yet: a unit is one stack.
+      // Retype the whole slot, and split a slice of it into a new slot. Both only to a unit the squad does not
+      // field yet: a unit is one stack.
       for (let u = 0; u < units.length; u += 1) {
         if (poolOf(u) !== pool || squad.some((s) => s.u === u)) continue;
         const retyped = squad.map((s) => ({ ...s }));
         retyped[a]!.u = u;
         retyped[a]!.n = Math.floor(fromMoney / costOf(u));
         if (retyped[a]!.n > 0) yield canon(retyped);
-        if (squad.length < maxStacks) {
-          const give = Math.floor((take * costOf(from.u)) / costOf(u));
-          if (give <= 0) continue;
-          const trial = squad.map((s) => ({ ...s }));
-          trial[a]!.n -= take;
-          trial.push({ u, n: give });
-          yield canon(trial);
-        }
+        const give = Math.floor((take * costOf(from.u)) / costOf(u));
+        if (give <= 0) continue;
+        const split = squad.map((s) => ({ ...s }));
+        split[a]!.n -= take;
+        split.push({ u, n: give });
+        yield canon(split);
       }
     }
   }
@@ -403,7 +373,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
           trial[i]!.n += Math.floor(left / costOf(slot.u));
           consider(trial);
         });
-        if (newStacks && squad.length < maxStacks) {
+        if (newStacks) {
           for (const u of unitsOf(p)) {
             if (costOf(u) <= left && !squad.some((s) => s.u === u))
               consider([...squad.map((x) => ({ ...x })), { u, n: Math.floor(left / costOf(u)) }]);

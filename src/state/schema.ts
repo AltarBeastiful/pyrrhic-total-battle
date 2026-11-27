@@ -32,7 +32,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 27;
+export const SCHEMA_VERSION = 28;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -532,8 +532,6 @@ export type Talents = z.infer<typeof talentsSchema>;
  * the rules' defaults; `seeded` records that the setup was first cloned from the active march, so a reload keeps
  * what was typed. The plan is a view result and is not stored.
  */
-export const DEFAULT_ARENA_STACKS = 8;
-export const MAX_ARENA_STACKS = 16;
 
 /** The arena squad takes five captains and five artifacts, where a calculator march takes three of each. */
 export const ARENA_MAX_CAPTAINS = 5;
@@ -584,8 +582,6 @@ export const primeArenaSchema = z.object({
   seeded: z.boolean(),
   /** Which side the plan plays (schema v21); fixes who strikes first in each round. */
   role: z.enum(['attacker', 'defender']).catch('attacker'),
-  /** Most stacks in the squad (schema v21); the real limit is unknown, 8 is the planner's default. */
-  maxStacks: z.number().int().min(1).max(MAX_ARENA_STACKS).catch(DEFAULT_ARENA_STACKS),
   /** Capacity bonus % the app has no source for (schema v24), added to the captains' Leadership and Dominance. */
   otherCapacity: z.number().min(0).max(MAX_OTHER_CAPACITY).catch(0),
   /** `null` until the page first reads this arena: the saved pools stay as typed, unless both are zero. */

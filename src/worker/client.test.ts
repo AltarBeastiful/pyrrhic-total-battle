@@ -107,12 +107,11 @@ describe('inline client', () => {
       housing: { leadership: 4100, authority: 0, dominance: 0 },
       totals: emptyTotals(),
       role: 'defender',
-      maxStacks: 2,
       maxEvaluations: 20,
     });
     expect(plan.role).toBe('defender');
     expect(plan.mode).toBe('allRound');
-    expect(plan.stacks.length).toBeLessThanOrEqual(2);
+    expect(plan.stacks.length).toBeGreaterThan(0);
   });
 
   test('an aborted signal cancels a plan too', async () => {

@@ -1087,7 +1087,7 @@ describe('migrateProfile', () => {
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 19)).toEqual(once);
     });
   });
-  describe('v20 → v21 gives the arena a role and a stack cap', () => {
+  describe('v20 → v21 gives the arena a role (and a stack cap, until v28 drops it)', () => {
     const v20Doc = (): Record<string, unknown> => {
       const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
       const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
@@ -1096,16 +1096,14 @@ describe('migrateProfile', () => {
       return { ...doc, schemaVersion: 20 };
     };
 
-    it('adds attacker and eight stacks, the planner defaults', () => {
-      const arena = migrate(v20Doc()).profiles[0]!.primeArena;
-      expect(arena.role).toBe('attacker');
-      expect(arena.maxStacks).toBe(8);
+    it('adds attacker, the planner default', () => {
+      expect(migrate(v20Doc()).profiles[0]!.primeArena.role).toBe('attacker');
     });
 
     it('keeps a role already typed, and upgrades an exported v20 profile once', () => {
       const profile = (v20Doc().profiles as Record<string, unknown>[])[0]!;
       const once = migrateProfile(profile, 20);
-      expect(once.primeArena.maxStacks).toBe(8);
+      expect(once.primeArena.role).toBe('attacker');
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 20)).toEqual(once);
     });
   });
@@ -1129,7 +1127,7 @@ describe('migrateProfile', () => {
       const profile = migrate(v21Doc()).profiles[0]!;
       expect('troops' in profile.primeArena).toBe(false);
       expect(profile.troops).toEqual(before);
-      expect(profile.primeArena).toMatchObject({ role: 'attacker', maxStacks: 8, seeded: false });
+      expect(profile.primeArena).toMatchObject({ role: 'attacker', seeded: false });
     });
 
     it('upgrades an exported v21 profile once', () => {
@@ -1313,7 +1311,7 @@ describe('migrateProfile', () => {
       );
       delete profile.primeArena.enemy;
       profile.primeArena.toggles = { monuments: false };
-      profile.primeArena.maxStacks = 6;
+      profile.primeArena.otherCapacity = 6;
       return { ...doc, schemaVersion: 26 };
     };
 
@@ -1339,6 +1337,34 @@ describe('migrateProfile', () => {
       const once = migrateProfile(profile, 26);
       expect(once.primeArena.enemy).toEqual([]);
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 26)).toEqual(once);
+    });
+  });
+
+  describe('v27 → v28: the arena has no stack cap', () => {
+    const v27Doc = (): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!;
+      profile.primeArena.maxStacks = 6;
+      profile.primeArena.role = 'defender';
+      return { ...doc, schemaVersion: 27 };
+    };
+
+    it('drops the saved cap and keeps the rest, without a dropped-field warning', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const doc = v27Doc();
+      const { maxStacks: _cap, ...kept } = (doc.profiles as { primeArena: Record<string, unknown> }[])[0]!
+        .primeArena;
+      const migrated = migrate(doc);
+      expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+      expect(migrated.profiles[0]!.primeArena).toEqual(kept);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an exported v27 profile once', () => {
+      const profile = (v27Doc().profiles as Record<string, unknown>[])[0]!;
+      const once = migrateProfile(profile, 27);
+      expect('maxStacks' in once.primeArena).toBe(false);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 27)).toEqual(once);
     });
   });
 });

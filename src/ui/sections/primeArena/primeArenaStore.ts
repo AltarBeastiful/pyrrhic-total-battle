@@ -11,7 +11,7 @@
  *
  * `generate` plans on a calculation worker of the arena's own (B-37): the planner may search for up to a minute,
  * so the page flips to `running` and stays responsive while the job runs. Where the platform has no worker the
- * client runs the same job on the main thread (tests, old browsers). The role and the stack cap are inputs like the
+ * client runs the same job on the main thread (tests, old browsers). The role is an input like the
  * rest: saved with the account, part of the fingerprint. So is the typed enemy (B-46): empty plans all-round,
  * otherwise Generate counter-picks it.
  */
@@ -29,7 +29,7 @@ import {
 } from '@/engine/primeArenaInputs';
 import type { PrimeArenaPlan, PrimeArenaRole } from '@/engine/primeArenaPlanner';
 import { defaultPrimeArena } from '@/state/defaults';
-import { DEFAULT_ARENA_STACKS, MAX_ARENA_STACKS, MAX_OTHER_CAPACITY } from '@/state/schema';
+import { MAX_OTHER_CAPACITY } from '@/state/schema';
 import type {
   ArenaCapacityBasis,
   ArenaEnemyStack,
@@ -59,8 +59,6 @@ export interface ArenaInputs {
   enemy: ArenaEnemyStack[];
   /** Which side the plan plays: who strikes first in each round. */
   role: PrimeArenaRole;
-  /** Most stacks in the squad; the game's real limit is unknown. */
-  maxStacks: number;
   /** Capacity bonus % the app has no source for, added to the captains' Leadership and Dominance. */
   otherCapacity: number;
   /** What the pools were last filled from; `null` until the page first reads this arena. */
@@ -69,17 +67,16 @@ export interface ArenaInputs {
 
 /** The inputs out of the store's state. */
 export function pickInputs(from: ArenaInputs): ArenaInputs {
-  const { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis } = from;
-  return { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis };
+  const { toggles, setup, enemy, seeded, role, otherCapacity, capacityBasis } = from;
+  return { toggles, setup, enemy, seeded, role, otherCapacity, capacityBasis };
 }
 
 /** The inputs as one object that changes only when one of them does, for hooks that depend on them. */
 export function useArenaInputs(): ArenaInputs {
-  const { toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis } =
-    usePrimeArenaStore();
+  const { toggles, setup, enemy, seeded, role, otherCapacity, capacityBasis } = usePrimeArenaStore();
   return useMemo(
-    () => ({ toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis }),
-    [toggles, setup, enemy, seeded, role, maxStacks, otherCapacity, capacityBasis],
+    () => ({ toggles, setup, enemy, seeded, role, otherCapacity, capacityBasis }),
+    [toggles, setup, enemy, seeded, role, otherCapacity, capacityBasis],
   );
 }
 
@@ -108,7 +105,7 @@ function savedToggles(saved: Record<string, boolean>): PrimeArenaToggles {
  */
 export function arenaFingerprint(
   profile: Profile,
-  inputs: Pick<ArenaInputs, 'toggles' | 'setup' | 'enemy' | 'role' | 'maxStacks'>,
+  inputs: Pick<ArenaInputs, 'toggles' | 'setup' | 'enemy' | 'role'>,
 ): string {
   return JSON.stringify([
     profile.troops,
@@ -116,7 +113,6 @@ export function arenaFingerprint(
     inputs.setup,
     inputs.enemy,
     inputs.role,
-    inputs.maxStacks,
     profile.sources,
     profile.talents.ranks,
   ]);
@@ -137,7 +133,6 @@ function freshInputs(): ArenaInputs {
     enemy: [],
     seeded: false,
     role: 'attacker',
-    maxStacks: DEFAULT_ARENA_STACKS,
     otherCapacity: fresh.otherCapacity,
     capacityBasis: fresh.capacityBasis,
   };
@@ -203,7 +198,6 @@ interface PrimeArenaState extends ArenaInputs {
   setEnemyCount: (unitId: string, count: number | null) => void;
   /** Takes the whole typed enemy away: back to the all-round plan. */
   clearEnemy: () => void;
-  setMaxStacks: (maxStacks: number) => void;
   /** The other capacity bonus %, held to two decimals between 0 and `MAX_OTHER_CAPACITY`. */
   setOtherCapacity: (percent: number) => void;
   /** Puts the squad's maximum back into Leadership and Dominance. */
@@ -295,11 +289,6 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   setRole: (role) => {
     set({ role });
     save({ ...get(), role });
-  },
-  setMaxStacks: (value) => {
-    const maxStacks = Math.min(MAX_ARENA_STACKS, Math.max(1, Math.round(value)));
-    set({ maxStacks });
-    save({ ...get(), maxStacks });
   },
   setEnemyCount: (unitId, count) => {
     const held = get().enemy;
@@ -397,7 +386,7 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
   generate: (profile, given) => {
     if (get().running) return;
     const inputs = pickInputs(get());
-    const { role, maxStacks } = inputs;
+    const { role } = inputs;
     const budget = given ?? get().budget;
     const mine = ++generation;
     set({ running: true, failed: false });
@@ -410,7 +399,6 @@ export const usePrimeArenaStore = create<PrimeArenaState>()((set, get) => ({
         housing: prepared.housing,
         totals: prepared.totals,
         role,
-        maxStacks,
         ...budget,
       })
       .then(
@@ -456,7 +444,6 @@ function hydrate(profile: Profile | undefined): void {
     enemy: saved.enemy,
     seeded: saved.seeded,
     role: saved.role,
-    maxStacks: saved.maxStacks,
     otherCapacity: saved.otherCapacity,
     capacityBasis: saved.capacityBasis,
   };

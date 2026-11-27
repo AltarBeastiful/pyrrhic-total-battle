@@ -34,14 +34,11 @@ describe('planPrimeArena', () => {
     expect(plan.stacks.some((s) => s.unit.kind === 'monster')).toBe(false);
   });
 
-  it('respects maxStacks, which is 8 by default', () => {
-    for (const maxStacks of [1, 2, 3]) {
-      const plan = planPrimeArena(arenaInput({ maxStacks, maxEvaluations: 300 }));
-      expect(plan.stacks.length).toBeLessThanOrEqual(maxStacks);
-      expect(plan.start.stacks.length).toBeLessThanOrEqual(maxStacks);
-      expect(plan.stacks.length).toBeGreaterThan(0);
-    }
-    expect(planPrimeArena(arenaInput({ maxEvaluations: 300 })).stacks.length).toBeLessThanOrEqual(8);
+  it('has no stack cap: the even fill of level V fields all twelve top-tier units', () => {
+    const pool = primeArenaPool(troopsAt(5));
+    const { start } = planPrimeArena(arenaInput({ pool, level: 5, maxEvaluations: 1 }));
+    expect(start.stacks).toHaveLength(12);
+    expect(start.stacks.every((s) => s.unit.tier === 5)).toBe(true);
   });
 
   it('starts from the default even fill: the top tiers, each pool split evenly by housing', () => {
@@ -56,10 +53,10 @@ describe('planPrimeArena', () => {
     }
   });
 
-  it('adds no unit to the even fill when the top tiers leave room under the stack cap', () => {
-    // Eight top-tier units under a cap of twelve, and a leftover a lower-tier monster could be bought with.
+  it('adds no unit to the even fill, whatever is left over', () => {
+    // A leftover a lower-tier monster could be bought with.
     const housing = { leadership: 20_038, authority: 0, dominance: 3_024 };
-    const { start } = planPrimeArena(arenaInput({ housing, maxStacks: 12, maxEvaluations: 1 }));
+    const { start } = planPrimeArena(arenaInput({ housing, maxEvaluations: 1 }));
     expect(start.stacks.map((s) => s.unit.id).sort()).toEqual(
       evenArenaArmy(4, housing)
         .map((s) => s.unit.id)
@@ -76,6 +73,19 @@ describe('planPrimeArena', () => {
     expect(plan.evaluations).toBeLessThanOrEqual(5);
     expect(plan.stacks.length).toBeGreaterThan(0);
   });
+
+  it('stops at a fixed number of squads by default, so a slower machine plans the same', () => {
+    // Level IX offers the most troop types; one typed enemy keeps each squad cheap to score.
+    const enemy = evenArenaArmy(9, arenaInput().housing);
+    const plan = planPrimeArena({
+      pool: primeArenaPool(troopsAt(9)),
+      level: 9,
+      housing: arenaInput().housing,
+      totals: arenaInput().totals,
+      enemy,
+    });
+    expect(plan.evaluations).toBeLessThanOrEqual(20_000);
+  }, 120_000);
 
   it('honours the wall-clock cap', () => {
     const started = Date.now();

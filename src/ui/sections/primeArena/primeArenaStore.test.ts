@@ -43,16 +43,14 @@ test('inputs saved in a profile fill the store when that document arrives', () =
     },
     seeded: true,
     role: 'defender',
-    maxStacks: 5,
     otherCapacity: 25,
     capacityBasis: { captains: [], other: 25 },
   };
   root.profiles = [profile];
   root.activeProfileId = profile.id;
   useStore.getState().replaceDocument(root);
-  const { setup, toggles, seeded, role, maxStacks } = usePrimeArenaStore.getState();
+  const { setup, toggles, seeded, role } = usePrimeArenaStore.getState();
   expect(role).toBe('defender');
-  expect(maxStacks).toBe(5);
   expect(usePrimeArenaStore.getState().enemy).toEqual([{ unitId: 'rider-4', count: 12 }]);
   expect(usePrimeArenaStore.getState().otherCapacity).toBe(25);
   expect(usePrimeArenaStore.getState().capacityBasis).toEqual({ captains: [], other: 25 });
@@ -135,30 +133,21 @@ test('the plan is not saved', () => {
   expect(JSON.stringify(profile)).not.toContain('planLevel');
 });
 
-test('the role and the stack cap are saved with the account and default to attacker and eight', () => {
-  expect(usePrimeArenaStore.getState()).toMatchObject({ role: 'attacker', maxStacks: 8 });
+test('the role is saved with the account and defaults to attacker; there is no stack cap to save', () => {
+  expect(usePrimeArenaStore.getState().role).toBe('attacker');
   usePrimeArenaStore.getState().setRole('defender');
-  usePrimeArenaStore.getState().setMaxStacks(6);
-  expect(selectActiveProfile(useStore.getState())?.primeArena).toMatchObject({
-    role: 'defender',
-    maxStacks: 6,
-  });
-  usePrimeArenaStore.getState().setMaxStacks(0);
-  expect(usePrimeArenaStore.getState().maxStacks).toBe(1);
-  usePrimeArenaStore.getState().setMaxStacks(99);
-  expect(usePrimeArenaStore.getState().maxStacks).toBe(16);
+  const saved = selectActiveProfile(useStore.getState())!.primeArena;
+  expect(saved.role).toBe('defender');
+  expect('maxStacks' in saved).toBe(false);
+  expect('maxStacks' in usePrimeArenaStore.getState()).toBe(false);
 });
 
-test('the fingerprint moves with the role and the cap, so the bar calls the plan stale', () => {
-  const key = () => {
-    return arenaFingerprint(selectActiveProfile(useStore.getState())!, usePrimeArenaStore.getState());
-  };
+test('the fingerprint moves with the role, so the bar calls the plan stale', () => {
+  const key = () =>
+    arenaFingerprint(selectActiveProfile(useStore.getState())!, usePrimeArenaStore.getState());
   const before = key();
   usePrimeArenaStore.getState().setRole('defender');
-  const asDefender = key();
-  expect(asDefender).not.toBe(before);
-  usePrimeArenaStore.getState().setMaxStacks(5);
-  expect(key()).not.toBe(asDefender);
+  expect(key()).not.toBe(before);
 });
 
 test('the fingerprint moves with the account’s Guardsmen level, so the plan made at another level is stale', () => {

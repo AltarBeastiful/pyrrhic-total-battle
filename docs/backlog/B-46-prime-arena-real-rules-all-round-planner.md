@@ -8,7 +8,7 @@ related: ['[[B-37-prime-arena-report-faithful-planner]]', '[[B-38-game-data-arti
 
 # B-46 Prime Arena: the game's own battle rules and an all-round planner
 
-Status: `done` (see Comments; one question open for the owner). From the 2026-11-27 grilling on two battle reports against one defender: the planner's squad lost 0-2, the game's default fill won 2-0. Evidence: theory-craft experiments 370 to 375 (transcript of the four rounds, fitted bonuses, target rule, forward replay, squad search). Cite [[design-rules]] in any UI brief. Supersedes the targeting, Arena source and opponent panel decisions of [[B-37-prime-arena-report-faithful-planner]].
+Status: `done` (see Comments). From the 2026-11-27 grilling on two battle reports against one defender: the planner's squad lost 0-2, the game's default fill won 2-0. Evidence: theory-craft experiments 370 to 375 (transcript of the four rounds, fitted bonuses, target rule, forward replay, squad search). Cite [[design-rules]] in any UI brief. Supersedes the targeting, Arena source and opponent panel decisions of [[B-37-prime-arena-report-faithful-planner]].
 
 Standing criteria: the benchmark rating does not regress (only the owner re-bases it); tests are written once, red first, then green.
 
@@ -162,6 +162,15 @@ target = max effective; equal effective (relative 1e-6) → max threat
 
 Checked: unit suite (2917 pass), end-to-end (71 pass; "what to upgrade next" and "talents journey" fail on phone and desktop, as before this work), and the page at 1400 and 390 px in both schemes with no console error and no sideways overflow.
 
-**Open question for the owner.** From Guardsmen level V up, an assumed enemy (and the even army of the battle log) fields all its top-tier stacks, 12 at levels V and VI, while our squad is held to "Most stacks" (8 by default). How many stacks may a squad field in game at those levels? If the limit binds both sides, the enemies need the same cap, and so does the order in which the even fill drops units under it. Quality on unseen enemies was measured at level IV only.
-
 **Left as found.** Experiments 370 to 375 are untracked; 370 and 371 use the removed panel API and 372 to 374 did not typecheck before, so `pnpm typecheck` fails in a checkout that holds them.
+
+### No stack cap, 2026-11-27
+
+Owner: the stacks of a squad are however many troop types the player has available. This replaces "Unchanged: stack cap setting (default 8)": the setting and its field are removed (schema v28), and a squad may field every unit of the pool, each once. The planner now stops at 20,000 scored squads by default (and still at 60 s), so equal inputs give an equal plan on a slower machine.
+
+Experiment 376, 200 unseen enemies per level, wins of the all-round plan (old 8-stack cap in brackets): II 91 (91), III 87 (91), IV 93 (93), V 83 (86), VI 74 (71), VII 94 (68), VIII 99 (82), IX 100 (81). Level IV, the owner's, picks the same squad as before. Planning takes up to 3 s at level IV and 25 s at levels V to IX on this machine.
+
+From level VII the squad fields 22 to 27 stacks against assumed enemies of 12 (top tier only, as specified). Turn order between sides with such different stack counts was never seen in a report (both had 8), so treat those figures with caution.
+
+Tests rewritten for it: planner "respects maxStacks" and the store, page, share, worker and migration cases that named the cap.
+

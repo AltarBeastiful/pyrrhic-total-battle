@@ -199,7 +199,6 @@ describe('profile links', () => {
       ],
       seeded: true,
       role: 'defender',
-      maxStacks: 6,
       otherCapacity: 12.5,
       capacityBasis: {
         captains: [{ captainId: 'aydae', level: 40 }],
@@ -245,7 +244,6 @@ describe('profile links', () => {
       enemy: [],
       seeded: false,
       role: 'attacker',
-      maxStacks: 8,
       otherCapacity: 0,
       capacityBasis: null,
     });

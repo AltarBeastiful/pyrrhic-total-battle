@@ -133,7 +133,11 @@ describe.skipIf(!process.env.ARENA_376)('376 the shipped planner', () => {
       `${m.winner}; ${m.rounds.map((r) => `${pct(r.attacker.share)}/${pct(r.defender.share)}`).join(' | ')}`,
     );
 
-    out.push('\n## time to plan at each Guardsmen level (all-round, default budget)');
+    out.push(
+      '\n## each Guardsmen level (all-round, default budget; 200 assumed enemies unseen by the search)',
+    );
+    out.push('\n| level | stacks | time | wins | mean lead | bad-case lead | even fill: wins (lead) |');
+    out.push('|---|---|---|---|---|---|---|');
     for (const level of [2, 3, 4, 5, 6, 7, 8, 9]) {
       const started = Date.now();
       const at = planPrimeArena({
@@ -142,8 +146,12 @@ describe.skipIf(!process.env.ARENA_376)('376 the shipped planner', () => {
         housing: HOUSING,
         totals: OURS,
       });
+      const time = ((Date.now() - started) / 1000).toFixed(1);
+      const unseen = assumedEnemies({ level, housing: HOUSING, totals: OURS, seed: 987_654, count: 200 });
+      const mine = scorePrimeArenaSet(at.stacks, OURS, 'attacker', unseen);
+      const fill = scorePrimeArenaSet(at.start.stacks, OURS, 'attacker', unseen);
       out.push(
-        `level ${String(level)}: ${((Date.now() - started) / 1000).toFixed(1)} s, ${String(at.evaluations)} squads, wins ${pct(at.setScore.wins)} % (default fill ${pct(at.start.setScore.wins)} %), lead ${pct(at.setScore.lead)} (${pct(at.start.setScore.lead)})`,
+        `| ${String(level)} | ${String(at.stacks.length)} | ${time} s, ${String(at.evaluations)} squads | ${pct(mine.wins)} % | ${pct(mine.lead)} | ${pct(mine.badLead)} | ${pct(fill.wins)} % (${pct(fill.lead)}) |`,
       );
     }
     writeFileSync('tools/theorycraft/out/376-arena-shipped-planner.md', `${out.join('\n')}\n`);

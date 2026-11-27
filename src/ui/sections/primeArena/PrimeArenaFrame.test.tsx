@@ -408,17 +408,11 @@ test('the role is the calculator’s segmented control, saved, and a defender pl
   expect(usePrimeArenaStore.getState().plan?.role).toBe('defender');
 });
 
-test('the stack cap is a typed figure, saved, and the planner is held to it', async () => {
+test('there is no stack cap to type: a squad may field every troop type it has', async () => {
   renderArena();
-  await screen.findByRole('radiogroup', { name: /role/i });
-  expect((screen.getByRole('textbox', { name: /most stacks/i }) as HTMLInputElement).value).toBe('8');
-  typeInto(/most stacks/i, '2');
-  expect(usePrimeArenaStore.getState().maxStacks).toBe(2);
-  typeInto(/leadership/i, '200000');
-  typeInto(/dominance/i, '100000');
-  fireEvent.click(screen.getByRole('button', { name: /^generate match$/i }));
-  await waitFor(() => expect(usePrimeArenaStore.getState().plan).not.toBeNull(), { timeout: 8000 });
-  expect(usePrimeArenaStore.getState().plan?.stacks.length).toBeLessThanOrEqual(2);
+  const role = await screen.findByRole('region', { name: 'Role' });
+  expect(within(role).queryByRole('textbox')).toBeNull();
+  expect(screen.queryByText(/most stacks/i)).toBeNull();
 });
 
 test('narrow, the setup is the page, the bar carries the answer and the sheet holds the match', async () => {
