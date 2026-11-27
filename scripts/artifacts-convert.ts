@@ -10,6 +10,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { convertCapacities, LEVELS_FILE } from './capacities-convert.ts';
 import { canonicalText, TABLES_DIR } from './data-tables.ts';
 import { ARTIFACT_RARITIES } from '../src/data/types.ts';
 import type {
@@ -327,9 +328,14 @@ async function main() {
   }
   const dump = JSON.parse(await readFile(path.join(source, EXPORT_FILE), 'utf8')) as ArtifactDump;
   const rows = convertArtifacts(dump);
+  // Both tables come from the one export; both are converted before either is written.
+  const capacities = convertCapacities(await readFile(path.join(source, LEVELS_FILE), 'utf8'));
   const text = await canonicalText('artifacts.json', rows as never);
+  const capacityText = await canonicalText('capacities.json', capacities as never);
   await writeFile(path.join(TABLES_DIR, 'artifacts.json'), text);
+  await writeFile(path.join(TABLES_DIR, 'capacities.json'), capacityText);
   console.warn(`artifacts.json: ${rows.length} artifacts from ${source}`);
+  console.warn(`capacities.json: captains and the hero from ${source}`);
 }
 
 if (process.argv[1]?.endsWith('artifacts-convert.ts')) await main();

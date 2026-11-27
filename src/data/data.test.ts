@@ -27,6 +27,7 @@ import researchTroopsJson from '../../docs/research/totalstack-data/troops.json'
 import {
   artifacts,
   battleSelection,
+  capacities,
   captains,
   customMercenaryToUnit,
   equipment,
@@ -52,6 +53,7 @@ import { QUALITIES, type Quality } from './types.ts';
 const TABLES: Record<TableFile, unknown> = {
   'artifacts.json': artifacts,
   'battleSelection.json': battleSelection,
+  'capacities.json': capacities,
   'captains.json': captains,
   'equipment.json': equipment,
   'events.json': events,

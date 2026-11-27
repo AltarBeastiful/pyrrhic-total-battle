@@ -7,7 +7,8 @@
  *   calculator uses (five captains, no hero, no march type, only the sources the arena counts);
  * - **the answer** (`ArenaMatch`, in the March pane's place and, below 1200 px, in the sheet the bar opens);
  * - **the bars** (`ArenaBars`): the calculator's command bar and phone bar over a frame config with the two
- *   pools the arena has, no objective, and a Generate that plans the attack.
+ *   pools the arena has, the other capacity bonus % and "Max" beside them (the squad's maximum fills the pools,
+ *   B-43), no objective, and a Generate that plans the attack.
  */
 import { Button, Stack, Text, VisuallyHidden } from '@mantine/core';
 import { ChevronUp } from 'lucide-react';
@@ -21,7 +22,7 @@ import {
 } from '@/engine/primeArenaInputs';
 import type { Pool } from '@/engine/types';
 import { SOURCE_LABELS } from '@/state/defaults';
-import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS } from '@/state/schema';
+import { ARENA_MAX_ARTIFACTS, ARENA_MAX_CAPTAINS, MAX_OTHER_CAPACITY } from '@/state/schema';
 import type { SetupBinding } from '@/state/setupBinding';
 import { selectActiveProfile, selectActiveSetup, useStore } from '@/state/store';
 import { Glyph } from '@/ui/domain';
@@ -150,7 +151,8 @@ function blockedReason(hasProfile: boolean, leadership: number, dominance: numbe
 function useArenaBar(): { frame: BarFrame; press: () => void } {
   const profile = useStore(selectActiveProfile);
   const inputs = useArenaInputs();
-  const { running, plan, planKey, updateSetup, generate } = usePrimeArenaStore();
+  const { running, plan, planKey, updateSetup, setOtherCapacity, fillMaximum, generate } =
+    usePrimeArenaStore();
   const { leadership, dominance } = inputs.setup.housing;
   const hint = blockedReason(profile !== undefined, leadership, dominance);
   const fingerprint = useMemo(
@@ -185,6 +187,15 @@ function useArenaBar(): { frame: BarFrame; press: () => void } {
     message: said.length === 0 ? null : said.join(' '),
     setPool: (pool, value) => {
       updateSetup((s) => ({ housing: { ...s.housing, [pool]: value ?? 0 } }));
+    },
+    maximum: {
+      label: 'Other capacity bonus %',
+      short: 'Bonus',
+      percent: inputs.otherCapacity,
+      max: MAX_OTHER_CAPACITY,
+      setPercent: setOtherCapacity,
+      fillLabel: 'Max Leadership and Dominance',
+      fill: fillMaximum,
     },
     objective: null,
     form: barForm(press),

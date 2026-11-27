@@ -249,6 +249,19 @@ export interface VipRecord {
   bonus: BonusContribution;
 }
 
+/** Leadership, authority and dominance at each level, 1 to 600: index = level − 1. */
+export interface CapacityLadder {
+  leadership: number[];
+  authority: number[];
+  dominance: number[];
+}
+
+/** What a captain (every captain holds the same figures) and the hero can lead at each level (B-43). */
+export interface CapacityTable {
+  captain: CapacityLadder;
+  hero: CapacityLadder;
+}
+
 export interface TempleTable {
   /** Temple level (1..45) → revival cost divisor (1.04 … 5.91). Level 0 = 1. */
   multiplier: Record<string, number>;

@@ -11,7 +11,8 @@
  *   with its value selected so the next keystroke replaces it, and `Enter` or leaving it puts the
  *   figure back (design rule 9). The glyph and the pool's short name stay put through all of it — an
  *   emoji is never the only label, and a chip that loses its word when it opens is a chip you have to
- *   remember the meaning of.
+ *   remember the meaning of. A fight that works its pools out adds a chip for the bonus on them, which
+ *   types the same way, and "Max" (`BarFrame.maximum`).
  * - **row 2** — the answer in one line, whose whole half opens the March sheet, and Generate.
  *
  * Sticky rather than fixed: as the last block of the frame it is pinned to the bottom edge while
@@ -28,7 +29,7 @@
  */
 import { NumberInput, Popover, UnstyledButton } from '@mantine/core';
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { Pool } from '@/engine/types';
 import { Glyph } from '@/ui/domain';
@@ -59,7 +60,7 @@ export function BottomBar(props: BottomBarProps) {
 
 /** The phone bar over a frame config. */
 export function BottomBarView({ frame, onOpenRecap, pulse = 0 }: BottomBarProps & { frame: BarFrame }) {
-  const { housing, problems, message, setPool, objective, form } = frame;
+  const { housing, problems, message, setPool, maximum, objective, form } = frame;
 
   return (
     /* The same form the desktop bar is (`CommandBar.tsx`): `Enter` in a chip's field puts the
@@ -83,6 +84,28 @@ export function BottomBarView({ frame, onOpenRecap, pulse = 0 }: BottomBarProps 
               }}
             />
           ))}
+          {maximum !== undefined && (
+            <>
+              <FigureChip
+                label={maximum.label}
+                short={maximum.short}
+                value={maximum.percent}
+                shown={`${String(maximum.percent)} %`}
+                spoken={`${String(maximum.percent)} %`}
+                decimal
+                max={maximum.max}
+                onChange={maximum.setPercent}
+              />
+              <UnstyledButton
+                type="button"
+                className={classes.maxChip}
+                aria-label={maximum.fillLabel}
+                onClick={maximum.fill}
+              >
+                Max
+              </UnstyledButton>
+            </>
+          )}
           {objective !== null && (
             <ObjectiveChip
               value={objective.priority}
@@ -128,21 +151,67 @@ interface HousingChipProps {
 
 /** One pool: a figure to read under its name, and — once tapped — the field that figure is typed in. */
 function HousingChip({ pool, value, problem, onChange }: HousingChipProps) {
+  return (
+    <FigureChip
+      label={POOL_LABELS[pool]}
+      short={POOL_SHORT[pool]}
+      glyph={<Glyph kind={pool} />}
+      value={value}
+      shown={amount(value)}
+      spoken={amount(value)}
+      empty={value === 0}
+      problem={problem}
+      onChange={onChange}
+    />
+  );
+}
+
+interface FigureChipProps {
+  /** The figure's full name, which a screen reader is given. */
+  label: string;
+  /** The name in a chip's worth of room. */
+  short: string;
+  glyph?: ReactNode;
+  value: number;
+  /** The figure as the chip prints it, and as it is read aloud. */
+  shown: string;
+  spoken: string;
+  /** A chip with nothing in it yet writes its figure in the muted ink. */
+  empty?: boolean;
+  /** What is wrong with the figure, or `null`; the words are the bar's one message line. */
+  problem?: string | null;
+  /** The figure may carry a fraction. */
+  decimal?: boolean;
+  max?: number;
+  onChange: (value: number) => void;
+}
+
+/** A typed figure as a chip, which becomes its own plain input in place once tapped. */
+function FigureChip({
+  label,
+  short,
+  glyph,
+  value,
+  shown,
+  spoken,
+  empty = false,
+  problem = null,
+  decimal = false,
+  max,
+  onChange,
+}: FigureChipProps) {
   const [editing, setEditing] = useState(false);
-  const label = POOL_LABELS[pool];
-  const short = POOL_SHORT[pool];
+  const glyphBox = glyph === undefined ? null : <span className={classes.chipGlyph}>{glyph}</span>;
 
   if (editing) {
     return (
       <div className={classes.chipField} data-error={problem === null ? undefined : true}>
-        <span className={classes.chipGlyph}>
-          <Glyph kind={pool} />
-        </span>
+        {glyphBox}
         <span className={classes.chipBody}>
           <span className={classes.chipWord}>{short}</span>
           <NumberInput
             // The label is the word standing above the field, and there is no room for a second
-            // one: the pool's full name reaches a screen reader as the field's own name.
+            // one: the figure's full name reaches a screen reader as the field's own name.
             aria-label={label}
             // The theme selects the whole value on focus, so the keyboard that opens replaces it.
             autoFocus
@@ -150,15 +219,18 @@ function HousingChip({ pool, value, problem, onChange }: HousingChipProps) {
             classNames={{ input: classes.chipInput }}
             value={value === 0 ? '' : value}
             min={0}
-            allowDecimal={false}
+            {...(max === undefined ? {} : { max })}
+            allowDecimal={decimal}
+            {...(decimal ? { decimalScale: 2 } : {})}
             allowNegative={false}
             error={problem !== null}
             // The digits pad, and an Enter key that says "go". Through `attributes` because
             // Mantine writes `inputMode` itself after the props it was given (`NumberField`).
-            attributes={{ input: { inputMode: 'numeric' } }}
+            attributes={{ input: { inputMode: decimal ? 'decimal' : 'numeric' } }}
             enterKeyHint="go"
             onChange={(next) => {
-              const parsed = typeof next === 'number' ? next : Number(String(next).replace(/\D/g, ''));
+              const digits = decimal ? /[^\d.]/g : /\D/g;
+              const parsed = typeof next === 'number' ? next : Number(String(next).replace(digits, ''));
               onChange(Number.isNaN(parsed) ? 0 : parsed);
             }}
             onKeyDown={(event) => {
@@ -180,21 +252,19 @@ function HousingChip({ pool, value, problem, onChange }: HousingChipProps) {
     <UnstyledButton
       type="button"
       className={classes.chip}
-      data-empty={value === 0 ? true : undefined}
+      data-empty={empty ? true : undefined}
       data-error={problem === null ? undefined : true}
       // The glyph and the short word are what the eye reads; the full name is what a screen
       // reader is given, with the figure, because "Lead" is not a word for anybody's ears.
-      aria-label={`${label} ${amount(value)}`}
+      aria-label={`${label.replace(/ %$/, '')} ${spoken}`}
       onClick={() => {
         setEditing(true);
       }}
     >
-      <span className={classes.chipGlyph}>
-        <Glyph kind={pool} />
-      </span>
+      {glyphBox}
       <span className={classes.chipBody}>
         <span className={classes.chipWord}>{short}</span>
-        <span className={classes.chipValue}>{amount(value)}</span>
+        <span className={classes.chipValue}>{shown}</span>
       </span>
     </UnstyledButton>
   );

@@ -30,6 +30,7 @@ import type {
   BattleSelectionOrder,
   BonusContribution,
   BonusMap,
+  CapacityTable,
   CaptainProgression,
   CaptainRecord,
   DataVersion,
@@ -269,6 +270,17 @@ export const templeSchema = z.strictObject({
   multiplier: z.record(z.string().regex(/^\d+$/, 'temple levels are whole numbers'), z.number().positive()),
 }) satisfies z.ZodType<Loose<TempleTable>>;
 
+const capacityColumn = z.array(z.int().nonnegative()).length(600, 'one figure per level, 1 to 600');
+const capacityLadder = z.strictObject({
+  leadership: capacityColumn,
+  authority: capacityColumn,
+  dominance: capacityColumn,
+});
+export const capacitiesSchema = z.strictObject({
+  captain: capacityLadder,
+  hero: capacityLadder,
+}) satisfies z.ZodType<Loose<CapacityTable>>;
+
 export const ordersSchema = z.strictObject({
   troops: z.array(id),
   monsters: z.array(id),
@@ -330,6 +342,7 @@ export const vipTableSchema = z.array(vipSchema);
 export const TABLE_SCHEMAS = {
   'artifacts.json': artifactsTableSchema,
   'battleSelection.json': battleSelectionSchema,
+  'capacities.json': capacitiesSchema,
   'captains.json': captainsTableSchema,
   'equipment.json': equipmentTableSchema,
   'events.json': eventsTableSchema,

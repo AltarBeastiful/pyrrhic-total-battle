@@ -217,6 +217,13 @@ const SHAPES: Record<TableFile, (value: Json) => Json> = {
     out.multiplier = byNumericKey(out.multiplier as Json);
     return out;
   },
+  'capacities.json': (value) => {
+    const out = order(value, ['captain', 'hero']) as JsonObject;
+    for (const key of ['captain', 'hero'] as const) {
+      if (key in out) out[key] = order(out[key] as Json, ['leadership', 'authority', 'dominance']);
+    }
+    return out;
+  },
   'orders.json': (value) => order(value, ['troops', 'monsters', 'captains']),
   'battleSelection.json': (value) => order(value, ['source', 'troops', 'monsters']),
   'version.json': (value) => order(value, ['dataVersion', 'verifiedOn', 'notes']),

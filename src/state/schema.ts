@@ -32,7 +32,7 @@ import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 24;
+export const SCHEMA_VERSION = 25;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -541,6 +541,19 @@ export const arenaSetupSchema = battleSetupSchema.extend({
   }),
 });
 
+/** The most the other capacity bonus % may be typed as. */
+export const MAX_OTHER_CAPACITY = 1000;
+
+/**
+ * What the arena's pools were last filled from (schema v24, B-43): the squad captains with their level, and the other
+ * capacity bonus %. While today's inputs read the same, what the player typed over the pools stays.
+ */
+export const arenaCapacityBasisSchema = z.object({
+  captains: z.array(z.object({ captainId: nonEmpty, level: z.int().min(0) })),
+  other: z.number().min(0),
+});
+export type ArenaCapacityBasis = z.infer<typeof arenaCapacityBasisSchema>;
+
 export const primeArenaSchema = z.object({
   toggles: z.record(z.string(), z.boolean()).catch({}),
   setup: arenaSetupSchema,
@@ -549,6 +562,10 @@ export const primeArenaSchema = z.object({
   role: z.enum(['attacker', 'defender']).catch('attacker'),
   /** Most stacks in the squad (schema v21); the real limit is unknown, 8 is the planner's default. */
   maxStacks: z.number().int().min(1).max(MAX_ARENA_STACKS).catch(DEFAULT_ARENA_STACKS),
+  /** Capacity bonus % the app has no source for (schema v24), added to the captains' Leadership and Dominance. */
+  otherCapacity: z.number().min(0).max(MAX_OTHER_CAPACITY).catch(0),
+  /** `null` until the page first reads this arena: the saved pools stay as typed, unless both are zero. */
+  capacityBasis: arenaCapacityBasisSchema.nullable().catch(null),
 });
 export type PrimeArenaSaved = z.infer<typeof primeArenaSchema>;
 

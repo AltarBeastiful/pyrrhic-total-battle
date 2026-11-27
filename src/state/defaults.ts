@@ -64,6 +64,8 @@ export function defaultPrimeArena(deviceId: string): PrimeArenaSaved {
     seeded: false,
     role: 'attacker',
     maxStacks: DEFAULT_ARENA_STACKS,
+    otherCapacity: 0,
+    capacityBasis: null,
   };
 }
 

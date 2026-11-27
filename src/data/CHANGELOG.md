@@ -14,7 +14,7 @@ How to read a line: **what changed** — how it was verified.
   `authority` and `marchSpeed`. No existing id, level row or star row changed. Part of v2, which had not
   shipped yet, so no further bump. The one typed random bonus becomes line 1 in saved profiles, with the
   nearest of the three values, the lower on a tie, or is dropped when the artifact cannot roll that option
-  (schema 23 to 24). Verified by `artifactsConvert.test.ts` (rebuilds the table from the export),
+  (schema 24 to 25). Verified by `artifactsConvert.test.ts` (rebuilds the table from the export),
   `data.test.ts`, `derive.test.ts` and `migrations.test.ts`.
 
 - **Artifact bonuses against other players (B-41)** — level and star rows of Forest Crown and Mars' Twin Blades
@@ -33,6 +33,12 @@ How to read a line: **what changed** — how it was verified.
   yet (B-44). The typed artifact percentages are deleted from saved profiles (schema 22 to 23: a level below 1
   becomes 1, star 0.0 becomes 0.1). Verified by `artifactsConvert.test.ts` (rebuilds the table from the
   export), `data.test.ts`, `derive.test.ts` and `migrations.test.ts`.
+- **Captain and hero capacities (B-43)** — new table `capacities.json`, built by the same command from the export's
+  `hero_levels.csv`: leadership, authority (the game's "mastery") and dominance for levels 1 to 600, one set for
+  captains (the export gives every captain the same one, which the converter checks) and one for the hero. Prime
+  Arena fills Leadership and Dominance from it (schema 23 to 24 adds the other capacity bonus % and the capacity
+  basis; typed pools are kept). No id changed. Verified by `capacitiesConvert.test.ts` (rebuilds the table from the
+  export), `data.test.ts` and `arenaCapacity.test.ts`.
 
 ## v1, amended 2026-11-20 (no bump)
 

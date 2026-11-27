@@ -196,6 +196,8 @@ describe('profile links', () => {
       seeded: true,
       role: 'defender',
       maxStacks: 6,
+      otherCapacity: 12.5,
+      capacityBasis: { captains: [{ captainId: 'aydae', level: 40 }], other: 12.5 },
       setup: {
         ...profile.primeArena.setup,
         active: {
@@ -223,7 +225,14 @@ describe('profile links', () => {
     );
     if (v16.kind !== 'profile') throw new Error('wrong kind');
     const { setup, ...rest } = v16.profile.primeArena;
-    expect(rest).toEqual({ toggles: {}, seeded: false, role: 'attacker', maxStacks: 8 });
+    expect(rest).toEqual({
+      toggles: {},
+      seeded: false,
+      role: 'attacker',
+      maxStacks: 8,
+      otherCapacity: 0,
+      capacityBasis: null,
+    });
     expect(setup.active).toEqual(fresh.primeArena.setup.active);
     expect(setup.housing).toEqual(fresh.primeArena.setup.housing);
   });
@@ -266,7 +275,7 @@ describe('profile links', () => {
     expect(decoded.profile.sources.artifacts).toEqual([{ ...typed, level: 1, star: '0.1' }]);
   });
 
-  it('a v23 link with a typed random bonus opens with it on line 1', async () => {
+  it('a v24 link with a typed random bonus opens with it on line 1', async () => {
     const profile = realisticProfile();
     const typed = { id: 'a1', artifactId: 'ruby-brooch', level: 20, star: '2.0' };
     const withOld = {
@@ -279,7 +288,7 @@ describe('profile links', () => {
     const decoded = await decodeShare(
       await encodeShare({
         kind: 'profile',
-        schemaVersion: 23,
+        schemaVersion: 24,
         dataVersion: 2,
         profile: withOld as unknown as Profile,
       }),

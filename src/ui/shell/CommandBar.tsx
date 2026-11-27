@@ -20,7 +20,7 @@
  * Generate. `Ctrl`/`⌘ + Enter` still generates from anywhere; so does a plain `Enter`, because the
  * bar is a form and Generate is the button it submits with.
  */
-import { Select, UnstyledButton } from '@mantine/core';
+import { Button, Select, UnstyledButton } from '@mantine/core';
 
 import { Glyph } from '@/ui/domain';
 import { NumberField } from '@/ui/kit';
@@ -57,7 +57,7 @@ export function CommandBar(props: CommandBarProps) {
 
 /** The bar over a frame config: the same form, wells and Generate for whatever fight fills the frame. */
 export function CommandBarView({ frame, onOpenRecap, pulse = 0 }: CommandBarProps & { frame: BarFrame }) {
-  const { housing, problems, message, setPool, objective, form } = frame;
+  const { housing, problems, message, setPool, maximum, objective, form } = frame;
   const objectiveLocked = objective?.locked === true;
   // Room, not width for its own sake: from 1200 px the March is a pane and the bar's row is the wells
   // and Generate alone, which is the only state the sentence fits into (owner, 2026-09-21).
@@ -98,6 +98,32 @@ export function CommandBarView({ frame, onOpenRecap, pulse = 0 }: CommandBarProp
               }}
             />
           ))}
+          {maximum !== undefined && (
+            <>
+              <NumberField
+                label={maximum.label}
+                value={maximum.percent}
+                min={0}
+                max={maximum.max}
+                allowDecimal
+                decimalScale={2}
+                enterKeyHint="go"
+                onChange={(value) => {
+                  maximum.setPercent(value ?? 0);
+                }}
+              />
+              {/* `type="button"`: pressing it fills the pools, it does not generate. */}
+              <Button
+                type="button"
+                variant="default"
+                className={classes.maxButton}
+                aria-label={maximum.fillLabel}
+                onClick={maximum.fill}
+              >
+                Max
+              </Button>
+            </>
+          )}
           {/* Five objectives and "no priority", each a short line: the one control on the page a
               dropdown is honestly better at than a list of cards, because it sits in a bar 92 px
               tall (design plan §5.6; design rule 8 is about a choice that needs its sentence on

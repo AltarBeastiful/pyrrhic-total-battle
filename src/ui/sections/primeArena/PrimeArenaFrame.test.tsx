@@ -228,6 +228,7 @@ test('a random line against other players counts in the arena; capacity does not
 });
 
 test('Generate waits for a Leadership or Dominance budget, and says so', async () => {
+  seed(0); // a squad with a captain fills the pools by itself (B-43)
   renderArena();
   const bar = await screen.findByRole('form', { name: 'This match' });
   const generate = within(bar).getByRole('button', { name: /generate match/i });
@@ -467,4 +468,71 @@ test('the calculator keeps its own captain selection: nothing filled, no quick p
   expect(screen.queryByRole('button', { name: 'Pick 5 strongest' })).toBeNull();
   expect(chipNames()).toEqual({ riding: [], shining: [] });
   expect(selectActiveSetup(useStore.getState())?.active.captains).toEqual([]);
+});
+
+/** The saved arena pools, as `[leadership, dominance]`. */
+const savedPools = (): [number, number] => {
+  const { leadership, dominance } = selectActiveProfile(useStore.getState())!.primeArena.setup.housing;
+  return [leadership, dominance];
+};
+
+// The seeded captain is level 10: 1500 Leadership and 450 Dominance in the game's table.
+test('the bar fills the squad’s maximum, takes the other capacity bonus % and restores it with Max (B-43)', async () => {
+  renderArena();
+  const bar = await screen.findByRole('form', { name: 'This match' });
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const field = within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }) as HTMLInputElement;
+  expect(field.value).toBe('0');
+  const user = userEvent.setup();
+  // Typed key by key: a decimal fraction survives the way there.
+  await user.click(field);
+  await user.keyboard('0.7');
+  expect(field.value).toBe('0.7');
+  expect(selectActiveProfile(useStore.getState())!.primeArena.otherCapacity).toBe(0.7);
+  expect(savedPools()).toEqual([1510, 453]);
+  typeInto(/^leadership/i, '5');
+  expect(savedPools()).toEqual([5, 453]);
+  await user.click(within(bar).getByRole('button', { name: 'Max Leadership and Dominance' }));
+  expect(savedPools()).toEqual([1510, 453]);
+});
+
+test('a captain level changed while the page is open refills the pools (B-43)', async () => {
+  renderArena();
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const profile = selectActiveProfile(useStore.getState())!;
+  act(() => {
+    useStore.getState().updateProfile(profile.id, {
+      sources: {
+        ...profile.sources,
+        captains: profile.sources.captains.map((entry) => ({ ...entry, level: 100 })),
+      },
+    });
+  });
+  await waitFor(() => expect(savedPools()).toEqual([14_000, 3500]));
+});
+
+test('the phone bar holds the bonus % as a chip beside the pools, with Max (B-43)', async () => {
+  stubMedia([]);
+  renderArena();
+  const bar = await screen.findByRole('form', { name: 'This match' });
+  await waitFor(() => expect(savedPools()).toEqual([1500, 450]));
+  const user = userEvent.setup();
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 0 %' }));
+  await user.keyboard('12.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  expect(within(bar).getByRole('button', { name: 'Other capacity bonus 12.5 %' })).toBeTruthy();
+  expect(savedPools()).toEqual([1687, 506]);
+  // A fraction that opens with a zero can be typed too: 1500 × 1.005 = 1507.5.
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 12.5 %' }));
+  await user.keyboard('0.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  expect(savedPools()).toEqual([1507, 452]);
+  await user.click(within(bar).getByRole('button', { name: 'Other capacity bonus 0.5 %' }));
+  await user.keyboard('12.5');
+  fireEvent.blur(within(bar).getByRole('textbox', { name: 'Other capacity bonus %' }));
+  act(() => {
+    usePrimeArenaStore.getState().updateSetup((s) => ({ housing: { ...s.housing, dominance: 9 } }));
+  });
+  await user.click(within(bar).getByRole('button', { name: 'Max Leadership and Dominance' }));
+  expect(savedPools()).toEqual([1687, 506]);
 });
