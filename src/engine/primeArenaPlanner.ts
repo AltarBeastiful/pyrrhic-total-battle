@@ -12,7 +12,8 @@
  * Leadership, monsters Dominance.
  *
  * Search: hill climbs over slot counts from the default even fill (the game's own: the top tier of each pool,
- * evenly) and from seeded random restarts, sharing one evaluation budget and one deadline. Moves (first
+ * evenly) and from seeded random restarts, first holding squads to a few stacks (`FOCUSED_STACKS`), then free,
+ * sharing one evaluation budget and one deadline. Moves (first
  * improvement, slice of a pool's budget halving from 1/2 to 1/64): transfer money between two slots of a pool,
  * retype a slot, split part of a slot into a new slot, merge a slot into another. Each climbed squad is then
  * filled (best-scoring top-up until no unit is affordable) and the best filled squad wins; the default fill
@@ -123,6 +124,14 @@ const FIRST_SLICE = 0.5;
 const LAST_SLICE = 1 / 64;
 /** Most units of one pool a random restart begins with: the climb adds the rest as they pay. */
 const RANDOM_START_UNITS = 5;
+/**
+ * The stacks the first climbs may split a squad into. Not a rule of the game, which has no cap: a climb free to
+ * split from the start settles on many small stacks it cannot climb out of. The best squad found this way is then
+ * climbed again without the bound.
+ */
+const FOCUSED_STACKS = 8;
+/** The share of the search those first climbs may use, so the free climb after them always has its turn. */
+const FOCUSED_SHARE = 0.5;
 
 const NO_SCORE: PrimeArenaSetScore = { wins: 0, draws: 0, roundsWon: 0, lead: 0, badLead: 0 };
 
@@ -291,7 +300,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   };
 
   // ---- moves -------------------------------------------------------------------------------------------
-  function* neighbours(squad: Squad, slice: number): Generator<Squad> {
+  function* neighbours(squad: Squad, slice: number, stacks: number): Generator<Squad> {
     for (let a = 0; a < squad.length; a += 1) {
       const from = squad[a]!;
       const pool = poolOf(from.u);
@@ -318,7 +327,7 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
         retyped[a]!.n = Math.floor(fromMoney / costOf(u));
         if (retyped[a]!.n > 0) yield canon(retyped);
         const give = Math.floor((take * costOf(from.u)) / costOf(u));
-        if (give <= 0) continue;
+        if (give <= 0 || squad.length >= stacks) continue;
         const split = squad.map((s) => ({ ...s }));
         split[a]!.n -= take;
         split.push({ u, n: give });
@@ -327,15 +336,15 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
     }
   }
 
-  const climb = (start: Squad): Squad => {
+  const climb = (start: Squad, stacks = Infinity, open = budgetLeft): Squad => {
     let current = start;
     let best = score(current);
-    for (let slice = FIRST_SLICE; slice >= LAST_SLICE && budgetLeft(); slice /= 2) {
+    for (let slice = FIRST_SLICE; slice >= LAST_SLICE && open(); slice /= 2) {
       let improved = true;
-      while (improved && budgetLeft()) {
+      while (improved && open()) {
         improved = false;
-        for (const trial of neighbours(current, slice)) {
-          if (!budgetLeft()) break;
+        for (const trial of neighbours(current, slice, stacks)) {
+          if (!open()) break;
           if (keyOf(trial) === keyOf(current)) continue;
           // Never exceed a pool's budget (a move pays for what it buys with what it frees).
           const result = score(trial);
@@ -403,9 +412,14 @@ export function planPrimeArena(input: PrimeArenaPlanInput): PrimeArenaPlan {
   };
   if (units.length > 0) {
     consider(start);
-    consider(climb(evenStart()));
+    const focused = (): boolean => budgetLeft() && evaluations < maxEvaluations * FOCUSED_SHARE;
+    consider(climb(evenStart(), FOCUSED_STACKS, focused));
     const rand = mulberry32(0x5eed);
-    for (let r = 0; r < restarts && budgetLeft(); r += 1) consider(climb(randomStart(rand)));
+    for (let r = 0; r < restarts && focused(); r += 1)
+      consider(climb(randomStart(rand), FOCUSED_STACKS, focused));
+    // Without the bound: from the best squad so far, then from the even fill while the search has budget left.
+    consider(climb(bestSquad));
+    consider(climb(evenStart()));
   }
 
   const stacks = stacksOf(bestSquad);

@@ -168,9 +168,11 @@ Checked: unit suite (2917 pass), end-to-end (71 pass; "what to upgrade next" and
 
 Owner: the stacks of a squad are however many troop types the player has available. This replaces "Unchanged: stack cap setting (default 8)": the setting and its field are removed (schema v28), and a squad may field every unit of the pool, each once. The planner now stops at 20,000 scored squads by default (and still at 60 s), so equal inputs give an equal plan on a slower machine.
 
-Experiment 376, 200 unseen enemies per level, wins of the all-round plan (old 8-stack cap in brackets): II 91 (91), III 87 (91), IV 93 (93), V 83 (86), VI 74 (71), VII 94 (68), VIII 99 (82), IX 100 (81). Level IV, the owner's, picks the same squad as before. Planning takes up to 3 s at level IV and 25 s at levels V to IX on this machine.
+A climb free to split from the start loses its way among small stacks (at level IV with no bonuses it found 94 % where an eight-stack squad beats all 16), so the first climbs hold a squad to eight stacks, on half the budget, and the best is then climbed without that bound. Eight is a search setting, not a rule.
 
-From level VII the squad fields 22 to 27 stacks against assumed enemies of 12 (top tier only, as specified). Turn order between sides with such different stack counts was never seen in a report (both had 8), so treat those figures with caution.
+Experiment 376, 200 unseen enemies per level, wins of the all-round plan (old 8-stack cap in brackets): II 91 (91), III 90 (91), IV 93 (93), V 83 (86), VI 91 (71), VII 94 (68), VIII 96 (82), IX 100 (81). Level IV, the owner's, picks the same squad as before. Planning takes about 4 s at level IV and up to 24 s at levels V to IX on this machine.
+
+From level VI the squad fields 20 to 27 stacks against assumed enemies of 12 (top tier only, as specified). Turn order between sides with such different stack counts was never seen in a report (both had 8), so treat those figures with caution.
 
 Tests rewritten for it: planner "respects maxStacks" and the store, page, share, worker and migration cases that named the cap.
 

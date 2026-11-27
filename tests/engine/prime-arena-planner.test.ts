@@ -6,6 +6,7 @@ import { planPrimeArena } from '../../src/engine/primeArenaPlanner';
 import { evenArenaArmy } from '../../src/engine/primeArenaEnemies';
 import { arenaInput, spentIn, squadKey, troopsAt } from '../helpers/primeArenaPlanner';
 import { primeArenaPool } from '../../src/engine/primeArenaInputs';
+import { totalsFrom } from '../helpers/request';
 import { monsterSet, troopSet } from '../helpers/units';
 
 describe('planPrimeArena', () => {
@@ -73,6 +74,14 @@ describe('planPrimeArena', () => {
     expect(plan.evaluations).toBeLessThanOrEqual(5);
     expect(plan.stacks.length).toBeGreaterThan(0);
   });
+
+  it('does not lose its way among the many stacks it may field', () => {
+    // An account without bonuses, level IV: a squad that beats every assumed enemy exists with eight stacks, so
+    // the search with no stack cap must find one at least as good.
+    const plan = planPrimeArena(arenaInput({ totals: totalsFrom({}), maxEvaluations: 20_000 }));
+    expect(plan.setScore.wins).toBe(1);
+    expect(plan.setScore.lead).toBeGreaterThan(0.2);
+  }, 120_000);
 
   it('stops at a fixed number of squads by default, so a slower machine plans the same', () => {
     // Level IX offers the most troop types; one typed enemy keeps each squad cheap to score.
