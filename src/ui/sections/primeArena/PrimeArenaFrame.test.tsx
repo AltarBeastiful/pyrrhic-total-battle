@@ -181,9 +181,9 @@ test('artifacts read with what they give against other players, and the Summary 
   // The chip rides the arena's figure: level 1 gives army health and strength against other players only.
   expect(screen.getByText(/42 % HP \/ \+42 % STR army/)).toBeTruthy();
   await user.click(screen.getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
-  expect(
-    within(screen.getByRole('dialog')).getByText('+42 % health and strength (army) and 1 more'),
-  ).toBeTruthy();
+  const editor = screen.getByRole('dialog');
+  expect(within(editor).getByText('+42 % health and strength (army)')).toBeTruthy();
+  expect(within(editor).getByText('+1.1 % strike two squads chance')).toBeTruthy();
   await user.keyboard('{Escape}');
 
   await user.click(screen.getByRole('button', { name: 'Summary' }));
@@ -193,6 +193,38 @@ test('artifacts read with what they give against other players, and the Summary 
   // The Summary reads the arena's sources: what the artifact gives against other players is in it.
   const strength = screen.getByRole('region', { name: 'Strength' });
   expect(within(strength).getByText("Mars' Twin Blades L1 ★0.1")).toBeTruthy();
+});
+
+test('a random line against other players counts in the arena; capacity does not yet (B-42)', async () => {
+  const user = userEvent.setup();
+  renderArena();
+  // The fold may open by itself: the device remembers how it was left.
+  const fold = await screen.findByRole('button', { name: /^Artifacts/ });
+  if (fold.getAttribute('aria-expanded') !== 'true') await user.click(fold);
+  await user.click(await screen.findByRole('checkbox', { name: "Equip Mars' Twin Blades" }));
+  await user.click(screen.getByRole('button', { name: /Mars' Twin Blades’s level$/ }));
+  const editor = screen.getByRole('dialog');
+  await user.click(within(editor).getByRole('combobox', { name: 'Star rating' }));
+  await user.click(within(editor).getByRole('option', { name: '★ 1.0' }));
+  await user.click(within(editor).getByRole('combobox', { name: 'Random bonus 1' }));
+  await user.click(within(editor).getByRole('option', { name: 'Army strength against other players' }));
+  const field = within(editor).getByRole('combobox', { name: 'Random bonus 1' });
+  const described = (field.getAttribute('aria-describedby') ?? '').split(' ');
+  expect(described.map((id) => document.getElementById(id)?.textContent ?? '').join('')).toBe(
+    'Against other players',
+  );
+  expect(within(editor).queryByText(/not counted/i)).toBeNull();
+  // Level 1: 42 against players, and the line's smallest value, 20.
+  expect(within(editor).getByText('+62 % strength (army)')).toBeTruthy();
+  await user.keyboard('{Escape}');
+
+  await user.click(screen.getByRole('checkbox', { name: "Equip Zeus' Lightning" }));
+  await user.click(screen.getByRole('button', { name: /Zeus' Lightning’s level$/ }));
+  const zeus = screen.getByRole('dialog');
+  await user.click(within(zeus).getByRole('combobox', { name: 'Star rating' }));
+  await user.click(within(zeus).getByRole('option', { name: '★ 1.0' }));
+  await user.click(within(zeus).getByRole('combobox', { name: 'Random bonus 1' }));
+  expect(within(zeus).getByRole('option', { name: /Leadership\s*Not counted/ })).toBeTruthy();
 });
 
 test('Generate waits for a Leadership or Dominance budget, and says so', async () => {

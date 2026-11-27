@@ -321,6 +321,31 @@ describe('integrity', () => {
     }
   });
 
+  it('gives every artifact random option three values, one per rarity', () => {
+    for (const artifact of artifacts) {
+      const ids = artifact.randomOptions.map((option) => option.id);
+      expect(ids.length, artifact.id).toBeGreaterThan(0);
+      expect(new Set(ids).size, artifact.id).toBe(ids.length);
+      for (const option of artifact.randomOptions) {
+        expect(Object.keys(option.values), `${artifact.id} ${option.id}`).toEqual([
+          'rare',
+          'epic',
+          'legendary',
+        ]);
+        for (const value of Object.values(option.values)) {
+          expect(Object.keys(value), `${artifact.id} ${option.id}`).not.toEqual([]);
+        }
+      }
+    }
+    const zeus = byId(artifacts).get('zeus-lightning');
+    expect(zeus?.randomOptions.map((option) => option.id)).toEqual([
+      'authority',
+      'dominance',
+      'doubleDamageChance',
+      'leadership',
+    ]);
+  });
+
   it('covers temple levels 1 to 45 with a growing multiplier', () => {
     const levels = Object.keys(temple.multiplier).map(Number);
     expect([Math.min(...levels), Math.max(...levels)]).toEqual([1, 45]);

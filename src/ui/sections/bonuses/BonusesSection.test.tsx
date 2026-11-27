@@ -547,6 +547,145 @@ test('the artifact steppers work from the keyboard, and the end of a ladder keep
   });
 });
 
+// ---- B-42: the random bonus lines -----------------------------------------------------------------
+const savedLines = () => profile()?.sources.artifacts[0]?.lines;
+const lineFields = (editor: HTMLElement): string[] =>
+  within(editor)
+    .queryAllByRole('combobox', { name: /^Random bonus \d$/ })
+    .map((field) => field.getAttribute('aria-label') ?? '');
+
+/** Picks an option on one line: the choice is named by what it reads, "not counted" included. */
+async function pickLine(
+  user: ReturnType<typeof userEvent.setup>,
+  editor: HTMLElement,
+  line: number,
+  option: RegExp,
+): Promise<void> {
+  await user.click(within(editor).getByRole('combobox', { name: `Random bonus ${String(line)}` }));
+  await user.click(within(editor).getByRole('option', { name: option }));
+}
+
+/** What a line says under its option, as a screen reader gets it with the field. */
+function lineNote(editor: HTMLElement, line: number): string | null {
+  const field = within(editor).getByRole('combobox', { name: `Random bonus ${String(line)}` });
+  const ids = (field.getAttribute('aria-describedby') ?? '').split(' ');
+  const text = ids.map((id) => document.getElementById(id)?.textContent ?? '').join('');
+  return text === '' ? null : text;
+}
+
+const lineValues = (editor: HTMLElement, line: number): HTMLElement =>
+  within(editor).getByRole('radiogroup', { name: `Random bonus ${String(line)} value` });
+
+test('an artifact shows one random bonus line per whole star reached, five at most', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Heart of the Forest');
+
+  expect(lineFields(editor)).toEqual([]);
+  expect(within(editor).getByText('Random bonus lines open from star 1.0.')).toBeTruthy();
+  await chooseIn(user, editor, 'Star rating', '★ 0.4');
+  expect(lineFields(editor)).toEqual([]);
+  await user.click(button('Raise star rating'));
+  expect(lineFields(editor)).toEqual(['Random bonus 1']);
+  await chooseIn(user, editor, 'Star rating', '★ 3.4');
+  expect(lineFields(editor)).toHaveLength(3);
+  await chooseIn(user, editor, 'Star rating', '★ 5.0');
+  expect(lineFields(editor)).toHaveLength(5);
+});
+
+test('a line takes an option, then one of its three values, and the bonuses follow', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Heart of the Forest');
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  expect(within(editor).getByText('+207 % strength (army)')).toBeTruthy(); // level 1: 42, star 2.0: 165
+
+  expect(within(editor).queryByRole('radiogroup')).toBeNull();
+  await pickLine(user, editor, 2, /^Army strength$/);
+  // Line 1 stays empty; the new line starts on the smallest of the three values.
+  expect(savedLines()).toEqual([null, { option: 'armyStrength', rarity: 'rare' }]);
+  expect(within(editor).getByText('+227 % strength (army)')).toBeTruthy();
+
+  const values = within(lineValues(editor, 2)).getAllByRole('radio');
+  expect(values.map((radio) => radio.closest('div')?.textContent)).toEqual([
+    '+20 %Rare',
+    '+40 %Epic',
+    '+100 %Legendary',
+  ]);
+  await user.click(within(lineValues(editor, 2)).getByRole('radio', { name: /Legendary/ }));
+  expect(savedLines()?.[1]).toEqual({ option: 'armyStrength', rarity: 'legendary' });
+  expect(within(editor).getByText('+307 % strength (army)')).toBeTruthy();
+
+  // Another option on the same line keeps the rarity; the same option on two lines adds up.
+  await pickLine(user, editor, 1, /^Army strength$/);
+  expect(within(editor).getByText('+327 % strength (army)')).toBeTruthy();
+  await pickLine(user, editor, 2, /^Army health$/);
+  expect(savedLines()?.[1]).toEqual({ option: 'armyHealth', rarity: 'legendary' });
+
+  // A line can be emptied again, and a profile with every line empty records none.
+  await pickLine(user, editor, 2, /^Empty$/);
+  expect(savedLines()).toEqual([{ option: 'armyStrength', rarity: 'rare' }]);
+  await pickLine(user, editor, 1, /^Empty$/);
+  expect(savedLines()).toBeUndefined();
+});
+
+test('lowering the star hides a line and stops counting it; raising the star brings it back', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor, button } = await artifactEditor(user, 'Heart of the Forest');
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  await pickLine(user, editor, 2, /^Army strength$/);
+
+  await user.click(button('Lower star rating'));
+  expect(lineFields(editor)).toEqual(['Random bonus 1']);
+  expect(within(editor).getByText('+194 % strength (army)')).toBeTruthy(); // 42 + star 1.4: 152
+  // Hidden, not forgotten: a pick on another line keeps it.
+  await pickLine(user, editor, 1, /^Army health$/);
+  expect(savedLines()?.[1]).toEqual({ option: 'armyStrength', rarity: 'rare' });
+
+  await user.click(button('Raise star rating'));
+  expect(within(editor).getByRole('combobox', { name: 'Random bonus 2' })).toHaveProperty(
+    'value',
+    'Army strength',
+  );
+  expect(within(editor).getByText('+227 % strength (army)')).toBeTruthy();
+});
+
+test('the march marks the options it does not count, and leaves them selectable', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, "Zeus' Lightning");
+  await chooseIn(user, editor, 'Star rating', '★ 2.0');
+  await user.click(within(editor).getByRole('combobox', { name: 'Random bonus 1' }));
+  // The artifact's own options and no other, each saying whether it counts here.
+  expect(
+    within(editor)
+      .getAllByRole('option')
+      .map((option) => option.textContent),
+  ).toEqual([
+    'Empty',
+    'AuthorityNot counted',
+    'DominanceNot counted',
+    'Double damage chance',
+    'LeadershipNot counted',
+  ]);
+  await user.click(within(editor).getByRole('option', { name: /Leadership/ }));
+  expect(savedLines()).toEqual([{ option: 'leadership', rarity: 'rare' }]);
+  expect(lineNote(editor, 1)).toBe('Not counted');
+  await pickLine(user, editor, 1, /^Double damage chance$/);
+  expect(lineNote(editor, 1)).toBeNull();
+});
+
+test('the march marks a line against other players as not counted', async () => {
+  const user = userEvent.setup();
+  renderWithTheme(<BonusesSection />);
+  const { editor } = await artifactEditor(user, 'Ruby Brooch');
+  await chooseIn(user, editor, 'Star rating', '★ 1.0');
+  await pickLine(user, editor, 1, /^Melee strength and health against other players\s*Not counted$/);
+  expect(lineNote(editor, 1)).toBe('Against other players, not counted');
+  expect(within(editor).getByText('+23 % health and strength (melee)')).toBeTruthy();
+});
+
 test('a captain’s editor has no + and − buttons', async () => {
   const user = userEvent.setup();
   renderWithTheme(<BonusesSection />);

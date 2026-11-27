@@ -183,6 +183,24 @@ export interface ArtifactRow extends Pick<BonusContribution, 'health' | 'strengt
   againstPlayers?: Pick<BonusContribution, 'health' | 'strength'>;
 }
 
+/** The three values the game can roll for a random bonus, the smallest first (B-42). */
+export const ARTIFACT_RARITIES = ['rare', 'epic', 'legendary'] as const;
+export type ArtifactRarity = (typeof ARTIFACT_RARITIES)[number];
+
+/** What one rolled random bonus gives: a row, plus the kinds only a random bonus carries so far. */
+export interface ArtifactOptionValue extends ArtifactRow {
+  /** Percent added to the army's capacity. No total counts it yet (B-44 counts it in Prime Arena). */
+  capacity?: Partial<Record<'leadership' | 'dominance', number>>;
+  /** Figures the app never counts, kept so the option can be shown. */
+  unused?: Partial<Record<'authority' | 'marchSpeed', number>>;
+}
+
+export interface ArtifactRandomOption {
+  /** What saved profiles store, e.g. "armyHealth" or "armyStrengthAgainstPlayers". */
+  id: string;
+  values: Record<ArtifactRarity, ArtifactOptionValue>;
+}
+
 /** Built from the game export by `scripts/artifacts-convert.ts`; never edited by hand. */
 export interface ArtifactRecord {
   id: string;
@@ -191,7 +209,8 @@ export interface ArtifactRecord {
   levels: Record<string, ArtifactRow>;
   /** Keys "0.1".."5.0", the in-game star notation. The two rows may feed different stats. */
   stars: Record<string, ArtifactRow>;
-  randomBonusOptions: string[]; // option ids the random bonus can take, e.g. "armyHealth"
+  /** The random bonuses this artifact can roll; the game rolls one per whole star (B-42). */
+  randomOptions: ArtifactRandomOption[];
 }
 
 export interface TitleRecord {

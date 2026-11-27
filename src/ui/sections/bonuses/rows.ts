@@ -28,7 +28,14 @@ import {
   vip as vipTable,
 } from '@/data';
 import { QUALITIES } from '@/data/types';
-import type { ArtifactRecord, BonusKey, CaptainRecord, EquipmentRecord, Quality } from '@/data/types';
+import type {
+  ArtifactRandomOption,
+  ArtifactRecord,
+  BonusKey,
+  CaptainRecord,
+  EquipmentRecord,
+  Quality,
+} from '@/data/types';
 import { aggregateBonuses } from '@/engine/bonuses';
 import type { ResolvedSource } from '@/engine/types';
 import type { ActiveFlagKey, ActiveListKey } from '@/state/actions/bonuses';
@@ -143,16 +150,34 @@ export function equipmentWorth(record: EquipmentRecord | undefined, entry: Equip
 }
 
 /**
- * What an artifact is worth at this level and star rating on this kind of march, from the game's table. The
- * random bonus is not on this line: it is one option out of forty and it belongs in the editor, next to the
- * option it was rolled on.
+ * What an artifact is worth as the player has it on this kind of march, from the game's table: its level, its
+ * star and the random lines the star has opened.
  */
 export function artifactWorth(
   record: ArtifactRecord | undefined,
   entry: ArtifactEntry,
   marchType: SetupMarchType,
 ): BonusLike {
-  return record ? artifactBonus(record, entry.level, entry.star, marchType) : {};
+  return record ? artifactBonus(record, entry, marchType) : {};
+}
+
+/**
+ * What to say under a random option on this kind of march (B-42), or `null` for one that simply counts. An
+ * option is "not counted" when no total of this march moves with it: against other players outside the Prime
+ * Arena; capacity (until B-44 counts it in the Arena), authority and march speed everywhere.
+ */
+export function optionNote(
+  option: ArtifactRandomOption,
+  marchType: SetupMarchType,
+): { counted: boolean; note: string | null } {
+  // The three rarities of an option feed the same things, so any one of them tells.
+  const { health, strength, special, againstPlayers } = option.values.rare;
+  const plain = health !== undefined || strength !== undefined || special !== undefined;
+  if (againstPlayers !== undefined) {
+    const counted = marchType === 'arena';
+    return { counted, note: counted ? 'Against other players' : 'Against other players, not counted' };
+  }
+  return { counted: plain, note: plain ? null : 'Not counted' };
 }
 
 /** What VIP is worth right now: the table row, or the values typed when we have no row. */

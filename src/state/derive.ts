@@ -64,7 +64,15 @@ import type {
   StackingOptions,
   StackRequest,
 } from '../engine/types';
-import type { BattleSetup, Profile, ProfileTroops, SetupMarchType, SetupMethod } from './schema';
+import { ARTIFACT_LINES } from './schema';
+import type {
+  BattleSetup,
+  Profile,
+  ProfileSources,
+  ProfileTroops,
+  SetupMarchType,
+  SetupMethod,
+} from './schema';
 
 // ---- Tables ---------------------------------------------------------------------------------------
 /** The game tables the derive layer reads. Injectable so tests can pin values without touching `src/data`. */
@@ -210,60 +218,29 @@ const MARCH_TYPE_PHRASES: Record<Exclude<SetupMarchType, 'unspecified'>, string>
 };
 
 // ---- Artifacts -------------------------------------------------------------------------------------
-/** Prefix of a random-bonus option id → the bonus key it feeds (`guardsmanStrength` → `guardsmen`). */
-const RANDOM_OPTION_KEYS: Record<string, BonusKey> = {
-  army: 'army',
-  guardsman: 'guardsmen',
-  specialist: 'specialist',
-  engineer: 'engineers',
-  monster: 'monster',
-  melee: 'melee',
-  ranged: 'ranged',
-  mounted: 'mounted',
-  flying: 'flying',
-};
+type ArtifactEntry = ProfileSources['artifacts'][number];
 
-/** Random-bonus options that are special-strength keys rather than `<key><Health|Strength>` pairs. */
-const RANDOM_OPTION_SPECIALS: Record<string, SpecialKey> = {
-  doubleDamageChance: 'doubleDamageChance',
-  armyStrengthAgainstEpicMonsters: 'armyStrengthAgainstEpicMonsters',
-  strikeTwoSquadsChance: 'strikeTwoSquadsChance',
-};
-
-/** Applies an artifact random bonus; returns false when the option id is not one we understand. */
-function addRandomBonus(target: Draft, option: string, value: number): boolean {
-  const special = RANDOM_OPTION_SPECIALS[option];
-  if (special !== undefined) {
-    addKey(target.special, special, value);
-    return true;
-  }
-  for (const [prefix, key] of Object.entries(RANDOM_OPTION_KEYS)) {
-    if (!option.startsWith(prefix)) continue;
-    const suffix = option.slice(prefix.length);
-    if (suffix === 'Health') addKey(target.health, key, value);
-    else if (suffix === 'Strength') addKey(target.strength, key, value);
-    else if (suffix === 'StrengthAndHealth') {
-      addKey(target.health, key, value);
-      addKey(target.strength, key, value);
-    } else continue;
-    return true;
-  }
-  return false;
-}
+/** The random lines a star has opened: one per whole star reached, so line k counts from star k.0 (B-42). */
+export const artifactLineCount = (star: string): number => Math.min(ARTIFACT_LINES, Math.floor(Number(star)));
 
 /**
- * What an artifact gives at this level and star on this kind of march: its level row plus its star row, the
- * game's own figures. What a row gives against other players is added in the Prime Arena only, in the same
- * additive bracket (B-41). The random bonus is the player's roll and is not part of it.
+ * What an artifact gives as the player has it, on this kind of march: its level row, its star row and the
+ * random lines its star has opened, each read from the game's table (B-39, B-42). What any of them gives
+ * against other players is added in the Prime Arena only, in the same additive bracket (B-41). A line's
+ * capacity, authority or march speed is no total, and an option the artifact cannot roll gives nothing.
  */
 export function artifactBonus(
   record: ArtifactRecord,
-  level: number,
-  star: string,
+  entry: Pick<ArtifactEntry, 'level' | 'star' | 'lines'>,
   marchType: SetupMarchType,
 ): Omit<ArtifactRow, 'againstPlayers'> {
+  const rolled = (entry.lines ?? [])
+    .slice(0, artifactLineCount(entry.star))
+    .map((line) =>
+      line === null ? undefined : byId(record.randomOptions, line.option)?.values[line.rarity],
+    );
   const value = draft();
-  for (const row of [record.levels[String(level)], record.stars[star]]) {
+  for (const row of [record.levels[String(entry.level)], record.stars[entry.star], ...rolled]) {
     addContribution(value, row);
     if (marchType === 'arena') addContribution(value, row?.againstPlayers);
   }
@@ -342,12 +319,11 @@ export function resolveSources(
     out.push(toSource(id, `${name} (${titleCase(entry.quality)})`, 'equipment', value));
   }
 
-  // Artifacts: what the table gives at this level and star, plus the random bonus.
+  // Artifacts: what the table gives at this level and star, and on the random lines.
   for (const entry of activeEntries(sources.artifacts, active.artifacts)) {
     const record = byId(tables.artifacts, entry.artifactId);
     const value = draft();
-    if (record) addContribution(value, artifactBonus(record, entry.level, entry.star, setup.marchType));
-    if (entry.random) addRandomBonus(value, entry.random.option, entry.random.value);
+    if (record) addContribution(value, artifactBonus(record, entry, setup.marchType));
     const name = record?.name ?? entry.artifactId;
     const id = nextId(`artifact:${entry.artifactId}`, entry.id);
     out.push(toSource(id, `${name} L${entry.level} ★${entry.star}`, 'artifact', value));

@@ -11,7 +11,16 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { canonicalText, TABLES_DIR } from './data-tables.ts';
-import type { ArtifactRecord, ArtifactRow, BonusKey, SpecialKey } from '../src/data/types.ts';
+import { ARTIFACT_RARITIES } from '../src/data/types.ts';
+import type {
+  ArtifactOptionValue,
+  ArtifactRandomOption,
+  ArtifactRarity,
+  ArtifactRecord,
+  ArtifactRow,
+  BonusKey,
+  SpecialKey,
+} from '../src/data/types.ts';
 
 /** The export directory named by the environment, or null. */
 export const EXPORT_SOURCE: string | null = process.env['HEROES_ARTIFACTS_EXPORT'] ?? null;
@@ -55,7 +64,8 @@ export interface DumpArtifact {
   name: string;
   levels: { level: number; effects: DumpEffect[] }[];
   stars: { star: number; effects: DumpEffect[] }[];
-  randomEffects: { effectId: number; text: string; effects: DumpEffect[] }[];
+  /** One entry per rarity of each option the artifact can roll. */
+  randomEffects: { effectId: number; rarity: string; text: string; effects: DumpEffect[] }[];
 }
 export interface ArtifactDump {
   artifacts: DumpArtifact[];
@@ -135,15 +145,12 @@ function learnUnitSets(dump: ArtifactDump): UnitSets {
   return sets;
 }
 
-/** One decoded effect: what it feeds and by how much, or `null` when the app carries nothing of it yet. */
+/** One decoded effect: what it feeds and by how much. */
 type Decoded =
   | { bucket: 'health' | 'strength'; key: BonusKey; value: number; againstPlayers: boolean }
   | { bucket: 'special'; key: SpecialKey; value: number }
-  | null;
-
-/** A health or strength bonus the game gives against other players only. */
-const isAgainstPlayers = (bonus: Decoded): boolean =>
-  bonus !== null && bonus.bucket !== 'special' && bonus.againstPlayers;
+  | { bucket: 'capacity'; key: 'leadership' | 'dominance'; value: number }
+  | { bucket: 'unused'; key: 'authority' | 'marchSpeed'; value: number };
 
 function decode(effect: DumpEffect, sets: UnitSets, record: string): Decoded {
   const kind = KINDS[effect.typeName];
@@ -177,20 +184,29 @@ function decode(effect: DumpEffect, sets: UnitSets, record: string): Decoded {
     }
     return { bucket: 'special', key: kind.special, value };
   }
-  // Capacity (B-44), authority and march speed: understood, not carried.
-  return null;
+  if ('capacity' in kind) return { bucket: 'capacity', key: kind.capacity, value };
+  return { bucket: 'unused', key: kind.unused, value };
 }
 
-function row(effects: DumpEffect[], sets: UnitSets, record: string): ArtifactRow {
-  const out: ArtifactRow = {};
-  for (const effect of effects) {
-    const bonus = decode(effect, sets, record);
-    if (bonus === null) continue;
-    const into: ArtifactRow = isAgainstPlayers(bonus) ? (out.againstPlayers ??= {}) : out;
+/** The decoded effects of one record, added up, those against other players apart. */
+function sum(bonuses: Decoded[]): ArtifactOptionValue {
+  const out: ArtifactOptionValue = {};
+  for (const bonus of bonuses) {
+    const against = 'againstPlayers' in bonus && bonus.againstPlayers;
+    const into: ArtifactOptionValue = against ? (out.againstPlayers ??= {}) : out;
     const map: Partial<Record<string, number>> = (into[bonus.bucket] ??= {});
     map[bonus.key] = (map[bonus.key] ?? 0) + bonus.value;
   }
   return out;
+}
+
+/** What a level or star row gives. Capacity (B-44), authority and march speed are not carried on a row. */
+function row(effects: DumpEffect[], sets: UnitSets, record: string): ArtifactRow {
+  return sum(
+    effects
+      .map((effect) => decode(effect, sets, record))
+      .filter((bonus) => bonus.bucket !== 'capacity' && bonus.bucket !== 'unused'),
+  );
 }
 
 /** Where a random option id spells a unit set differently from its bonus key (`guardsmanStrength`). */
@@ -199,26 +215,54 @@ const OPTION_PREFIXES: Partial<Record<BonusKey, string>> = {
   engineers: 'engineer',
 };
 
-/** The id of a random option as saved profiles name it, or `null` when the app counts nothing of it. */
-function optionId(effects: DumpEffect[], sets: UnitSets, record: string): string | null {
-  const decoded = effects.map((effect) => decode(effect, sets, record));
-  // Random options against other players are not offered yet (B-42).
-  const counted = decoded.filter(
-    (bonus): bonus is Exclude<Decoded, null> => bonus !== null && !isAgainstPlayers(bonus),
-  );
-  const [first, ...rest] = counted;
-  if (first === undefined) return null;
-  if (counted.length === decoded.length) {
-    if (first.bucket === 'special') {
+/** The id of a random option as saved profiles name it. */
+function optionId(bonuses: Decoded[], record: string): string {
+  const [first, ...rest] = bonuses;
+  if (first !== undefined) {
+    if (!('againstPlayers' in first)) {
       if (rest.length === 0) return first.key;
-    } else if (rest.every((bonus) => bonus.bucket !== 'special' && bonus.key === first.key)) {
-      const buckets = new Set(counted.map((bonus) => bonus.bucket));
+    } else if (
+      rest.every(
+        (bonus) =>
+          'againstPlayers' in bonus &&
+          bonus.key === first.key &&
+          bonus.againstPlayers === first.againstPlayers,
+      )
+    ) {
+      const buckets = new Set(bonuses.map((bonus) => bonus.bucket));
       const suffix =
         buckets.size === 2 ? 'StrengthAndHealth' : first.bucket === 'health' ? 'Health' : 'Strength';
-      return `${OPTION_PREFIXES[first.key] ?? first.key}${suffix}`;
+      const where = first.againstPlayers ? 'AgainstPlayers' : '';
+      return `${OPTION_PREFIXES[first.key] ?? first.key}${suffix}${where}`;
     }
   }
   return fail(record, 'its effects cannot be named as one random option');
+}
+
+/** The rarities as the export writes them. */
+const RARITIES = new Map<string, ArtifactRarity>(
+  ARTIFACT_RARITIES.map((rarity) => [rarity.toUpperCase(), rarity]),
+);
+
+/** The random options of one artifact, in id order, each with its three values. */
+function randomOptions(artifact: DumpArtifact, sets: UnitSets): ArtifactRandomOption[] {
+  const { name, randomEffects } = artifact;
+  if (randomEffects.length === 0) fail(name, 'no random options');
+  const found = new Map<string, Partial<ArtifactRandomOption['values']>>();
+  for (const entry of randomEffects) {
+    const record = `${name}, random option ${String(entry.effectId)}`;
+    const bonuses = entry.effects.map((effect) => decode(effect, sets, record));
+    const id = optionId(bonuses, record);
+    const rarity = RARITIES.get(entry.rarity) ?? fail(record, `unknown rarity ${entry.rarity}`);
+    const values = found.get(id) ?? {};
+    if (values[rarity] !== undefined) fail(record, `a second ${rarity} value for ${id}`);
+    found.set(id, { ...values, [rarity]: sum(bonuses) });
+  }
+  return [...found.keys()].sort().map((id) => {
+    const value = (rarity: ArtifactRarity): ArtifactOptionValue =>
+      found.get(id)?.[rarity] ?? fail(name, `random option ${id} has no ${rarity} value`);
+    return { id, values: { rare: value('rare'), epic: value('epic'), legendary: value('legendary') } };
+  });
 }
 
 /** The steps of one ladder (levels or star steps), which must run 1, 2, 3 up to `count`. */
@@ -254,16 +298,12 @@ function convertArtifact(id: string, artifact: DumpArtifact, sets: UnitSets): Ar
     ([step, { effects }]) =>
       [starKey(step), row(effects, sets, `${name}, star step ${String(step)}`)] as const,
   );
-  const options = artifact.randomEffects.flatMap((option) => {
-    const found = optionId(option.effects, sets, `${name}, random option ${String(option.effectId)}`);
-    return found === null ? [] : [found];
-  });
   return {
     id,
     name,
     levels: Object.fromEntries(levels),
     stars: Object.fromEntries(stars),
-    randomBonusOptions: [...new Set(options)].sort(),
+    randomOptions: randomOptions(artifact, sets),
   };
 }
 

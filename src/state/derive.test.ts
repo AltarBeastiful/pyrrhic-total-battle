@@ -19,7 +19,7 @@ import {
   sourceCaveats,
   vipNeedsManual,
 } from './derive';
-import type { BattleSetup, Profile, SetupMarchType } from './schema';
+import type { ArtifactLine, BattleSetup, Profile, SetupMarchType } from './schema';
 
 /** A fresh profile and its implicit setup, both mutable, for one test. */
 function fixture(): { profile: Profile; setup: BattleSetup } {
@@ -433,51 +433,88 @@ describe('resolveSources — artifacts', () => {
     expect(brooch?.strength).toEqual({ melee: 18.5 });
   });
 
-  it('maps random-bonus options onto bonus and special keys', () => {
+  /** `resolved`, with the random lines the player recorded. */
+  const rolled = (
+    artifactId: string,
+    star: string,
+    lines: ArtifactLine[],
+    marchType: SetupMarchType = 'unspecified',
+  ) => {
     const { profile, setup } = fixture();
-    profile.sources.artifacts = [
-      {
-        id: 'a1',
-        artifactId: 'wardens-quiver',
-        level: 1,
-        star: '0.1',
-        random: { option: 'rangedStrengthAndHealth', value: 30 },
-      },
-      {
-        id: 'a2',
-        artifactId: 'zeus-lightning',
-        level: 1,
-        star: '0.1',
-        random: { option: 'doubleDamageChance', value: 4 },
-      },
-      {
-        id: 'a3',
-        artifactId: 'ghostflame-lantern',
-        level: 1,
-        star: '0.1',
-        random: { option: 'armyStrengthAgainstEpicMonsters', value: 15 },
-      },
-      {
-        id: 'a4',
-        artifactId: 'mars-twin-blades',
-        level: 1,
-        star: '0.1',
-        random: { option: 'strikeTwoSquadsChance', value: 0.4 },
-      },
-    ];
-    setup.active.artifacts = ['a1', 'a2', 'a3', 'a4'];
+    setup.marchType = marchType;
+    profile.sources.artifacts = [{ id: 'a1', artifactId, level: 1, star, lines }];
+    setup.active.artifacts = ['a1'];
+    return sourceById(resolveSources(profile, setup), `artifact:${artifactId}`);
+  };
 
-    // Each total is the artifact's own figure at level 1, star 0.1, plus the rolled bonus.
-    const sources = resolveSources(profile, setup);
-    expect(sourceById(sources, 'artifact:wardens-quiver')?.health).toEqual({ ranged: 48.5 });
-    expect(sourceById(sources, 'artifact:wardens-quiver')?.strength).toEqual({ ranged: 48.5 });
-    expect(sourceById(sources, 'artifact:zeus-lightning')?.special).toEqual({ doubleDamageChance: 4.7 });
-    expect(sourceById(sources, 'artifact:ghostflame-lantern')?.special).toEqual({
-      armyStrengthAgainstEpicMonsters: 105,
-    });
-    expect(sourceById(sources, 'artifact:mars-twin-blades')?.special).toEqual({
-      strikeTwoSquadsChance: 1.5, // 1.1 + 0.4
-    });
+  it('adds what the table gives for a line’s option and rarity', () => {
+    // Level 1: 9.5, star 1.0: 13.5, the epic line: 10.
+    const epic = rolled('wardens-quiver', '1.0', [{ option: 'rangedStrengthAndHealth', rarity: 'epic' }]);
+    expect(epic?.health).toEqual({ ranged: 33 });
+    expect(epic?.strength).toEqual({ ranged: 33 });
+    const legendary = rolled('wardens-quiver', '1.0', [{ option: 'rangedHealth', rarity: 'legendary' }]);
+    expect(legendary?.health).toEqual({ ranged: 73 });
+    expect(legendary?.strength).toEqual({ ranged: 23 });
+  });
+
+  it('counts line k only from star k.0, and the same lines come back with the star', () => {
+    const lines: ArtifactLine[] = [
+      { option: 'armyStrength', rarity: 'rare' }, // 20, from star 1.0
+      null,
+      { option: 'armyStrength', rarity: 'legendary' }, // 100, from star 3.0
+    ];
+    const strength = (star: string) => rolled('heart-of-the-forest', star, lines)?.strength?.army;
+    expect(strength('0.4')).toBe(129); // level 1: 42, star 0.4: 87, no line yet
+    expect(strength('1.0')).toBe(162); // 42 + 100 + 20
+    expect(strength('2.1')).toBe(240); // 42 + 178 + 20: line 3 waits
+    expect(strength('3.0')).toBe(392); // 42 + 230 + 20 + 100
+    expect(strength('5.0')).toBe(522); // 42 + 360 + 20 + 100
+  });
+
+  it('adds up an option that sits on several lines', () => {
+    const line: ArtifactLine = { option: 'armyStrength', rarity: 'rare' };
+    const heart = rolled('heart-of-the-forest', '5.0', [line, line, line, line, line]);
+    expect(heart?.strength).toEqual({ army: 502 }); // 42 + 360 + 5 × 20
+  });
+
+  it('counts double damage, strength against epic monsters and strike two squads as their totals do', () => {
+    const zeus = rolled('zeus-lightning', '2.0', [
+      { option: 'doubleDamageChance', rarity: 'legendary' },
+      { option: 'leadership', rarity: 'legendary' },
+    ]);
+    expect(zeus?.special).toEqual({ doubleDamageChance: 3.5 }); // star 2.0: 2, the line: 1.5
+    // Capacity is no total here (B-44).
+    expect(zeus?.health).toBeUndefined();
+    expect(zeus?.strength).toBeUndefined();
+
+    const lantern = rolled('ghostflame-lantern', '2.0', [
+      { option: 'armyStrengthAgainstEpicMonsters', rarity: 'rare' },
+      { option: 'marchSpeed', rarity: 'legendary' },
+    ]);
+    expect(lantern?.special).toEqual({ armyStrengthAgainstEpicMonsters: 188 }); // 42 + 126 + 20
+    expect(lantern?.strength).toBeUndefined();
+
+    const blades = rolled('mars-twin-blades', '1.0', [
+      { option: 'strikeTwoSquadsChance', rarity: 'legendary' },
+    ]);
+    expect(blades?.special).toEqual({ strikeTwoSquadsChance: 2.6 }); // star 1.0: 1.6, the line: 1
+  });
+
+  it('counts a line against other players in the Arena and nowhere else', () => {
+    const lines: ArtifactLine[] = [{ option: 'armyStrengthAgainstPlayers', rarity: 'legendary' }];
+    for (const marchType of ['unspecified', 'solo', 'group', 'epic'] as const) {
+      const crown = rolled('forest-crown', '1.0', lines, marchType);
+      expect(crown?.health).toEqual({ army: 62.5 }); // level 1: 17.5, star 1.0: 45
+      expect(crown?.strength).toEqual({ army: 62.5 });
+    }
+    const arena = rolled('forest-crown', '1.0', lines, 'arena');
+    expect(arena?.health).toEqual({ army: 125 }); // the rows again, against players
+    expect(arena?.strength).toEqual({ army: 325 }); // and the line's 200
+  });
+
+  it('adds nothing for an option the artifact cannot roll', () => {
+    const brooch = rolled('ruby-brooch', '1.0', [{ option: 'armyStrength', rarity: 'legendary' }]);
+    expect(brooch?.strength).toEqual({ melee: 23 }); // 9.5 + 13.5
   });
 });
 

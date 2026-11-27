@@ -323,6 +323,35 @@ test('Prime Arena inputs set on one device and troops changed on the other both 
   }
 });
 
+test('artifact lines recorded on one device and troops changed on the other both survive (B-42)', () => {
+  const { phone, pc } = twoDevices();
+  const [base] = phone.profiles;
+  if (!base) throw new Error('no profile');
+  const t = base.updatedAt;
+  const onPhone = edit(
+    base,
+    { troops: { ...base.troops, guardsmen: null }, sectionUpdatedAt: { troops: t + 10 } },
+    t + 10,
+  );
+  const artifact = {
+    id: 'a1',
+    artifactId: 'heart-of-the-forest',
+    level: 20,
+    star: '2.0',
+    lines: [{ option: 'armyStrength', rarity: 'epic' as const }, null],
+  };
+  const sources = { ...base.sources, artifacts: [artifact] };
+  const onPc = edit(base, { sources, sectionUpdatedAt: { sources: t + 20 } }, t + 20);
+  for (const merged of [
+    mergeDocuments({ ...phone, profiles: [onPhone] }, { ...pc, profiles: [onPc] }),
+    mergeDocuments({ ...pc, profiles: [onPc] }, { ...phone, profiles: [onPhone] }),
+  ]) {
+    const [profile] = merged.profiles;
+    expect(profile?.sources.artifacts).toEqual([artifact]);
+    expect(profile?.troops.guardsmen).toBeNull();
+  }
+});
+
 test('sameContent ignores the order of profiles, tombstones and section stamps', () => {
   const { phone } = twoDevices();
   const [first] = phone.profiles;

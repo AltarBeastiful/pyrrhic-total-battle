@@ -6,7 +6,8 @@
  *
  * Unknown fields are never a crash: zod strips them and we log one console warning naming the paths.
  */
-import { talents as talentTable, unitById } from '../data';
+import { artifacts as artifactTable, talents as talentTable, unitById } from '../data';
+import { ARTIFACT_RARITIES } from '../data/types';
 import { DEFAULT_SETTINGS, DEFAULT_TALENTS, defaultPrimeArena } from './defaults';
 import {
   DEFAULT_TALENT_GOAL_ORDER,
@@ -437,7 +438,7 @@ export function dropArenaTroops(profile: Record<string, unknown>): Record<string
 /**
  * `22 → 23` for one profile (B-39): artifact values come from the game's table, so the percentages typed by
  * hand are removed. The table starts at level 1 and star 0.1: a level below 1 becomes 1, star 0.0 (which the
- * game does not have) becomes 0.1. The random bonus is kept as it is.
+ * game does not have) becomes 0.1. The random bonus is left for the next step.
  */
 export function artifactsFollowTable(profile: Record<string, unknown>): Record<string, unknown> {
   const sources = profile.sources;
@@ -452,6 +453,40 @@ export function artifactsFollowTable(profile: Record<string, unknown>): Record<s
     };
   });
   return { ...profile, sources: { ...sources, artifacts } };
+}
+
+/**
+ * `23 → 24` for one profile (B-42): the one typed random bonus becomes line 1 of the artifact's lines, with
+ * the rarity whose table value is nearest to what was typed, the smaller one on a tie. A bonus the artifact
+ * cannot roll is dropped.
+ */
+export function randomBonusBecomesLine(profile: Record<string, unknown>): Record<string, unknown> {
+  const sources = profile.sources;
+  if (!isPlainObject(sources) || !Array.isArray(sources.artifacts)) return profile;
+  const artifacts = sources.artifacts.map((entry) => {
+    if (!isPlainObject(entry) || !('random' in entry)) return entry;
+    const { random, ...rest } = entry;
+    const line = nearestRoll(rest.artifactId, random);
+    return line === null ? rest : { ...rest, lines: [line] };
+  });
+  return { ...profile, sources: { ...sources, artifacts } };
+}
+
+function nearestRoll(artifactId: unknown, random: unknown): { option: string; rarity: string } | null {
+  if (!isPlainObject(random) || typeof random.value !== 'number') return null;
+  const record = artifactTable.find((candidate) => candidate.id === artifactId);
+  const option = record?.randomOptions.find((candidate) => candidate.id === random.option);
+  if (option === undefined) return null;
+  const typed = random.value;
+  // Every option a player could type feeds one figure, or the same one to health and strength. The gap is
+  // rounded to thousandths, so decimals cannot break a tie; the rarities run smallest first.
+  const gaps = ARTIFACT_RARITIES.map((rarity) => {
+    const { health, strength, special } = option.values[rarity];
+    const figure = Object.values({ ...health, ...strength, ...special })[0] ?? 0;
+    return { rarity, gap: Math.round(Math.abs(figure - typed) * 1000) };
+  });
+  const nearest = gaps.reduce((best, next) => (next.gap < best.gap ? next : best));
+  return { option: option.id, rarity: nearest.rarity };
 }
 
 function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown {
@@ -478,6 +513,7 @@ function migrateProfiles(doc: Record<string, unknown>, step: Migration): unknown
  * `14 → 15`: the typed talent points become the whole stock, which held ranks spend (B-23).
  * `15 → 16`: the Hero Talents source keeps only strength and health on the nine talent keys (B-25).
  * `22 → 23`: typed artifact percentages are removed; level starts at 1 and star at 0.1 (B-39).
+ * `23 → 24`: the typed random bonus of an artifact becomes line 1, at the nearest value it can roll (B-42).
  */
 export const migrations: MigrationTable = {
   0: (doc) => ({ ...doc, schemaVersion: 1 }),
@@ -503,6 +539,7 @@ export const migrations: MigrationTable = {
   20: (doc) => ({ ...doc, schemaVersion: 21, profiles: migrateProfiles(doc, addArenaRole) }),
   21: (doc) => ({ ...doc, schemaVersion: 22, profiles: migrateProfiles(doc, dropArenaTroops) }),
   22: (doc) => ({ ...doc, schemaVersion: 23, profiles: migrateProfiles(doc, artifactsFollowTable) }),
+  23: (doc) => ({ ...doc, schemaVersion: 24, profiles: migrateProfiles(doc, randomBonusBecomesLine) }),
 };
 
 /**
@@ -537,6 +574,7 @@ export const profileMigrations: MigrationTable = {
   20: addArenaRole,
   21: dropArenaTroops,
   22: artifactsFollowTable,
+  23: randomBonusBecomesLine,
 };
 /**
  * A saved stack carries a *whole setup*, so `3 → 4`, `4 → 5`, `5 → 6` and `7 → 8` reach inside it: the
@@ -570,6 +608,7 @@ export const savedStackMigrations: MigrationTable = {
   20: identity,
   21: identity,
   22: identity,
+  23: identity,
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

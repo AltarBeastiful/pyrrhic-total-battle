@@ -7,6 +7,8 @@
  * and stay here so the section owns its own wording.
  */
 import type {
+  ArtifactOptionValue,
+  ArtifactRarity,
   BonusKey,
   BonusMap,
   Group,
@@ -185,13 +187,46 @@ export function chipValue(bonus: BonusLike, limit = 2): ChipValue {
   return { ...(key === undefined ? {} : { key }), text };
 }
 
+export const RARITY_LABELS: Record<ArtifactRarity, string> = {
+  rare: 'Rare',
+  epic: 'Epic',
+  legendary: 'Legendary',
+};
+
+/** The unit sets an option id spells in the singular, as the rest of the card names them. */
+const OPTION_SETS: Record<string, string> = {
+  guardsman: 'guardsmen',
+  specialist: 'specialists',
+  engineer: 'engineers',
+  monster: 'monsters',
+};
+
 /** `armyStrengthAndHealth` → "Army strength and health": the random-bonus options read as sentences. */
 export function humanizeOption(option: string): string {
-  const spaced = option
+  if (option === 'marchSpeed') return 'March speed against monsters';
+  const base = option.replace(/AgainstPlayers$/, '');
+  const spaced = base
+    .replace(/^(guardsman|specialist|engineer|monster)(?=[A-Z])/, (set) => OPTION_SETS[set] ?? set)
     .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
     .trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  const against = base === option ? '' : ' against other players';
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1) + against;
+}
+
+/** The one figure a random option's value shows: an option on health and strength gives both the same. */
+export function optionFigure(value: ArtifactOptionValue): number {
+  const { health, strength, special, againstPlayers, capacity, unused } = value;
+  const maps = [
+    health,
+    strength,
+    special,
+    againstPlayers?.health,
+    againstPlayers?.strength,
+    capacity,
+    unused,
+  ];
+  return maps.flatMap((map) => Object.values(map ?? {}))[0] ?? 0;
 }
 
 /**

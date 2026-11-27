@@ -431,7 +431,100 @@
         }
       }
     },
-    "randomBonusOptions": ["armyStrength", "guardsmanStrength"]
+    "randomOptions": [
+      {
+        "id": "armyStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "strength": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "strength": {
+                "army": 100
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "guardsmen": 13
+            }
+          },
+          "epic": {
+            "strength": {
+              "guardsmen": 26
+            }
+          },
+          "legendary": {
+            "strength": {
+              "guardsmen": 65
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanStrengthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "strength": {
+                "guardsmen": 26
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "strength": {
+                "guardsmen": 52
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "strength": {
+                "guardsmen": 130
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "forest-crown",
@@ -1800,7 +1893,124 @@
         }
       }
     },
-    "randomBonusOptions": ["armyStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "armyHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 40
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 80
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 200
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "strength": {
+                "army": 40
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "strength": {
+                "army": 80
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "strength": {
+                "army": 200
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 10
+            },
+            "strength": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 20
+            },
+            "strength": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 50
+            },
+            "strength": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              },
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 40
+              },
+              "strength": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 100
+              },
+              "strength": {
+                "army": 100
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "ghostflame-lantern",
@@ -2234,7 +2444,97 @@
         }
       }
     },
-    "randomBonusOptions": ["armyStrength", "armyStrengthAgainstEpicMonsters", "armyStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "armyStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAgainstEpicMonsters",
+        "values": {
+          "rare": {
+            "special": {
+              "armyStrengthAgainstEpicMonsters": 20
+            }
+          },
+          "epic": {
+            "special": {
+              "armyStrengthAgainstEpicMonsters": 40
+            }
+          },
+          "legendary": {
+            "special": {
+              "armyStrengthAgainstEpicMonsters": 100
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 5
+            },
+            "strength": {
+              "army": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 10
+            },
+            "strength": {
+              "army": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 25
+            },
+            "strength": {
+              "army": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "marchSpeed",
+        "values": {
+          "rare": {
+            "unused": {
+              "marchSpeed": 20
+            }
+          },
+          "epic": {
+            "unused": {
+              "marchSpeed": 40
+            }
+          },
+          "legendary": {
+            "unused": {
+              "marchSpeed": 100
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "griffinwing-mask",
@@ -2923,7 +3223,112 @@
         }
       }
     },
-    "randomBonusOptions": ["monsterHealth", "monsterStrength", "monsterStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "monsterHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "monster": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "monster": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "monster": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "monsterStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "monster": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "monster": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "monster": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "monsterStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "monster": 5
+            },
+            "strength": {
+              "monster": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "monster": 10
+            },
+            "strength": {
+              "monster": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "monster": 25
+            },
+            "strength": {
+              "monster": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "monsterStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "monster": 10
+              },
+              "strength": {
+                "monster": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "monster": 20
+              },
+              "strength": {
+                "monster": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "monster": 50
+              },
+              "strength": {
+                "monster": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "heart-of-the-forest",
@@ -3357,7 +3762,112 @@
         }
       }
     },
-    "randomBonusOptions": ["armyHealth", "armyStrength", "armyStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "armyHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 20
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 40
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 100
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "army": 20
+            }
+          },
+          "epic": {
+            "strength": {
+              "army": 40
+            }
+          },
+          "legendary": {
+            "strength": {
+              "army": 100
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 10
+            },
+            "strength": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 20
+            },
+            "strength": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 50
+            },
+            "strength": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              },
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 40
+              },
+              "strength": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 100
+              },
+              "strength": {
+                "army": 100
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "ifrit-lords-belt",
@@ -4046,7 +4556,112 @@
         }
       }
     },
-    "randomBonusOptions": ["armyHealth", "armyStrength", "armyStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "armyHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 5
+            },
+            "strength": {
+              "army": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 10
+            },
+            "strength": {
+              "army": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 25
+            },
+            "strength": {
+              "army": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 10
+              },
+              "strength": {
+                "army": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              },
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 50
+              },
+              "strength": {
+                "army": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "knight-of-dalarna",
@@ -4735,7 +5350,112 @@
         }
       }
     },
-    "randomBonusOptions": ["mountedHealth", "mountedStrength", "mountedStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "mountedHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "mounted": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "mounted": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "mounted": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "mountedStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "mounted": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "mounted": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "mounted": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "mountedStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "mounted": 5
+            },
+            "strength": {
+              "mounted": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "mounted": 10
+            },
+            "strength": {
+              "mounted": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "mounted": 25
+            },
+            "strength": {
+              "mounted": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "mountedStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "mounted": 10
+              },
+              "strength": {
+                "mounted": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "mounted": 20
+              },
+              "strength": {
+                "mounted": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "mounted": 50
+              },
+              "strength": {
+                "mounted": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "mars-twin-blades",
@@ -5469,7 +6189,115 @@
         }
       }
     },
-    "randomBonusOptions": ["strikeTwoSquadsChance"]
+    "randomOptions": [
+      {
+        "id": "armyHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 100
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "strength": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "strength": {
+                "army": 100
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "armyStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 10
+              },
+              "strength": {
+                "army": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              },
+              "strength": {
+                "army": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 50
+              },
+              "strength": {
+                "army": 50
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "strikeTwoSquadsChance",
+        "values": {
+          "rare": {
+            "special": {
+              "strikeTwoSquadsChance": 0.2
+            }
+          },
+          "epic": {
+            "special": {
+              "strikeTwoSquadsChance": 0.4
+            }
+          },
+          "legendary": {
+            "special": {
+              "strikeTwoSquadsChance": 1
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "medallion-of-unity",
@@ -5903,7 +6731,100 @@
         }
       }
     },
-    "randomBonusOptions": ["armyHealth", "guardsmanHealth"]
+    "randomOptions": [
+      {
+        "id": "armyHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "army": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "army": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "army": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "armyHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "army": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "army": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "army": 100
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "guardsmen": 13
+            }
+          },
+          "epic": {
+            "health": {
+              "guardsmen": 26
+            }
+          },
+          "legendary": {
+            "health": {
+              "guardsmen": 65
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 26
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 52
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 130
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "philosophers-stone",
@@ -6592,7 +7513,112 @@
         }
       }
     },
-    "randomBonusOptions": ["specialistHealth", "specialistStrength", "specialistStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "specialistHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "specialist": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "specialist": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "specialist": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "specialistStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "specialist": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "specialist": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "specialist": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "specialistStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "specialist": 5
+            },
+            "strength": {
+              "specialist": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "specialist": 10
+            },
+            "strength": {
+              "specialist": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "specialist": 25
+            },
+            "strength": {
+              "specialist": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "specialistStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "specialist": 10
+              },
+              "strength": {
+                "specialist": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "specialist": 20
+              },
+              "strength": {
+                "specialist": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "specialist": 50
+              },
+              "strength": {
+                "specialist": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "ruby-brooch",
@@ -7281,7 +8307,112 @@
         }
       }
     },
-    "randomBonusOptions": ["meleeHealth", "meleeStrength", "meleeStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "meleeHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "melee": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "melee": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "melee": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "meleeStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "melee": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "melee": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "melee": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "meleeStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "melee": 5
+            },
+            "strength": {
+              "melee": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "melee": 10
+            },
+            "strength": {
+              "melee": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "melee": 25
+            },
+            "strength": {
+              "melee": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "meleeStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "melee": 10
+              },
+              "strength": {
+                "melee": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "melee": 20
+              },
+              "strength": {
+                "melee": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "melee": 50
+              },
+              "strength": {
+                "melee": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "source-flask",
@@ -7970,7 +9101,112 @@
         }
       }
     },
-    "randomBonusOptions": ["guardsmanHealth", "guardsmanStrength", "guardsmanStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "guardsmanHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "guardsmen": 14
+            }
+          },
+          "epic": {
+            "health": {
+              "guardsmen": 28
+            }
+          },
+          "legendary": {
+            "health": {
+              "guardsmen": 70
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "guardsmen": 14
+            }
+          },
+          "epic": {
+            "strength": {
+              "guardsmen": 28
+            }
+          },
+          "legendary": {
+            "strength": {
+              "guardsmen": 70
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "guardsmen": 7
+            },
+            "strength": {
+              "guardsmen": 7
+            }
+          },
+          "epic": {
+            "health": {
+              "guardsmen": 14
+            },
+            "strength": {
+              "guardsmen": 14
+            }
+          },
+          "legendary": {
+            "health": {
+              "guardsmen": 35
+            },
+            "strength": {
+              "guardsmen": 35
+            }
+          }
+        }
+      },
+      {
+        "id": "guardsmanStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 14
+              },
+              "strength": {
+                "guardsmen": 14
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 28
+              },
+              "strength": {
+                "guardsmen": 28
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "guardsmen": 70
+              },
+              "strength": {
+                "guardsmen": 70
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "technobomb",
@@ -8659,7 +9895,112 @@
         }
       }
     },
-    "randomBonusOptions": ["engineerHealth", "engineerStrength", "engineerStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "engineerHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "engineers": 20
+            }
+          },
+          "epic": {
+            "health": {
+              "engineers": 40
+            }
+          },
+          "legendary": {
+            "health": {
+              "engineers": 100
+            }
+          }
+        }
+      },
+      {
+        "id": "engineerStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "engineers": 20
+            }
+          },
+          "epic": {
+            "strength": {
+              "engineers": 40
+            }
+          },
+          "legendary": {
+            "strength": {
+              "engineers": 100
+            }
+          }
+        }
+      },
+      {
+        "id": "engineerStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "engineers": 10
+            },
+            "strength": {
+              "engineers": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "engineers": 20
+            },
+            "strength": {
+              "engineers": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "engineers": 50
+            },
+            "strength": {
+              "engineers": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "engineerStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "engineers": 20
+              },
+              "strength": {
+                "engineers": 20
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "engineers": 40
+              },
+              "strength": {
+                "engineers": 40
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "engineers": 100
+              },
+              "strength": {
+                "engineers": 100
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "valkyrie-diadem",
@@ -9348,7 +10689,112 @@
         }
       }
     },
-    "randomBonusOptions": ["flyingHealth", "flyingStrength", "flyingStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "flyingHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "flying": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "flying": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "flying": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "flyingStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "flying": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "flying": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "flying": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "flyingStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "flying": 5
+            },
+            "strength": {
+              "flying": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "flying": 10
+            },
+            "strength": {
+              "flying": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "flying": 25
+            },
+            "strength": {
+              "flying": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "flyingStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "flying": 10
+              },
+              "strength": {
+                "flying": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "flying": 20
+              },
+              "strength": {
+                "flying": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "flying": 50
+              },
+              "strength": {
+                "flying": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "wardens-quiver",
@@ -10037,7 +11483,112 @@
         }
       }
     },
-    "randomBonusOptions": ["rangedHealth", "rangedStrength", "rangedStrengthAndHealth"]
+    "randomOptions": [
+      {
+        "id": "rangedHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "ranged": 10
+            }
+          },
+          "epic": {
+            "health": {
+              "ranged": 20
+            }
+          },
+          "legendary": {
+            "health": {
+              "ranged": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "rangedStrength",
+        "values": {
+          "rare": {
+            "strength": {
+              "ranged": 10
+            }
+          },
+          "epic": {
+            "strength": {
+              "ranged": 20
+            }
+          },
+          "legendary": {
+            "strength": {
+              "ranged": 50
+            }
+          }
+        }
+      },
+      {
+        "id": "rangedStrengthAndHealth",
+        "values": {
+          "rare": {
+            "health": {
+              "ranged": 5
+            },
+            "strength": {
+              "ranged": 5
+            }
+          },
+          "epic": {
+            "health": {
+              "ranged": 10
+            },
+            "strength": {
+              "ranged": 10
+            }
+          },
+          "legendary": {
+            "health": {
+              "ranged": 25
+            },
+            "strength": {
+              "ranged": 25
+            }
+          }
+        }
+      },
+      {
+        "id": "rangedStrengthAndHealthAgainstPlayers",
+        "values": {
+          "rare": {
+            "againstPlayers": {
+              "health": {
+                "ranged": 10
+              },
+              "strength": {
+                "ranged": 10
+              }
+            }
+          },
+          "epic": {
+            "againstPlayers": {
+              "health": {
+                "ranged": 20
+              },
+              "strength": {
+                "ranged": 20
+              }
+            }
+          },
+          "legendary": {
+            "againstPlayers": {
+              "health": {
+                "ranged": 50
+              },
+              "strength": {
+                "ranged": 50
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "id": "zeus-lightning",
@@ -10231,6 +11782,87 @@
         }
       }
     },
-    "randomBonusOptions": ["doubleDamageChance"]
+    "randomOptions": [
+      {
+        "id": "authority",
+        "values": {
+          "rare": {
+            "unused": {
+              "authority": 1
+            }
+          },
+          "epic": {
+            "unused": {
+              "authority": 2
+            }
+          },
+          "legendary": {
+            "unused": {
+              "authority": 5
+            }
+          }
+        }
+      },
+      {
+        "id": "dominance",
+        "values": {
+          "rare": {
+            "capacity": {
+              "dominance": 1
+            }
+          },
+          "epic": {
+            "capacity": {
+              "dominance": 2
+            }
+          },
+          "legendary": {
+            "capacity": {
+              "dominance": 5
+            }
+          }
+        }
+      },
+      {
+        "id": "doubleDamageChance",
+        "values": {
+          "rare": {
+            "special": {
+              "doubleDamageChance": 0.3
+            }
+          },
+          "epic": {
+            "special": {
+              "doubleDamageChance": 0.6
+            }
+          },
+          "legendary": {
+            "special": {
+              "doubleDamageChance": 1.5
+            }
+          }
+        }
+      },
+      {
+        "id": "leadership",
+        "values": {
+          "rare": {
+            "capacity": {
+              "leadership": 1
+            }
+          },
+          "epic": {
+            "capacity": {
+              "leadership": 2
+            }
+          },
+          "legendary": {
+            "capacity": {
+              "leadership": 5
+            }
+          }
+        }
+      }
+    ]
   }
 ]

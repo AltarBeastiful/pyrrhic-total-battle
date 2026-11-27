@@ -17,13 +17,22 @@
  */
 import { z } from 'zod';
 
-import { BONUS_KEYS, CATEGORIES, GROUPS, MARCH_TYPES, QUALITIES, RACES, SPECIAL_KEYS } from '../data/types';
+import {
+  ARTIFACT_RARITIES,
+  BONUS_KEYS,
+  CATEGORIES,
+  GROUPS,
+  MARCH_TYPES,
+  QUALITIES,
+  RACES,
+  SPECIAL_KEYS,
+} from '../data/types';
 import type { BonusMap, Category, SpecialMap } from '../data/types';
 import { UNIT_FAMILIES } from '../engine/types';
 import type { Method, Objective, RecoveryMode } from '../engine/types';
 
 /** Bumped whenever a stored shape changes; every bump needs a `migrations[n]` entry and a fixture test. */
-export const SCHEMA_VERSION = 23;
+export const SCHEMA_VERSION = 24;
 
 // ---- Small building blocks -----------------------------------------------------------------------
 export const bonusKeySchema = z.enum(BONUS_KEYS);
@@ -172,17 +181,24 @@ export const equipmentEntrySchema = z.object({
     .optional(),
 });
 
+/** The game rolls one random bonus per whole star, so an artifact has five lines at most (B-42). */
+export const ARTIFACT_LINES = 5;
+
+/** One rolled bonus: the option and which of its three values. The figure itself is the table's. */
+export const artifactRollSchema = z.object({ option: nonEmpty, rarity: z.enum(ARTIFACT_RARITIES) });
+
 /**
- * What the player says of one artifact: its level and star. The bonuses are the game table's (B-39); only
- * the rolled random bonus is typed. `star` is the in-game star notation ("0.1".."5.0"), a string like the
- * data tables' keys.
+ * What the player says of one artifact: its level, its star and the random bonuses the game rolled. The
+ * figures are the game table's (B-39, B-42). `star` is the in-game star notation ("0.1".."5.0"), a string like
+ * the data tables' keys. `lines[k - 1]` is line k, `null` while it is empty; it counts from star k.0, and a
+ * lower star keeps it unread. No `lines` means none is recorded.
  */
 export const artifactEntrySchema = z.object({
   id: nonEmpty,
   artifactId: nonEmpty,
   level: z.int().min(1),
   star: z.string(),
-  random: z.object({ option: z.string(), value: z.number() }).optional(),
+  lines: z.array(artifactRollSchema.nullable()).max(ARTIFACT_LINES).optional(),
 });
 
 export const customSourceSchema = z.object({
@@ -214,6 +230,9 @@ export const sourcesSchema = z.object({
   custom: z.array(customSourceSchema),
 });
 export type ProfileSources = z.infer<typeof sourcesSchema>;
+export type ArtifactRoll = z.infer<typeof artifactRollSchema>;
+/** One random line of an artifact: a rolled bonus, or `null` while it is empty. */
+export type ArtifactLine = ArtifactRoll | null;
 
 // ---- Recovery / housing / enemy / method ----------------------------------------------------------
 export const RECOVERY_MODES = ['retrain', 'revive', 'selective'] as const satisfies readonly RecoveryMode[];

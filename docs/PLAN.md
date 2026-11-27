@@ -133,8 +133,9 @@ Sources → contributions (all additive percentages, same as TotalStack):
 - Captains: bonus% = baseLevel × baseMultiplier + starBonuses[star] on `bonusKey`, separately for health and
   strength (data in `captains.json`; Sofia/Amanitore/Skadi multipliers included).
 - Equipment: `bonusesByQuality[quality]` per piece (`equipment.json`), up to 15 pieces, plus gem/enchant fields.
-- Artifacts: level tables (`artifact-*-by-level.json`) + random bonus with rarity, up to 3. Values against
-  other players are kept (`againstPlayers` in `artifacts.json`) and apply in Prime Arena only (B-41).
+- Artifacts: level and star rows from the game export (`artifacts.json`, B-39) + up to five random lines,
+  one per whole star, each an option and a rarity (B-42); up to 3 artifacts. Values against other players are
+  kept (`againstPlayers` in `artifacts.json`) and apply in Prime Arena only (B-41).
 - Titles: fixed tables (`titles.json`), PvP-only keys ignored.
 - Other: VIP level → army%, Dragon (13-key editor), hero (Svyatogor +50/+50 only when marching alone),
   Personal/Clan/Kingdom +25 pills, custom. VIP and the Dragon start switched **off** and TotalStack's

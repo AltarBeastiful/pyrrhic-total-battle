@@ -216,8 +216,8 @@ describe.skipIf(!process.env.THEORY)('C3 gear', () => {
     report.add(`\n### Artifacts (\`artifacts.json\`, ${String(artifactTable.length)} entries)\n`);
     report.add(
       'Every artifact carries the game’s level and star tables; the column below is what each gives at the ' +
-        'top of both ladders (L60 ★5.0). The `random bonus` column is the extra roll the artifact can ' +
-        'carry; its value is typed by the player.',
+        'top of both ladders (L60 ★5.0). The `random bonus` column names the options the artifact ' +
+        'can roll, one per whole star.',
     );
     report.add('');
     report.add('| artifact | at L60 ★5.0 | random bonus options |');
@@ -233,7 +233,7 @@ describe.skipIf(!process.env.THEORY)('C3 gear', () => {
         ['artifact'],
       );
       report.add(
-        `| ${record.name} | ${describeSource(source)} | ${record.randomBonusOptions.join(', ') || '—'} |`,
+        `| ${record.name} | ${describeSource(source)} | ${record.randomOptions.map((option) => option.id).join(', ') || '—'} |`,
       );
     }
 

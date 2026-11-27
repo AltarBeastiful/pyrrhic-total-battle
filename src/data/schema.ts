@@ -23,6 +23,8 @@ import {
   TALENT_TREES,
 } from './types.ts';
 import type {
+  ArtifactOptionValue,
+  ArtifactRandomOption,
   ArtifactRecord,
   ArtifactRow,
   BattleSelectionOrder,
@@ -201,6 +203,20 @@ const artifactRowSchema = z.strictObject({
     .optional(),
 }) satisfies z.ZodType<Loose<ArtifactRow>>;
 
+const artifactOptionValueSchema = artifactRowSchema.extend({
+  capacity: z.strictObject({ leadership: percent.optional(), dominance: percent.optional() }).optional(),
+  unused: z.strictObject({ authority: percent.optional(), marchSpeed: percent.optional() }).optional(),
+}) satisfies z.ZodType<Loose<ArtifactOptionValue>>;
+
+const artifactOptionSchema = z.strictObject({
+  id: z.string().min(1),
+  values: z.strictObject({
+    rare: artifactOptionValueSchema,
+    epic: artifactOptionValueSchema,
+    legendary: artifactOptionValueSchema,
+  }),
+}) satisfies z.ZodType<Loose<ArtifactRandomOption>>;
+
 /** Level keys are "1".."60"; star keys use the in-game notation "0.1".."5.0". */
 export const artifactSchema = z.strictObject({
   id,
@@ -210,7 +226,7 @@ export const artifactSchema = z.strictObject({
     z.string().regex(/^\d\.\d$/, 'star keys use the in-game notation, e.g. "3.2"'),
     artifactRowSchema,
   ),
-  randomBonusOptions: z.array(z.string().min(1)),
+  randomOptions: z.array(artifactOptionSchema).min(1),
 }) satisfies z.ZodType<Loose<ArtifactRecord>>;
 
 export const titleSchema = z.strictObject({

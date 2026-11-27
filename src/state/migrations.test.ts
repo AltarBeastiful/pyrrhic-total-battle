@@ -1163,7 +1163,8 @@ describe('migrateProfile', () => {
         artifactId: 'ruby-brooch',
         level: 1,
         star: '0.1',
-        random: { option: 'meleeHealth', value: 12 },
+        // The typed random bonus goes on to be line 1 (B-42).
+        lines: [{ option: 'meleeHealth', rarity: 'rare' }],
       },
       { id: 'a2', artifactId: 'heart-of-the-forest', level: 20, star: '2.1' },
     ];
@@ -1180,6 +1181,75 @@ describe('migrateProfile', () => {
       const once = migrateProfile(profile, 22);
       expect(once.sources.artifacts).toEqual(upgraded);
       expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 22)).toEqual(once);
+    });
+  });
+
+  describe('v23 → v24: the typed random bonus becomes line 1 (B-42)', () => {
+    /** One entry per old random bonus, `a1` onwards, at level 20 ★2.1. */
+    const v23Doc = (rolls: [string, string?, number?][]): Record<string, unknown> => {
+      const doc = JSON.parse(JSON.stringify(newRoot('device'))) as Record<string, unknown>;
+      const profile = (doc.profiles as { sources: Record<string, unknown> }[])[0]!;
+      profile.sources.artifacts = rolls.map(([artifactId, option, value], index) => ({
+        id: `a${String(index + 1)}`,
+        artifactId,
+        level: 20,
+        star: '2.1',
+        ...(option === undefined ? {} : { random: { option, value } }),
+      }));
+      return { ...doc, schemaVersion: 23 };
+    };
+    const linesOf = (rolls: [string, string?, number?][]) =>
+      migrate(v23Doc(rolls)).profiles[0]!.sources.artifacts.map((entry) => entry.lines);
+
+    it('takes the rarity whose value is nearest to the typed one', () => {
+      // Heart of the Forest rolls army strength at 20, 40 or 100.
+      const typed = [0, 12, 29, 31, 69, 71, 999];
+      expect(
+        linesOf(typed.map((value) => ['heart-of-the-forest', 'armyStrength', value])).map(
+          (lines) => lines?.[0]?.rarity,
+        ),
+      ).toEqual(['rare', 'rare', 'rare', 'epic', 'epic', 'legendary', 'legendary']);
+    });
+
+    it('takes the lower value on a tie, whatever the decimals', () => {
+      expect(
+        linesOf([
+          ['heart-of-the-forest', 'armyStrength', 30], // 20 or 40
+          ['heart-of-the-forest', 'armyStrength', 70], // 40 or 100
+          ['zeus-lightning', 'doubleDamageChance', 0.45], // 0.3 or 0.6
+          ['mars-twin-blades', 'strikeTwoSquadsChance', 0.7], // 0.4 or 1
+        ]).map((lines) => lines?.[0]?.rarity),
+      ).toEqual(['rare', 'epic', 'rare', 'epic']);
+    });
+
+    it('drops a bonus the artifact cannot roll, and keeps the level and the star', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const doc = v23Doc([
+        ['ruby-brooch', 'armyStrength', 20],
+        ['ruby-brooch', '', 20],
+        ['no-such-artifact', 'armyStrength', 20],
+        ['ruby-brooch'],
+        ['ruby-brooch', 'meleeStrength', 20],
+      ]);
+      const entry = (id: string, artifactId: string) => ({ id, artifactId, level: 20, star: '2.1' });
+      expect(migrate(doc).profiles[0]!.sources.artifacts).toEqual([
+        entry('a1', 'ruby-brooch'),
+        entry('a2', 'ruby-brooch'),
+        entry('a3', 'no-such-artifact'),
+        entry('a4', 'ruby-brooch'),
+        { ...entry('a5', 'ruby-brooch'), lines: [{ option: 'meleeStrength', rarity: 'epic' }] },
+      ]);
+      // The migration removes the old field itself: nothing is left for the schema to drop and report.
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an exported v23 profile once', () => {
+      const profile = (
+        v23Doc([['ruby-brooch', 'meleeHealth', 50]]).profiles as Record<string, unknown>[]
+      )[0]!;
+      const once = migrateProfile(profile, 23);
+      expect(once.sources.artifacts[0]?.lines).toEqual([{ option: 'meleeHealth', rarity: 'legendary' }]);
+      expect(migrateProfile(JSON.parse(JSON.stringify(once)) as Record<string, unknown>, 23)).toEqual(once);
     });
   });
 });

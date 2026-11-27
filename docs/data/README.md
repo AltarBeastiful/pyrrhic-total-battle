@@ -147,8 +147,8 @@ artifact export (`artifacts.json` in that directory; the directory can also be n
 A wrong value is fixed in the export or in `scripts/artifacts-convert.ts`, never in the table.
 
 It holds sixteen artifacts, the ones that can change something here. Each has what its 60 levels and its 25
-star steps give; the artifact's total is **the level row plus the star row**, and the two may feed different
-stats:
+star steps give, and the random bonuses it can roll. Its total is **the level row plus the star row plus the
+random lines its star has opened** (line *k* from star *k*.0), and the rows may feed different stats:
 
 ```json
 {
@@ -156,7 +156,16 @@ stats:
   "name": "Zeus' Lightning",
   "levels": { "1": {} },
   "stars": { "0.1": { "special": { "doubleDamageChance": 0.7 } } },
-  "randomBonusOptions": ["doubleDamageChance"]
+  "randomOptions": [
+    {
+      "id": "leadership",
+      "values": {
+        "rare": { "capacity": { "leadership": 1 } },
+        "epic": { "capacity": { "leadership": 2 } },
+        "legendary": { "capacity": { "leadership": 5 } }
+      }
+    }
+  ]
 }
 ```
 
@@ -171,7 +180,10 @@ A row that gives something against other players (Forest Crown, Mars' Twin Blade
   maps, and is empty when the app carries none of its effects.
 - `againstPlayers` holds the `health` and `strength` maps the row gives against other players only. In Prime
   Arena they are added to the others in the same additive bracket; nowhere else do they count.
-- `randomBonusOptions` lists the bonuses the artifact's random slot can roll that the app counts.
+- `randomOptions` lists every bonus the artifact can roll at random, each with exactly three values. A saved
+  profile stores the option `id` and the rarity, never the figure, so **an `id` is never changed**. A value is
+  a row (`health`, `strength`, `special`, `againstPlayers`) or one of two kinds only these carry: `capacity`
+  (Leadership and Dominance, not counted yet) and `unused` (authority and march speed, never counted).
 
 How the converter reads the export:
 
@@ -179,11 +191,14 @@ How the converter reads the export:
   value in the scale coefficient, in tenths of a percent.
 - The export names a unit set only by its size. Which size is which bonus key is learned from the random
   option texts of the same export ("Guardsmen's health"), so no size is written in the code.
-- Level and star effects against other players go into the row's `againstPlayers`.
-- Random options against other players, Leadership and Dominance capacity, authority and march speed are
-  understood but not carried yet.
+- Effects against other players go into `againstPlayers`.
+- On level and star rows, Leadership and Dominance capacity, authority and march speed are understood but not
+  carried yet.
+- An option's `id` is made from its effects (`armyStrengthAndHealth`, `armyStrengthAgainstPlayers`,
+  `leadership`); the export's three entries of an option, one per rarity, become its three values.
 - It stops, naming the record, on an unknown effect kind, a unit set no text names or two keys claim, a
-  missing artifact, and a level or star step that is missing or out of order.
+  missing artifact, a level or star step that is missing or out of order, an artifact with no random option,
+  an option that cannot be named, and an option without exactly one value per rarity.
 
 ### `titles.json`, `heroes.json`, `otherPills.json`
 

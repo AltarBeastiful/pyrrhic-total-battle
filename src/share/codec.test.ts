@@ -69,7 +69,12 @@ function realisticProfile(): Profile {
     artifactId: `artifact-${index + 1}`,
     level: 30 + index,
     star: `${index + 1}.0`,
-    random: { option: 'armyHealth', value: 4.5 + index },
+    // Five lines at most, any of them empty (B-42).
+    lines: [
+      { option: 'armyHealth', rarity: 'epic' as const },
+      null,
+      { option: 'armyStrength', rarity: 'rare' as const },
+    ],
   }));
   profile.sources.titles = ['baron', 'count', 'duke'];
   profile.sources.vipLevel = 12;
@@ -259,6 +264,30 @@ describe('profile links', () => {
     );
     if (decoded.kind !== 'profile') throw new Error('wrong kind');
     expect(decoded.profile.sources.artifacts).toEqual([{ ...typed, level: 1, star: '0.1' }]);
+  });
+
+  it('a v23 link with a typed random bonus opens with it on line 1', async () => {
+    const profile = realisticProfile();
+    const typed = { id: 'a1', artifactId: 'ruby-brooch', level: 20, star: '2.0' };
+    const withOld = {
+      ...profile,
+      sources: {
+        ...profile.sources,
+        artifacts: [{ ...typed, random: { option: 'meleeHealth', value: 18 } }],
+      },
+    };
+    const decoded = await decodeShare(
+      await encodeShare({
+        kind: 'profile',
+        schemaVersion: 23,
+        dataVersion: 2,
+        profile: withOld as unknown as Profile,
+      }),
+    );
+    if (decoded.kind !== 'profile') throw new Error('wrong kind');
+    expect(decoded.profile.sources.artifacts).toEqual([
+      { ...typed, lines: [{ option: 'meleeHealth', rarity: 'epic' }] },
+    ]);
   });
 
   it('a new link carries the data version the tables ship', async () => {

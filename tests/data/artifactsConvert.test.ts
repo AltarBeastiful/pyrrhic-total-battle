@@ -51,6 +51,9 @@ const effect = (typeName: string, affected: number, B: number, C = 0): DumpEffec
   C,
 });
 
+/** The export lists an option once per rarity, the best first. */
+const RARITIES = ['LEGENDARY', 'EPIC', 'RARE'] as const;
+
 /** Every artifact starts as "army strength": +level % per level, +step/10 % per star step. */
 function handMade(): ArtifactDump {
   return {
@@ -64,9 +67,12 @@ function handMade(): ArtifactDump {
         star: i + 1,
         effects: [effect('UNIT_POWER', ARMY, 10000 + (i + 1) * 10)],
       })),
-      randomEffects: [
-        { effectId: 500 + index, text: 'Army strength', effects: [effect('UNIT_POWER', ARMY, 11000)] },
-      ],
+      randomEffects: RARITIES.map((rarity, step) => ({
+        effectId: 500 + 3 * index + step,
+        rarity,
+        text: 'Army strength',
+        effects: [effect('UNIT_POWER', ARMY, 11000 + step * 1000)],
+      })),
     })),
   };
 }
@@ -91,10 +97,25 @@ function everyRow(
   for (const row of artifact.stars) row.effects = stars;
 }
 
-/** One random option of an artifact, appended to the list. */
-function roll(dump: ArtifactDump, name: string, text: string, effects: DumpEffect[]): void {
+/**
+ * One random option of an artifact, appended to the list as the export writes it: one entry per rarity. The
+ * effects are the same for the three unless they are given as a function of the rarity.
+ */
+function roll(
+  dump: ArtifactDump,
+  name: string,
+  text: string,
+  effects: DumpEffect[] | ((rarity: (typeof RARITIES)[number]) => DumpEffect[]),
+): void {
   const artifact = artifactOf(dump, name);
-  artifact.randomEffects.push({ effectId: 900 + artifact.randomEffects.length, text, effects });
+  for (const rarity of RARITIES) {
+    artifact.randomEffects.push({
+      effectId: 900 + artifact.randomEffects.length,
+      rarity,
+      text,
+      effects: typeof effects === 'function' ? effects(rarity) : effects,
+    });
+  }
 }
 
 describe('convertArtifacts', () => {
@@ -243,38 +264,80 @@ describe('convertArtifacts', () => {
     expect(rows.get('zeus-lightning')?.stars['0.1']).toEqual({ special: { doubleDamageChance: 0.7 } });
   });
 
-  it('lists the random options the app counts, named as saved profiles name them', () => {
+  it('carries every random option with its three values, named as saved profiles name them', () => {
     const dump = handMade();
-    const army = (typeName: string, B = 11000) => effect(typeName, ARMY, B);
+    const army = (typeName: string, B: number) => effect(typeName, ARMY, B);
+    const three = (rare: number, epic: number, legendary: number) => ({
+      RARE: rare,
+      EPIC: epic,
+      LEGENDARY: legendary,
+    });
     artifactOf(dump, 'Ghostflame Lantern').randomEffects = [];
-    for (const rarity of [12000, 11000]) {
-      // The three rarities of one option are one option.
-      roll(dump, 'Ghostflame Lantern', 'Army strength and health', [
-        army('UNIT_POWER', rarity),
-        army('UNIT_HEALTH', rarity),
-      ]);
-    }
-    roll(dump, 'Ghostflame Lantern', 'Strength of your entire army against epic monsters', [
-      army('UNIT_POWER_EPIC_MONSTERS'),
+    roll(dump, 'Ghostflame Lantern', 'Army strength and health', (rarity) => {
+      const B = three(10500, 11000, 12500)[rarity];
+      return [army('UNIT_POWER', B), army('UNIT_HEALTH', B)];
+    });
+    roll(dump, 'Ghostflame Lantern', 'Strength of your entire army against epic monsters', (rarity) => [
+      army('UNIT_POWER_EPIC_MONSTERS', three(12000, 14000, 20000)[rarity]),
     ]);
-    roll(dump, 'Ghostflame Lantern', 'Army strength', [army('UNIT_POWER')]);
-    roll(dump, 'Ghostflame Lantern', 'Army health', [army('UNIT_HEALTH')]);
-    roll(dump, 'Ghostflame Lantern', 'Army strength against other players', [army('UNIT_POWER_PVP')]);
-    roll(dump, 'Ghostflame Lantern', 'March speed against monsters', [effect('MARCH_SPEED_PVE', 0, 12000)]);
-    roll(dump, 'Ghostflame Lantern', 'Leadership', [effect('HERO_LEADERSHIP', 0, 10500)]);
-    roll(dump, 'Ghostflame Lantern', 'Authority', [effect('HERO_MASTERY', 0, 10500)]);
-    roll(dump, 'Ghostflame Lantern', 'Chance to deal double damage', [effect('UNIT_CRIT', 0, 10150)]);
-    roll(dump, 'Ghostflame Lantern', 'Chance to strike two squads', [
-      effect('UNIT_DOUBLE_TURN_PROBABILITY', ARMY, 0, 10),
+    roll(dump, 'Ghostflame Lantern', 'Chance to strike two squads', (rarity) => [
+      effect('UNIT_DOUBLE_TURN_PROBABILITY', ARMY, 0, three(2, 4, 10)[rarity]),
     ]);
 
-    expect(rowsById(dump).get('ghostflame-lantern')?.randomBonusOptions).toEqual([
-      'armyHealth',
-      'armyStrength',
-      'armyStrengthAgainstEpicMonsters',
-      'armyStrengthAndHealth',
-      'doubleDamageChance',
-      'strikeTwoSquadsChance',
+    expect(rowsById(dump).get('ghostflame-lantern')?.randomOptions).toEqual([
+      {
+        id: 'armyStrengthAgainstEpicMonsters',
+        values: {
+          rare: { special: { armyStrengthAgainstEpicMonsters: 20 } },
+          epic: { special: { armyStrengthAgainstEpicMonsters: 40 } },
+          legendary: { special: { armyStrengthAgainstEpicMonsters: 100 } },
+        },
+      },
+      {
+        id: 'armyStrengthAndHealth',
+        values: {
+          rare: { health: { army: 5 }, strength: { army: 5 } },
+          epic: { health: { army: 10 }, strength: { army: 10 } },
+          legendary: { health: { army: 25 }, strength: { army: 25 } },
+        },
+      },
+      {
+        id: 'strikeTwoSquadsChance',
+        values: {
+          rare: { special: { strikeTwoSquadsChance: 0.2 } },
+          epic: { special: { strikeTwoSquadsChance: 0.4 } },
+          legendary: { special: { strikeTwoSquadsChance: 1 } },
+        },
+      },
+    ]);
+  });
+
+  it('carries the options against other players, capacity, authority and march speed, each kept apart', () => {
+    const dump = handMade();
+    artifactOf(dump, "Zeus' Lightning").randomEffects = [];
+    roll(dump, "Zeus' Lightning", 'Army strength against other players', [
+      effect('UNIT_POWER_PVP', ARMY, 12000),
+    ]);
+    roll(dump, "Zeus' Lightning", 'Army strength and health against other players', [
+      effect('UNIT_POWER_PVP', ARMY, 11000),
+      effect('UNIT_HEALTH_PVP', ARMY, 11000),
+    ]);
+    roll(dump, "Zeus' Lightning", 'Leadership', [effect('HERO_LEADERSHIP', 0, 10500)]);
+    roll(dump, "Zeus' Lightning", 'Dominance', [effect('HERO_DOMINANCE', 0, 10200)]);
+    roll(dump, "Zeus' Lightning", 'Authority', [effect('HERO_MASTERY', 0, 10100)]);
+    roll(dump, "Zeus' Lightning", 'March speed against monsters', [effect('MARCH_SPEED_PVE', 0, 12000)]);
+
+    const options = rowsById(dump).get('zeus-lightning')?.randomOptions ?? [];
+    expect(options.map((option) => [option.id, option.values.rare])).toEqual([
+      ['armyStrengthAgainstPlayers', { againstPlayers: { strength: { army: 20 } } }],
+      [
+        'armyStrengthAndHealthAgainstPlayers',
+        { againstPlayers: { health: { army: 10 }, strength: { army: 10 } } },
+      ],
+      ['authority', { unused: { authority: 1 } }],
+      ['dominance', { capacity: { dominance: 2 } }],
+      ['leadership', { capacity: { leadership: 5 } }],
+      ['marchSpeed', { unused: { marchSpeed: 20 } }],
     ]);
   });
 });
@@ -298,7 +361,7 @@ describe('convertArtifacts refuses, naming the record', () => {
       refusal((dump) => {
         roll(dump, 'Ruby Brooch', 'Army magic', [effect('UNIT_MAGIC', ARMY, 11000)]);
       }),
-    ).toThrow(/Ruby Brooch, random option 901: unknown effect kind UNIT_MAGIC/);
+    ).toThrow(/Ruby Brooch, random option 903: unknown effect kind UNIT_MAGIC/);
   });
 
   it('a coefficient or a condition it does not understand', () => {
@@ -332,7 +395,7 @@ describe('convertArtifacts refuses, naming the record', () => {
       refusal((dump) => {
         roll(dump, 'Ruby Brooch', "Melee units' strength", [effect('UNIT_POWER', ARMY, 11000)]);
       }),
-    ).toThrow(/Ruby Brooch, random option 901: unit set of size 9 is claimed by both army and melee/);
+    ).toThrow(/Ruby Brooch, random option 903: unit set of size 9 is claimed by both army and melee/);
   });
 
   it('a set on an effect that names none, or the wrong set on an army-wide one', () => {
@@ -357,7 +420,42 @@ describe('convertArtifacts refuses, naming the record', () => {
           effect('UNIT_POWER_PVP', ARMY, 11000),
         ]);
       }),
-    ).toThrow(/Ruby Brooch, random option 901/);
+    ).toThrow(/Ruby Brooch, random option 903/);
+    expect(
+      refusal((dump) => {
+        roll(dump, 'Ruby Brooch', 'Leadership and more', [
+          effect('HERO_LEADERSHIP', 0, 10500),
+          effect('UNIT_CRIT', 0, 10150),
+        ]);
+      }),
+    ).toThrow(/Ruby Brooch, random option 903/);
+  });
+
+  it('a random option without exactly one value per rarity', () => {
+    const ghostflame = (change: (options: DumpArtifact['randomEffects']) => void) =>
+      refusal((dump) => {
+        change(artifactOf(dump, 'Ghostflame Lantern').randomEffects);
+      });
+    expect(
+      ghostflame((options) => {
+        options.splice(1, 1);
+      }),
+    ).toThrow(/Ghostflame Lantern: random option armyStrength has no epic value/);
+    expect(
+      ghostflame((options) => {
+        options.push({ ...options[0]!, effectId: 990 });
+      }),
+    ).toThrow(/Ghostflame Lantern, random option 990: a second legendary value for armyStrength/);
+    expect(
+      ghostflame((options) => {
+        options[2]!.rarity = 'MYTHIC';
+      }),
+    ).toThrow(/Ghostflame Lantern, random option \d+: unknown rarity MYTHIC/);
+    expect(
+      ghostflame((options) => {
+        options.length = 0;
+      }),
+    ).toThrow(/Ghostflame Lantern: no random options/);
   });
 
   it('a missing artifact, or one listed twice', () => {
