@@ -29,7 +29,6 @@ describe.each(PLANS)(
     const input: CampaignInput = {
       request,
       marchTarget: HORIZON,
-      budgetMs: CAMPAIGN.budgets.plan,
       ...CAMPAIGN.planFixes,
       putBack: CAMPAIGN.putBack,
     };

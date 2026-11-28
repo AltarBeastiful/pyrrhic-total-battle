@@ -104,6 +104,9 @@ export default defineConfig({
     include: ['tests/**/*.test.ts', 'tools/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules/**', 'dist/**', 'e2e/**'],
     restoreMocks: true,
+    // Caps against a hang, not speed budgets: the full run loads every core, and a UI test that takes
+    // seconds alone can take ten times that beside the plan suites.
+    testTimeout: 60_000,
     globalSetup: ['tests/kernel/build.global.ts'],
     /**
      * **One engine path, one suite** (W16 E3 S3, 2026-10-01; was "two engine paths, one suite", 2026-09-24,
@@ -117,6 +120,6 @@ export default defineConfig({
      * declining kernel (`tests/kernel/declining.ts`, W16 E3 S5c) around the reference calls, explicitly —
      * the kernel is mandatory, and `setKernel(null)` leaves an engine that throws.
      */
-    setupFiles: ['tests/kernel/with-kernel.setup.ts'],
+    setupFiles: ['tests/kernel/with-kernel.setup.ts', 'tests/ui.setup.ts'],
   },
 });

@@ -6,7 +6,7 @@
  */
 import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { captains as captainTable } from '@/data';
 import { newProfile, newRoot, defaultSetup } from '@/state/defaults';
@@ -17,8 +17,6 @@ import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { BonusesBody } from './BonusesBody';
 import { FULL_SCOPE, type BodyScope } from './bodyScope';
-
-vi.setConfig({ testTimeout: 30_000 });
 
 const ARENA_SCOPE: BodyScope = {
   families: ['captains', 'equipment'],

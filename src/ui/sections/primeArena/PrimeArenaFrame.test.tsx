@@ -19,8 +19,6 @@ import { useUiStore } from '@/ui/uiStore';
 
 import { CAPTAIN_SHINE_MS, usePrimeArenaStore } from './primeArenaStore';
 
-vi.setConfig({ testTimeout: 30_000 });
-
 const realMatchMedia = window.matchMedia;
 
 function stubMedia(matching: string[]): void {

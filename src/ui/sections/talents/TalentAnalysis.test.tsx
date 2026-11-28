@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** B-24 Seam 2 — **Analyze in the talent detail**: the button, the table, the chart, stale, cancel. */
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { talents as TALENTS } from '@/data';
 import { newRoot } from '@/state/defaults';
@@ -11,9 +11,6 @@ import { useUiStore } from '@/ui/uiStore';
 
 import { useAnalysisStore } from './analysisStore';
 import { TalentsPage } from './TalentsPage';
-
-// The first render of the page is slow under a full run; the default 5 s is for small tests.
-vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   globalThis.localStorage.clear();

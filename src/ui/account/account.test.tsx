@@ -23,8 +23,6 @@ vi.mock('pocketbase', async () => {
   return { default: FakePocketBase, LocalAuthStore: FakeAuthStore };
 });
 
-vi.setConfig({ testTimeout: 20_000 });
-
 const USER = { id: 'u1', email: 'player@example.com', verified: true };
 
 const BASE = {

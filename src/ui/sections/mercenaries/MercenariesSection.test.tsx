@@ -1,17 +1,13 @@
 // @vitest-environment jsdom
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { MercenariesSection } from './MercenariesSection';
-
-// Opening the picker walks the whole 69-mercenary table; under full-suite load that is slower than
-// the default 5 s budget, and it is a cost of the render, not a hang.
-vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   globalThis.localStorage.clear();

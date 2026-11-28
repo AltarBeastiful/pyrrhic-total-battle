@@ -550,7 +550,6 @@ describe.skip('every hired stack stands under the lowest troop stack', () => {
             return planCampaign({
               request: scenario.request,
               marchTarget: HORIZON,
-              budgetMs: CAMPAIGN.budgets.plan,
               ...CAMPAIGN.planFixes,
               putBack: CAMPAIGN.putBack,
             });
@@ -840,7 +839,6 @@ describe.skip('the reference table names only plans the bar may offer', () => {
             return planCampaign({
               request: scenario.request,
               marchTarget: HORIZON,
-              budgetMs: CAMPAIGN.budgets.plan,
               ...CAMPAIGN.planFixes,
               putBack: CAMPAIGN.putBack,
               // The band the stops are drawn from, as the engine kept it — the set this criterion is about.
@@ -1002,7 +1000,6 @@ const campaignIsItsMarchesSum = (title: string, variant: (request: StackRequest)
               return planCampaign({
                 request,
                 marchTarget: HORIZON,
-                budgetMs: CAMPAIGN.budgets.plan,
                 ...CAMPAIGN.planFixes,
                 putBack: CAMPAIGN.putBack,
               });
@@ -1323,7 +1320,6 @@ const planFor = (request: StackRequest): CampaignPlan | string => {
     return planCampaign({
       request,
       marchTarget: HORIZON,
-      budgetMs: CAMPAIGN.budgets.plan,
       ...CAMPAIGN.planFixes,
       putBack: CAMPAIGN.putBack,
       withTrade: true,

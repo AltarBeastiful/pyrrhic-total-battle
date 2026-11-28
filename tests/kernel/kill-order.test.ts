@@ -84,7 +84,6 @@ describe.skipIf(!ON || !checks(checked))('the kill order shadow check', () => {
         plan = planCampaign({
           request,
           marchTarget: HORIZON,
-          budgetMs: CAMPAIGN.budgets.plan,
           ...CAMPAIGN.planFixes,
           putBack: CAMPAIGN.putBack,
         });

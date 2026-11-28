@@ -5,15 +5,13 @@
  */
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 
 import { renderWithTheme } from '../kit/testRender';
 import { MainMenu } from './MainMenu';
-
-vi.setConfig({ testTimeout: 20_000 });
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());

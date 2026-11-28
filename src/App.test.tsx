@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { App } from '@/App';
 import { version as gameData } from '@/data';
@@ -8,10 +8,6 @@ import { newRoot } from '@/state/defaults';
 import { useStore } from '@/state/store';
 import { ThemeHarness } from '@/ui/kit/testRender';
 import { SECTIONS } from '@/ui/sections';
-
-// The first render compiles the whole application (every section); under full-suite load it can
-// exceed the default 5 s budget, which is a cost of the import, not a hang.
-vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   useStore.getState().replaceDocument(newRoot());

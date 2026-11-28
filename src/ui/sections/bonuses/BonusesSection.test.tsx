@@ -10,7 +10,7 @@
  */
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { captains as captainTable } from '@/data';
 import { updateSources } from '@/state/actions/bonuses';
@@ -20,10 +20,6 @@ import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { BonusesSection } from './BonusesSection';
 import { CAPTAIN_CAP_MESSAGE } from './CaptainChips';
-
-// The card pulls in every data table and renders eighty-odd chips; under full-suite load the first
-// render can exceed the default 5 s budget, which is the cost of the import, not a hang.
-vi.setConfig({ testTimeout: 30_000 });
 
 /**
  * The card is read with **reduced motion on**, which is a real setting we respect (rule 24) and the
@@ -1245,8 +1241,10 @@ async function dragPiece(name: string, target: string): Promise<void> {
     await Promise.resolve();
   });
   fireEvent.mouseUp(document, { clientX: 50, clientY: y });
+  // dnd-kit swallows every click on the document until 50 ms after a drag ends: wait it out, or the click
+  // of this test (or of the next one) is lost.
   await act(async () => {
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 60));
   });
 }
 

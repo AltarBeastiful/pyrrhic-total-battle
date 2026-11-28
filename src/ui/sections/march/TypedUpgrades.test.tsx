@@ -7,7 +7,7 @@
  */
 import { act, cleanup, screen, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { newRoot } from '@/state/defaults';
 import type { UserUpgrade } from '@/state/schema';
@@ -15,9 +15,6 @@ import { selectActiveProfile, useStore } from '@/state/store';
 import { renderWithTheme } from '@/ui/kit/testRender';
 
 import { TypedUpgrades } from './TypedUpgrades';
-
-// The line select lists 58 choices; under full-suite load opening it is slower than the default 5 s budget.
-vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(() => {
   globalThis.localStorage.clear();

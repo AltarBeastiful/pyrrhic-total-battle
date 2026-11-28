@@ -32,12 +32,12 @@ import { totalstackRows, widenedFor } from './totalstack-rows';
 const profile = ownerProfile();
 const scenarios = [...commonScenarios(), ...(profile ? ownerScenarios(profile) : [])];
 
+/** No `budgetMs` in this file's plans: a clock cut under full-suite load changes the bar (W17 A0). */
 const planWith = (request: StackRequest, shipped: boolean): CampaignPlan | undefined => {
   try {
     return planCampaign({
       request,
       marchTarget: HORIZON,
-      budgetMs: CAMPAIGN.budgets.plan,
       ...CAMPAIGN.planFixes,
       // The bar before W10: no hired saver and no fold. The troop wall stays as configured — it is a band rule,
       // not a W10 one, and its own trade is pinned apart below.
@@ -151,7 +151,6 @@ describe('the stops the bar offers', () => {
         return planCampaign({
           request: scenario.request,
           marchTarget: HORIZON,
-          budgetMs: CAMPAIGN.budgets.plan,
           ...CAMPAIGN.planFixes,
           bandTroopStacks: undefined,
           putBack: CAMPAIGN.putBack,
@@ -216,7 +215,6 @@ describe('the rated re-typing', () => {
       return planCampaign({
         request,
         marchTarget: HORIZON,
-        budgetMs: CAMPAIGN.budgets.plan,
         ...CAMPAIGN.planFixes,
         ...(on ? {} : { retype: undefined }),
         putBack: CAMPAIGN.putBack,
